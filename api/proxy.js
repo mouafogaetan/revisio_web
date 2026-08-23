@@ -10,13 +10,13 @@ export default async function handler(req, res) {
     return;
   }
 
-  // Récupérer le chemin complet depuis l'URL
-  // Exemple: /data/classes.json
-  const url = req.url;
+  // Récupérer le chemin demandé
+  // Le chemin complet est dans req.url
+  const path = req.url;
   
   // Cibler le dépôt GitHub contenant les données
   const targetBase = 'https://mouafogaetan.github.io/revisio_data';
-  const targetUrl = `${targetBase}${url}`;
+  const targetUrl = `${targetBase}${path}`;
   
   console.log(`🔄 Proxy: ${targetUrl}`);
   
@@ -29,17 +29,38 @@ export default async function handler(req, res) {
       }
     });
     
+    // Vérifier si la réponse est OK
+    if (!response.ok) {
+      console.error(`❌ Erreur HTTP: ${response.status} pour ${targetUrl}`);
+      res.status(response.status).json({ 
+        error: `HTTP ${response.status}`,
+        message: `Impossible de récupérer les données depuis ${targetUrl}`
+      });
+      return;
+    }
+    
     const data = await response.text();
     
+    // Vérifier que le contenu est du JSON
+    try {
+      JSON.parse(data);
+    } catch (e) {
+      console.error('❌ La réponse n\'est pas du JSON valide:', data.substring(0, 200));
+      res.status(500).json({ 
+        error: 'Invalid JSON response',
+        message: 'Le serveur a renvoyé une réponse invalide'
+      });
+      return;
+    }
+    
     // Ajouter les headers CORS
-    res.setHeader('Content-Type', response.headers.get('content-type') || 'application/json');
-    res.status(response.status).send(data);
+    res.setHeader('Content-Type', 'application/json');
+    res.status(200).send(data);
   } catch (error) {
-    console.error('❌ Proxy error:', error);
+    console.error('❌ Proxy error:', error.message);
     res.status(500).json({ 
       error: 'Proxy error', 
-      message: error.message,
-      target: targetUrl 
+      message: error.message 
     });
   }
 }
