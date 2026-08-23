@@ -10,9 +10,13 @@ export default async function handler(req, res) {
     return;
   }
 
-  // Récupérer le chemin demandé depuis l'URL
+  // Récupérer le chemin complet depuis l'URL
+  // Exemple: /data/classes.json
   const url = req.url;
-  const targetUrl = `https://mouafogaetan.github.io/revisio_data${url}`;
+  
+  // Cibler le dépôt GitHub contenant les données
+  const targetBase = 'https://mouafogaetan.github.io/revisio_data';
+  const targetUrl = `${targetBase}${url}`;
   
   console.log(`🔄 Proxy: ${targetUrl}`);
   
@@ -32,11 +36,14 @@ export default async function handler(req, res) {
     res.status(response.status).send(data);
   } catch (error) {
     console.error('❌ Proxy error:', error);
-    res.status(500).json({ error: 'Proxy error', message: error.message });
+    res.status(500).json({ 
+      error: 'Proxy error', 
+      message: error.message,
+      target: targetUrl 
+    });
   }
 }
 
-// Configuration pour Vercel
 export const config = {
   api: {
     externalResolver: true,

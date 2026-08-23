@@ -1,7 +1,5 @@
 // Utiliser le proxy en développement et en production
-export const API_URL = import.meta.env.DEV 
-  ? '/api/revisio_data' 
-  : '/api/revisio_data'  // Maintenant le proxy fonctionne aussi en production
+export const API_URL = '/api/revisio_data'
 
 export const APP_TITLE = import.meta.env.VITE_APP_TITLE || 'Revisio'
 
