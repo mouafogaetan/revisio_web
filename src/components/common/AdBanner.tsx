@@ -40,12 +40,24 @@ export const AdBanner: React.FC<AdBannerProps> = ({
 
   // Observer pour détecter le chargement des annonces
   useEffect(() => {
+    console.log('[AdSense debug] AdBanner render', {
+      isEnabled,
+      adSlot,
+      hasContainer: !!containerRef.current,
+      hostname: typeof window !== 'undefined' ? window.location.hostname : 'unknown'
+    })
+
     if (!isEnabled || !containerRef.current) return
 
     const observer = new MutationObserver(() => {
       if (containerRef.current && isMounted.current) {
         const adElement = containerRef.current.querySelector('ins.adsbygoogle')
         const hasAdContent = !!adElement && (adElement.innerHTML?.length ?? 0) > 0
+        console.log('[AdSense debug] MutationObserver check', {
+          hasAdElement: !!adElement,
+          hasAdContent,
+          innerHTMLLength: adElement?.innerHTML?.length ?? 0
+        })
         if (hasAdContent) {
           setAdLoaded(true)
         }
