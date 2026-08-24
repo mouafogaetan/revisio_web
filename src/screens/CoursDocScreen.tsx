@@ -333,24 +333,6 @@ export const CoursDocScreen: React.FC = () => {
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          {isSpeechSupported && hasTextToSpeak && (
-            <Button
-              variant={isSpeaking ? 'default' : 'ghost'}
-              onClick={toggleSpeaking}
-              className={isSpeaking ? 'bg-primary text-white hover:bg-primary/90' : ''}
-              title={isSpeaking ? (isPaused ? 'Reprendre la lecture' : 'Arrêter la lecture') : 'Lire à haute voix'}
-            >
-              {isSpeaking ? (
-                isPaused ? (
-                  <Play className="w-4 h-4" />
-                ) : (
-                  <Pause className="w-4 h-4" />
-                )
-              ) : (
-                <Volume2 className="w-4 h-4" />
-              )}
-            </Button>
-          )}
           <Button variant="ghost" onClick={() => window.location.reload()}>
             <RefreshCw className="w-4 h-4" />
           </Button>
@@ -397,7 +379,7 @@ export const CoursDocScreen: React.FC = () => {
       )}
 
       <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
-        <div className="flex items-center space-x-2">
+        <div className="hidden sm:flex items-center space-x-2">
           <Button
             variant="ghost"
             onClick={goToPrev}
@@ -407,6 +389,22 @@ export const CoursDocScreen: React.FC = () => {
             <ChevronLeft className="w-4 h-4 mr-1" />
             Précédent
           </Button>
+
+          {isSpeechSupported && hasTextToSpeak && (
+            <Button
+              variant={isSpeaking ? 'default' : 'ghost'}
+              onClick={toggleSpeaking}
+              className={isSpeaking ? 'bg-primary text-white hover:bg-primary/90' : ''}
+              title={isSpeaking ? (isPaused ? 'Reprendre la lecture' : 'Arrêter la lecture') : 'Lire à haute voix'}
+            >
+              {isSpeaking ? (
+                <Pause className="w-4 h-4" />
+              ) : (
+                <Play className="w-4 h-4" />
+              )}
+            </Button>
+          )}
+
           <Button
             variant="ghost"
             onClick={goToNext}
@@ -417,15 +415,56 @@ export const CoursDocScreen: React.FC = () => {
             <ChevronRight className="w-4 h-4 ml-1" />
           </Button>
         </div>
+
         <div className="flex items-center space-x-4">
           {isSpeechSupported && hasTextToSpeak && (
-            <span className="text-xs text-gray-400">
+            <span className="text-xs text-gray-400 hidden sm:inline">
               {isSpeaking ? '🔊' : '🔇'} Lecture disponible
             </span>
           )}
           <span className="text-sm text-gray-500">
             {currentIndex + 1} / {slides.length}
           </span>
+        </div>
+      </div>
+
+      {/* Mobile floating controls (icons only) */}
+      <div className="sm:hidden fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
+        <div className="bg-white/95 backdrop-blur rounded-full px-3 py-2 shadow-lg flex items-center space-x-3">
+          <Button
+            variant="ghost"
+            onClick={goToPrev}
+            disabled={currentIndex === 0}
+            className="p-2"
+            aria-label="Précédent"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </Button>
+
+          {isSpeechSupported && hasTextToSpeak && (
+            <Button
+              variant={isSpeaking ? 'default' : 'ghost'}
+              onClick={toggleSpeaking}
+              className={isSpeaking ? 'bg-primary text-white hover:bg-primary/90 p-2 rounded-full' : 'p-2'}
+              aria-label="Lire"
+            >
+              {isSpeaking ? (
+                <Pause className="w-5 h-5" />
+              ) : (
+                <Play className="w-5 h-5" />
+              )}
+            </Button>
+          )}
+
+          <Button
+            variant="ghost"
+            onClick={goToNext}
+            disabled={currentIndex === slides.length - 1}
+            className="p-2"
+            aria-label="Suivant"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </Button>
         </div>
       </div>
     </div>
