@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import useMeta from '@/hooks/useMeta'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAppStore } from '@/store/appStore'
 import { Button } from '@/components/ui/button'
@@ -59,6 +60,15 @@ export const LessonViewScreen: React.FC = () => {
       </div>
     )
   }
+
+  // Meta dynamique pour la leçon
+  useMeta({
+    title: `${lesson.lessonName} — ${matiere.matiereName} | Revisio`,
+    description: `Cours: ${lesson.lessonName} — ${matiere.matiereName}. Révisez gratuitement sur Revisio.`,
+    url: typeof window !== 'undefined' ? window.location.href : undefined,
+    image: 'https://revisio-web.vercel.app/icon-512.png',
+    type: 'article'
+  })
 
   const menuItems = [
     {

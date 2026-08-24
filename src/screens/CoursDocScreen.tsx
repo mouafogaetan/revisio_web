@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react'
+import useMeta from '@/hooks/useMeta'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAppStore } from '@/store/appStore'
 import { Button } from '@/components/ui/button'
@@ -312,6 +313,20 @@ export const CoursDocScreen: React.FC = () => {
 
   const currentSlide = slides[currentIndex] || slides[0]
   const hasTextToSpeak = currentSlide?.texteParle && currentSlide.texteParle.trim() !== ''
+
+  // Meta dynamiques basés sur le slide courant / leçon
+  useMeta({
+    title: currentSlide?.titre
+      ? `${currentSlide.titre} — ${lesson?.lessonName || ''} | Revisio`
+      : `${lesson?.lessonName || 'Cours'} | Revisio`,
+    description: (() => {
+      const raw = (currentSlide?.contenu || lesson?.lessonName || '').replace(/<[^>]*>/g, '')
+      return raw.substring(0, 160)
+    })(),
+    url: typeof window !== 'undefined' ? window.location.href : undefined,
+    image: 'https://revisio-web.vercel.app/icon-512.png',
+    type: 'article'
+  })
 
   return (
     <div className="flex flex-col h-full">
