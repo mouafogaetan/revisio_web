@@ -37,6 +37,16 @@ export default async function handler(req, res) {
       });
       return;
     }
+
+    const contentType = response.headers.get('content-type') || 'application/octet-stream';
+
+    // Les fichiers image / assets ne sont pas du JSON ; on les renvoie bruts.
+    if (!contentType.includes('application/json') && !contentType.includes('+json')) {
+      const buffer = Buffer.from(await response.arrayBuffer());
+      res.setHeader('Content-Type', contentType);
+      res.status(200).send(buffer);
+      return;
+    }
     
     const data = await response.text();
     
