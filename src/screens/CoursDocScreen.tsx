@@ -97,7 +97,7 @@ export const CoursDocScreen: React.FC = () => {
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setShowFullScreenAd(true)
-    }, 180000)
+    }, 60000)
 
     return () => window.clearTimeout(timer)
   }, [])

@@ -240,7 +240,7 @@ export const ReponsesScreen: React.FC = () => {
       <FullScreenAdModal
         visible={showFullScreenAd}
         onClose={() => setShowFullScreenAd(false)}
-        durationMs={180000}
+        durationMs={5000}
         title="Réponses"
       />
     </div>

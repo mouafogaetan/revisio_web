@@ -12,16 +12,14 @@ interface FullScreenAdModalProps {
 export const FullScreenAdModal: React.FC<FullScreenAdModalProps> = ({
   visible,
   onClose,
-  durationMs = 180000,
+  durationMs = 5000,
   title = 'Publicité'
 }) => {
   const [progress, setProgress] = useState(0)
-  const [isComplete, setIsComplete] = useState(false)
 
   useEffect(() => {
     if (!visible) {
       setProgress(0)
-      setIsComplete(false)
       return
     }
 
@@ -32,13 +30,13 @@ export const FullScreenAdModal: React.FC<FullScreenAdModalProps> = ({
       setProgress(nextProgress)
 
       if (nextProgress >= 100) {
-        setIsComplete(true)
         window.clearInterval(interval)
+        onClose()
       }
-    }, 250)
+    }, 200)
 
     return () => window.clearInterval(interval)
-  }, [visible, durationMs])
+  }, [visible, durationMs, onClose])
 
   if (!visible) return null
 
@@ -51,16 +49,14 @@ export const FullScreenAdModal: React.FC<FullScreenAdModalProps> = ({
             <h3 className="text-lg font-bold text-gray-800">Publicité sponsorisée</h3>
           </div>
 
-          {isComplete && (
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-full bg-gray-100 p-2 text-gray-600 transition hover:bg-gray-200"
-              aria-label="Fermer la publicité"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full bg-gray-100 p-2 text-gray-600 transition hover:bg-gray-200"
+            aria-label="Fermer la publicité"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
 
         <div className="mb-4 h-2.5 w-full overflow-hidden rounded-full bg-gray-200">
@@ -71,20 +67,16 @@ export const FullScreenAdModal: React.FC<FullScreenAdModalProps> = ({
         </div>
 
         <p className="mb-4 text-center text-sm text-gray-600">
-          {isComplete
-            ? 'La publicité est terminée. Vous pouvez la fermer.'
-            : 'Cette publicité se ferme automatiquement lorsque le temps est écoulé.'}
+          Cette publicité se ferme automatiquement dans quelques secondes.
         </p>
 
         <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
           <AdManager type="banner" position="inline" delay={0} showLabel={false} className="w-full" />
         </div>
 
-        {!isComplete && (
-          <div className="mt-4 text-center text-xs text-gray-500">
-            Temps restant : {Math.max(0, Math.ceil((durationMs - progress * durationMs / 100) / 1000))}s
-          </div>
-        )}
+        <div className="mt-4 text-center text-xs text-gray-500">
+          Fermeture automatique : {Math.max(0, Math.ceil((durationMs - progress * durationMs / 100) / 1000))}s
+        </div>
       </div>
     </div>
   )

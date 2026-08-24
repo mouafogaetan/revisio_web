@@ -34,7 +34,7 @@ export const QuizScreen: React.FC = () => {
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setShowFullScreenAd(true)
-    }, 180000)
+    }, 60000)
 
     return () => window.clearTimeout(timer)
   }, [])
@@ -287,7 +287,7 @@ export const QuizScreen: React.FC = () => {
       <FullScreenAdModal
         visible={showFullScreenAd}
         onClose={() => setShowFullScreenAd(false)}
-        durationMs={180000}
+        durationMs={5000}
         title="Quiz"
       />
     </div>
