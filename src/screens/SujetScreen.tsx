@@ -113,8 +113,8 @@ export const SujetScreen: React.FC = () => {
   return (
     <div className="flex flex-col h-full">
       {selectedEpreuve ? (
-        <div className="flex flex-col flex-1 min-h-0"> {/* CHANGEMENT: flex-1 min-h-0 au lieu de h-screen */}
-          <div className="flex items-center mb-4">
+        <div className="flex flex-col h-[calc(100vh-8rem)] min-h-0">
+          <div className="flex items-center mb-4 shrink-0">
             <Button
               variant="ghost"
               onClick={closeDetail}
@@ -138,7 +138,7 @@ export const SujetScreen: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex-1 relative bg-white overflow-hidden rounded-lg border border-gray-200 shadow-sm min-h-0">
+          <div className="flex-1 min-h-0 relative bg-white overflow-hidden rounded-lg border border-gray-200 shadow-sm">
             {iframeLoading && (
               <div className="absolute inset-0 flex items-center justify-center bg-white z-10">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
