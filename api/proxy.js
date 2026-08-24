@@ -10,15 +10,14 @@ export default async function handler(req, res) {
     return;
   }
 
-  // Récupérer le chemin demandé
-  // Le chemin complet est dans req.url
-  const path = req.url;
-  
-  // Cibler le dépôt GitHub contenant les données
-  const targetBase = 'https://mouafogaetan.github.io/revisio_data';
-  const targetUrl = `${targetBase}${path}`;
-  
-  console.log(`🔄 Proxy: ${targetUrl}`);
+  const targetBase = process.env.VITE_API_URL || 'https://mouafogaetan.github.io/revisio_data';
+  const requestUrl = new URL(req.url || '/', 'http://localhost');
+  const rawPath = requestUrl.pathname;
+  const cleanPath = rawPath.replace(/^\/api\/revisio_data/, '') || '/';
+  const targetUrl = new URL(cleanPath.replace(/^\/+/, ''), `${targetBase}/`);
+  targetUrl.search = requestUrl.search;
+
+  console.log(`🔄 Proxy: ${requestUrl.pathname}${requestUrl.search} -> ${targetUrl.toString()}`);
   
   try {
     const response = await fetch(targetUrl, {

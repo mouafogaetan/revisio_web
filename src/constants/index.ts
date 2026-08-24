@@ -1,4 +1,7 @@
-// Utiliser le proxy en développement et en production
+// URL publique du site de données (GitHub Pages)
+export const DATA_SOURCE_URL = import.meta.env.VITE_API_URL || 'https://mouafogaetan.github.io/revisio_data'
+
+// URL interne du proxy Vercel pour les requêtes front
 export const API_URL = '/api/revisio_data'
 
 export const APP_TITLE = import.meta.env.VITE_APP_TITLE || 'Revisio'
