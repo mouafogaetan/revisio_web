@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { shouldShowAds, isAdSenseReady, loadAdSense } from '@/utils/adUtils'
+import { shouldShowAds, isAdSenseReady } from '@/utils/adUtils'
 
 export const useAdSense = () => {
   const [isReady, setIsReady] = useState(false)
@@ -11,17 +11,15 @@ export const useAdSense = () => {
     setShouldShow(show)
 
     if (show) {
-      // Vérifier si AdSense est chargé
+      // Vérifier si AdSense est chargé sans le pousser plusieurs fois
       const checkAdSense = () => {
         if (isAdSenseReady()) {
           setIsReady(true)
-          loadAdSense()
         } else {
           // Réessayer après un délai
           const interval = setInterval(() => {
             if (isAdSenseReady()) {
               setIsReady(true)
-              loadAdSense()
               clearInterval(interval)
             }
           }, 1000)

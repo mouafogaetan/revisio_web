@@ -30,6 +30,7 @@ export const AdBanner: React.FC<AdBannerProps> = ({
   const [error, setError] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const isMounted = useRef(true)
+  const hasPushedAd = useRef(false)
 
   useEffect(() => {
     isMounted.current = true
@@ -37,6 +38,23 @@ export const AdBanner: React.FC<AdBannerProps> = ({
       isMounted.current = false
     }
   }, [])
+
+  useEffect(() => {
+    if (!isEnabled || !containerRef.current || hasPushedAd.current) return
+
+    const ins = containerRef.current.querySelector('ins.adsbygoogle')
+    if (!ins) return
+
+    try {
+      const adsbygoogle = window.adsbygoogle || []
+      adsbygoogle.push({})
+      hasPushedAd.current = true
+      console.log('[AdSense debug] push() unique pour le slot', adSlot)
+    } catch (e) {
+      console.warn('[AdSense debug] push() impossible pour le slot', adSlot, e)
+      setError('Impossible de charger la publicité')
+    }
+  }, [isEnabled, adSlot])
 
   // Observer pour détecter le chargement des annonces
   useEffect(() => {
@@ -77,11 +95,13 @@ export const AdBanner: React.FC<AdBannerProps> = ({
   const retryLoad = () => {
     setError(null)
     setAdLoaded(false)
+    hasPushedAd.current = false
 
     try {
-      const adsbygoogle = window.adsbygoogle
-      if (adsbygoogle) {
-        adsbygoogle.push({})
+      const ins = containerRef.current?.querySelector('ins.adsbygoogle')
+      if (ins && window.adsbygoogle) {
+        window.adsbygoogle.push({})
+        hasPushedAd.current = true
       }
     } catch (e) {
       console.warn('Erreur lors du rechargement de l\'annonce:', e)
@@ -157,18 +177,6 @@ export const AdBanner: React.FC<AdBannerProps> = ({
         data-full-width-responsive={isResponsive ? 'true' : 'false'}
       />
       
-      {/* Script pour pousser l'annonce */}
-      <script
-        dangerouslySetInnerHTML={{
-          __html: `
-            try {
-              (adsbygoogle = window.adsbygoogle || []).push({});
-            } catch (e) {
-              console.warn('Erreur AdSense:', e);
-            }
-          `
-        }}
-      />
     </div>
   )
 }

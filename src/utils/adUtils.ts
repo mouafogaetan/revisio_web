@@ -55,15 +55,8 @@ export const isAdSenseReady = (): boolean => {
   }
 }
 
-// Fonction pour forcer le chargement d'AdSense
+// Fonction de compatibilité conservée, mais sans push global pour éviter
+// les doublons sur plusieurs blocs AdSense dans la page.
 export const loadAdSense = (): void => {
-  try {
-    // @ts-ignore
-    if (window.adsbygoogle) {
-      // @ts-ignore
-      window.adsbygoogle.push({})
-    }
-  } catch (error) {
-    console.warn('Erreur lors du chargement d\'AdSense:', error)
-  }
+  console.log('[AdSense debug] loadAdSense appelé, push global ignoré pour éviter les doublons')
 }

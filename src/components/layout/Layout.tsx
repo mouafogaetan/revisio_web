@@ -26,12 +26,6 @@ const LayoutContent: React.FC = () => {
           "flex-1 overflow-auto transition-all duration-300",
           isMobile ? "pb-24" : "pb-6"
         )}>
-          {/* Bannière en haut de chaque page */}
-          <div className="sticky top-0 z-10 bg-gray-50/95 backdrop-blur-sm">
-            <div className="container mx-auto px-4 py-2">
-              <AdManager type="banner" position="top" delay={1500} showLabel={false} />
-            </div>
-          </div>
           
           {/* Contenu principal - CHANGEMENT: flex-1 flex flex-col */}
           <div className="container mx-auto px-4 py-4 md:py-6 flex-1 flex flex-col">
