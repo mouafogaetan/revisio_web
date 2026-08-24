@@ -25,10 +25,10 @@ export const AdManager: React.FC<AdManagerProps> = ({
   showLabel = true
 }) => {
   const [showAd, setShowAd] = useState(false)
+  const [isSidebarVisible, setIsSidebarVisible] = useState(false)
   const { shouldShow, isEnabled } = useAdSense()
 
   useEffect(() => {
-    // Délai avant d'afficher l'annonce pour ne pas ralentir le chargement
     const timer = setTimeout(() => {
       setShowAd(shouldShow && isEnabled)
     }, delay)
@@ -36,7 +36,26 @@ export const AdManager: React.FC<AdManagerProps> = ({
     return () => clearTimeout(timer)
   }, [shouldShow, isEnabled, delay])
 
-  if (!showAd) {
+  useEffect(() => {
+    if (type !== 'sidebar') {
+      setIsSidebarVisible(true)
+      return
+    }
+
+    const mediaQuery = window.matchMedia('(min-width: 1280px)')
+    const updateVisibility = () => setIsSidebarVisible(mediaQuery.matches)
+
+    updateVisibility()
+    mediaQuery.addEventListener?.('change', updateVisibility)
+
+    return () => {
+      mediaQuery.removeEventListener?.('change', updateVisibility)
+    }
+  }, [type])
+
+  const shouldRenderAd = showAd && (type !== 'sidebar' || isSidebarVisible)
+
+  if (!shouldRenderAd) {
     // En développement, afficher un petit placeholder
     if (import.meta.env.DEV) {
       return (
@@ -66,7 +85,7 @@ export const AdManager: React.FC<AdManagerProps> = ({
   const formatMap = {
     banner: 'auto' as const,
     rectangle: 'rectangle' as const,
-    sidebar: 'vertical' as const,
+    sidebar: 'auto' as const,
     inArticle: 'auto' as const
   }
 
