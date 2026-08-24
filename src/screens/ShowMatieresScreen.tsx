@@ -58,6 +58,7 @@ export const ShowMatieresScreen: React.FC = () => {
   }
 
   const matieres = classe.matieres || []
+  const adInsertIndex = matieres.length > 2 ? Math.max(1, Math.ceil(matieres.length / 2)) : -1
 
   return (
     <div>
@@ -77,23 +78,30 @@ export const ShowMatieresScreen: React.FC = () => {
       <div className="lg:flex lg:items-start lg:gap-6">
         <div className="flex-1 min-w-0">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {matieres.map((matiere) => {
+            {matieres.map((matiere, index) => {
               const imageUrl = getImageUrl('matiere', matiere.matiereId)
               const count = matiere.chapitres?.length || 0
               const showCount = isDataLoaded && matiere.chapitres !== undefined
 
               return (
-                <ContentCard
-                  key={matiere.matiereId}
-                  id={matiere.matiereId}
-                  title={matiere.matiereName}
-                  iconType="matiere"
-                  imageUrl={imageUrl}
-                  count={showCount ? count : undefined}
-                  countLabel="chapitre(s)"
-                  onClick={handlePressMatiere}
-                  isLoading={!isDataLoaded}
-                />
+                <React.Fragment key={matiere.matiereId}>
+                  <ContentCard
+                    id={matiere.matiereId}
+                    title={matiere.matiereName}
+                    iconType="matiere"
+                    imageUrl={imageUrl}
+                    count={showCount ? count : undefined}
+                    countLabel="chapitre(s)"
+                    onClick={handlePressMatiere}
+                    isLoading={!isDataLoaded}
+                  />
+
+                  {adInsertIndex !== -1 && index === adInsertIndex - 1 && (
+                    <div className="md:col-span-2 lg:col-span-3">
+                      <AdManager type="inArticle" position="inline" delay={1000} showLabel={false} className="w-full" />
+                    </div>
+                  )}
+                </React.Fragment>
               )
             })}
           </div>

@@ -6,6 +6,7 @@ import { Loader2, ArrowLeft, Eye, EyeOff, ChevronLeft, ChevronRight } from 'luci
 import { getExercices } from '@/services/api'
 import { Exercice, Question as QuestionType } from '@/types/classeTypes'
 import { MathJaxContent } from '@/components/common/MathJaxContent'
+import { FullScreenAdModal } from '@/components/common/FullScreenAdModal'
 
 export const ExerciceDocScreen: React.FC = () => {
   const { classeId, matiereId, chapitreId, lessonId } = useParams<{
@@ -19,6 +20,7 @@ export const ExerciceDocScreen: React.FC = () => {
   const [exercices, setExercices] = useState<Exercice[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showFullScreenAd, setShowFullScreenAd] = useState(false)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [visibleAnswers, setVisibleAnswers] = useState<Record<string, boolean>>({})
   const [renderKey, setRenderKey] = useState(0)
@@ -52,6 +54,14 @@ export const ExerciceDocScreen: React.FC = () => {
     }
     loadExercices()
   }, [classeId, matiereId, chapitreId, lessonId])
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setShowFullScreenAd(true)
+    }, 180000)
+
+    return () => window.clearTimeout(timer)
+  }, [])
 
   const toggleAnswer = (questionId: string) => {
     setVisibleAnswers(prev => {
@@ -289,6 +299,13 @@ export const ExerciceDocScreen: React.FC = () => {
           <ChevronRight className="w-4 h-4 ml-1" />
         </Button>
       </div>
+
+      <FullScreenAdModal
+        visible={showFullScreenAd}
+        onClose={() => setShowFullScreenAd(false)}
+        durationMs={180000}
+        title="Exercice"
+      />
     </div>
   )
 }

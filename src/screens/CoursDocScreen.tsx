@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Loader2, ArrowLeft, ChevronLeft, ChevronRight, RefreshCw, Volume2, VolumeX, Play, Pause } from 'lucide-react'
 import { API_URL } from '@/constants'
 import { MathJaxContent } from '@/components/common/MathJaxContent'
+import { FullScreenAdModal } from '@/components/common/FullScreenAdModal'
 
 interface SlideData {
   titre: string
@@ -26,6 +27,7 @@ export const CoursDocScreen: React.FC = () => {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showFullScreenAd, setShowFullScreenAd] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
   const [isSpeechSupported, setIsSpeechSupported] = useState(true)
@@ -91,6 +93,14 @@ export const CoursDocScreen: React.FC = () => {
     }
     loadSlides()
   }, [classeId, matiereId, chapitreId, lessonId])
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setShowFullScreenAd(true)
+    }, 180000)
+
+    return () => window.clearTimeout(timer)
+  }, [])
 
   const extractSlidesFromHTML = (html: string): SlideData[] => {
     try {

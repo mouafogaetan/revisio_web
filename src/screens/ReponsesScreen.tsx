@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, CheckCircle, XCircle, ChevronLeft, ChevronRight } from 'lucide-react'
 import { MathJaxContent } from '@/components/common/MathJaxContent'
+import { FullScreenAdModal } from '@/components/common/FullScreenAdModal'
 
 export const ReponsesScreen: React.FC = () => {
   const location = useLocation()
@@ -10,6 +11,7 @@ export const ReponsesScreen: React.FC = () => {
   const { quiz } = location.state || {}
   const [currentIndex, setCurrentIndex] = useState(0)
   const [renderKey, setRenderKey] = useState(0)
+  const [showFullScreenAd, setShowFullScreenAd] = useState(true)
 
   if (!quiz || !quiz.questions || quiz.questions.length === 0) {
     return (
@@ -234,6 +236,13 @@ export const ReponsesScreen: React.FC = () => {
           <ChevronRight className="w-4 h-4 ml-1" />
         </Button>
       </div>
+
+      <FullScreenAdModal
+        visible={showFullScreenAd}
+        onClose={() => setShowFullScreenAd(false)}
+        durationMs={180000}
+        title="Réponses"
+      />
     </div>
   )
 }

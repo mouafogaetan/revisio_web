@@ -10,6 +10,7 @@ import {
 import { getCoursVideo } from '@/services/api'
 import { CoursVideo } from '@/types/classeTypes'
 import { getYouTubeId } from '@/lib/utils'
+import { FullScreenAdModal } from '@/components/common/FullScreenAdModal'
 
 // Qualités disponibles
 const QUALITIES = [
@@ -36,6 +37,7 @@ export const CoursVideoScreen: React.FC = () => {
   const [videos, setVideos] = useState<CoursVideo[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showFullScreenAd, setShowFullScreenAd] = useState(false)
   const [selectedVideo, setSelectedVideo] = useState<CoursVideo | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [isMuted, setIsMuted] = useState(false)
@@ -91,6 +93,14 @@ export const CoursVideoScreen: React.FC = () => {
     }
     loadVideos()
   }, [classeId, matiereId, chapitreId, lessonId])
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setShowFullScreenAd(true)
+    }, 180000)
+
+    return () => window.clearTimeout(timer)
+  }, [])
 
   // Chargement du lecteur YouTube
   useEffect(() => {
@@ -564,6 +574,13 @@ export const CoursVideoScreen: React.FC = () => {
           <p className="text-gray-500">Aucune vidéo disponible</p>
         </div>
       )}
+
+      <FullScreenAdModal
+        visible={showFullScreenAd}
+        onClose={() => setShowFullScreenAd(false)}
+        durationMs={180000}
+        title="Vidéo"
+      />
     </div>
   )
 }

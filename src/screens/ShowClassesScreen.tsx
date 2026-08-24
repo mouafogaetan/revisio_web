@@ -29,6 +29,8 @@ export const ShowClassesScreen: React.FC = () => {
     navigate(`/matiere/${classeId}`)
   }
 
+  const adInsertIndex = classes.length > 2 ? Math.max(1, Math.ceil(classes.length / 2)) : -1
+
   if (isLoading && classes.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -64,23 +66,30 @@ export const ShowClassesScreen: React.FC = () => {
       <div className="lg:flex lg:items-start lg:gap-6">
         <div className="flex-1 min-w-0">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {classes.map((classe) => {
+            {classes.map((classe, index) => {
               const imageUrl = getImageUrl('classe', classe.classeId)
               const count = classe.matieres?.length || 0
               const showCount = !isLoading && classe.matieres !== undefined
 
               return (
-                <ContentCard
-                  key={classe.classeId}
-                  id={classe.classeId}
-                  title={classe.classeName}
-                  iconType="classe"
-                  imageUrl={imageUrl}
-                  count={showCount ? count : undefined}
-                  countLabel="matière(s)"
-                  onClick={handlePressClasse}
-                  isLoading={isLoading}
-                />
+                <React.Fragment key={classe.classeId}>
+                  <ContentCard
+                    id={classe.classeId}
+                    title={classe.classeName}
+                    iconType="classe"
+                    imageUrl={imageUrl}
+                    count={showCount ? count : undefined}
+                    countLabel="matière(s)"
+                    onClick={handlePressClasse}
+                    isLoading={isLoading}
+                  />
+
+                  {adInsertIndex !== -1 && index === adInsertIndex - 1 && (
+                    <div className="md:col-span-2 lg:col-span-3">
+                      <AdManager type="inArticle" position="inline" delay={900} showLabel={false} className="w-full" />
+                    </div>
+                  )}
+                </React.Fragment>
               )
             })}
           </div>

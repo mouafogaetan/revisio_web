@@ -61,6 +61,7 @@ export const ShowChapitresScreen: React.FC = () => {
   }
 
   const chapitres = matiere.chapitres || []
+  const adInsertIndex = chapitres.length > 2 ? Math.max(1, Math.ceil(chapitres.length / 2)) : -1
 
   return (
     <div>
@@ -82,24 +83,29 @@ export const ShowChapitresScreen: React.FC = () => {
       <div className="lg:flex lg:items-start lg:gap-6">
         <div className="flex-1 min-w-0">
           <div className="space-y-3">
-            {chapitres.map((chapitre) => {
+            {chapitres.map((chapitre, index) => {
               const imageUrl = getImageUrl('chapitre', chapitre.matiereId)
               const count = chapitre.lessons?.length || 0
               const showCount = isDataLoaded && chapitre.lessons !== undefined
 
               return (
-                <ContentCard
-                  key={chapitre.chapitreId}
-                  id={chapitre.chapitreId}
-                  title={`Chapitre ${chapitre.index + 1}: ${chapitre.chapitreName}`}
-                  iconType="chapitre"
-                  imageUrl={imageUrl}
-                  count={showCount ? count : undefined}
-                  countLabel="leçon(s)"
-                  onClick={handlePressChapitre}
-                  isLoading={!isDataLoaded}
-                  className="w-full"
-                />
+                <React.Fragment key={chapitre.chapitreId}>
+                  <ContentCard
+                    id={chapitre.chapitreId}
+                    title={`Chapitre ${chapitre.index + 1}: ${chapitre.chapitreName}`}
+                    iconType="chapitre"
+                    imageUrl={imageUrl}
+                    count={showCount ? count : undefined}
+                    countLabel="leçon(s)"
+                    onClick={handlePressChapitre}
+                    isLoading={!isDataLoaded}
+                    className="w-full"
+                  />
+
+                  {adInsertIndex !== -1 && index === adInsertIndex - 1 && (
+                    <AdManager type="inArticle" position="inline" delay={1100} showLabel={false} className="w-full" />
+                  )}
+                </React.Fragment>
               )
             })}
           </div>

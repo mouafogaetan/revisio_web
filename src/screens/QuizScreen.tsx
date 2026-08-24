@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Loader2, ArrowLeft, CheckCircle, XCircle, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Questions, Quiz } from '@/types/classeTypes'
 import { MathJaxContent } from '@/components/common/MathJaxContent'
+import { FullScreenAdModal } from '@/components/common/FullScreenAdModal'
 
 export const QuizScreen: React.FC = () => {
   const location = useLocation()
@@ -15,6 +16,7 @@ export const QuizScreen: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [renderKey, setRenderKey] = useState(0)
+  const [showFullScreenAd, setShowFullScreenAd] = useState(false)
 
   useEffect(() => {
     const quizData = location.state?.quiz
@@ -28,6 +30,14 @@ export const QuizScreen: React.FC = () => {
       setLoading(false)
     }
   }, [location.state])
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setShowFullScreenAd(true)
+    }, 180000)
+
+    return () => window.clearTimeout(timer)
+  }, [])
 
   const handleSelectOption = (optionIndex: number) => {
     setQuestions(prev => 
@@ -273,6 +283,13 @@ export const QuizScreen: React.FC = () => {
           {allAnswered ? '✅ Toutes les questions ont été répondues' : `${totalQuestions - answeredCount} question(s) restante(s)`}
         </p>
       </div>
+
+      <FullScreenAdModal
+        visible={showFullScreenAd}
+        onClose={() => setShowFullScreenAd(false)}
+        durationMs={180000}
+        title="Quiz"
+      />
     </div>
   )
 }

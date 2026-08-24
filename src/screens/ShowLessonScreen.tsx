@@ -62,6 +62,7 @@ export const ShowLessonScreen: React.FC = () => {
   }
 
   const lessons = chapitre.lessons || []
+  const adInsertIndex = lessons.length > 2 ? Math.max(1, Math.ceil(lessons.length / 2)) : -1
 
   return (
     <div>
@@ -81,20 +82,25 @@ export const ShowLessonScreen: React.FC = () => {
       <div className="lg:flex lg:items-start lg:gap-6">
         <div className="flex-1 min-w-0">
           <div className="space-y-3">
-            {lessons.map((lesson) => {
+            {lessons.map((lesson, index) => {
               const imageUrl = getImageUrl('lesson', lesson.matiereId)
 
               return (
-                <ContentCard
-                  key={lesson.lessonId}
-                  id={lesson.lessonId}
-                  title={`Leçon ${lesson.index + 1}: ${lesson.lessonName}`}
-                  iconType="lesson"
-                  imageUrl={imageUrl}
-                  onClick={handlePressLesson}
-                  isLoading={!isDataLoaded}
-                  className="w-full"
-                />
+                <React.Fragment key={lesson.lessonId}>
+                  <ContentCard
+                    id={lesson.lessonId}
+                    title={`Leçon ${lesson.index + 1}: ${lesson.lessonName}`}
+                    iconType="lesson"
+                    imageUrl={imageUrl}
+                    onClick={handlePressLesson}
+                    isLoading={!isDataLoaded}
+                    className="w-full"
+                  />
+
+                  {adInsertIndex !== -1 && index === adInsertIndex - 1 && (
+                    <AdManager type="inArticle" position="inline" delay={1200} showLabel={false} className="w-full" />
+                  )}
+                </React.Fragment>
               )
             })}
           </div>

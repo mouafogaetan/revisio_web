@@ -1,12 +1,14 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, CheckCircle, XCircle, Trophy, Eye } from 'lucide-react'
 import { QuizResult } from '@/types/classeTypes'
+import { FullScreenAdModal } from '@/components/common/FullScreenAdModal'
 
 export const ResultScreen: React.FC = () => {
   const location = useLocation()
   const navigate = useNavigate()
+  const [showFullScreenAd, setShowFullScreenAd] = useState(true)
   
   const { result, quiz } = location.state || {}
   
@@ -148,6 +150,13 @@ export const ResultScreen: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <FullScreenAdModal
+        visible={showFullScreenAd}
+        onClose={() => setShowFullScreenAd(false)}
+        durationMs={180000}
+        title="Résultats"
+      />
     </div>
   )
 }
