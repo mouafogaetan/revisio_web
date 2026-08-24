@@ -1,3 +1,4 @@
+// src/components/layout/Layout.tsx
 import React, { useEffect } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { Header } from './Header'
@@ -17,9 +18,9 @@ const LayoutContent: React.FC = () => {
   }, [location.pathname])
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-gray-50"> {/* CHANGEMENT: flex flex-col */}
       <Header />
-      <div className="flex">
+      <div className="flex flex-1 min-h-0"> {/* CHANGEMENT: flex-1 min-h-0 */}
         <Sidebar />
         <main className={cn(
           "flex-1 overflow-auto transition-all duration-300",
@@ -32,8 +33,8 @@ const LayoutContent: React.FC = () => {
             </div>
           </div>
           
-          {/* Contenu principal */}
-          <div className="container mx-auto px-4 py-4 md:py-6">
+          {/* Contenu principal - CHANGEMENT: flex-1 flex flex-col */}
+          <div className="container mx-auto px-4 py-4 md:py-6 flex-1 flex flex-col">
             <Outlet />
           </div>
           
