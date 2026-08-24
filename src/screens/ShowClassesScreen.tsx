@@ -6,6 +6,7 @@ import { Loader2 } from 'lucide-react'
 import { ContentCard } from '@/components/common/ContentCard'
 import { getImageUrl } from '@/services/api'
 import { AddToHomeScreen } from '@/components/common/AddToHomeScreen'
+import { AdManager } from '@/components/common/AdManager'
 
 export const ShowClassesScreen: React.FC = () => {
   const navigate = useNavigate()
@@ -60,33 +61,43 @@ export const ShowClassesScreen: React.FC = () => {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {classes.map((classe) => {
-          const imageUrl = getImageUrl('classe', classe.classeId)
-          const count = classe.matieres?.length || 0
-          const showCount = !isLoading && classe.matieres !== undefined
+      <div className="lg:flex lg:items-start lg:gap-6">
+        <div className="flex-1 min-w-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {classes.map((classe) => {
+              const imageUrl = getImageUrl('classe', classe.classeId)
+              const count = classe.matieres?.length || 0
+              const showCount = !isLoading && classe.matieres !== undefined
 
-          return (
-            <ContentCard
-              key={classe.classeId}
-              id={classe.classeId}
-              title={classe.classeName}
-              iconType="classe"
-              imageUrl={imageUrl}
-              count={showCount ? count : undefined}
-              countLabel="matière(s)"
-              onClick={handlePressClasse}
-              isLoading={isLoading}
-            />
-          )
-        })}
-      </div>
+              return (
+                <ContentCard
+                  key={classe.classeId}
+                  id={classe.classeId}
+                  title={classe.classeName}
+                  iconType="classe"
+                  imageUrl={imageUrl}
+                  count={showCount ? count : undefined}
+                  countLabel="matière(s)"
+                  onClick={handlePressClasse}
+                  isLoading={isLoading}
+                />
+              )
+            })}
+          </div>
 
-      {classes.length === 0 && !isLoading && (
-        <div className="text-center py-10">
-          <p className="text-gray-500">Aucune classe disponible</p>
+          {classes.length === 0 && !isLoading && (
+            <div className="text-center py-10">
+              <p className="text-gray-500">Aucune classe disponible</p>
+            </div>
+          )}
         </div>
-      )}
+
+        <aside className="hidden xl:block w-[300px] shrink-0">
+          <div className="sticky top-24">
+            <AdManager type="sidebar" position="inline" delay={1200} showLabel={true} className="w-full" />
+          </div>
+        </aside>
+      </div>
 
       {/* Bouton flottant AddToHomeScreen */}
       <div className="fixed bottom-6 right-6 z-50">

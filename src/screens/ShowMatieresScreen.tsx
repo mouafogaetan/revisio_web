@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Loader2, ArrowLeft } from 'lucide-react'
 import { ContentCard } from '@/components/common/ContentCard'
 import { getImageUrl } from '@/services/api'
+import { AdManager } from '@/components/common/AdManager'
 
 export const ShowMatieresScreen: React.FC = () => {
   const { classeId } = useParams<{ classeId: string }>()
@@ -73,33 +74,43 @@ export const ShowMatieresScreen: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {matieres.map((matiere) => {
-          const imageUrl = getImageUrl('matiere', matiere.matiereId)
-          const count = matiere.chapitres?.length || 0
-          const showCount = isDataLoaded && matiere.chapitres !== undefined
+      <div className="lg:flex lg:items-start lg:gap-6">
+        <div className="flex-1 min-w-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {matieres.map((matiere) => {
+              const imageUrl = getImageUrl('matiere', matiere.matiereId)
+              const count = matiere.chapitres?.length || 0
+              const showCount = isDataLoaded && matiere.chapitres !== undefined
 
-          return (
-            <ContentCard
-              key={matiere.matiereId}
-              id={matiere.matiereId}
-              title={matiere.matiereName}
-              iconType="matiere"
-              imageUrl={imageUrl}
-              count={showCount ? count : undefined}
-              countLabel="chapitre(s)"
-              onClick={handlePressMatiere}
-              isLoading={!isDataLoaded}
-            />
-          )
-        })}
-      </div>
+              return (
+                <ContentCard
+                  key={matiere.matiereId}
+                  id={matiere.matiereId}
+                  title={matiere.matiereName}
+                  iconType="matiere"
+                  imageUrl={imageUrl}
+                  count={showCount ? count : undefined}
+                  countLabel="chapitre(s)"
+                  onClick={handlePressMatiere}
+                  isLoading={!isDataLoaded}
+                />
+              )
+            })}
+          </div>
 
-      {matieres.length === 0 && isDataLoaded && (
-        <div className="text-center py-10">
-          <p className="text-gray-500">Aucune matière disponible</p>
+          {matieres.length === 0 && isDataLoaded && (
+            <div className="text-center py-10">
+              <p className="text-gray-500">Aucune matière disponible</p>
+            </div>
+          )}
         </div>
-      )}
+
+        <aside className="hidden xl:block w-[300px] shrink-0">
+          <div className="sticky top-24">
+            <AdManager type="sidebar" position="inline" delay={1300} showLabel={true} className="w-full" />
+          </div>
+        </aside>
+      </div>
     </div>
   )
 }

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Loader2, ArrowLeft } from 'lucide-react'
 import { ContentCard } from '@/components/common/ContentCard'
 import { getImageUrl } from '@/services/api'
+import { AdManager } from '@/components/common/AdManager'
 
 export const ShowChapitresScreen: React.FC = () => {
   const { classeId, matiereId } = useParams<{ classeId: string; matiereId: string }>()
@@ -78,34 +79,44 @@ export const ShowChapitresScreen: React.FC = () => {
         📄 Voir les épreuves
       </Button>
 
-      <div className="space-y-3">
-        {chapitres.map((chapitre) => {
-          const imageUrl = getImageUrl('chapitre', chapitre.matiereId)
-          const count = chapitre.lessons?.length || 0
-          const showCount = isDataLoaded && chapitre.lessons !== undefined
+      <div className="lg:flex lg:items-start lg:gap-6">
+        <div className="flex-1 min-w-0">
+          <div className="space-y-3">
+            {chapitres.map((chapitre) => {
+              const imageUrl = getImageUrl('chapitre', chapitre.matiereId)
+              const count = chapitre.lessons?.length || 0
+              const showCount = isDataLoaded && chapitre.lessons !== undefined
 
-          return (
-            <ContentCard
-              key={chapitre.chapitreId}
-              id={chapitre.chapitreId}
-              title={`Chapitre ${chapitre.index + 1}: ${chapitre.chapitreName}`}
-              iconType="chapitre"
-              imageUrl={imageUrl}
-              count={showCount ? count : undefined}
-              countLabel="leçon(s)"
-              onClick={handlePressChapitre}
-              isLoading={!isDataLoaded}
-              className="w-full"
-            />
-          )
-        })}
-      </div>
+              return (
+                <ContentCard
+                  key={chapitre.chapitreId}
+                  id={chapitre.chapitreId}
+                  title={`Chapitre ${chapitre.index + 1}: ${chapitre.chapitreName}`}
+                  iconType="chapitre"
+                  imageUrl={imageUrl}
+                  count={showCount ? count : undefined}
+                  countLabel="leçon(s)"
+                  onClick={handlePressChapitre}
+                  isLoading={!isDataLoaded}
+                  className="w-full"
+                />
+              )
+            })}
+          </div>
 
-      {chapitres.length === 0 && isDataLoaded && (
-        <div className="text-center py-10">
-          <p className="text-gray-500">Aucun chapitre disponible</p>
+          {chapitres.length === 0 && isDataLoaded && (
+            <div className="text-center py-10">
+              <p className="text-gray-500">Aucun chapitre disponible</p>
+            </div>
+          )}
         </div>
-      )}
+
+        <aside className="hidden xl:block w-[300px] shrink-0">
+          <div className="sticky top-24">
+            <AdManager type="sidebar" position="inline" delay={1400} showLabel={true} className="w-full" />
+          </div>
+        </aside>
+      </div>
     </div>
   )
 }

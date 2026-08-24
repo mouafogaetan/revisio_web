@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Loader2, ArrowLeft } from 'lucide-react'
 import { ContentCard } from '@/components/common/ContentCard'
 import { getImageUrl } from '@/services/api'
+import { AdManager } from '@/components/common/AdManager'
 
 export const ShowLessonScreen: React.FC = () => {
   const { classeId, matiereId, chapitreId } = useParams<{
@@ -77,30 +78,40 @@ export const ShowLessonScreen: React.FC = () => {
         </div>
       </div>
 
-      <div className="space-y-3">
-        {lessons.map((lesson) => {
-          const imageUrl = getImageUrl('lesson', lesson.matiereId)
+      <div className="lg:flex lg:items-start lg:gap-6">
+        <div className="flex-1 min-w-0">
+          <div className="space-y-3">
+            {lessons.map((lesson) => {
+              const imageUrl = getImageUrl('lesson', lesson.matiereId)
 
-          return (
-            <ContentCard
-              key={lesson.lessonId}
-              id={lesson.lessonId}
-              title={`Leçon ${lesson.index + 1}: ${lesson.lessonName}`}
-              iconType="lesson"
-              imageUrl={imageUrl}
-              onClick={handlePressLesson}
-              isLoading={!isDataLoaded}
-              className="w-full"
-            />
-          )
-        })}
-      </div>
+              return (
+                <ContentCard
+                  key={lesson.lessonId}
+                  id={lesson.lessonId}
+                  title={`Leçon ${lesson.index + 1}: ${lesson.lessonName}`}
+                  iconType="lesson"
+                  imageUrl={imageUrl}
+                  onClick={handlePressLesson}
+                  isLoading={!isDataLoaded}
+                  className="w-full"
+                />
+              )
+            })}
+          </div>
 
-      {lessons.length === 0 && isDataLoaded && (
-        <div className="text-center py-10">
-          <p className="text-gray-500">Aucune leçon disponible</p>
+          {lessons.length === 0 && isDataLoaded && (
+            <div className="text-center py-10">
+              <p className="text-gray-500">Aucune leçon disponible</p>
+            </div>
+          )}
         </div>
-      )}
+
+        <aside className="hidden xl:block w-[300px] shrink-0">
+          <div className="sticky top-24">
+            <AdManager type="sidebar" position="inline" delay={1500} showLabel={true} className="w-full" />
+          </div>
+        </aside>
+      </div>
     </div>
   )
 }
