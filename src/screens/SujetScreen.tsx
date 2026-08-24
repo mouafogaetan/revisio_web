@@ -113,7 +113,7 @@ export const SujetScreen: React.FC = () => {
   return (
     <div className="flex flex-col h-full">
       {selectedEpreuve ? (
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-screen"> {/* CHANGEMENT: h-screen au lieu de h-full */}
           <div className="flex items-center mb-4">
             <Button
               variant="ghost"
@@ -138,7 +138,7 @@ export const SujetScreen: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex-1 relative bg-white overflow-hidden rounded-lg border border-gray-200 shadow-sm">
+          <div className="flex-1 relative bg-white overflow-hidden rounded-lg border border-gray-200 shadow-sm min-h-0"> {/* CHANGEMENT: ajout de min-h-0 */}
             {iframeLoading && (
               <div className="absolute inset-0 flex items-center justify-center bg-white z-10">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -182,7 +182,7 @@ export const SujetScreen: React.FC = () => {
             )}
           </div>
         </div>
-      ) : (
+      ): (
         <>
           <div className="flex items-center mb-4">
             <Button
