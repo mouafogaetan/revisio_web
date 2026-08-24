@@ -20,6 +20,7 @@ export const AddToHomeScreen: React.FC<AddToHomeScreenProps> = ({
   const [isStandalone, setIsStandalone] = useState(false)
   const [isDismissed, setIsDismissed] = useState(false)
   const [isVisible, setIsVisible] = useState(true)
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
 
   // Position classes
   const positionClasses = {
@@ -51,12 +52,26 @@ export const AddToHomeScreen: React.FC<AddToHomeScreenProps> = ({
       setIsDismissed(true)
     }
 
+    const handleBeforeInstallPrompt = (event: Event) => {
+      event.preventDefault()
+      setDeferredPrompt(event as any)
+    }
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+
     // Afficher automatiquement après un délai
     if (!isStandaloneMode && isMobileDevice && !dismissed) {
       const timer = setTimeout(() => {
         setShowPrompt(true)
       }, 3000)
-      return () => clearTimeout(timer)
+      return () => {
+        clearTimeout(timer)
+        window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+      }
+    }
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
     }
   }, [])
 
@@ -68,26 +83,26 @@ export const AddToHomeScreen: React.FC<AddToHomeScreenProps> = ({
   }
 
   const handleAddToHomeScreen = async () => {
-    // Pour Android (Chrome)
-    if (isAndroid && window.navigator && 'share' in window.navigator) {
-      try {
-        // @ts-ignore - window.navigator.share
-        await window.navigator.share({
-          title: 'Revisio',
-          text: 'Rejoignez-nous sur Revisio pour réviser vos cours !',
-          url: window.location.origin
-        })
-      } catch (error) {
-        console.warn('Share cancelled:', error)
-      }
-    } else {
-      // Pour les autres navigateurs, ouvrir une boîte de dialogue
-      alert(
-        isIOS 
-          ? "Pour ajouter Revisio à votre écran d'accueil :\n\n1. Appuyez sur le bouton 'Partager' (carré avec une flèche)\n2. Faites défiler vers le bas\n3. Appuyez sur 'Sur l'écran d'accueil'\n4. Appuyez sur 'Ajouter'"
-          : "Pour ajouter Revisio à votre écran d'accueil :\n\n1. Ouvrez le menu du navigateur (⋮)\n2. Appuyez sur 'Ajouter à l'écran d'accueil'\n3. Appuyez sur 'Ajouter'"
-      )
+    if (deferredPrompt) {
+      deferredPrompt.prompt()
+      const choiceResult = await deferredPrompt.userChoice
+      console.log('Install prompt choice:', choiceResult.outcome)
+      setDeferredPrompt(null)
+      setShowPrompt(false)
+      return
     }
+
+    if (isIOS) {
+      alert(
+        "Pour ajouter Revisio à votre écran d'accueil :\n\n1. Appuyez sur le bouton 'Partager' (carré avec une flèche)\n2. Faites défiler vers le bas\n3. Appuyez sur 'Sur l'écran d'accueil'\n4. Appuyez sur 'Ajouter'"
+      )
+      setShowPrompt(false)
+      return
+    }
+
+    alert(
+      "Pour ajouter Revisio à l'écran d'accueil :\n\n1. Ouvrez le menu du navigateur (⋮)\n2. Appuyez sur 'Ajouter à l'écran d'accueil'\n3. Appuyez sur 'Ajouter'"
+    )
     setShowPrompt(false)
   }
 
