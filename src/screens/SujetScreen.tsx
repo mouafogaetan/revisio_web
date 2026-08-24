@@ -139,10 +139,50 @@ export const SujetScreen: React.FC = () => {
           </div>
 
           <div className="flex-1 relative bg-white overflow-hidden rounded-lg border border-gray-200 shadow-sm min-h-0">
-            {/* ... reste du code iframe identique ... */}
+            {iframeLoading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-white z-10">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <span className="ml-2 text-gray-600">Chargement de l'épreuve...</span>
+              </div>
+            )}
+
+            {iframeError ? (
+              <div className="flex flex-col items-center justify-center h-full">
+                <p className="text-red-500 mb-4">Impossible de charger l'épreuve</p>
+                <Button onClick={handleRetry}>Réessayer</Button>
+              </div>
+            ) : (
+              <iframe
+                id="epreuve-iframe"
+                ref={iframeRef}
+                src={getEpreuveUrl(selectedEpreuve)}
+                className="w-full h-full border-0"
+                title={`Épreuve - ${selectedEpreuve.title || 'Épreuve'}`}
+                onLoad={() => {
+                  setIframeLoading(false)
+                  setIframeError(false)
+                  try {
+                    const iframeDoc = iframeRef.current?.contentDocument
+                    if (iframeDoc && iframeDoc.defaultView) {
+                      const iframeWindow = iframeDoc.defaultView as any
+                      if (iframeWindow.MathJax && iframeWindow.MathJax.typesetPromise) {
+                        iframeWindow.MathJax.typesetPromise().catch(() => {})
+                      }
+                    }
+                  } catch (e) {
+                    // Ignorer les erreurs de cross-origin
+                  }
+                }}
+                onError={() => {
+                  setIframeLoading(false)
+                  setIframeError(true)
+                }}
+                sandbox="allow-scripts allow-same-origin allow-forms"
+              />
+            )}
           </div>
         </div>
-      ) : (
+      ): (
         <>
           <div className="flex items-center mb-4">
             <Button
