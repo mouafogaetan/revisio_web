@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAppStore } from '@/store/appStore'
 import { Button } from '@/components/ui/button'
-import { Loader2, ArrowLeft } from 'lucide-react'
+import { Loader2, ArrowLeft, RefreshCw } from 'lucide-react'
 import { ContentCard } from '@/components/common/ContentCard'
 import { getImageUrl } from '@/services/api'
 import { AdManager } from '@/components/common/AdManager'
@@ -73,6 +73,9 @@ export const ShowMatieresScreen: React.FC = () => {
             {isDataLoaded ? `${matieres.length} matière(s)` : 'Chargement...'}
           </p>
         </div>
+        <Button variant="ghost" onClick={() => window.location.reload()} className="ml-auto" title="Rafraîchir" aria-label="Rafraîchir">
+          <RefreshCw className="w-4 h-4" />
+        </Button>
       </div>
 
       <div className="lg:flex lg:items-start lg:gap-6">

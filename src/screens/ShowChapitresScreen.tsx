@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAppStore } from '@/store/appStore'
 import { Button } from '@/components/ui/button'
-import { Loader2, ArrowLeft } from 'lucide-react'
+import { Loader2, ArrowLeft, RefreshCw } from 'lucide-react'
 import { ContentCard } from '@/components/common/ContentCard'
 import { getImageUrl } from '@/services/api'
 import { AdManager } from '@/components/common/AdManager'
@@ -74,6 +74,9 @@ export const ShowChapitresScreen: React.FC = () => {
           <h2 className="text-2xl font-bold text-gray-800">{matiere.matiereName}</h2>
           <p className="text-sm text-gray-500">{classe.classeName}</p>
         </div>
+        <Button variant="ghost" onClick={() => window.location.reload()} className="ml-auto" title="Rafraîchir" aria-label="Rafraîchir">
+          <RefreshCw className="w-4 h-4" />
+        </Button>
       </div>
 
       <Button onClick={handlePressSujet} className="mb-6 w-full bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200">
