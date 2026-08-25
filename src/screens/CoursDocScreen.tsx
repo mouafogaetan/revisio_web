@@ -3,7 +3,7 @@ import useMeta from '@/hooks/useMeta'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAppStore } from '@/store/appStore'
 import { Button } from '@/components/ui/button'
-import { Loader2, ArrowLeft, ChevronLeft, ChevronRight, RefreshCw, Volume2, VolumeX, Play, Pause } from 'lucide-react'
+import { Loader2, ArrowLeft, ChevronLeft, ChevronRight, RefreshCw, VolumeX, Play, Pause } from 'lucide-react'
 import { API_URL } from '@/constants'
 import { MathJaxContent } from '@/components/common/MathJaxContent'
 import { FullScreenAdModal } from '@/components/common/FullScreenAdModal'
@@ -40,6 +40,21 @@ export const CoursDocScreen: React.FC = () => {
   const matiere = classe?.matieres.find(m => m.matiereId === matiereId)
   const chapitre = matiere?.chapitres.find(c => c.chapitreId === chapitreId)
   const lesson = chapitre?.lessons.find(l => l.lessonId === lessonId)
+  const currentSlide = slides[currentIndex] || slides[0]
+  const hasTextToSpeak = currentSlide?.texteParle && currentSlide.texteParle.trim() !== ''
+
+  useMeta({
+    title: currentSlide?.titre
+      ? `${currentSlide.titre} — ${lesson?.lessonName || ''} | Revisio`
+      : `${lesson?.lessonName || 'Cours'} | Revisio`,
+    description: (() => {
+      const raw = (currentSlide?.contenu || lesson?.lessonName || '').replace(/<[^>]*>/g, '')
+      return raw.substring(0, 160)
+    })(),
+    url: typeof window !== 'undefined' ? window.location.href : undefined,
+    image: 'https://revisio-web.vercel.app/icon-512.png',
+    type: 'article'
+  })
 
   // Vérifier la synthèse vocale
   useEffect(() => {
@@ -311,23 +326,6 @@ export const CoursDocScreen: React.FC = () => {
     )
   }
 
-  const currentSlide = slides[currentIndex] || slides[0]
-  const hasTextToSpeak = currentSlide?.texteParle && currentSlide.texteParle.trim() !== ''
-
-  // Meta dynamiques basés sur le slide courant / leçon
-  useMeta({
-    title: currentSlide?.titre
-      ? `${currentSlide.titre} — ${lesson?.lessonName || ''} | Revisio`
-      : `${lesson?.lessonName || 'Cours'} | Revisio`,
-    description: (() => {
-      const raw = (currentSlide?.contenu || lesson?.lessonName || '').replace(/<[^>]*>/g, '')
-      return raw.substring(0, 160)
-    })(),
-    url: typeof window !== 'undefined' ? window.location.href : undefined,
-    image: 'https://revisio-web.vercel.app/icon-512.png',
-    type: 'article'
-  })
-
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center mb-4">
@@ -482,6 +480,11 @@ export const CoursDocScreen: React.FC = () => {
           </Button>
         </div>
       </div>
+
+      <FullScreenAdModal
+        visible={showFullScreenAd}
+        onClose={() => setShowFullScreenAd(false)}
+      />
     </div>
   )
 }

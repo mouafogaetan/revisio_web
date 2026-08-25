@@ -2,10 +2,10 @@ import React, { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAppStore } from '@/store/appStore'
 import { Button } from '@/components/ui/button'
-import { Loader2, ArrowLeft, RefreshCw, Eye, FileText, X } from 'lucide-react'
+import { Loader2, ArrowLeft, RefreshCw, Eye, FileText } from 'lucide-react'
 import { getEpreuves } from '@/services/api'
 import { Epreuve } from '@/types/classeTypes'
-import { API_URL } from '@/constants'
+import { DATA_SOURCE_URL } from '@/constants'
 
 export const SujetScreen: React.FC = () => {
   const { classeId, matiereId } = useParams<{ classeId: string; matiereId: string }>()
@@ -42,7 +42,7 @@ export const SujetScreen: React.FC = () => {
   }, [classeId, matiereId])
 
   const getEpreuveUrl = (epreuve: Epreuve): string => {
-    return `${API_URL}/data/${classeId}/${matiereId}/epreuves/${epreuve.epreuveId}.html`
+    return `${DATA_SOURCE_URL}/data/${classeId}/${matiereId}/epreuves/${epreuve.epreuveId}.html`
   }
 
   const openEpreuve = (epreuve: Epreuve) => {
