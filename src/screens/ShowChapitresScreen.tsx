@@ -40,6 +40,15 @@ export const ShowChapitresScreen: React.FC = () => {
     navigate(`/sujet/${classeId}/${matiereId}`)
   }
 
+  const handleRefresh = async () => {
+    if (!classeId || !matiereId) return
+    setLoading(true)
+    setIsDataLoaded(false)
+    await loadChapitres(classeId, matiereId, true)
+    setLoading(false)
+    setIsDataLoaded(true)
+  }
+
   if (isLoading || loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -74,7 +83,7 @@ export const ShowChapitresScreen: React.FC = () => {
           <h2 className="text-2xl font-bold text-gray-800">{matiere.matiereName}</h2>
           <p className="text-sm text-gray-500">{classe.classeName}</p>
         </div>
-        <Button variant="ghost" onClick={() => window.location.reload()} className="ml-auto" title="Rafraîchir" aria-label="Rafraîchir">
+        <Button variant="ghost" onClick={handleRefresh} disabled={loading} className="ml-auto" title="Rafraîchir" aria-label="Rafraîchir">
           <RefreshCw className="w-4 h-4" />
         </Button>
       </div>

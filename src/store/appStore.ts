@@ -10,9 +10,9 @@ interface AppState {
   
   // Actions
   loadClasses: (forceRefresh?: boolean) => Promise<void>;
-  loadMatieres: (classeId: string) => Promise<void>;
-  loadChapitres: (classeId: string, matiereId: string) => Promise<void>;
-  loadLessons: (classeId: string, matiereId: string, chapitreId: string) => Promise<void>;
+  loadMatieres: (classeId: string, forceRefresh?: boolean) => Promise<void>;
+  loadChapitres: (classeId: string, matiereId: string, forceRefresh?: boolean) => Promise<void>;
+  loadLessons: (classeId: string, matiereId: string, chapitreId: string, forceRefresh?: boolean) => Promise<void>;
   
   // Mutations
   updateMatieres: (classeId: string, matieres: Matiere[]) => void;
@@ -51,12 +51,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   // Charger les matières
-  loadMatieres: async (classeId: string) => {
+  loadMatieres: async (classeId: string, forceRefresh = false) => {
     const { classes } = get();
     const classe = classes.find(c => c.classeId === classeId);
     
     // Si déjà chargé, ne rien faire
-    if (classe && classe.matieres.length > 0) {
+    if (classe && classe.matieres.length > 0 && !forceRefresh) {
       return;
     }
     
@@ -74,13 +74,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   // Charger les chapitres
-  loadChapitres: async (classeId: string, matiereId: string) => {
+  loadChapitres: async (classeId: string, matiereId: string, forceRefresh = false) => {
     const { classes } = get();
     const classe = classes.find(c => c.classeId === classeId);
     const matiere = classe?.matieres.find(m => m.matiereId === matiereId);
     
     // Si déjà chargé, ne rien faire
-    if (matiere && matiere.chapitres.length > 0) {
+    if (matiere && matiere.chapitres.length > 0 && !forceRefresh) {
       return;
     }
     
@@ -98,14 +98,14 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   // Charger les leçons
-  loadLessons: async (classeId: string, matiereId: string, chapitreId: string) => {
+  loadLessons: async (classeId: string, matiereId: string, chapitreId: string, forceRefresh = false) => {
     const { classes } = get();
     const classe = classes.find(c => c.classeId === classeId);
     const matiere = classe?.matieres.find(m => m.matiereId === matiereId);
     const chapitre = matiere?.chapitres.find(c => c.chapitreId === chapitreId);
     
     // Si déjà chargé, ne rien faire
-    if (chapitre && chapitre.lessons.length > 0) {
+    if (chapitre && chapitre.lessons.length > 0 && !forceRefresh) {
       return;
     }
     

@@ -37,6 +37,15 @@ export const ShowMatieresScreen: React.FC = () => {
     navigate(`/chapitre/${classeId}/${matiereId}`)
   }
 
+  const handleRefresh = async () => {
+    if (!classeId) return
+    setLoading(true)
+    setIsDataLoaded(false)
+    await loadMatieres(classeId, true)
+    setLoading(false)
+    setIsDataLoaded(true)
+  }
+
   if (isLoading || loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -73,7 +82,7 @@ export const ShowMatieresScreen: React.FC = () => {
             {isDataLoaded ? `${matieres.length} matière(s)` : 'Chargement...'}
           </p>
         </div>
-        <Button variant="ghost" onClick={() => window.location.reload()} className="ml-auto" title="Rafraîchir" aria-label="Rafraîchir">
+        <Button variant="ghost" onClick={handleRefresh} disabled={loading} className="ml-auto" title="Rafraîchir" aria-label="Rafraîchir">
           <RefreshCw className="w-4 h-4" />
         </Button>
       </div>

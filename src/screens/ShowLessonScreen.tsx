@@ -41,6 +41,15 @@ export const ShowLessonScreen: React.FC = () => {
     navigate(`/lesson/${classeId}/${matiereId}/${chapitreId}/${lessonId}`)
   }
 
+  const handleRefresh = async () => {
+    if (!classeId || !matiereId || !chapitreId) return
+    setLoading(true)
+    setIsDataLoaded(false)
+    await loadLessons(classeId, matiereId, chapitreId, true)
+    setLoading(false)
+    setIsDataLoaded(true)
+  }
+
   if (isLoading || loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -77,7 +86,7 @@ export const ShowLessonScreen: React.FC = () => {
           </h2>
           <p className="text-sm text-gray-500">{matiere.matiereName}</p>
         </div>
-          <Button variant="ghost" onClick={() => window.location.reload()} className="ml-auto" title="Rafraîchir" aria-label="Rafraîchir">
+          <Button variant="ghost" onClick={handleRefresh} disabled={loading} className="ml-auto" title="Rafraîchir" aria-label="Rafraîchir">
             <RefreshCw className="w-4 h-4" />
           </Button>
       </div>
