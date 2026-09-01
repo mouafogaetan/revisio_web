@@ -176,7 +176,7 @@ export const Header: React.FC = () => {
                   />
                 )}
                 
-                {/* Texte de l'annonce - avec gestion du texte long */}
+                {/* Texte de l'annonce - Titre et description sur une seule ligne chacun */}
                 <div className="flex-1 min-w-0 overflow-hidden">
                   <p 
                     className="text-xs sm:text-sm font-medium truncate"
@@ -186,7 +186,7 @@ export const Header: React.FC = () => {
                   </p>
                   {currentAd.description && (
                     <p 
-                      className="text-[10px] sm:text-xs truncate opacity-80 hidden sm:block"
+                      className="text-[10px] sm:text-xs truncate opacity-80"
                       style={{ color: currentAd.textColor || '#ffffff' }}
                     >
                       {currentAd.description}

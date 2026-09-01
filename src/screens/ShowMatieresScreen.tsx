@@ -71,20 +71,24 @@ export const ShowMatieresScreen: React.FC = () => {
 
   return (
     <div>
-      <div className="flex items-center mb-6">
-        <Button variant="ghost" onClick={() => navigate('/')} className="mr-4">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Retour
-        </Button>
-        <div>
-          <h2 className="text-2xl font-bold text-gray-800">{classe.classeName}</h2>
+      <div className="mb-6">
+        <div className="flex items-center justify-between gap-3 w-full">
+          <Button variant="ghost" onClick={() => navigate('/')} className="shrink-0">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Retour
+          </Button>
+
+          <Button variant="ghost" onClick={handleRefresh} disabled={loading} className="shrink-0" title="Rafraîchir" aria-label="Rafraîchir">
+            <RefreshCw className="w-4 h-4" />
+          </Button>
+        </div>
+
+        <div className="mt-3 w-full">
+          <h2 className="text-2xl font-bold text-gray-800 break-words">{classe.classeName}</h2>
           <p className="text-sm text-gray-500">
             {isDataLoaded ? `${matieres.length} matière(s)` : 'Chargement...'}
           </p>
         </div>
-        <Button variant="ghost" onClick={handleRefresh} disabled={loading} className="ml-auto" title="Rafraîchir" aria-label="Rafraîchir">
-          <RefreshCw className="w-4 h-4" />
-        </Button>
       </div>
 
       <div className="lg:flex lg:items-start lg:gap-6">

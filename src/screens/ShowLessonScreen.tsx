@@ -75,20 +75,24 @@ export const ShowLessonScreen: React.FC = () => {
 
   return (
     <div>
-      <div className="flex items-center mb-6">
-        <Button variant="ghost" onClick={() => navigate(`/chapitre/${classeId}/${matiereId}`)} className="mr-4">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Retour
-        </Button>
-        <div>
-          <h2 className="text-2xl font-bold text-gray-800">
+      <div className="mb-6">
+        <div className="flex items-center justify-between gap-3 w-full">
+          <Button variant="ghost" onClick={() => navigate(`/chapitre/${classeId}/${matiereId}`)} className="shrink-0">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Retour
+          </Button>
+
+          <Button variant="ghost" onClick={handleRefresh} disabled={loading} className="shrink-0" title="Rafraîchir" aria-label="Rafraîchir">
+            <RefreshCw className="w-4 h-4" />
+          </Button>
+        </div>
+
+        <div className="mt-3 w-full">
+          <h2 className="text-2xl font-bold text-gray-800 break-words">
             Chapitre {chapitre.index + 1}: {chapitre.chapitreName}
           </h2>
           <p className="text-sm text-gray-500">{matiere.matiereName}</p>
         </div>
-          <Button variant="ghost" onClick={handleRefresh} disabled={loading} className="ml-auto" title="Rafraîchir" aria-label="Rafraîchir">
-            <RefreshCw className="w-4 h-4" />
-          </Button>
       </div>
 
       <div className="lg:flex lg:items-start lg:gap-6">

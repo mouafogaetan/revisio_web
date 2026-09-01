@@ -328,27 +328,31 @@ export const CoursDocScreen: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center mb-4">
-        <Button 
-          variant="ghost" 
-          onClick={() => navigate(`/lesson/${classeId}/${matiereId}/${chapitreId}/${lessonId}`)} 
-          className="mr-4"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Retour
-        </Button>
-        <div className="flex-1">
-          <h2 className="text-xl font-bold text-gray-800 truncate">
+      <div className="mb-4">
+        <div className="flex items-center justify-between gap-3 w-full">
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate(`/lesson/${classeId}/${matiereId}/${chapitreId}/${lessonId}`)} 
+            className="shrink-0"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Retour
+          </Button>
+
+          <div className="flex items-center space-x-2 shrink-0">
+            <Button variant="ghost" onClick={() => window.location.reload()}>
+              <RefreshCw className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+
+        <div className="mt-3 w-full">
+          <h2 className="text-xl font-bold text-gray-800 break-words">
             {currentSlide?.titre || lesson.lessonName}
           </h2>
           <p className="text-sm text-gray-500">
             {lesson.lessonName}
           </p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Button variant="ghost" onClick={() => window.location.reload()}>
-            <RefreshCw className="w-4 h-4" />
-          </Button>
         </div>
       </div>
 

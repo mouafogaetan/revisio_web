@@ -74,18 +74,22 @@ export const ShowChapitresScreen: React.FC = () => {
 
   return (
     <div>
-      <div className="flex items-center mb-6">
-        <Button variant="ghost" onClick={() => navigate(`/matiere/${classeId}`)} className="mr-4">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Retour
-        </Button>
-        <div>
-          <h2 className="text-2xl font-bold text-gray-800">{matiere.matiereName}</h2>
+      <div className="mb-6">
+        <div className="flex items-center justify-between gap-3 w-full">
+          <Button variant="ghost" onClick={() => navigate(`/matiere/${classeId}`)} className="shrink-0">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Retour
+          </Button>
+
+          <Button variant="ghost" onClick={handleRefresh} disabled={loading} className="shrink-0" title="Rafraîchir" aria-label="Rafraîchir">
+            <RefreshCw className="w-4 h-4" />
+          </Button>
+        </div>
+
+        <div className="mt-3 w-full">
+          <h2 className="text-2xl font-bold text-gray-800 break-words">{matiere.matiereName}</h2>
           <p className="text-sm text-gray-500">{classe.classeName}</p>
         </div>
-        <Button variant="ghost" onClick={handleRefresh} disabled={loading} className="ml-auto" title="Rafraîchir" aria-label="Rafraîchir">
-          <RefreshCw className="w-4 h-4" />
-        </Button>
       </div>
 
       <Button onClick={handlePressSujet} className="mb-6 w-full bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200">

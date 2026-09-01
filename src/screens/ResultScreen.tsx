@@ -61,16 +61,21 @@ export const ResultScreen: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center mb-4">
-        <Button 
-          variant="ghost" 
-          onClick={handleBackToLesson} 
-          className="mr-4"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Retour
-        </Button>
-        <h2 className="text-xl font-bold text-gray-800">Résultats</h2>
+      <div className="mb-4">
+        <div className="flex items-center w-full">
+          <Button 
+            variant="ghost" 
+            onClick={handleBackToLesson} 
+            className="shrink-0"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Retour
+          </Button>
+        </div>
+
+        <div className="mt-3 w-full">
+          <h2 className="text-xl font-bold text-gray-800 break-words">Résultats</h2>
+        </div>
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center">

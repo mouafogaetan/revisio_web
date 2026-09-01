@@ -68,32 +68,36 @@ export const ReponsesScreen: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center mb-4">
-        <Button 
-          variant="ghost" 
-          onClick={() => navigate(-1)} 
-          className="mr-4"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Retour
-        </Button>
-        <div className="flex-1">
-          <h2 className="text-xl font-bold text-gray-800">{quiz.title}</h2>
+      <div className="mb-4">
+        <div className="flex items-center justify-between gap-3 w-full">
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate(-1)} 
+            className="shrink-0"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Retour
+          </Button>
+
+          <div className="flex items-center space-x-2 shrink-0">
+            <span className={`px-3 py-1 rounded-full text-xs font-medium ${getDifficultyColor(currentQuestion.difficulty)}`}>
+              {getDifficultyLabel(currentQuestion.difficulty)}
+            </span>
+            <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+              isCorrect(currentQuestion) 
+                ? 'bg-green-100 text-green-700' 
+                : 'bg-red-100 text-red-700'
+            }`}>
+              {isCorrect(currentQuestion) ? '✅ Correct' : '❌ Incorrect'}
+            </span>
+          </div>
+        </div>
+
+        <div className="mt-3 w-full">
+          <h2 className="text-xl font-bold text-gray-800 break-words">{quiz.title}</h2>
           <p className="text-sm text-gray-500">
             Correction - Question {currentIndex + 1} sur {totalQuestions}
           </p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <span className={`px-3 py-1 rounded-full text-xs font-medium ${getDifficultyColor(currentQuestion.difficulty)}`}>
-            {getDifficultyLabel(currentQuestion.difficulty)}
-          </span>
-          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-            isCorrect(currentQuestion) 
-              ? 'bg-green-100 text-green-700' 
-              : 'bg-red-100 text-red-700'
-          }`}>
-            {isCorrect(currentQuestion) ? '✅ Correct' : '❌ Incorrect'}
-          </span>
         </div>
       </div>
 

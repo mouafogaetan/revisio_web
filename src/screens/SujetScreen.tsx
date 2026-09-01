@@ -114,27 +114,29 @@ export const SujetScreen: React.FC = () => {
     <div className="flex flex-col h-full">
       {selectedEpreuve ? (
         <div className="flex flex-col h-[calc(100vh-8rem)] min-h-0">
-          <div className="flex items-center mb-4 shrink-0">
-            <Button
-              variant="ghost"
-              onClick={closeDetail}
-              className="mr-4"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Retour
-            </Button>
-            <div className="min-w-0">
-              <h2 className="text-xl font-bold text-gray-800 truncate">
-                {selectedEpreuve.title || 'Épreuve'}
-              </h2>
-              <p className="text-sm text-gray-500 truncate">
-                {matiere.matiereName} - {classe.classeName}
-              </p>
-            </div>
-            <div className="ml-auto flex items-center space-x-2">
-              <Button variant="ghost" size="sm" onClick={handleRetry} title="Recharger">
+          <div className="mb-4 shrink-0">
+            <div className="flex items-center justify-between gap-3 w-full">
+              <Button
+                variant="ghost"
+                onClick={closeDetail}
+                className="shrink-0"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Retour
+              </Button>
+
+              <Button variant="ghost" size="sm" onClick={handleRetry} title="Recharger" className="shrink-0">
                 <RefreshCw className="w-4 h-4" />
               </Button>
+            </div>
+
+            <div className="mt-3 w-full">
+              <h2 className="text-xl font-bold text-gray-800 break-words">
+                {selectedEpreuve.title || 'Épreuve'}
+              </h2>
+              <p className="text-sm text-gray-500 break-words">
+                {matiere.matiereName} - {classe.classeName}
+              </p>
             </div>
           </div>
 

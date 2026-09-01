@@ -192,17 +192,20 @@ export const ExerciceDocScreen: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center mb-4">
-        <Button 
-          variant="ghost" 
-          onClick={() => navigate(`/lesson/${classeId}/${matiereId}/${chapitreId}/${lessonId}`)} 
-          className="mr-4"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Retour
-        </Button>
-        <div>
-          <h2 className="text-xl font-bold text-gray-800">{lesson.lessonName}</h2>
+      <div className="mb-4">
+        <div className="flex items-center w-full">
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate(`/lesson/${classeId}/${matiereId}/${chapitreId}/${lessonId}`)} 
+            className="shrink-0"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Retour
+          </Button>
+        </div>
+
+        <div className="mt-3 w-full">
+          <h2 className="text-xl font-bold text-gray-800 break-words">{lesson.lessonName}</h2>
           <p className="text-sm text-gray-500">
             Exercice {currentIndex + 1} sur {exercices.length}
           </p>
