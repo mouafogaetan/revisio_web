@@ -445,42 +445,50 @@ export const CoursDocScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* Mobile floating controls (icons only) */}
+      {/* Mobile floating controls */}
       <div className="sm:hidden fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
-        <div className="bg-white/95 backdrop-blur rounded-full px-3 py-2 shadow-lg flex items-center space-x-3">
+        <div className="bg-white/95 backdrop-blur rounded-full px-2 py-2 shadow-lg flex items-center gap-1 border border-gray-200">
           <Button
             variant="ghost"
             onClick={goToPrev}
             disabled={currentIndex === 0}
-            className="p-2"
+            className="flex items-center gap-1 px-3 py-2 rounded-full text-[11px] font-medium"
             aria-label="Précédent"
           >
-            <ChevronLeft className="w-5 h-5" />
+            <ChevronLeft className="w-4 h-4" />
+            <span>Préc.</span>
           </Button>
 
           {isSpeechSupported && hasTextToSpeak && (
             <Button
               variant={isSpeaking ? 'default' : 'ghost'}
               onClick={toggleSpeaking}
-              className={isSpeaking ? 'bg-primary text-white hover:bg-primary/90 p-2 rounded-full' : 'p-2'}
+              className={isSpeaking ? 'bg-primary text-white hover:bg-primary/90 p-2 rounded-full' : 'p-2 rounded-full'}
               aria-label="Lire"
+              title={isSpeaking ? (isPaused ? 'Reprendre la lecture' : 'Arrêter la lecture') : 'Lire à haute voix'}
             >
               {isSpeaking ? (
-                <Pause className="w-5 h-5" />
+                <Pause className="w-4 h-4" />
               ) : (
-                <Play className="w-5 h-5" />
+                <Play className="w-4 h-4" />
               )}
             </Button>
           )}
+
+          <div className="min-w-[72px] text-center text-[10px] font-semibold text-gray-600 leading-tight px-1">
+            Slide {currentIndex + 1}
+            <span className="block text-[9px] text-gray-500">/ {slides.length}</span>
+          </div>
 
           <Button
             variant="ghost"
             onClick={goToNext}
             disabled={currentIndex === slides.length - 1}
-            className="p-2"
+            className="flex items-center gap-1 px-3 py-2 rounded-full text-[11px] font-medium"
             aria-label="Suivant"
           >
-            <ChevronRight className="w-5 h-5" />
+            <span>Suiv.</span>
+            <ChevronRight className="w-4 h-4" />
           </Button>
         </div>
       </div>

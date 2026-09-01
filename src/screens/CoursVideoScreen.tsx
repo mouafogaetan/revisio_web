@@ -72,6 +72,13 @@ export const CoursVideoScreen: React.FC = () => {
 
       {selectedVideo ? (
         <div className="flex-1 flex flex-col">
+          <div className="mb-4">
+            <Button variant="ghost" onClick={() => setSelectedVideo(null)} className="shrink-0">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Retour
+            </Button>
+          </div>
+
           <div className="relative bg-black rounded-lg overflow-hidden aspect-video">
             <iframe
               src={`https://www.youtube.com/embed/${getYouTubeId(selectedVideo.youtubeUrl)}?autoplay=1&controls=1&modestbranding=1&rel=0&playsinline=1`}
@@ -81,7 +88,7 @@ export const CoursVideoScreen: React.FC = () => {
               allowFullScreen
             />
           </div>
-          <div className="mt-4 flex items-center justify-between"><h3 className="text-lg font-semibold text-gray-800">{selectedVideo.title}</h3><Button variant="ghost" onClick={() => setSelectedVideo(null)}>Fermer</Button></div>
+          <div className="mt-4"><h3 className="text-lg font-semibold text-gray-800">{selectedVideo.title}</h3></div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 flex-1 overflow-y-auto">

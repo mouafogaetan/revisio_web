@@ -249,17 +249,17 @@ export const QuizScreen: React.FC = () => {
 
       {/* Navigation et validation */}
       <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
-        <Button
-          variant="ghost"
-          onClick={handlePrev}
-          disabled={currentIndex === 0}
-          className="disabled:opacity-50"
-        >
-          <ChevronLeft className="w-4 h-4 mr-1" />
-          Précédent
-        </Button>
-        
-        <div className="flex items-center space-x-2">
+        <div className="hidden sm:flex items-center space-x-2">
+          <Button
+            variant="ghost"
+            onClick={handlePrev}
+            disabled={currentIndex === 0}
+            className="disabled:opacity-50"
+          >
+            <ChevronLeft className="w-4 h-4 mr-1" />
+            Précédent
+          </Button>
+
           <Button
             onClick={handleValidate}
             disabled={!allAnswered}
@@ -268,24 +268,69 @@ export const QuizScreen: React.FC = () => {
             <CheckCircle className="w-4 h-4 mr-2" />
             Valider
           </Button>
+
+          <Button
+            variant="ghost"
+            onClick={handleNext}
+            disabled={currentIndex === totalQuestions - 1}
+            className="disabled:opacity-50"
+          >
+            Suivant
+            <ChevronRight className="w-4 h-4 ml-1" />
+          </Button>
         </div>
 
-        <Button
-          variant="ghost"
-          onClick={handleNext}
-          disabled={currentIndex === totalQuestions - 1}
-          className="disabled:opacity-50"
-        >
-          Suivant
-          <ChevronRight className="w-4 h-4 ml-1" />
-        </Button>
+        <div className="hidden sm:block text-xs text-gray-400">
+          {allAnswered ? '✅ Terminé' : `${totalQuestions - answeredCount} restante(s)`}
+        </div>
       </div>
 
       {/* Indicateur de complétion */}
-      <div className="mt-2 text-center">
+      <div className="mt-2 text-center hidden sm:block">
         <p className="text-xs text-gray-400">
           {allAnswered ? '✅ Toutes les questions ont été répondues' : `${totalQuestions - answeredCount} question(s) restante(s)`}
         </p>
+      </div>
+
+      <div className="sm:hidden fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
+        <div className="bg-white/95 backdrop-blur rounded-full px-2 py-2 shadow-lg flex items-center gap-1 border border-gray-200">
+          <Button
+            variant="ghost"
+            onClick={handlePrev}
+            disabled={currentIndex === 0}
+            className="flex items-center gap-1 px-3 py-2 rounded-full text-[11px] font-medium"
+            aria-label="Précédent"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            <span>Préc.</span>
+          </Button>
+
+          <Button
+            onClick={handleValidate}
+            disabled={!allAnswered}
+            className={`flex items-center gap-1 px-3 py-2 rounded-full text-[11px] font-medium ${allAnswered ? 'bg-green-600 hover:bg-green-700 text-white' : 'opacity-50'}`}
+            aria-label="Valider"
+          >
+            <CheckCircle className="w-4 h-4" />
+            <span>Valider</span>
+          </Button>
+
+          <div className="min-w-[78px] text-center text-[10px] font-semibold text-gray-600 leading-tight px-1">
+            {totalQuestions - answeredCount}
+            <span className="block text-[9px] text-gray-500">restantes</span>
+          </div>
+
+          <Button
+            variant="ghost"
+            onClick={handleNext}
+            disabled={currentIndex === totalQuestions - 1}
+            className="flex items-center gap-1 px-3 py-2 rounded-full text-[11px] font-medium"
+            aria-label="Suivant"
+          >
+            <span>Suiv.</span>
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
 
       <FullScreenAdModal
