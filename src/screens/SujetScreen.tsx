@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAppStore } from '@/store/appStore'
+import useMeta from '@/hooks/useMeta'
 import { Button } from '@/components/ui/button'
 import { Loader2, ArrowLeft, ChevronLeft, ChevronRight, RefreshCw, Eye, FileText } from 'lucide-react'
 import { DATA_SOURCE_URL } from '@/constants'
@@ -39,7 +40,7 @@ interface Epreuve {
 }
 
 export const SujetScreen: React.FC = () => {
-  const { classeId, matiereId } = useParams<{ classeId: string; matiereId: string }>()
+  const { classeId, matiereId, epreuveId } = useParams<{ classeId: string; matiereId: string; epreuveId?: string }>()
   const navigate = useNavigate()
   const { classes, loadRouteData } = useAppStore()
   
@@ -62,6 +63,21 @@ export const SujetScreen: React.FC = () => {
   const classe = classes.find(c => c.classeId === classeId)
   const matiere = classe?.matieres.find(m => m.matiereId === matiereId)
   const currentSlide = slides[currentIndex] || slides[0]
+
+  useMeta({
+    title: selectedEpreuve
+      ? `${selectedEpreuve.title || 'Épreuve'} | ${matiere?.matiereName || 'Revisio'}`
+      : matiere
+        ? `Épreuves de ${matiere.matiereName} | Revisio`
+        : 'Épreuves | Revisio',
+    description: selectedEpreuve
+      ? `Consultez le sujet ${selectedEpreuve.title || selectedEpreuve.epreuveId} de ${matiere?.matiereName || 'cette matière'} et sa correction sur Revisio.`
+      : matiere
+        ? `Consultez les épreuves de ${matiere.matiereName} pour la classe ${classe?.classeName || ''} et révisez gratuitement sur Revisio.`
+        : 'Consultez les épreuves disponibles et révisez gratuitement sur Revisio.',
+    url: typeof window !== 'undefined' ? window.location.href : undefined,
+    type: 'article',
+  })
 
   useEffect(() => {
     if (!classeId || !matiereId) return
@@ -91,49 +107,11 @@ export const SujetScreen: React.FC = () => {
     loadEpreuves()
   }, [classeId, matiereId])
 
-  // Fonction pour ouvrir un sujet
-  const openEpreuve = async (epreuve: Epreuve) => {
-    if (!classeId || !matiereId) return
-
-    try {
-      setLoadingSubject(true)
-      setSubjectError(null)
-      setSelectedEpreuve(epreuve)
-
-      // Charger le fichier HTML du sujet
-      const htmlResponse = await fetch(`${DATA_SOURCE_URL}/data/${classeId}/${matiereId}/epreuves/${epreuve.epreuveId}.html`)
-      if (!htmlResponse.ok) throw new Error('Impossible de charger le sujet')
-      const html = await htmlResponse.text()
-
-      // Extraire examData du HTML
-      const extractedData = extractExamData(html)
-      if (extractedData && extractedData.exercices.length > 0) {
-        // Convertir les exercices en slides
-        const convertedSlides = convertExercisesToSlides(extractedData)
-        setSlides(convertedSlides)
-        setCurrentIndex(0)
-        // Initialiser les réponses révélées
-        const initialRevealed: Record<number, Record<number, boolean>> = {}
-        extractedData.exercices.forEach((_, exIndex) => {
-          initialRevealed[exIndex] = {}
-        })
-        setRevealedAnswers(initialRevealed)
-      } else {
-        setSlides([{
-          titre: 'Sujet non disponible',
-          contenu: '<p>Le contenu du sujet n\'a pas pu être extrait.</p>',
-        }])
-      }
-    } catch (err) {
-      setSubjectError('Impossible de charger le sujet')
-      console.error(err)
-    } finally {
-      setLoadingSubject(false)
-    }
-  }
-
   // Fermer le sujet pour revenir à la liste
   const closeEpreuve = () => {
+    if (classeId && matiereId) {
+      navigate(`/sujet/${classeId}/${matiereId}`)
+    }
     setSelectedEpreuve(null)
     setSlides([])
     setCurrentIndex(0)
@@ -175,7 +153,7 @@ export const SujetScreen: React.FC = () => {
       
       // Remplacer les guillemets simples par des doubles (pour les clés et les valeurs)
       // Mais attention aux apostrophes dans les textes
-      dataStr = dataStr.replace(/'/g, (match, offset, string) => {
+      dataStr = dataStr.replace(/'/g, (_match, offset, string) => {
         // Vérifier si c'est une clé (suivi de deux-points)
         const after = string.substring(offset + 1)
         if (after.trim().startsWith(':')) {
@@ -370,6 +348,17 @@ export const SujetScreen: React.FC = () => {
 
   // Remplacer openEpreuve par openEpreuveWithData
   const openEpreuveFinal = openEpreuveWithData
+
+  useEffect(() => {
+    if (!epreuveId || loadingList || selectedEpreuve || epreuves.length === 0) return
+
+    const epreuve = epreuves.find(item => item.epreuveId === epreuveId)
+    if (epreuve) {
+      openEpreuveFinal(epreuve)
+    } else {
+      setSubjectError('Épreuve non trouvée')
+    }
+  }, [epreuveId, loadingList, selectedEpreuve, epreuves, openEpreuveFinal])
 
   // Mettre à jour les slides quand les réponses changent
   useEffect(() => {
@@ -790,7 +779,7 @@ export const SujetScreen: React.FC = () => {
             {epreuves.map((epreuve, index) => (
               <div
                 key={epreuve.epreuveId}
-                onClick={() => openEpreuveFinal(epreuve)}
+                onClick={() => navigate(`/sujet/${classeId}/${matiereId}/${epreuve.epreuveId}`)}
                 className={`
                   cursor-pointer rounded-lg shadow-md hover:shadow-lg transition-all
                   hover:scale-[1.02] p-5 border-2

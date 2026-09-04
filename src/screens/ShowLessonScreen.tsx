@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import useMeta from '@/hooks/useMeta'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAppStore } from '@/store/appStore'
 import { Button } from '@/components/ui/button'
@@ -14,7 +15,7 @@ export const ShowLessonScreen: React.FC = () => {
     chapitreId: string
   }>()
   const navigate = useNavigate()
-  const { classes, isLoading, loadRouteData } = useAppStore()
+  const { classes, isLoading, loadMatieres, loadChapitres, loadLessons } = useAppStore()
   const [loading, setLoading] = useState(false)
   const [isDataLoaded, setIsDataLoaded] = useState(false)
 
@@ -22,16 +23,41 @@ export const ShowLessonScreen: React.FC = () => {
   const matiere = classe?.matieres.find(m => m.matiereId === matiereId)
   const chapitre = matiere?.chapitres.find(c => c.chapitreId === chapitreId)
 
+  useMeta({
+    title: chapitre ? `Leçons de ${chapitre.chapitreName} | Revisio` : 'Leçons | Revisio',
+    description: chapitre ? `Découvrez les leçons du chapitre ${chapitre.chapitreName} et révisez gratuitement sur Revisio.` : 'Découvrez les leçons disponibles sur Revisio.',
+    url: typeof window !== 'undefined' ? window.location.href : undefined,
+  })
+
   useEffect(() => {
-    if (classeId && matiereId && chapitreId) {
-      setIsDataLoaded(false)
+    if (!classeId || !matiereId || !chapitreId || !classe) return
+
+    if (!matiere) {
       setLoading(true)
-      loadRouteData(classeId, matiereId, chapitreId).finally(() => {
-        setLoading(false)
-        setIsDataLoaded(true)
-      })
+      setIsDataLoaded(false)
+      loadMatieres(classeId).finally(() => setLoading(false))
+      return
     }
-  }, [classeId, matiereId, chapitreId, loadRouteData])
+
+    if (!chapitre) {
+      setLoading(true)
+      setIsDataLoaded(false)
+      loadChapitres(classeId, matiereId).finally(() => setLoading(false))
+      return
+    }
+
+    if (chapitre.lessons.length > 0) {
+      setIsDataLoaded(true)
+      return
+    }
+
+    setIsDataLoaded(false)
+    setLoading(true)
+    loadLessons(classeId, matiereId, chapitreId).finally(() => {
+      setLoading(false)
+      setIsDataLoaded(true)
+    })
+  }, [classeId, matiereId, chapitreId, classe, matiere, chapitre, loadMatieres, loadChapitres, loadLessons])
 
   const handlePressLesson = (lessonId: string) => {
     navigate(`/lesson/${classeId}/${matiereId}/${chapitreId}/${lessonId}`)
@@ -41,7 +67,7 @@ export const ShowLessonScreen: React.FC = () => {
     if (!classeId || !matiereId || !chapitreId) return
     setLoading(true)
     setIsDataLoaded(false)
-    await loadRouteData(classeId, matiereId, chapitreId, true)
+    await loadLessons(classeId, matiereId, chapitreId, true)
     setLoading(false)
     setIsDataLoaded(true)
   }

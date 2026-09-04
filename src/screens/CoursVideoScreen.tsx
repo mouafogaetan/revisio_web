@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import useMeta from '@/hooks/useMeta'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAppStore } from '@/store/appStore'
 import { Button } from '@/components/ui/button'
@@ -23,6 +24,13 @@ export const CoursVideoScreen: React.FC = () => {
   const matiere = classe?.matieres.find(m => m.matiereId === matiereId)
   const chapitre = matiere?.chapitres.find(c => c.chapitreId === chapitreId)
   const lesson = chapitre?.lessons.find(l => l.lessonId === lessonId)
+
+  useMeta({
+    title: lesson ? `Cours vidéo : ${lesson.lessonName} | Revisio` : 'Cours vidéo | Revisio',
+    description: lesson ? `Regardez les cours vidéo de ${lesson.lessonName} sur Revisio.` : 'Regardez les cours vidéo disponibles sur Revisio.',
+    url: typeof window !== 'undefined' ? window.location.href : undefined,
+    type: 'video.other',
+  })
 
   useEffect(() => {
     if (!classeId || !matiereId || !chapitreId) return

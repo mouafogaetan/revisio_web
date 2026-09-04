@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import useMeta from '@/hooks/useMeta'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAppStore } from '@/store/appStore'
 import { Button } from '@/components/ui/button'
@@ -10,22 +11,33 @@ import { AdManager } from '@/components/common/AdManager'
 export const ShowMatieresScreen: React.FC = () => {
   const { classeId } = useParams<{ classeId: string }>()
   const navigate = useNavigate()
-  const { classes, isLoading, loadRouteData } = useAppStore()
+  const { classes, isLoading, loadMatieres } = useAppStore()
   const [loading, setLoading] = useState(false)
   const [isDataLoaded, setIsDataLoaded] = useState(false)
 
   const classe = classes.find(c => c.classeId === classeId)
 
+  useMeta({
+    title: classe ? `Matières de ${classe.classeName} | Revisio` : 'Matières | Revisio',
+    description: classe ? `Découvrez les matières de ${classe.classeName} et révisez gratuitement sur Revisio.` : 'Découvrez les matières disponibles sur Revisio.',
+    url: typeof window !== 'undefined' ? window.location.href : undefined,
+  })
+
   useEffect(() => {
-    if (classeId) {
+    if (classeId && classe) {
+      if (classe.matieres.length > 0) {
+        setIsDataLoaded(true)
+        return
+      }
+
       setLoading(true)
       setIsDataLoaded(false)
-      loadRouteData(classeId).finally(() => {
+      loadMatieres(classeId).finally(() => {
         setLoading(false)
         setIsDataLoaded(true)
       })
     }
-  }, [classeId, loadRouteData])
+  }, [classeId, classe, loadMatieres])
 
   const handlePressMatiere = (matiereId: string) => {
     navigate(`/chapitre/${classeId}/${matiereId}`)

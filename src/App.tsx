@@ -63,7 +63,7 @@ function App() {
               <Route path="quiz" element={<QuizScreen />} />
               <Route path="result" element={<ResultScreen />} />
               <Route path="reponses" element={<ReponsesScreen />} />
-              <Route path="sujet/:classeId/:matiereId" element={<SujetScreen />} />
+              <Route path="sujet/:classeId/:matiereId/:epreuveId?" element={<SujetScreen />} />
               <Route path="evaluation" element={<QuizExamScreen />} />
               <Route path="actu" element={<ActuScreen />} />
               <Route path="contact" element={<ContactScreen />} />

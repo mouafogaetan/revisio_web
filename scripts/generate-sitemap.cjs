@@ -52,9 +52,19 @@ const fetchJson = async (url) => {
 
       for (const matiere of matieres) {
         const chapitres = await fetchJson(`${DATA_SOURCE_URL}/data/${classe.id}/${matiere.id}/chapitres.json`) || []
+        const epreuves = await fetchJson(`${DATA_SOURCE_URL}/data/${classe.id}/${matiere.id}/epreuves.json`) || []
 
         // Liste des chapitres de la matière
         urls.push({ loc: `${SITE_URL}/chapitre/${classe.id}/${matiere.id}`, lastmod: todayStr, changefreq: 'weekly', priority: '0.7' })
+
+        // Liste des épreuves de la matière
+        if (epreuves.length > 0) {
+          urls.push({ loc: `${SITE_URL}/sujet/${classe.id}/${matiere.id}`, lastmod: todayStr, changefreq: 'weekly', priority: '0.8' })
+          for (const epreuve of epreuves) {
+            if (!epreuve.id) continue
+            urls.push({ loc: `${SITE_URL}/sujet/${classe.id}/${matiere.id}/${epreuve.id}`, lastmod: todayStr, changefreq: 'weekly', priority: '0.9' })
+          }
+        }
 
         for (const chapitre of chapitres) {
           // Liste des leçons du chapitre

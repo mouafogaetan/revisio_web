@@ -125,7 +125,10 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   // Hydrater les données nécessaires à une route ouverte directement
   loadRouteData: async (classeId, matiereId, chapitreId, forceRefresh = false) => {
-    await get().loadClasses(forceRefresh);
+    const classeAlreadyLoaded = get().classes.some(classe => classe.classeId === classeId);
+    if (!classeAlreadyLoaded || forceRefresh) {
+      await get().loadClasses(forceRefresh);
+    }
 
     if (!matiereId) return;
     await get().loadMatieres(classeId, forceRefresh);

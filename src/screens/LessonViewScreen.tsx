@@ -29,6 +29,16 @@ export const LessonViewScreen: React.FC = () => {
   const chapitre = matiere?.chapitres.find(c => c.chapitreId === chapitreId)
   const lesson = chapitre?.lessons.find(l => l.lessonId === lessonId)
 
+  useMeta({
+    title: lesson ? `${lesson.lessonName} — ${matiere?.matiereName || ''} | Revisio` : 'Leçon | Revisio',
+    description: lesson
+      ? `Cours: ${lesson.lessonName} — ${matiere?.matiereName || ''}. Révisez gratuitement sur Revisio.`
+      : 'Révisez gratuitement sur Revisio.',
+    url: typeof window !== 'undefined' ? window.location.href : undefined,
+    image: 'https://revisio-web.vercel.app/icon-512.png',
+    type: 'article'
+  })
+
   const handleGenerateQuiz = async () => {
     if (!classeId || !matiereId || !chapitreId || !lessonId || !matiere || !lesson) return
 
@@ -68,15 +78,6 @@ export const LessonViewScreen: React.FC = () => {
       </div>
     )
   }
-
-  // Meta dynamique pour la leçon
-  useMeta({
-    title: `${lesson.lessonName} — ${matiere.matiereName} | Revisio`,
-    description: `Cours: ${lesson.lessonName} — ${matiere.matiereName}. Révisez gratuitement sur Revisio.`,
-    url: typeof window !== 'undefined' ? window.location.href : undefined,
-    image: 'https://revisio-web.vercel.app/icon-512.png',
-    type: 'article'
-  })
 
   const menuItems = [
     {

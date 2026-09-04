@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import useMeta from '@/hooks/useMeta'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAppStore } from '@/store/appStore'
 import { Button } from '@/components/ui/button'
@@ -10,23 +11,41 @@ import { AdManager } from '@/components/common/AdManager'
 export const ShowChapitresScreen: React.FC = () => {
   const { classeId, matiereId } = useParams<{ classeId: string; matiereId: string }>()
   const navigate = useNavigate()
-  const { classes, isLoading, loadRouteData } = useAppStore()
+  const { classes, isLoading, loadMatieres, loadChapitres } = useAppStore()
   const [loading, setLoading] = useState(false)
   const [isDataLoaded, setIsDataLoaded] = useState(false)
 
   const classe = classes.find(c => c.classeId === classeId)
   const matiere = classe?.matieres.find(m => m.matiereId === matiereId)
 
+  useMeta({
+    title: matiere ? `Chapitres de ${matiere.matiereName} | Revisio` : 'Chapitres | Revisio',
+    description: matiere ? `Consultez les chapitres de ${matiere.matiereName} et révisez gratuitement sur Revisio.` : 'Consultez les chapitres disponibles sur Revisio.',
+    url: typeof window !== 'undefined' ? window.location.href : undefined,
+  })
+
   useEffect(() => {
-    if (!classeId || !matiereId) return
+    if (!classeId || !matiereId || !classe) return
+
+    if (!matiere) {
+      setLoading(true)
+      setIsDataLoaded(false)
+      loadMatieres(classeId).finally(() => setLoading(false))
+      return
+    }
+
+    if (matiere.chapitres.length > 0) {
+      setIsDataLoaded(true)
+      return
+    }
 
     setIsDataLoaded(false)
     setLoading(true)
-    loadRouteData(classeId, matiereId).finally(() => {
+    loadChapitres(classeId, matiereId).finally(() => {
       setLoading(false)
       setIsDataLoaded(true)
     })
-  }, [classeId, matiereId, loadRouteData])
+  }, [classeId, matiereId, classe, matiere, loadMatieres, loadChapitres])
 
   const handlePressChapitre = (chapitreId: string) => {
     navigate(`/lesson/${classeId}/${matiereId}/${chapitreId}`)
@@ -40,7 +59,7 @@ export const ShowChapitresScreen: React.FC = () => {
     if (!classeId || !matiereId) return
     setLoading(true)
     setIsDataLoaded(false)
-    await loadRouteData(classeId, matiereId, undefined, true)
+    await loadChapitres(classeId, matiereId, true)
     setLoading(false)
     setIsDataLoaded(true)
   }
