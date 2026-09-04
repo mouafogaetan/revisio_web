@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import useMeta from '@/hooks/useMeta'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAppStore } from '@/store/appStore'
@@ -14,8 +14,15 @@ export const LessonViewScreen: React.FC = () => {
     lessonId: string
   }>()
   const navigate = useNavigate()
-  const { classes } = useAppStore()
+  const { classes, loadRouteData } = useAppStore()
   const [generatingQuiz, setGeneratingQuiz] = useState(false)
+  const [routeLoading, setRouteLoading] = useState(true)
+
+  useEffect(() => {
+    if (!classeId || !matiereId || !chapitreId) return
+
+    loadRouteData(classeId, matiereId, chapitreId).finally(() => setRouteLoading(false))
+  }, [classeId, matiereId, chapitreId, loadRouteData])
 
   const classe = classes.find(c => c.classeId === classeId)
   const matiere = classe?.matieres.find(m => m.matiereId === matiereId)
@@ -50,13 +57,14 @@ export const LessonViewScreen: React.FC = () => {
     }
   }
 
-  if (!classe || !matiere || !chapitre || !lesson) {
+  if (routeLoading || !classe || !matiere || !chapitre || !lesson) {
     return (
       <div className="text-center py-10">
-        <p className="text-red-500">Leçon non trouvée</p>
-        <Button onClick={() => navigate('/')} className="mt-4">
-          Retour à l'accueil
-        </Button>
+        {routeLoading ? (
+          <><Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" /><p className="mt-2 text-gray-600">Chargement de la leçon...</p></>
+        ) : (
+          <><p className="text-red-500">Leçon non trouvée</p><Button onClick={() => navigate('/')} className="mt-4">Retour à l'accueil</Button></>
+        )}
       </div>
     )
   }

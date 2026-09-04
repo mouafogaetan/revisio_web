@@ -10,7 +10,7 @@ import { AdManager } from '@/components/common/AdManager'
 export const ShowChapitresScreen: React.FC = () => {
   const { classeId, matiereId } = useParams<{ classeId: string; matiereId: string }>()
   const navigate = useNavigate()
-  const { classes, isLoading, loadChapitres } = useAppStore()
+  const { classes, isLoading, loadRouteData } = useAppStore()
   const [loading, setLoading] = useState(false)
   const [isDataLoaded, setIsDataLoaded] = useState(false)
 
@@ -18,19 +18,15 @@ export const ShowChapitresScreen: React.FC = () => {
   const matiere = classe?.matieres.find(m => m.matiereId === matiereId)
 
   useEffect(() => {
-    if (classeId && matiereId && matiere) {
-      if (matiere.chapitres && matiere.chapitres.length > 0) {
-        setIsDataLoaded(true)
-        return
-      }
-      
-      setLoading(true)
-      loadChapitres(classeId, matiereId).finally(() => {
-        setLoading(false)
-        setIsDataLoaded(true)
-      })
-    }
-  }, [classeId, matiereId, matiere])
+    if (!classeId || !matiereId) return
+
+    setIsDataLoaded(false)
+    setLoading(true)
+    loadRouteData(classeId, matiereId).finally(() => {
+      setLoading(false)
+      setIsDataLoaded(true)
+    })
+  }, [classeId, matiereId, loadRouteData])
 
   const handlePressChapitre = (chapitreId: string) => {
     navigate(`/lesson/${classeId}/${matiereId}/${chapitreId}`)
@@ -44,7 +40,7 @@ export const ShowChapitresScreen: React.FC = () => {
     if (!classeId || !matiereId) return
     setLoading(true)
     setIsDataLoaded(false)
-    await loadChapitres(classeId, matiereId, true)
+    await loadRouteData(classeId, matiereId, undefined, true)
     setLoading(false)
     setIsDataLoaded(true)
   }

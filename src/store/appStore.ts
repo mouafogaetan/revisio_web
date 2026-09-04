@@ -13,6 +13,7 @@ interface AppState {
   loadMatieres: (classeId: string, forceRefresh?: boolean) => Promise<void>;
   loadChapitres: (classeId: string, matiereId: string, forceRefresh?: boolean) => Promise<void>;
   loadLessons: (classeId: string, matiereId: string, chapitreId: string, forceRefresh?: boolean) => Promise<void>;
+  loadRouteData: (classeId: string, matiereId?: string, chapitreId?: string, forceRefresh?: boolean) => Promise<void>;
   
   // Mutations
   updateMatieres: (classeId: string, matieres: Matiere[]) => void;
@@ -120,6 +121,19 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({ error: message, isLoading: false });
       console.error('Erreur loadLessons:', error);
     }
+  },
+
+  // Hydrater les données nécessaires à une route ouverte directement
+  loadRouteData: async (classeId, matiereId, chapitreId, forceRefresh = false) => {
+    await get().loadClasses(forceRefresh);
+
+    if (!matiereId) return;
+    await get().loadMatieres(classeId, forceRefresh);
+
+    if (!chapitreId) return;
+    await get().loadChapitres(classeId, matiereId, forceRefresh);
+
+    await get().loadLessons(classeId, matiereId, chapitreId, forceRefresh);
   },
 
   // Mettre à jour les matières

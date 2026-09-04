@@ -23,7 +23,7 @@ export const CoursDocScreen: React.FC = () => {
     lessonId: string
   }>()
   const navigate = useNavigate()
-  const { classes } = useAppStore()
+  const { classes, loadRouteData } = useAppStore()
   const [slides, setSlides] = useState<SlideData[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -32,6 +32,7 @@ export const CoursDocScreen: React.FC = () => {
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
   const [isSpeechSupported, setIsSpeechSupported] = useState(true)
+  const [routeLoading, setRouteLoading] = useState(true)
   const contentRef = useRef<HTMLDivElement>(null)
   const speechSynthRef = useRef<SpeechSynthesis | null>(null)
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null)
@@ -42,6 +43,12 @@ export const CoursDocScreen: React.FC = () => {
   const lesson = chapitre?.lessons.find(l => l.lessonId === lessonId)
   const currentSlide = slides[currentIndex] || slides[0]
   const hasTextToSpeak = currentSlide?.texteParle && currentSlide.texteParle.trim() !== ''
+
+  useEffect(() => {
+    if (!classeId || !matiereId || !chapitreId) return
+
+    loadRouteData(classeId, matiereId, chapitreId).finally(() => setRouteLoading(false))
+  }, [classeId, matiereId, chapitreId, loadRouteData])
 
   useMeta({
     title: currentSlide?.titre
@@ -295,7 +302,7 @@ export const CoursDocScreen: React.FC = () => {
     }
   }
 
-  if (loading) {
+  if (routeLoading || loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />

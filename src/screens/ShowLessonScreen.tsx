@@ -14,7 +14,7 @@ export const ShowLessonScreen: React.FC = () => {
     chapitreId: string
   }>()
   const navigate = useNavigate()
-  const { classes, isLoading, loadLessons } = useAppStore()
+  const { classes, isLoading, loadRouteData } = useAppStore()
   const [loading, setLoading] = useState(false)
   const [isDataLoaded, setIsDataLoaded] = useState(false)
 
@@ -23,19 +23,15 @@ export const ShowLessonScreen: React.FC = () => {
   const chapitre = matiere?.chapitres.find(c => c.chapitreId === chapitreId)
 
   useEffect(() => {
-    if (classeId && matiereId && chapitreId && chapitre) {
-      if (chapitre.lessons && chapitre.lessons.length > 0) {
-        setIsDataLoaded(true)
-        return
-      }
-      
+    if (classeId && matiereId && chapitreId) {
+      setIsDataLoaded(false)
       setLoading(true)
-      loadLessons(classeId, matiereId, chapitreId).finally(() => {
+      loadRouteData(classeId, matiereId, chapitreId).finally(() => {
         setLoading(false)
         setIsDataLoaded(true)
       })
     }
-  }, [classeId, matiereId, chapitreId, chapitre])
+  }, [classeId, matiereId, chapitreId, loadRouteData])
 
   const handlePressLesson = (lessonId: string) => {
     navigate(`/lesson/${classeId}/${matiereId}/${chapitreId}/${lessonId}`)
@@ -45,7 +41,7 @@ export const ShowLessonScreen: React.FC = () => {
     if (!classeId || !matiereId || !chapitreId) return
     setLoading(true)
     setIsDataLoaded(false)
-    await loadLessons(classeId, matiereId, chapitreId, true)
+    await loadRouteData(classeId, matiereId, chapitreId, true)
     setLoading(false)
     setIsDataLoaded(true)
   }

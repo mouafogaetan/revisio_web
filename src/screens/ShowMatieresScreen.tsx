@@ -10,28 +10,22 @@ import { AdManager } from '@/components/common/AdManager'
 export const ShowMatieresScreen: React.FC = () => {
   const { classeId } = useParams<{ classeId: string }>()
   const navigate = useNavigate()
-  const { classes, isLoading, loadMatieres } = useAppStore()
+  const { classes, isLoading, loadRouteData } = useAppStore()
   const [loading, setLoading] = useState(false)
   const [isDataLoaded, setIsDataLoaded] = useState(false)
 
   const classe = classes.find(c => c.classeId === classeId)
 
   useEffect(() => {
-    if (classeId && classe) {
-      // Si les matières sont déjà chargées
-      if (classe.matieres && classe.matieres.length > 0) {
-        setIsDataLoaded(true)
-        return
-      }
-      
-      // Sinon les charger
+    if (classeId) {
       setLoading(true)
-      loadMatieres(classeId).finally(() => {
+      setIsDataLoaded(false)
+      loadRouteData(classeId).finally(() => {
         setLoading(false)
         setIsDataLoaded(true)
       })
     }
-  }, [classeId, classe])
+  }, [classeId, loadRouteData])
 
   const handlePressMatiere = (matiereId: string) => {
     navigate(`/chapitre/${classeId}/${matiereId}`)

@@ -11,17 +11,24 @@ import { FullScreenAdModal } from '@/components/common/FullScreenAdModal'
 export const ExerciceVideoScreen: React.FC = () => {
   const { classeId, matiereId, chapitreId, lessonId } = useParams<{ classeId: string; matiereId: string; chapitreId: string; lessonId: string }>()
   const navigate = useNavigate()
-  const { classes } = useAppStore()
+  const { classes, loadRouteData } = useAppStore()
   const [videos, setVideos] = useState<ExerciceVideo[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showFullScreenAd, setShowFullScreenAd] = useState(false)
   const [selectedVideo, setSelectedVideo] = useState<ExerciceVideo | null>(null)
+  const [routeLoading, setRouteLoading] = useState(true)
 
   const classe = classes.find(c => c.classeId === classeId)
   const matiere = classe?.matieres.find(m => m.matiereId === matiereId)
   const chapitre = matiere?.chapitres.find(c => c.chapitreId === chapitreId)
   const lesson = chapitre?.lessons.find(l => l.lessonId === lessonId)
+
+  useEffect(() => {
+    if (!classeId || !matiereId || !chapitreId) return
+
+    loadRouteData(classeId, matiereId, chapitreId).finally(() => setRouteLoading(false))
+  }, [classeId, matiereId, chapitreId, loadRouteData])
 
   useEffect(() => {
     const loadVideos = async () => {
@@ -53,7 +60,7 @@ export const ExerciceVideoScreen: React.FC = () => {
     return videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : ''
   }
 
-  if (loading) return <div className="flex items-center justify-center min-h-[400px]"><Loader2 className="w-8 h-8 animate-spin text-primary" /><span className="ml-2 text-gray-600">Chargement des vidéos...</span></div>
+  if (routeLoading || loading) return <div className="flex items-center justify-center min-h-[400px]"><Loader2 className="w-8 h-8 animate-spin text-primary" /><span className="ml-2 text-gray-600">Chargement des vidéos...</span></div>
   if (error) return <div className="text-center py-10"><p className="text-red-500">{error}</p><Button onClick={() => window.location.reload()} className="mt-4">Réessayer</Button></div>
   if (!classe || !matiere || !chapitre || !lesson) return <div className="text-center py-10"><p className="text-red-500">Leçon non trouvée</p><Button onClick={() => navigate('/')} className="mt-4">Retour à l'accueil</Button></div>
 

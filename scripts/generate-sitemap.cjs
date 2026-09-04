@@ -46,19 +46,30 @@ const fetchJson = async (url) => {
 
     for (const classe of classes) {
       const matieres = await fetchJson(`${DATA_SOURCE_URL}/data/${classe.id}/matieres.json`) || []
+
+      // Liste des matières de la classe
+      urls.push({ loc: `${SITE_URL}/matiere/${classe.id}`, lastmod: todayStr, changefreq: 'weekly', priority: '0.8' })
+
       for (const matiere of matieres) {
         const chapitres = await fetchJson(`${DATA_SOURCE_URL}/data/${classe.id}/${matiere.id}/chapitres.json`) || []
+
+        // Liste des chapitres de la matière
+        urls.push({ loc: `${SITE_URL}/chapitre/${classe.id}/${matiere.id}`, lastmod: todayStr, changefreq: 'weekly', priority: '0.7' })
+
         for (const chapitre of chapitres) {
-          // chapter listing
+          // Liste des leçons du chapitre
           urls.push({ loc: `${SITE_URL}/lesson/${classe.id}/${matiere.id}/${chapitre.id}`, lastmod: todayStr, changefreq: 'weekly', priority: '0.6' })
 
           const lessons = await fetchJson(`${DATA_SOURCE_URL}/data/${classe.id}/${matiere.id}/${chapitre.id}/lessons.json`) || []
           for (const lesson of lessons) {
             const lessonId = lesson.lessonId || lesson.id
+            if (!lessonId) continue
             const base = `${SITE_URL}/lesson/${classe.id}/${matiere.id}/${chapitre.id}/${lessonId}`
-            // main lesson page
+
+            // Page de présentation de la leçon
             urls.push({ loc: base, lastmod: todayStr, changefreq: 'weekly', priority: '0.9' })
-            // content variants
+
+            // Cours, vidéos et exercices de la leçon
             urls.push({ loc: `${SITE_URL}/cours-doc/${classe.id}/${matiere.id}/${chapitre.id}/${lessonId}`, lastmod: todayStr, changefreq: 'weekly', priority: '0.8' })
             urls.push({ loc: `${SITE_URL}/cours-video/${classe.id}/${matiere.id}/${chapitre.id}/${lessonId}`, lastmod: todayStr, changefreq: 'weekly', priority: '0.7' })
             urls.push({ loc: `${SITE_URL}/exercice-doc/${classe.id}/${matiere.id}/${chapitre.id}/${lessonId}`, lastmod: todayStr, changefreq: 'weekly', priority: '0.7' })

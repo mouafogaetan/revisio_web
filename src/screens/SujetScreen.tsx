@@ -41,7 +41,7 @@ interface Epreuve {
 export const SujetScreen: React.FC = () => {
   const { classeId, matiereId } = useParams<{ classeId: string; matiereId: string }>()
   const navigate = useNavigate()
-  const { classes } = useAppStore()
+  const { classes, loadRouteData } = useAppStore()
   
   // États pour la liste des sujets
   const [epreuves, setEpreuves] = useState<Epreuve[]>([])
@@ -55,12 +55,19 @@ export const SujetScreen: React.FC = () => {
   const [revealedAnswers, setRevealedAnswers] = useState<Record<number, Record<number, boolean>>>({})
   const [loadingSubject, setLoadingSubject] = useState(false)
   const [subjectError, setSubjectError] = useState<string | null>(null)
+  const [routeLoading, setRouteLoading] = useState(true)
   
   const contentRef = useRef<HTMLDivElement>(null)
 
   const classe = classes.find(c => c.classeId === classeId)
   const matiere = classe?.matieres.find(m => m.matiereId === matiereId)
   const currentSlide = slides[currentIndex] || slides[0]
+
+  useEffect(() => {
+    if (!classeId || !matiereId) return
+
+    loadRouteData(classeId, matiereId).finally(() => setRouteLoading(false))
+  }, [classeId, matiereId, loadRouteData])
 
   // Charger la liste des épreuves
   useEffect(() => {
@@ -390,7 +397,7 @@ export const SujetScreen: React.FC = () => {
     return colors[index % colors.length]
   }
 
-  if (loadingList) {
+  if (routeLoading || loadingList) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />

@@ -16,7 +16,7 @@ export const ExerciceDocScreen: React.FC = () => {
     lessonId: string
   }>()
   const navigate = useNavigate()
-  const { classes } = useAppStore()
+  const { classes, loadRouteData } = useAppStore()
   const [exercices, setExercices] = useState<Exercice[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -24,11 +24,18 @@ export const ExerciceDocScreen: React.FC = () => {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [visibleAnswers, setVisibleAnswers] = useState<Record<string, boolean>>({})
   const [renderKey, setRenderKey] = useState(0)
+  const [routeLoading, setRouteLoading] = useState(true)
 
   const classe = classes.find(c => c.classeId === classeId)
   const matiere = classe?.matieres.find(m => m.matiereId === matiereId)
   const chapitre = matiere?.chapitres.find(c => c.chapitreId === chapitreId)
   const lesson = chapitre?.lessons.find(l => l.lessonId === lessonId)
+
+  useEffect(() => {
+    if (!classeId || !matiereId || !chapitreId) return
+
+    loadRouteData(classeId, matiereId, chapitreId).finally(() => setRouteLoading(false))
+  }, [classeId, matiereId, chapitreId, loadRouteData])
 
   useEffect(() => {
     const loadExercices = async () => {
@@ -146,7 +153,7 @@ export const ExerciceDocScreen: React.FC = () => {
     )
   }
 
-  if (loading) {
+  if (routeLoading || loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
