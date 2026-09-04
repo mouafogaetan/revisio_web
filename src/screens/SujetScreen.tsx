@@ -44,12 +44,10 @@ export const SujetScreen: React.FC = () => {
   const navigate = useNavigate()
   const { classes, loadRouteData } = useAppStore()
   
-  // États pour la liste des sujets
   const [epreuves, setEpreuves] = useState<Epreuve[]>([])
   const [loadingList, setLoadingList] = useState(true)
   const [error, setError] = useState<string | null>(null)
   
-  // États pour le sujet sélectionné
   const [selectedEpreuve, setSelectedEpreuve] = useState<Epreuve | null>(null)
   const [slides, setSlides] = useState<SlideData[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -57,6 +55,7 @@ export const SujetScreen: React.FC = () => {
   const [loadingSubject, setLoadingSubject] = useState(false)
   const [subjectError, setSubjectError] = useState<string | null>(null)
   const [routeLoading, setRouteLoading] = useState(true)
+  const [renderKey, setRenderKey] = useState(0)
   
   const contentRef = useRef<HTMLDivElement>(null)
 
@@ -81,20 +80,15 @@ export const SujetScreen: React.FC = () => {
 
   useEffect(() => {
     if (!classeId || !matiereId) return
-
     loadRouteData(classeId, matiereId).finally(() => setRouteLoading(false))
   }, [classeId, matiereId, loadRouteData])
 
-  // Charger la liste des épreuves
   useEffect(() => {
     const loadEpreuves = async () => {
       if (!classeId || !matiereId) return
-      
       try {
         setLoadingList(true)
         setError(null)
-        
-        // Normaliser les champs bruts `id` et `nom` en `epreuveId` et `title`.
         const data = await getEpreuves(classeId, matiereId)
         setEpreuves(data)
       } catch (err) {
@@ -107,7 +101,6 @@ export const SujetScreen: React.FC = () => {
     loadEpreuves()
   }, [classeId, matiereId])
 
-  // Fermer le sujet pour revenir à la liste
   const closeEpreuve = () => {
     if (classeId && matiereId) {
       navigate(`/sujet/${classeId}/${matiereId}`)
@@ -119,75 +112,63 @@ export const SujetScreen: React.FC = () => {
     setSubjectError(null)
   }
 
-  // Extraire examData du HTML - Version améliorée
   const extractExamData = (html: string): ExamData | null => {
     try {
-      // Méthode 1: Chercher examData avec regex
-      const examDataRegex = /const\s+examData\s*=\s*({[\s\S]*?});/
-      const match = html.match(examDataRegex)
-      
-      if (!match) {
-        console.warn('examData non trouvé avec regex, tentative avec eval...')
-        // Méthode 2: Chercher tout objet JavaScript dans le script
-        try {
-          // Extraire le contenu entre <script> et </script>
-          const scriptMatch = html.match(/<script>([\s\S]*?)<\/script>/)
-          if (scriptMatch) {
-            const scriptContent = scriptMatch[1]
-            // Chercher une affectation à examData
-            const evalMatch = scriptContent.match(/examData\s*=\s*({[\s\S]*?});/)
-            if (evalMatch) {
-              const dataStr = evalMatch[1]
-              const data = new Function(`return ${dataStr}`)()
-              return data
-            }
-          }
-        } catch (e) {
-          console.warn('Erreur avec la méthode 2:', e)
-        }
+      const assignment = html.match(/(?:const|let|var)\s+examData\s*=\s*/)
+      if (!assignment || assignment.index === undefined) {
         return null
       }
 
-      // Nettoyer la chaîne pour le parsing
-      let dataStr = match[1]
-      
-      // Remplacer les guillemets simples par des doubles (pour les clés et les valeurs)
-      // Mais attention aux apostrophes dans les textes
-      dataStr = dataStr.replace(/'/g, (_match, offset, string) => {
-        // Vérifier si c'est une clé (suivi de deux-points)
-        const after = string.substring(offset + 1)
-        if (after.trim().startsWith(':')) {
-          return '"'
-        }
-        // Sinon c'est une valeur, on garde les guillemets simples
-        return "'"
-      })
+      const objectStart = assignment.index + assignment[0].length
+      if (html[objectStart] !== '{') {
+        return null
+      }
 
-      // Essayer de parser avec JSON
-      try {
-        const data = JSON.parse(dataStr)
-        return data
-      } catch (parseError) {
-        console.warn('Erreur de parsing JSON, tentative avec eval...')
-        // Fallback: utiliser une fonction
-        try {
-          const data = new Function(`return ${dataStr}`)()
-          return data
-        } catch (evalError) {
-          console.error('Erreur eval:', evalError)
-          return null
+      let depth = 0
+      let quote: '"' | "'" | null = null
+      let escaped = false
+      let objectEnd = -1
+
+      for (let index = objectStart; index < html.length; index += 1) {
+        const character = html[index]
+
+        if (quote) {
+          if (escaped) {
+            escaped = false
+          } else if (character === '\\') {
+            escaped = true
+          } else if (character === quote) {
+            quote = null
+          }
+          continue
+        }
+
+        if (character === '"' || character === "'") {
+          quote = character
+        } else if (character === '{') {
+          depth += 1
+        } else if (character === '}') {
+          depth -= 1
+          if (depth === 0) {
+            objectEnd = index + 1
+            break
+          }
         }
       }
+
+      if (objectEnd === -1) {
+        return null
+      }
+
+      return JSON.parse(html.slice(objectStart, objectEnd)) as ExamData
     } catch (err) {
       console.error('Erreur extraction examData:', err)
       return null
     }
   }
 
-  // Convertir les exercices en slides
   const convertExercisesToSlides = (data: ExamData): SlideData[] => {
     return data.exercices.map((exercise, index) => {
-      // Construire le contenu HTML pour l'exercice
       let contenu = `
         <div class="exercise-card">
           <div class="exercise-header">
@@ -198,31 +179,7 @@ export const SujetScreen: React.FC = () => {
             ${exercise.enonce}
           </div>
       `
-
-      exercise.questions.forEach((q, qIndex) => {
-        const isRevealed = revealedAnswers[index]?.[qIndex] || false
-        contenu += `
-          <div class="question-block ${isRevealed ? 'revealed' : ''}" data-exercise="${index}" data-question="${qIndex}">
-            <div class="question-text">
-              <span class="question-label">${qIndex + 1}.</span>
-              <span>${q.question}</span>
-            </div>
-            <button 
-              class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
-              data-exercise="${index}" 
-              data-question="${qIndex}"
-            >
-              ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
-            </button>
-            <div class="question-answer ${isRevealed ? 'visible' : ''}">
-              ${q.reponse}
-            </div>
-          </div>
-        `
-      })
-
       contenu += `</div>`
-
       return {
         titre: `Exercice ${index + 1} : ${exercise.titre}`,
         contenu: contenu,
@@ -231,13 +188,13 @@ export const SujetScreen: React.FC = () => {
     })
   }
 
-  // Fonctions de navigation
   const goToPrev = () => {
     if (currentIndex > 0) {
       setCurrentIndex(currentIndex - 1)
       if (contentRef.current) {
         contentRef.current.scrollTop = 0
       }
+      setRenderKey(prev => prev + 1)
     }
   }
 
@@ -247,10 +204,10 @@ export const SujetScreen: React.FC = () => {
       if (contentRef.current) {
         contentRef.current.scrollTop = 0
       }
+      setRenderKey(prev => prev + 1)
     }
   }
 
-  // Fonction pour basculer la réponse - Version améliorée avec gestion des événements
   const toggleAnswer = useCallback((exIndex: number, qIndex: number) => {
     setRevealedAnswers(prev => {
       const newRevealed = { ...prev }
@@ -260,55 +217,11 @@ export const SujetScreen: React.FC = () => {
       newRevealed[exIndex][qIndex] = !newRevealed[exIndex][qIndex]
       return newRevealed
     })
+    setRenderKey(prev => prev + 1)
   }, [])
 
-  // Gestion des clics sur les boutons "Voir réponse/Masquer"
-  useEffect(() => {
-    const handleRevealClick = (e: Event) => {
-      const target = e.target as HTMLElement
-      const button = target.closest('.btn-reveal')
-      if (button) {
-        const exIndex = parseInt(button.getAttribute('data-exercise') || '0')
-        const qIndex = parseInt(button.getAttribute('data-question') || '0')
-        toggleAnswer(exIndex, qIndex)
-      }
-    }
-
-    const container = contentRef.current
-    if (container) {
-      container.addEventListener('click', handleRevealClick)
-    }
-
-    return () => {
-      if (container) {
-        container.removeEventListener('click', handleRevealClick)
-      }
-    }
-  }, [toggleAnswer])
-
-  // Mettre à jour les slides quand revealedAnswers change
-  useEffect(() => {
-    if (selectedEpreuve && slides.length > 0) {
-      // Reconstruire les slides avec les nouvelles réponses révélées
-      const data = slides[0]?.contenu ? extractExamDataFromSlides() : null
-      if (data) {
-        const newSlides = convertExercisesToSlides(data)
-        setSlides(newSlides)
-      }
-    }
-  }, [revealedAnswers])
-
-  // Fonction helper pour extraire les données des slides (simplifiée)
-  const extractExamDataFromSlides = (): ExamData | null => {
-    // Cette fonction serait complexe à implémenter parfaitement
-    // Pour simplifier, on pourrait stocker les données originales
-    return null
-  }
-
-  // Stocker les données originales pour la reconstruction
   const [originalExamData, setOriginalExamData] = useState<ExamData | null>(null)
 
-  // Modifier openEpreuve pour stocker les données originales
   const openEpreuveWithData = async (epreuve: Epreuve) => {
     if (!classeId || !matiereId) return
 
@@ -332,6 +245,7 @@ export const SujetScreen: React.FC = () => {
           initialRevealed[exIndex] = {}
         })
         setRevealedAnswers(initialRevealed)
+        setRenderKey(prev => prev + 1)
       } else {
         setSlides([{
           titre: 'Sujet non disponible',
@@ -346,12 +260,10 @@ export const SujetScreen: React.FC = () => {
     }
   }
 
-  // Remplacer openEpreuve par openEpreuveWithData
   const openEpreuveFinal = openEpreuveWithData
 
   useEffect(() => {
     if (!epreuveId || loadingList || selectedEpreuve || epreuves.length === 0) return
-
     const epreuve = epreuves.find(item => item.epreuveId === epreuveId)
     if (epreuve) {
       openEpreuveFinal(epreuve)
@@ -360,20 +272,6 @@ export const SujetScreen: React.FC = () => {
     }
   }, [epreuveId, loadingList, selectedEpreuve, epreuves, openEpreuveFinal])
 
-  // Mettre à jour les slides quand les réponses changent
-  useEffect(() => {
-    if (originalExamData && slides.length > 0) {
-      const newSlides = convertExercisesToSlides(originalExamData)
-      // Garder l'index courant
-      const currentIdx = currentIndex
-      setSlides(newSlides)
-      if (currentIdx < newSlides.length) {
-        setCurrentIndex(currentIdx)
-      }
-    }
-  }, [revealedAnswers, originalExamData])
-
-  // Fonction pour obtenir la couleur de fond selon l'index
   const getCardColor = (index: number) => {
     const colors = [
       'bg-blue-50 hover:bg-blue-100 border-blue-200',
@@ -418,7 +316,7 @@ export const SujetScreen: React.FC = () => {
   }
 
   // ============================================================
-  // AFFICHAGE DU SUJET SÉLECTIONNÉ (avec extraction des données)
+  // AFFICHAGE DU SUJET SÉLECTIONNÉ
   // ============================================================
   if (selectedEpreuve) {
     if (loadingSubject) {
@@ -463,18 +361,13 @@ export const SujetScreen: React.FC = () => {
 
     return (
       <div className="flex flex-col h-full w-full px-4">
-        {/* En-tête du sujet */}
+        {/* En-tête */}
         <div className="mb-4 shrink-0">
           <div className="flex items-center justify-between gap-3 w-full">
-            <Button 
-              variant="ghost" 
-              onClick={closeEpreuve}
-              className="shrink-0"
-            >
+            <Button variant="ghost" onClick={closeEpreuve} className="shrink-0">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Retour
             </Button>
-
             <div className="flex items-center space-x-2 shrink-0">
               <span className="text-sm text-gray-400 hidden sm:inline">
                 {slides.length} exercice{slides.length > 1 ? 's' : ''}
@@ -484,7 +377,6 @@ export const SujetScreen: React.FC = () => {
               </Button>
             </div>
           </div>
-
           <div className="mt-3 w-full">
             <h2 className="text-xl font-bold text-gray-800 break-words">
               {selectedEpreuve.title || 'Sujet'}
@@ -495,17 +387,78 @@ export const SujetScreen: React.FC = () => {
           </div>
         </div>
 
-        {/* Contenu du sujet */}
+        {/* Contenu - TOUT est dans MathJaxContent */}
         <div 
           ref={contentRef}
           className="flex-1 min-h-[500px] bg-white rounded-lg shadow-md p-4 md:p-6 overflow-y-auto border border-gray-200"
         >
-          <div className="subject-content">
-            <MathJaxContent 
-              html={currentSlide?.contenu || '<p>Contenu non disponible</p>'}
-              key={`slide-${currentIndex}`}
-            />
-          </div>
+          {originalExamData?.exercices[currentIndex] ? (
+            <div className="subject-content" key={`subject-${renderKey}`}>
+              <div className="exercise-card">
+                <div className="exercise-header">
+                  <span className="exercise-title">
+                    {originalExamData.exercices[currentIndex].titre}
+                  </span>
+                  <span className="exercise-points">
+                    {originalExamData.exercices[currentIndex].points}
+                  </span>
+                </div>
+
+                {/* Énoncé avec MathJaxContent */}
+                <div className="exercise-statement">
+                  <MathJaxContent
+                    html={originalExamData.exercices[currentIndex].enonce}
+                    key={`enonce-${currentIndex}-${renderKey}`}
+                    forceRender={true}
+                  />
+                </div>
+
+                {/* Questions et réponses avec MathJaxContent */}
+                {originalExamData.exercices[currentIndex].questions.map((question, questionIndex) => {
+                  const isRevealed = revealedAnswers[currentIndex]?.[questionIndex] || false
+
+                  return (
+                    <div
+                      key={`${currentIndex}-${questionIndex}`}
+                      className={`question-block ${isRevealed ? 'revealed' : ''}`}
+                    >
+                      {/* Question avec MathJaxContent */}
+                      <div className="question-text">
+                        <span className="question-label">{questionIndex + 1}.</span>
+                        <MathJaxContent 
+                          html={question.question}
+                          key={`q-${currentIndex}-${questionIndex}-${renderKey}`}
+                          forceRender={true}
+                        />
+                      </div>
+
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className={`btn-reveal ${isRevealed ? 'revealed' : ''}`}
+                        onClick={() => toggleAnswer(currentIndex, questionIndex)}
+                      >
+                        {isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                      </Button>
+
+                      {/* Réponse avec MathJaxContent */}
+                      {isRevealed && (
+                        <div className="question-answer visible">
+                          <MathJaxContent 
+                            html={question.reponse}
+                            key={`r-${currentIndex}-${questionIndex}-${renderKey}`}
+                            forceRender={true}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          ) : (
+            <p>Contenu non disponible</p>
+          )}
         </div>
 
         {/* Note */}
@@ -515,13 +468,14 @@ export const SujetScreen: React.FC = () => {
             <div className="text-sm text-blue-700">
               <MathJaxContent 
                 html={currentSlide.note}
-                key={`note-${currentIndex}`}
+                key={`note-${currentIndex}-${renderKey}`}
+                forceRender={true}
               />
             </div>
           </div>
         )}
 
-        {/* Pied de page avec contrôles de navigation */}
+        {/* Navigation */}
         <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
           <div className="flex items-center space-x-2">
             <Button
@@ -534,7 +488,6 @@ export const SujetScreen: React.FC = () => {
               <span className="hidden sm:inline">Précédent</span>
               <span className="sm:hidden">Préc.</span>
             </Button>
-
             <Button
               variant="ghost"
               onClick={goToNext}
@@ -546,7 +499,6 @@ export const SujetScreen: React.FC = () => {
               <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
           </div>
-
           <div className="flex items-center space-x-4">
             <span className="text-sm text-gray-500">
               {currentIndex + 1} / {slides.length}
@@ -554,39 +506,7 @@ export const SujetScreen: React.FC = () => {
           </div>
         </div>
 
-        {/* Contrôles mobiles flottants */}
-        <div className="sm:hidden fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
-          <div className="bg-white/95 backdrop-blur rounded-full px-2 py-2 shadow-lg flex items-center gap-1 border border-gray-200">
-            <Button
-              variant="ghost"
-              onClick={goToPrev}
-              disabled={currentIndex === 0}
-              className="flex items-center gap-1 px-3 py-2 rounded-full text-[11px] font-medium"
-              aria-label="Précédent"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              <span>Préc.</span>
-            </Button>
-
-            <div className="min-w-[72px] text-center text-[10px] font-semibold text-gray-600 leading-tight px-1">
-              {currentIndex + 1}
-              <span className="block text-[9px] text-gray-500">/ {slides.length}</span>
-            </div>
-
-            <Button
-              variant="ghost"
-              onClick={goToNext}
-              disabled={currentIndex === slides.length - 1}
-              className="flex items-center gap-1 px-3 py-2 rounded-full text-[11px] font-medium"
-              aria-label="Suivant"
-            >
-              <span>Suiv.</span>
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
-
-        {/* Styles pour le contenu du sujet */}
+        {/* Styles */}
         <style>{`
           .subject-content .exercise-card {
             background: #f8fafc;
@@ -631,6 +551,10 @@ export const SujetScreen: React.FC = () => {
             padding: 0 4px;
           }
 
+          .subject-content .exercise-statement .math-content {
+            display: inline;
+          }
+
           .subject-content .question-block {
             background: rgba(0,0,0,0.02);
             border-radius: 12px;
@@ -653,6 +577,10 @@ export const SujetScreen: React.FC = () => {
             gap: 8px;
           }
 
+          .subject-content .question-text .math-content {
+            flex: 1;
+          }
+
           .subject-content .question-label {
             font-weight: 600;
             color: #2563eb;
@@ -665,7 +593,7 @@ export const SujetScreen: React.FC = () => {
             border-radius: 8px;
             padding: 10px 14px;
             margin-top: 8px;
-            display: none;
+            display: none !important;
             font-size: 0.9rem;
             color: #065f46;
             line-height: 1.6;
@@ -673,8 +601,12 @@ export const SujetScreen: React.FC = () => {
           }
 
           .subject-content .question-answer.visible {
-            display: block;
+            display: block !important;
             animation: fadeIn 0.3s ease;
+          }
+
+          .subject-content .question-answer .math-content {
+            color: #065f46;
           }
 
           @keyframes fadeIn {
@@ -707,6 +639,38 @@ export const SujetScreen: React.FC = () => {
             background: rgba(5, 150, 105, 0.1);
             border-color: rgba(5, 150, 105, 0.2);
             color: #059669;
+          }
+
+          /* Styles pour les éléments mathématiques dans les questions */
+          .subject-content .math-block {
+            margin: 8px 0;
+            padding: 8px 12px;
+            background: rgba(0,0,0,0.02);
+            border-radius: 8px;
+            overflow-x: auto;
+          }
+
+          .subject-content .data-table {
+            margin: 8px 0;
+            overflow-x: auto;
+          }
+
+          .subject-content .data-table table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+          }
+
+          .subject-content .data-table th,
+          .subject-content .data-table td {
+            border: 1px solid #e2e8f0;
+            padding: 6px 12px;
+            text-align: center;
+          }
+
+          .subject-content .data-table th {
+            background: #f1f5f9;
+            font-weight: 600;
           }
 
           @media (max-width: 400px) {

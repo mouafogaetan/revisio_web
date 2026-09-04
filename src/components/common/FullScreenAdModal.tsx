@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { X } from 'lucide-react'
 import { AdManager } from './AdManager'
 
@@ -17,6 +17,13 @@ export const FullScreenAdModal: React.FC<FullScreenAdModalProps> = ({
 }) => {
   const [progress, setProgress] = useState(0)
 
+  const handleClose = useCallback(() => {
+    onClose()
+    window.setTimeout(() => {
+      window.dispatchEvent(new Event('mathjax:refresh'))
+    }, 0)
+  }, [onClose])
+
   useEffect(() => {
     if (!visible) {
       setProgress(0)
@@ -31,12 +38,12 @@ export const FullScreenAdModal: React.FC<FullScreenAdModalProps> = ({
 
       if (nextProgress >= 100) {
         window.clearInterval(interval)
-        onClose()
+        handleClose()
       }
     }, 200)
 
     return () => window.clearInterval(interval)
-  }, [visible, durationMs, onClose])
+  }, [visible, durationMs, handleClose])
 
   if (!visible) return null
 
@@ -51,7 +58,7 @@ export const FullScreenAdModal: React.FC<FullScreenAdModalProps> = ({
 
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             className="rounded-full bg-gray-100 p-2 text-gray-600 transition hover:bg-gray-200"
             aria-label="Fermer la publicité"
           >

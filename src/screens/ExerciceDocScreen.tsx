@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Loader2, ArrowLeft, Eye, EyeOff, ChevronLeft, ChevronRight } from 'lucide-react'
 import { getExercices } from '@/services/api'
 import { Exercice, Question as QuestionType } from '@/types/classeTypes'
+import { DIFFICULTY_ORDER } from '@/constants'
 import { MathJaxContent } from '@/components/common/MathJaxContent'
 import { FullScreenAdModal } from '@/components/common/FullScreenAdModal'
 
@@ -52,11 +53,8 @@ export const ExerciceDocScreen: React.FC = () => {
         setLoading(true)
         setError(null)
         const data = await getExercices(classeId, matiereId, chapitreId, lessonId)
-        const niveauOrder: Record<string, number> = { easy: 1, medium: 2, hard: 3, 'very hard': 4 }
         const sorted = [...data].sort((a, b) => {
-          const aNiveau = niveauOrder[a.niveau] || 99
-          const bNiveau = niveauOrder[b.niveau] || 99
-          return aNiveau - bNiveau
+          return DIFFICULTY_ORDER[a.niveau] - DIFFICULTY_ORDER[b.niveau]
         })
         setExercices(sorted)
       } catch (err) {

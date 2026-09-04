@@ -4,7 +4,6 @@ interface MathJaxContentProps {
   html: string
   className?: string
   inline?: boolean
-  key?: string | number
   forceRender?: boolean
 }
 
@@ -12,11 +11,11 @@ export const MathJaxContent: React.FC<MathJaxContentProps> = ({
   html, 
   className = '',
   inline = false,
-  key,
   forceRender = false
 }) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const [renderAttempts, setRenderAttempts] = useState(0)
+  const [refreshKey, setRefreshKey] = useState(0)
   const maxAttempts = 5
   const isRenderedRef = useRef(false)
 
@@ -63,27 +62,15 @@ export const MathJaxContent: React.FC<MathJaxContentProps> = ({
       const readyMathJax = window.MathJax
       if (!containerRef.current || !readyMathJax) return
 
+      // Restaurer le HTML source avant de relancer MathJax après une modale.
+      containerRef.current.innerHTML = cleanHtml(html)
+
       // Marquer le conteneur
       containerRef.current.classList.add('math-content')
 
-      // Forcer le rendu
+      // Réinitialiser le suivi MathJax avant de rendre le HTML courant.
+      readyMathJax.typesetClear?.([containerRef.current])
       await readyMathJax.typesetPromise?.([containerRef.current])
-
-      // Traiter les éléments enfants avec des expressions
-      const elementsWithMath = containerRef.current.querySelectorAll(
-        'p, li, td, th, span, div'
-      )
-
-      for (const el of elementsWithMath) {
-        const html = el.innerHTML
-        if (html && (html.includes('$') || html.includes('\\(') || html.includes('\\[') || html.includes('$$'))) {
-          try {
-            await readyMathJax.typesetPromise?.([el])
-          } catch (e) {
-            // Ignorer les erreurs individuelles
-          }
-        }
-      }
 
       isRenderedRef.current = true
 
@@ -112,25 +99,13 @@ export const MathJaxContent: React.FC<MathJaxContentProps> = ({
         }
       }
     }
-  }, [html, key, forceRender, renderAttempts])
+  }, [html, forceRender, refreshKey, renderAttempts])
 
-  // Re-rendre quand le composant est visible
   useEffect(() => {
-    const observer = new MutationObserver(() => {
-      if (containerRef.current && !isRenderedRef.current) {
-        renderMath()
-      }
-    })
+    const refreshMathJax = () => setRefreshKey(prev => prev + 1)
+    window.addEventListener('mathjax:refresh', refreshMathJax)
 
-    if (containerRef.current) {
-      observer.observe(containerRef.current, {
-        attributes: true,
-        childList: true,
-        subtree: true,
-      })
-    }
-
-    return () => observer.disconnect()
+    return () => window.removeEventListener('mathjax:refresh', refreshMathJax)
   }, [])
 
   if (!html) return null

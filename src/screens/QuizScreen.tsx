@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Loader2, ArrowLeft, CheckCircle, XCircle, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Questions, Quiz } from '@/types/classeTypes'
+import { DIFFICULTY_ORDER } from '@/constants'
 import { MathJaxContent } from '@/components/common/MathJaxContent'
 import { FullScreenAdModal } from '@/components/common/FullScreenAdModal'
 
@@ -19,11 +20,16 @@ export const QuizScreen: React.FC = () => {
   const [showFullScreenAd, setShowFullScreenAd] = useState(false)
 
   useEffect(() => {
-    const quizData = location.state?.quiz
+    const quizData = location.state?.quiz as Quiz | undefined
     
     if (quizData && quizData.questions && quizData.questions.length > 0) {
       setQuiz(quizData)
-      setQuestions(quizData.questions.map((q: Questions) => ({ ...q, userAnswer: undefined })))
+      const orderedQuestions = quizData.questions
+        .map(q => ({ ...q, userAnswer: undefined }))
+        .sort((firstQuestion, secondQuestion) => (
+          DIFFICULTY_ORDER[firstQuestion.difficulty] - DIFFICULTY_ORDER[secondQuestion.difficulty]
+        ))
+      setQuestions(orderedQuestions)
       setLoading(false)
     } else {
       setError('Aucune question disponible pour ce quiz')

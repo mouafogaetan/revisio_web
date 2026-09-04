@@ -14,6 +14,7 @@ declare global {
     YT: any
     onYouTubeIframeAPIReady: () => void
     MathJax?: {
+      typesetClear?: (elements?: Element[]) => void
       typesetPromise?: (elements: Element[]) => Promise<void> | void
     }
     adsbygoogle?: Array<Record<string, unknown>>
