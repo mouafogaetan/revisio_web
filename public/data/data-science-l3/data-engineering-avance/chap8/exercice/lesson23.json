@@ -1,0 +1,160 @@
+[
+  {
+    "intitule": "Conception d'un Pipeline ETL avec Airflow",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous êtes Data Engineer dans une entreprise camerounaise de distribution d'électricité (ENEO). L'entreprise souhaite automatiser le traitement de ses données de consommation électrique.</p><p><strong>Contexte :</strong></p><ul><li>Les données sont extraites quotidiennement d'un fichier CSV depuis un serveur FTP contenant les relevés de consommation des abonnés (ID client, date, consommation en kWh, région).</li><li>Ces données doivent être transformées (nettoyage des valeurs aberrantes, calcul de la moyenne de consommation par région, ajout d'une colonne 'tarif' basée sur le seuil de consommation).</li><li>Les données transformées doivent être chargées dans un Data Warehouse (PostgreSQL) pour alimenter des dashboards de suivi.</li></ul><p><strong>Votre mission :</strong> Concevoir un pipeline ETL orchestré par Apache Airflow.</p>",
+      "images": [
+        "Diagramme d'architecture montrant le flux : FTP (CSV) -> Airflow (ETL) -> PostgreSQL (Data Warehouse).",
+        "Capture d'écran d'un DAG Airflow simple avec des tâches nommées 'extract', 'transform', et 'load'."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Définissez les étapes de votre pipeline et concevez un DAG Airflow pour ce pipeline. Décrivez les tâches et leurs dépendances.",
+        "niveau": "hard",
+        "reponse": "<p>Le pipeline sera composé de trois tâches principales :</p><ul><li><strong>extract_data</strong> : Tâche PythonOperator qui se connecte au serveur FTP, télécharge le fichier CSV et le stocke dans un répertoire local ou sur un bucket cloud (S3).</li><li><strong>transform_data</strong> : Tâche PythonOperator qui lit le CSV, effectue les transformations (nettoyage, calculs) et enregistre le résultat dans un nouveau fichier ou une table staging.</li><li><strong>load_data</strong> : Tâche PostgresOperator qui charge les données transformées dans la table cible du Data Warehouse (ou PythonOperator avec une connexion SQLAlchemy).</li></ul><p><strong>Dépendances :</strong> extract_data >> transform_data >> load_data</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez pourquoi il est important de gérer les erreurs et les retries dans ce pipeline.",
+            "niveau": "medium",
+            "reponse": "<p>La gestion des erreurs et des retries est cruciale car :</p><ul><li>La connexion FTP peut échouer (réseau instable) → un retry permet de réessayer.</li><li>Le fichier CSV peut être mal formé → il faut capturer l'erreur et envoyer une notification.</li><li>La base de données peut être indisponible → les retries permettent de surmonter une interruption temporaire.</li><li>Sans cela, le pipeline échouerait et les dashboards ne seraient pas mis à jour, impactant la prise de décision.</li></ul>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Proposez un mécanisme pour notifier l'équipe en cas d'échec du pipeline.",
+            "niveau": "medium",
+            "reponse": "<p>On peut utiliser :</p><ul><li>L'intégration email d'Airflow via les paramètres 'email_on_failure' dans le DAG.</li><li>Des alertes Slack ou Teams en configurant un Webhook dans un opérateur dédié.</li><li>Une tâche de 'cleanup' qui s'exécute en cas d'échec pour supprimer les fichiers temporaires.</li></ul>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation d'un Pipeline ELT avec dbt et Airflow",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Une startup de e-commerce au Cameroun utilise un pipeline ELT. Les données sont chargées brute dans BigQuery (via Airflow). Ensuite, dbt est utilisé pour les transformations en base.</p><p><strong>Problématique :</strong> Le pipeline actuel est trop lent et consomme beaucoup de ressources, surtout lors des pics de données pendant les périodes de soldes. De plus, les coûts de requêtage BigQuery augmentent.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analysez les causes possibles de lenteur du pipeline et de l'augmentation des coûts.",
+        "niveau": "hard",
+        "reponse": "<p>Les causes possibles sont :</p><ul><li><strong>Transformations non optimisées</strong> : Certaines requêtes SQL de dbt peuvent être inefficaces (manque de filtrage, joins trop larges).</li><li><strong>Granularité des données</strong> : Le pipeline traite peut-être des données trop fines (ligne par ligne) au lieu d'utiliser des batchs ou des tables partitionnées.</li><li><strong>Absence de partitionnement</strong> : Les tables BigQuery ne sont pas partitionnées par date, ce qui oblige à scanner toute la table à chaque transformation.</li><li><strong>Exécution fréquente</strong> : dbt s'exécute peut-être trop souvent (toutes les heures) alors qu'une exécution quotidienne suffirait.</li></ul>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposez des améliorations pour réduire la lenteur et les coûts.",
+            "niveau": "very hard",
+            "reponse": "<p>Améliorations :</p><ul><li><strong>Optimisation des modèles dbt</strong> : Utiliser des 'materializations' adaptées (view, table, incremental). Les modèles incrémentaux sont parfaits pour ne traiter que les nouvelles données.</li><li><strong>Partitionnement et clustering</strong> : Partitionner les tables par date et les clusteriser par région ou ID client pour réduire le volume scanné.</li><li><strong>Orchestration intelligente</strong> : Dans Airflow, ne déclencher dbt que lorsqu'il y a de nouvelles données (via un Senseur).</li><li><strong>Utiliser des 'tests' et des 'snapshots' dbt</strong> pour la qualité des données, mais les exécuter en dehors des heures de pointe.</li></ul>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Décrivez comment vous intégreriez dbt dans un DAG Airflow pour une exécution incrémentale.",
+            "niveau": "hard",
+            "reponse": "<p>Dans le DAG Airflow, on peut utiliser un BashOperator ou un KubernetesPodOperator pour lancer la commande dbt :</p><ul><li><strong>dbt run --select tag:incremental</strong> : pour exécuter uniquement les modèles incrémentaux.</li><li><strong>dbt test</strong> : pour exécuter les tests après les transformations.</li><li>On peut aussi paramétrer dbt via des variables d'environnement (target, schema).</li></ul>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Implémentation d'un Pipeline avec Airflow et Data Warehouse Cloud",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Une compagnie d'assurance camerounaise souhaite migrer ses données historiques (fichiers Excel, CSV) vers un Data Warehouse cloud (Snowflake) et automatiser les rapports quotidiens de sinistres.</p><p>Les données proviennent de plusieurs sources : fichiers Excel de sinistres, bases SQL Server des agences, et fichiers CSV des paiements.</p>",
+      "images": [
+        "Schéma d'intégration de données avec Airflow comme orchestreur central et Snowflake comme Data Warehouse.",
+        "Représentation des tâches Airflow (extract SQL Server, extract Excel, load staging, transform, load final)."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Déterminez les étapes nécessaires pour construire ce pipeline Airflow et justifiez vos choix.",
+        "niveau": "hard",
+        "reponse": "<p>Les étapes :</p><ol><li><strong>Ingestion (extraction)</strong> :<ul><li>Utiliser des opérateurs Airflow comme SQLServerOperator pour extraire les données des bases SQL.</li><li>Utiliser PythonOperator avec pandas pour lire les fichiers Excel/CSV et les charger dans un stockage intermédiaire (S3 ou GCS).</li></ul></li><li><strong>Chargement (loading)</strong> :<ul><li>Utiliser des opérateurs Snowflake (SnowflakeOperator) pour charger les données brutes dans des tables 'staging' dans Snowflake.</li></ul></li><li><strong>Transformation (transform)</strong> :<ul><li>Utiliser dbt ou des requêtes SQL dans Snowflake pour nettoyer, joindre et agréger les données.</li></ul></li><li><strong>Reporting</strong> :<ul><li>Exporter les résultats vers des dashboards (Looker, Power BI) ou générer des rapports PDF automatisés.</li></ul></li></ol>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment assurer la reproductibilité et la fiabilité du pipeline ?",
+            "niveau": "medium",
+            "reponse": "<p>Pour assurer la fiabilité :</p><ul><li>Utiliser l'idempotence : chaque exécution du DAG doit produire le même résultat.</li><li>Mettre en place des 'Sensors' pour attendre que les fichiers sources soient disponibles.</li><li>Journaliser les métadonnées (date de dernière extraction) pour éviter les doublons.</li><li>Utiliser un système de gestion de versions pour le code Airflow et dbt (Git).</li></ul>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Proposez un plan de monitoring pour ce pipeline.",
+            "niveau": "medium",
+            "reponse": "<p>Le monitoring inclut :</p><ul><li>Suivi de l'exécution des tâches dans l'interface Airflow (succès/échec).</li><li>Alertes par email ou Slack en cas d'échec.</li><li>Métriques de performance (durée d'exécution, volume de données traitées).</li><li>Utilisation de la fonctionnalité 'xcom' d'Airflow pour passer des métriques entre tâches.</li><li>Intégration avec un outil de monitoring comme Prometheus ou Datadog.</li></ul>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Questions de Révision sur les Fondamentaux d'Airflow",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Répondez aux questions suivantes pour vérifier votre compréhension des concepts de base d'Apache Airflow.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Définissez ce qu'est un DAG dans Airflow.",
+        "niveau": "easy",
+        "reponse": "<p>Un DAG (Directed Acyclic Graph) est un graphe orienté acyclique qui définit la structure et l'ordre d'exécution des tâches (opérateurs) dans un pipeline Airflow. Il spécifie les dépendances entre les tâches et les conditions d'exécution.</p>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Citez trois types d'opérateurs couramment utilisés dans Airflow et donnez un exemple de cas d'usage pour chacun.",
+        "niveau": "easy",
+        "reponse": "<ul><li><strong>PythonOperator</strong> : Exécute une fonction Python. Utilisé pour le traitement de données personnalisé, les appels API, le téléchargement de fichiers.</li><li><strong>PostgresOperator</strong> : Exécute une requête SQL sur une base PostgreSQL. Utilisé pour les opérations de chargement ou de transformation en base.</li><li><strong>BashOperator</strong> : Exécute une commande bash. Utilisé pour lancer des scripts, des commandes système, ou des outils comme dbt.</li></ul>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Conception d'un Pipeline de Données pour la Gestion des Dossiers Scolaires",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Le Ministère de l'Éducation du Cameroun souhaite mettre en place un pipeline de données pour centraliser et analyser les résultats scolaires des étudiants du secondaire.</p><p><strong>Sources :</strong> fichiers CSV des établissements, bases SQL des examens officiels (BEPC, Probatoire, Baccalauréat).</p><p><strong>Objectifs :</strong></p><ul><li>Identifier les régions avec les meilleurs taux de réussite.</li><li>Suivre l'évolution des performances par matière et par genre.</li><li>Alimenter un tableau de bord public.</li></ul>",
+      "images": [
+        "Carte du Cameroun avec des couleurs indiquant les taux de réussite par région.",
+        "Exemple de DAG Airflow avec des tâches (extract, clean, aggregate, load, publish)."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevez un DAG Airflow complet pour ce pipeline. Détaillez les tâches, leurs dépendances, et les outils utilisés.",
+        "niveau": "hard",
+        "reponse": "<p><strong>Tâches :</strong></p><ol><li><strong>extract_establishments</strong> (PythonOperator) : Télécharge les fichiers CSV des établissements depuis un serveur FTP/Ministère.</li><li><strong>extract_exams</strong> (PythonOperator) : Extrait les données des examens officiels via SQL (utiliser SQLAlchemy).</li><li><strong>clean_and_join</strong> (PythonOperator) : Nettoie les données (suppression des doublons, gestion des valeurs manquantes) et joint les deux sources pour créer une table unifiée.</li><li><strong>aggregate_by_region_gender</strong> (PythonOperator) : Agréege les données (taux de réussite par région, par genre, par matière).</li><li><strong>load_warehouse</strong> (PostgresOperator ou SnowflakeOperator) : Charge les données agrégées dans le Data Warehouse.</li><li><strong>publish_dashboard</strong> (BashOperator ou PythonOperator) : Actualise le dashboard (ex: Metabase, PowerBI).</li></ol><p><strong>Dépendances :</strong> extract_establishments >> clean_and_join, extract_exams >> clean_and_join >> aggregate_by_region_gender >> load_warehouse >> publish_dashboard</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Décrivez comment vous paramétrez ce DAG pour qu'il s'exécute automatiquement tous les mois après la publication des résultats des examens.",
+            "niveau": "medium",
+            "reponse": "<p>On peut :</p><ul><li>Définir le paramètre 'schedule_interval' à '@monthly'.</li><li>Ou utiliser un 'TimeSensor' pour attendre une date/heure spécifique chaque mois.</li><li>Combiner avec un 'FileSensor' pour attendre que le fichier CSV du mois soit disponible, déclenchant ainsi le pipeline en cas de nouvelle donnée.</li></ul>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Comment gérer les situations où les données de certains établissements manquent ou sont incomplètes ?",
+            "niveau": "hard",
+            "reponse": "<p>On peut :</p><ul><li>Mettre en place une validation des données via 'Great Expectations' ou des tests dbt pour détecter les anomalies.</li><li>Définir des règles de gestion : si plus de 20% des données d'une région sont manquantes, envoyer une alerte et exclure la région du rapport ce mois-ci.</li><li>Implémenter des 'retries' pour les tâches d'extraction et un 'notify_failure' pour signaler l'absence de données.</li></ul>"
+          }
+        ]
+      }
+    ]
+  }
+]

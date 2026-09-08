@@ -1,0 +1,185 @@
+[
+  {
+    "intitule": "Analyse d'un Dockerfile Node.js existant",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous travaillez sur une application Node.js Express qui écoute sur le port 3000. Un collègue a écrit le Dockerfile suivant :</p>\n<pre><code>\nFROM node:18-alpine\nWORKDIR /app\nCOPY package*.json ./\nRUN npm install\nCOPY . .\nEXPOSE 3000\nCMD [\"node\", \"server.js\"]\n</code></pre>\n<p>Analysez ce Dockerfile et répondez aux questions.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer le rôle de chaque instruction du Dockerfile (FROM, WORKDIR, COPY, RUN, EXPOSE, CMD).",
+        "niveau": "easy",
+        "reponse": "FROM : définit l'image de base (Node.js 18 sur Alpine Linux). WORKDIR : crée et définit le répertoire de travail /app. COPY package*.json ./ : copie les fichiers package.json et package-lock.json dans /app. RUN npm install : installe les dépendances. COPY . . : copie tout le code source. EXPOSE 3000 : documente que l'application utilise le port 3000. CMD : commande à exécuter au démarrage du conteneur.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Justifier pourquoi on copie d'abord package.json puis on exécute npm install avant de copier le reste du code.",
+        "niveau": "medium",
+        "reponse": "Cela optimise le cache des couches Docker. Tant que package.json ne change pas, Docker réutilise la couche npm install en cache, ce qui accélère les reconstructions. Si on copiait tout le code d'abord, toute modification du code invaliderait le cache et forcerait une réinstallation des dépendances à chaque fois.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation d'un Dockerfile pour la production",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous devez optimiser le Dockerfile suivant pour un déploiement en production :</p>\n<pre><code>\nFROM node:18\nWORKDIR /app\nCOPY . .\nRUN npm install\nRUN npm install -g nodemon\nEXPOSE 8080\nCMD [\"nodemon\", \"index.js\"]\n</code></pre>\n<p>Identifiez les problèmes et proposez des améliorations.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier trois problèmes dans ce Dockerfile pour un environnement de production.",
+        "niveau": "medium",
+        "reponse": "1. Utilisation de nodemon (outil de développement) en production. 2. Installation des dépendances après la copie de tout le code (cache inefficace). 3. Image node:18 plus lourde que node:18-alpine. 4. Installation globale de nodemon inutile. 5. Le port EXPOSE 8080 est documenté mais CMD utilise nodemon.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Réécrire le Dockerfile corrigé pour la production en utilisant les bonnes pratiques.",
+        "niveau": "hard",
+        "reponse": "<pre><code>\nFROM node:18-alpine\nWORKDIR /app\nCOPY package*.json ./\nRUN npm ci --only=production\nCOPY . .\nEXPOSE 8080\nCMD [\"node\", \"index.js\"]\n</code></pre>\nExplication : Alpine pour légèreté, npm ci pour installation reproductible, --only=production pour exclure devDependencies, node directement sans nodemon.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Construction d'un docker-compose pour application complète",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous développez une application Node.js avec Express qui se connecte à une base de données MongoDB. L'application nécessite également un serveur Redis pour la gestion de cache et des sessions. Vous devez containeriser l'ensemble avec docker-compose pour faciliter le développement local.</p>\n<p>L'application Node.js :</p>\n<ul>\n<li>Écoute sur le port 5000</li>\n<li>Lit les variables d'environnement : MONGO_URL, REDIS_HOST, REDIS_PORT, JWT_SECRET</li>\n<li>Nécessite un volume pour persister les logs dans ./logs</li>\n</ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédiger le fichier docker-compose.yml complet avec les services : app (Node.js), mongodb, redis.",
+        "niveau": "hard",
+        "reponse": "<pre><code>\nversion: '3.8'\nservices:\n  mongodb:\n    image: mongo:6\n    container_name: mongodb\n    restart: unless-stopped\n    ports:\n      - \"27017:27017\"\n    volumes:\n      - mongo_data:/data/db\n    environment:\n      MONGO_INITDB_ROOT_USERNAME: admin\n      MONGO_INITDB_ROOT_PASSWORD: secret\n\n  redis:\n    image: redis:7-alpine\n    container_name: redis\n    restart: unless-stopped\n    ports:\n      - \"6379:6379\"\n    volumes:\n      - redis_data:/data\n\n  app:\n    build: .\n    container_name: node_app\n    restart: unless-stopped\n    ports:\n      - \"5000:5000\"\n    environment:\n      MONGO_URL: mongodb://admin:secret@mongodb:27017/mydb?authSource=admin\n      REDIS_HOST: redis\n      REDIS_PORT: 6379\n      JWT_SECRET: supersecurekey\n    volumes:\n      - ./logs:/app/logs\n    depends_on:\n      - mongodb\n      - redis\n\nvolumes:\n  mongo_data:\n  redis_data:\n</code></pre>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer le rôle du champ `depends_on` et ses limitations.",
+            "niveau": "medium",
+            "reponse": "depends_on contrôle l'ordre de démarrage des services (mongodb et redis démarrent avant app). Mais il ne garantit pas que ces services soient prêts à accepter des connexions. Pour cela, il faudrait ajouter un script d'attente (wait-for-it) ou utiliser des healthchecks.",
+            "sousQuestions": []
+          },
+          {
+            "numero": "1.b",
+            "texte": "Proposer une commande pour lancer l'ensemble en mode détaché puis visualiser les logs de l'application.",
+            "niveau": "easy",
+            "reponse": "docker-compose up -d pour lancer en arrière-plan, puis docker-compose logs -f app pour suivre les logs de l'application.",
+            "sousQuestions": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Déploiement sur serveur distant avec Docker",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous avez terminé le développement de votre API Node.js. Vous devez maintenant la déployer sur un serveur Ubuntu 22.04 en production. Le serveur a Docker et Docker Compose installés. Votre projet contient un Dockerfile et un docker-compose.yml. Vous devez également gérer les variables sensibles (JWT_SECRET, mots de passe DB) de manière sécurisée.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire la procédure complète pour transférer le code sur le serveur et lancer l'application en production.",
+        "niveau": "hard",
+        "reponse": "1. Se connecter au serveur via SSH. 2. Cloner le dépôt Git ou utiliser rsync/scp pour transférer les fichiers. 3. Créer un fichier .env sur le serveur avec les variables sensibles (ne pas commit). 4. Exécuter docker-compose up -d --build pour construire et lancer. 5. Vérifier avec docker-compose ps et docker-compose logs.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment gérer les mises à jour de l'application sans interruption de service ?",
+            "niveau": "very hard",
+            "reponse": "Utiliser docker-compose up -d --build qui recrée les conteneurs modifiés. Pour zéro downtime, on peut utiliser un orchestrateur (Swarm, Kubernetes) ou un reverse proxy (Nginx) avec blue-green deployment. Sinon, accepter quelques secondes d'indisponibilité le temps du redémarrage.",
+            "sousQuestions": []
+          },
+          {
+            "numero": "1.b",
+            "texte": "Proposer une solution pour sauvegarder automatiquement les volumes de données (MongoDB, Redis) avant chaque mise à jour.",
+            "niveau": "very hard",
+            "reponse": "Écrire un script bash qui : 1) Exécute docker exec mongodb mongodump --archive=/backup/dump.gz --gzip. 2) Copie l'archive vers un stockage externe (rsync, S3). 3) Ou utilise les volumes Docker avec backup via docker run --rm -v mongo_data:/data -v $(pwd):/backup alpine tar czf /backup/mongo_backup.tar.gz /data. Automatiser via cron ou hook de déploiement.",
+            "sousQuestions": []
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer comment sécuriser les variables d'environnement sensibles dans un environnement Docker en production.",
+        "niveau": "medium",
+        "reponse": "Plusieurs méthodes : 1) Fichier .env non versionné avec docker-compose --env-file .env. 2) Utiliser Docker secrets (en mode Swarm). 3) Injecter via gestionnaire de secrets (Hashicorp Vault, AWS Secrets Manager). 4) Variables d'environnement du système (systemd avec EnvironmentFile). Ne jamais hardcoder dans l'image ou le docker-compose.yml commit.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Debug et résolution de problèmes Docker",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Après avoir lancé <code>docker-compose up -d</code>, votre conteneur Node.js crash avec l'erreur : <code>Error: Cannot find module '/app/server.js'</code>. Le Dockerfile utilisé est :</p>\n<pre><code>\nFROM node:18-alpine\nWORKDIR /usr/src/app\nCOPY package*.json ./\nRUN npm install\nCOPY . .\nCMD [\"node\", \"server.js\"]\n</code></pre>\n<p>Le projet a la structure suivante :</p>\n<pre><code>\nprojet/\n├── src/\n│   └── server.js\n├── package.json\n└── Dockerfile\n</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Diagnostiquer la cause de l'erreur et proposer une correction.",
+        "niveau": "medium",
+        "reponse": "Le WORKDIR est /usr/src/app mais server.js se trouve dans src/. La commande CMD cherche server.js à la racine de /usr/src/app. Correction : soit déplacer server.js à la racine, soit modifier le CMD en [\"node\", \"src/server.js\"], soit ajuster le COPY pour respecter la structure.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Donner la commande Docker pour accéder en mode interactif au conteneur défaillant et inspecter manuellement les fichiers.",
+        "niveau": "easy",
+        "reponse": "docker run -it --rm node_app_image /bin/sh (remplacer node_app_image par le nom de l'image). Ou docker-compose run --rm app sh si le service s'appelle app.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Mise en place d'un environnement multi-conteneurs pour une API REST complète",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous êtes consultant pour une startup camerounaise (Douala) qui développe une plateforme de e-commerce. L'architecture backend comprend :</p>\n<ul>\n<li>API Node.js (Express)</li>\n<li>Base de données PostgreSQL pour les données utilisateurs et commandes</li>\n<li>Base de données MongoDB pour les catalogues produits</li>\n<li>Redis pour les sessions et cache</li>\n<li>Nginx comme reverse proxy pour servir l'API et les fichiers statiques</li>\n</ul>\n<p>L'équipe souhaite containeriser l'ensemble avec Docker Compose pour la production.</p>",
+      "images": [
+        "schéma architecture microservices avec Node.js, PostgreSQL, MongoDB, Redis, Nginx"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevoir l'architecture docker-compose avec tous les services. Définir les réseaux, volumes, variables d'environnement essentielles et les dépendances.",
+        "niveau": "very hard",
+        "reponse": "<pre><code>\nversion: '3.8'\n\nnetworks:\n  backend:\n    driver: bridge\n\nvolumes:\n  postgres_data:\n  mongo_data:\n  redis_data:\n\nservices:\n  postgres:\n    image: postgres:15-alpine\n    networks:\n      - backend\n    volumes:\n      - postgres_data:/var/lib/postgresql/data\n    environment:\n      POSTGRES_USER: ecommerce\n      POSTGRES_PASSWORD: ${DB_PASS}\n      POSTGRES_DB: ecommerce_db\n    healthcheck:\n      test: [\"CMD-SHELL\", \"pg_isready -U ecommerce\"]\n      interval: 10s\n\n  mongodb:\n    image: mongo:6\n    networks:\n      - backend\n    volumes:\n      - mongo_data:/data/db\n    environment:\n      MONGO_INITDB_ROOT_USERNAME: admin\n      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASS}\n\n  redis:\n    image: redis:7-alpine\n    networks:\n      - backend\n    volumes:\n      - redis_data:/data\n    command: redis-server --appendonly yes\n\n  api:\n    build: ./backend\n    networks:\n      - backend\n    environment:\n      NODE_ENV: production\n      POSTGRES_URL: postgresql://ecommerce:${DB_PASS}@postgres:5432/ecommerce_db\n      MONGO_URL: mongodb://admin:${MONGO_PASS}@mongodb:27017\n      REDIS_URL: redis://redis:6379\n      JWT_SECRET: ${JWT_SECRET}\n    depends_on:\n      postgres:\n        condition: service_healthy\n      mongodb:\n        condition: service_started\n      redis:\n        condition: service_started\n    restart: unless-stopped\n\n  nginx:\n    image: nginx:alpine\n    networks:\n      - backend\n    ports:\n      - \"80:80\"\n      - \"443:443\"\n    volumes:\n      - ./nginx.conf:/etc/nginx/nginx.conf:ro\n      - ./ssl:/etc/nginx/ssl:ro\n    depends_on:\n      - api\n    restart: unless-stopped\n</code></pre>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer pourquoi on utilise `condition: service_healthy` pour PostgreSQL et pas pour MongoDB.",
+            "niveau": "hard",
+            "reponse": "PostgreSQL a besoin que la base soit prête à accepter des connexions (healthcheck avec pg_isready). Pour MongoDB, on utilise condition: service_started car il démarre rapidement mais l'API doit implémenter une logique de retry si la connexion échoue au premier essai.",
+            "sousQuestions": []
+          },
+          {
+            "numero": "1.b",
+            "texte": "Proposer une stratégie de backup des bases de données en production avec Docker.",
+            "niveau": "very hard",
+            "reponse": "1. Créer un service backup avec cron : image alpine, monte les volumes, exécute pg_dump et mongodump. 2. Ou script externe sur l'hôte : docker exec postgres pg_dump > backup.sql. 3. Automatiser avec un scheduler (cron host ou dans un conteneur) et envoyer vers stockage distant (S3, SFTP). Utiliser des volumes nommés pour faciliter les backups.",
+            "sousQuestions": []
+          }
+        ]
+      }
+    ]
+  }
+]

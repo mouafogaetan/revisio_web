@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+  "matiere": "Initiation aux Systèmes d'exploitation",
+  "classe": "Développement Web",
+  "sequence": "Séquence 2",
+  "anneeScolaire": "2025-2026",
+  "exercices": [
+    {
+      "titre": "Exercice 1 : Processus et états",
+      "points": "4 pts",
+      "enonce": "<div style='font-family: Arial, sans-serif; color: #333;'><p>Cet exercice porte sur les concepts fondamentaux des processus.</p><p><strong>Partie A : Définitions</strong> (2 pts)</p><p>Répondez aux questions suivantes :</p><ul><li>Quelle est la différence entre un <strong>programme</strong> et un <strong>processus</strong> ? [citation:1][citation:3]</li><li>Qu'est-ce que le <strong>PCB</strong> (Process Control Block) et à quoi sert-il ? [citation:1]</li></ul><p><strong>Partie B : États d'un processus</strong> (2 pts)</p><p>Un processus passe par plusieurs états au cours de son cycle de vie. [citation:1]</p><p>Décrivez les <strong>5 états</strong> d'un processus et les <strong>transitions</strong> principales entre eux.</p></div>",
+      "questions": [
+        {
+          "question": "1) Différence entre programme et processus :",
+          "reponse": "Un <strong>programme</strong> est un fichier statique contenant une suite d'instructions (ex: un fichier .exe). Un <strong>processus</strong> est un programme en cours d'exécution, avec son contexte (mémoire, registres, etc.). C'est l'instance active du programme. [citation:1][citation:3]"
+        },
+        {
+          "question": "2) Définition du PCB :",
+          "reponse": "Le <strong>PCB (Process Control Block)</strong> est une structure de données que le système d'exploitation maintient pour chaque processus. Il contient toutes les informations nécessaires à la gestion du processus : PID, état, compteur ordinal, registres, informations mémoire, fichiers ouverts, etc. [citation:1]"
+        },
+        {
+          "question": "3) Les 5 états d'un processus :",
+          "reponse": "Les 5 états principaux d'un processus sont : <strong>Nouveau</strong> (en cours de création), <strong>Prêt</strong> (en attente du processeur), <strong>Élu</strong> (en cours d'exécution), <strong>Bloqué</strong> (en attente d'une ressource), <strong>Terminé</strong> (exécution terminée). Les transitions principales sont : Nouveau → Prêt, Prêt → Élu, Élu → Bloqué (attente), Bloqué → Prêt (ressource disponible), Élu → Prêt (préemption/fin de quantum), Élu → Terminé. [citation:1]"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 2 : Ordonnancement des processus",
+      "points": "6 pts",
+      "enonce": "<div style='font-family: Arial, sans-serif; color: #333;'><p>L'<strong>ordonnanceur</strong> est le composant du noyau qui choisit l'ordre d'exécution des processus. [citation:1][citation:3]</p><p>On considère les processus suivants avec leurs durées et dates d'arrivée :</p><table style='width: 100%; border-collapse: collapse; font-size: 0.9em;'><thead><tr style='background-color: #e5e7eb;'><th style='padding: 8px; border: 1px solid #d1d5db; text-align: left;'>Processus</th><th style='padding: 8px; border: 1px solid #d1d5db; text-align: left;'>Durée (ms)</th><th style='padding: 8px; border: 1px solid #d1d5db; text-align: left;'>Date d'arrivée</th></tr></thead><tbody><tr><td style='padding: 8px; border: 1px solid #d1d5db;'>P1</td><td style='padding: 8px; border: 1px solid #d1d5db;'>5</td><td style='padding: 8px; border: 1px solid #d1d5db;'>0</td></tr><tr><td style='padding: 8px; border: 1px solid #d1d5db;'>P2</td><td style='padding: 8px; border: 1px solid #d1d5db;'>3</td><td style='padding: 8px; border: 1px solid #d1d5db;'>1</td></tr><tr><td style='padding: 8px; border: 1px solid #d1d5db;'>P3</td><td style='padding: 8px; border: 1px solid #d1d5db;'>4</td><td style='padding: 8px; border: 1px solid #d1d5db;'>2</td></tr><tr><td style='padding: 8px; border: 1px solid #d1d5db;'>P4</td><td style='padding: 8px; border: 1px solid #d1d5db;'>2</td><td style='padding: 8px; border: 1px solid #d1d5db;'>4</td></tr></tbody></table><p><strong>Partie A : FIFO</strong> (2 pts)</p><p>Calculez les temps d'attente et de séjour pour chaque processus avec l'algorithme <strong>FIFO</strong> (First In First Out).</p><p><strong>Partie B : Round Robin</strong> (2 pts)</p><p>Calculez les temps d'attente et de séjour avec l'algorithme <strong>Round Robin</strong> (quantum = 2 ms).</p><p><strong>Partie C : Comparaison</strong> (2 pts)</p><p>Comparez les temps d'attente moyens des deux algorithmes et expliquez lequel est plus performant dans ce cas.</p></div>",
+      "questions": [
+        {
+          "question": "1) Ordonnancement FIFO - Calculez les temps d'attente et de séjour de chaque processus.",
+          "reponse": "Pour FIFO, l'ordre d'exécution est P1, P2, P3, P4.<br><br><strong>Temps de séjour :</strong><br>P1 : 5 - 0 = 5 ms<br>P2 : 8 - 1 = 7 ms<br>P3 : 12 - 2 = 10 ms<br>P4 : 14 - 4 = 10 ms<br><br><strong>Temps d'attente :</strong><br>P1 : 5 - 5 = 0 ms<br>P2 : 7 - 3 = 4 ms<br>P3 : 10 - 4 = 6 ms<br>P4 : 10 - 2 = 8 ms<br><br><strong>Temps d'attente moyen :</strong> (0 + 4 + 6 + 8) / 4 = 4,5 ms"
+        },
+        {
+          "question": "2) Ordonnancement Round Robin - Calculez les temps d'attente et de séjour (quantum = 2 ms).",
+          "reponse": "Pour Round Robin (quantum = 2 ms), l'exécution se fait en cycles :<br><br>0-2 : P1 (reste 3)<br>2-4 : P2 (reste 1)<br>4-6 : P3 (reste 2)<br>6-8 : P4 (reste 0, terminé à 8)<br>8-10 : P1 (reste 1)<br>10-12 : P2 (reste 0, terminé à 12)<br>12-14 : P3 (reste 0, terminé à 14)<br>14-15 : P1 (reste 0, terminé à 15)<br><br><strong>Temps de séjour :</strong><br>P1 : 15 - 0 = 15 ms<br>P2 : 12 - 1 = 11 ms<br>P3 : 14 - 2 = 12 ms<br>P4 : 8 - 4 = 4 ms<br><br><strong>Temps d'attente :</strong><br>P1 : 15 - 5 = 10 ms<br>P2 : 11 - 3 = 8 ms<br>P3 : 12 - 4 = 8 ms<br>P4 : 4 - 2 = 2 ms<br><br><strong>Temps d'attente moyen :</strong> (10 + 8 + 8 + 2) / 4 = 7 ms"
+        },
+        {
+          "question": "3) Comparez les performances des deux algorithmes.",
+          "reponse": "Dans ce cas, <strong>FIFO</strong> (temps d'attente moyen = 4,5 ms) est plus performant que <strong>Round Robin</strong> (temps d'attente moyen = 7 ms). Cependant, FIFO peut causer l'<strong>effet de convoi</strong> (un long processus retarde les suivants). Round Robin offre une meilleure <strong>équité</strong> et un temps de réponse plus rapide pour les processus courts, au prix d'un temps d'attente moyen plus élevé. [citation:1][citation:3]"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 3 : Gestion de la mémoire",
+      "points": "5 pts",
+      "enonce": "<div style='font-family: Arial, sans-serif; color: #333;'><p>La gestion de la mémoire est une fonction essentielle du système d'exploitation.</p><p><strong>Partie A : Adressage</strong> (2 pts)</p><p>Expliquez la différence entre une <strong>adresse logique</strong> (virtuelle) et une <strong>adresse physique</strong>. Quel est le rôle de la <strong>MMU</strong> (Memory Management Unit) ?</p><p><strong>Partie B : Fragmentation</strong> (1.5 pts)</p><p>Définissez la <strong>fragmentation externe</strong> et la <strong>fragmentation interne</strong>. Donnez un exemple pour chacune.</p><p><strong>Partie C : Pagination</strong> (1.5 pts)</p><p>Expliquez le principe de la <strong>pagination</strong>. Comment se fait l'adressage paginé (numéro de page + déplacement) ?</p></div>",
+      "questions": [
+        {
+          "question": "1) Différence entre adresse logique et adresse physique. Rôle de la MMU.",
+          "reponse": "Une <strong>adresse logique</strong> (ou virtuelle) est l'adresse générée par un programme, indépendante de la mémoire physique réelle. Une <strong>adresse physique</strong> est l'adresse réelle dans la RAM. La <strong>MMU (Memory Management Unit)</strong> est un composant matériel qui traduit les adresses logiques en adresses physiques, permettant la mémoire virtuelle et la protection entre processus. [citation:3][citation:5]"
+        },
+        {
+          "question": "2) Définitions des fragmentations externe et interne.",
+          "reponse": "La <strong>fragmentation interne</strong> est la perte de mémoire à l'intérieur d'un bloc alloué, parce que le programme n'utilise pas tout l'espace alloué (ex: bloc de 64 Ko alloué pour un programme qui n'en utilise que 50 Ko, 14 Ko sont perdus). La <strong>fragmentation externe</strong> est la perte de mémoire due à de petits espaces libres entre les blocs alloués, trop petits pour être utilisés par de nouveaux programmes (ex: après plusieurs allocations/libérations, des trous de petite taille apparaissent). [citation:3]"
+        },
+        {
+          "question": "3) Principe de la pagination et adressage paginé.",
+          "reponse": "La <strong>pagination</strong> est une technique de gestion de mémoire qui divise la mémoire logique en <strong>pages</strong> (de taille fixe) et la mémoire physique en <strong>cadres</strong> (frames) de même taille. L'adresse logique est composée de deux parties : le <strong>numéro de page</strong> et le <strong>déplacement</strong> (offset). La table des pages permet de trouver le cadre correspondant à la page demandée. L'adresse physique est alors : adresse du cadre + déplacement. [citation:3]"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 4 : Interblocage (Deadlock)",
+      "points": "5 pts",
+      "enonce": "<div style='font-family: Arial, sans-serif; color: #333;'><p>L'<strong>interblocage</strong> (deadlock) est une situation où deux processus ou plus s'attendent mutuellement pour des ressources. [citation:1]</p><p><strong>Partie A : Conditions de Coffman</strong> (2 pts)</p><p>Citez et expliquez les <strong>4 conditions de Coffman</strong> nécessaires à un interblocage. [citation:1]</p><p><strong>Partie B : Exemple</strong> (2 pts)</p><p>Deux processus P1 et P2 partagent deux ressources R1 et R2. P1 détient R1 et demande R2. P2 détient R2 et demande R1. Expliquez pourquoi il y a interblocage et représentez la situation avec un <strong>graphe d'allocation</strong>.</p><p><strong>Partie C : Prévention</strong> (1 pt)</p><p>Proposez une stratégie pour <strong>prévenir</strong> cet interblocage en invalidant l'une des conditions de Coffman.</p></div>",
+      "questions": [
+        {
+          "question": "1) Les 4 conditions de Coffman.",
+          "reponse": "Les 4 conditions nécessaires à un interblocage sont :<br><br><strong>1. Exclusion mutuelle :</strong> Les ressources ne peuvent être utilisées que par un seul processus à la fois.<br><strong>2. Détention et attente :</strong> Un processus détient une ressource et en attend une autre.<br><strong>3. Non-préemption :</strong> Les ressources ne peuvent pas être retirées de force à un processus.<br><strong>4. Attente circulaire :</strong> Il existe un cycle d'attente entre les processus. [citation:1]"
+        },
+        {
+          "question": "2) Analyse de l'interblocage et graphe d'allocation.",
+          "reponse": "Il y a interblocage car les 4 conditions sont réunies :<br><br>- <strong>Exclusion mutuelle :</strong> R1 et R2 ne peuvent être utilisées que par un processus à la fois.<br>- <strong>Détention et attente :</strong> P1 détient R1 et attend R2 ; P2 détient R2 et attend R1.<br>- <strong>Non-préemption :</strong> Les ressources ne peuvent être retirées.<br>- <strong>Attente circulaire :</strong> P1 attend P2 (R2) et P2 attend P1 (R1).<br><br><strong>Graphe d'allocation :</strong><br>P1 → R1 (détient), P1 → R2 (demande)<br>P2 → R2 (détient), P2 → R1 (demande)<br>Il y a un cycle : P1 → R2 → P2 → R1 → P1. [citation:1]"
+        },
+        {
+          "question": "3) Stratégie de prévention.",
+          "reponse": "On peut <strong>prévenir</strong> l'interblocage en invalidant l'une des conditions de Coffman. Par exemple, en cassant la <strong>détention et attente</strong> : on impose aux processus de <strong>demander toutes les ressources en une seule fois</strong>. P1 demanderait R1 et R2 simultanément, ou libérerait R1 avant de demander R2. On peut aussi casser l'<strong>attente circulaire</strong> en imposant un <strong>ordre d'acquisition</strong> des ressources (ex: toujours R1 puis R2). [citation:1]"
+        }
+      ]
+    }
+  ]
+};
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

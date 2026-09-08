@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+  "matiere": "Géographie",
+  "classe": "Seconde",
+  "sequence": "Séquence 1",
+  "anneeScolaire": "2025-2026",
+  "exercices": [
+    {
+      "titre": "Les techniques cartographiques",
+      "points": "4 pts",
+      "enonce": "<p style='color: #2d3748;'>Une carte est une représentation plane des phénomènes localisables dans l'espace. Sa lecture nécessite la maîtrise de plusieurs éléments.</p><div style='background: #ebf8ff; padding: 12px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #3182ce;'><p style='color: #2d3748;'><strong>Document :</strong> Carte de la végétation du Cameroun (échelle 1/5 000 000)</p><ul style='color: #2d3748;'><li>La carte est orientée par une flèche indiquant le nord.</li><li>Un carré de 2 cm de côté sur la carte représente 100 km sur le terrain.</li><li>La légende présente des symboles pour : forêt dense, savane, mangrove, zone de montagne.</li><li>Le titre est : \"La végétation du Cameroun\".</li></ul></div>",
+      "questions": [
+        {
+          "question": "<span style='font-weight: bold; color: #1a365d;'>1.</span> Définis la cartographie.",
+          "reponse": "<p style='color: #2d3748;'>La cartographie est l'ensemble des études et des opérations scientifiques qui permettent l'établissement de cartes.</p>"
+        },
+        {
+          "question": "<span style='font-weight: bold; color: #1a365d;'>2.</span> Calcule l'échelle graphique de la carte à partir des informations du document.",
+          "reponse": "<p style='color: #2d3748;'>Sur la carte, 2 cm représentent 100 km sur le terrain (soit 100 000 m = 10 000 000 cm). L'échelle est donc de 1/5 000 000 (2 cm = 10 000 000 cm, donc 1 cm = 5 000 000 cm).</p>"
+        },
+        {
+          "question": "<span style='font-weight: bold; color: #1a365d;'>3.</span> Identifie les quatre éléments constitutifs d'une carte présents dans ce document.",
+          "reponse": "<p style='color: #2d3748;'>Les quatre éléments constitutifs de la carte sont : le titre, la légende, l'échelle, et l'orientation (flèche indiquant le nord).</p>"
+        },
+        {
+          "question": "<span style='font-weight: bold; color: #1a365d;'>4.</span> Distingue les types de cartes suivants : topographique, thématique, de synthèse, planisphère.",
+          "reponse": "<p style='color: #2d3748;'>- La carte topographique représente le relief et les détails du terrain (routes, cours d'eau, etc.).<br>- La carte thématique représente un phénomène précis (population, climat, végétation).<br>- La carte de synthèse combine plusieurs phénomènes pour présenter une vision d'ensemble.<br>- Le planisphère représente le monde entier sur une surface plane.</p>"
+        }
+      ]
+    },
+    {
+      "titre": "La structure interne de la Terre",
+      "points": "4 pts",
+      "enonce": "<p style='color: #2d3748;'>L'étude de la structure interne de la Terre repose sur plusieurs méthodes scientifiques.</p><div style='background: #fefcbf; padding: 12px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #d69e2e;'><p style='color: #2d3748;'><strong>Document :</strong> Schéma des couches de la Terre</p><ul style='color: #2d3748;'><li>L'écorce terrestre ou lithosphère a une épaisseur moyenne de 35 km (SIAL, densité 2,7).</li><li>Le manteau ou asthénosphère s'étend jusqu'à 2900 km de profondeur (SIMA, densité 2,9-5).</li><li>Le noyau ou baryosphère s'étend de 2900 à 5000 km (NIFE, densité > 12).</li><li>Les discontinuités de Moho (entre écorce et manteau) et de Gutenberg (entre manteau et noyau) marquent les limites.</li></ul></div>",
+      "questions": [
+        {
+          "question": "<span style='font-weight: bold; color: #1a365d;'>1.</span> Cite trois méthodes d'étude de la structure interne de la Terre.",
+          "reponse": "<p style='color: #2d3748;'>- La sismologie (étude des ondes sismiques).<br>- La gravimétrie (étude des variations du champ de pesanteur).<br>- La stratigraphie (étude de la succession des couches géologiques).<br>D'autres méthodes existent : forages profonds, étude des météorites, utilisation des satellites.</p>"
+        },
+        {
+          "question": "<span style='font-weight: bold; color: #1a365d;'>2.</span> Décris les caractéristiques des trois couches de la Terre.",
+          "reponse": "<p style='color: #2d3748;'>- <strong>Écorce terrestre (lithosphère)</strong> : épaisseur 35 km, composée de SIAL (silice et aluminium), densité 2,7.<br>- <strong>Manteau (asthénosphère)</strong> : épaisseur 2900 km, composé de SIMA (silice et magnésium), densité 2,9 à 5.<br>- <strong>Noyau (baryosphère)</strong> : de 2900 à 5000 km, composé de NIFE (nickel et fer), densité supérieure à 12.</p>"
+        },
+        {
+          "question": "<span style='font-weight: bold; color: #1a365d;'>3.</span> Qu'est-ce qu'une discontinuité ? Nomme et situe les deux discontinuités mentionnées.",
+          "reponse": "<p style='color: #2d3748;'>Une discontinuité est une zone de transition entre deux couches de la Terre où les propriétés physiques changent brusquement.<br>- La <strong>discontinuité de Moho</strong> se situe entre l'écorce et le manteau.<br>- La <strong>discontinuité de Gutenberg</strong> se situe entre le manteau et le noyau.</p>"
+        }
+      ]
+    },
+    {
+      "titre": "Les mouvements de l'écorce terrestre",
+      "points": "4 pts",
+      "enonce": "<p style='color: #2d3748;'>Les mouvements de l'écorce terrestre sont à l'origine de nombreux reliefs et phénomènes géologiques.</p><div style='background: #f0fff4; padding: 12px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #38a169;'><p style='color: #2d3748;'><strong>Document :</strong> Les types de mouvements tectoniques</p><ul style='color: #2d3748;'><li>Divergence : écartement des plaques → rifts et dorsales océaniques.</li><li>Convergence/subduction : enfoncement d'une plaque sous l'autre → fosses océaniques, chaînes de montagnes.</li><li>Collision : rencontre de deux plaques → chaînes de montagnes (Himalaya), séismes.</li><li>Cisaillement : glissement horizontal → failles, séismes.</li></ul></div>",
+      "questions": [
+        {
+          "question": "<span style='font-weight: bold; color: #1a365d;'>1.</span> Distingue les mouvements horizontaux des mouvements verticaux en donnant des exemples.",
+          "reponse": "<p style='color: #2d3748;'>Les <strong>mouvements horizontaux</strong> sont la divergence (écartement), la convergence/subduction (enfoncement), la collision (rencontre) et le cisaillement (glissement).<br>Les <strong>mouvements verticaux</strong> (isostasie) sont les failles (cassures avec dénivellation) et les plis (ondulations).</p>"
+        },
+        {
+          "question": "<span style='font-weight: bold; color: #1a365d;'>2.</span> Décris les conséquences de la divergence des plaques lithosphériques.",
+          "reponse": "<p style='color: #2d3748;'>La divergence provoque l'écartement des plaques, ce qui entraîne la formation de rifts (vallées d'effondrement) et de dorsales océaniques (chaînes de montagnes sous-marines).</p>"
+        },
+        {
+          "question": "<span style='font-weight: bold; color: #1a365d;'>3.</span> Pourquoi la collision des plaques est-elle à l'origine de séismes ?",
+          "reponse": "<p style='color: #2d3748;'>La collision des plaques provoque d'immenses pressions qui accumulent de l'énergie. Lorsque cette énergie se libère brutalement, elle provoque des secousses appelées séismes.</p>"
+        },
+        {
+          "question": "<span style='font-weight: bold; color: #1a365d;'>4.</span> Cite trois chaînes de montagnes issues de la collision de plaques.",
+          "reponse": "<p style='color: #2d3748;'>L'Himalaya (collision entre la plaque indienne et la plaque eurasienne), les Alpes (collision entre la plaque africaine et la plaque eurasienne), et les Pyrénées (collision entre la plaque ibérique et la plaque eurasienne).</p>"
+        }
+      ]
+    },
+    {
+      "titre": "Le volcanisme",
+      "points": "4 pts",
+      "enonce": "<p style='color: #2d3748;'>Le volcanisme est un phénomène majeur de la dynamique terrestre.</p><div style='background: #fefcbf; padding: 12px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #d69e2e;'><p style='color: #2d3748;'><strong>Document :</strong> Les types de volcans selon leur dynamisme</p><ul style='color: #2d3748;'><li>Hawaïen : magma fluide, éruption effusive.</li><li>Strombolien : laves fluides, quelques projections.</li><li>Vulcanien : laves visqueuses, éruptions explosives.</li><li>Péléen : laves très visqueuses, nuées ardentes.</li></ul></div>",
+      "questions": [
+        {
+          "question": "<span style='font-weight: bold; color: #1a365d;'>1.</span> Explique les causes du volcanisme.",
+          "reponse": "<p style='color: #2d3748;'>Le volcanisme est causé par :<br>- Les mouvements des plaques lithosphériques (subduction et divergence) qui créent des zones de remontée du magma.<br>- Les points chauds (remontées de magma en profondeur, indépendantes des plaques).</p>"
+        },
+        {
+          "question": "<span style='font-weight: bold; color: #1a365d;'>2.</span> Décris les trois phases d'une éruption volcanique.",
+          "reponse": "<p style='color: #2d3748;'>- <strong>Phase annonciatrice</strong> : grondements, affolement des animaux, fissurations du sol.<br>- <strong>Phase éruptive/paroxysmale</strong> : coulée de laves, explosions, projections de matériaux.<br>- <strong>Phase d'atténuation</strong> : dégagement de vapeur d'eau, fumeroles, sources thermales.</p>"
+        },
+        {
+          "question": "<span style='font-weight: bold; color: #1a365d;'>3.</span> Distingue les quatre types de volcans selon leur dynamisme.",
+          "reponse": "<p style='color: #2d3748;'>- <strong>Hawaïen</strong> : magma fluide, éruption effusive, peu dangereux.<br>- <strong>Strombolien</strong> : laves fluides avec quelques projections, éruption modérée.<br>- <strong>Vulcanien</strong> : laves visqueuses, éruptions explosives, dangereux.<br>- <strong>Péléen</strong> : laves très visqueuses, nuées ardentes, très dangereux.</p>"
+        },
+        {
+          "question": "<span style='font-weight: bold; color: #1a365d;'>4.</span> Cite deux conséquences négatives et deux conséquences positives du volcanisme.",
+          "reponse": "<p style='color: #2d3748;'><strong>Conséquences négatives :</strong> destructions de biens et d'infrastructures, pertes humaines.<br><strong>Conséquences positives :</strong> fertilisation des sols (cendres volcaniques), source de chaleur géothermique, attraction touristique.</p>"
+        }
+      ]
+    },
+    {
+      "titre": "Les séismes",
+      "points": "4 pts",
+      "enonce": "<p style='color: #2d3748;'>Les séismes sont des phénomènes naturels qui provoquent des secousses de l'écorce terrestre.</p><div style='background: #ebf8ff; padding: 12px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #3182ce;'><p style='color: #2d3748;'><strong>Document :</strong> Données sur un séisme</p><ul style='color: #2d3748;'><li>Le foyer ou hypocentre est le point de naissance du séisme en profondeur.</li><li>L'épicentre est le point en surface à la verticale du foyer.</li><li>Les trois phases sont : phase annonciatrice, phase paroxysmale, phase de répliques.</li><li>L'échelle de Richter mesure la magnitude (énergie libérée) et l'échelle de Mercalli mesure l'intensité (dégâts).</li></ul></div>",
+      "questions": [
+        {
+          "question": "<span style='font-weight: bold; color: #1a365d;'>1.</span> Explique l'origine des séismes.",
+          "reponse": "<p style='color: #2d3748;'>Les séismes sont provoqués par :<br>- Les mouvements de collision, de subduction et de cisaillement des plaques lithosphériques.<br>- Les failles (cassures de l'écorce terrestre).<br>- La remontée du magma dans les zones volcaniques.</p>"
+        },
+        {
+          "question": "<span style='font-weight: bold; color: #1a365d;'>2.</span> Distingue foyer et épicentre.",
+          "reponse": "<p style='color: #2d3748;'>Le <strong>foyer (ou hypocentre)</strong> est le point de naissance du séisme à l'intérieur de la Terre. L'<strong>épicentre</strong> est le point à la surface de la Terre situé à la verticale du foyer. C'est à l'épicentre que les dégâts sont les plus importants.</p>"
+        },
+        {
+          "question": "<span style='font-weight: bold; color: #1a365d;'>3.</span> Cite les trois zones sismiques les plus actives dans le monde.",
+          "reponse": "<p style='color: #2d3748;'>La ceinture de feu du Pacifique (zone la plus active), la zone méditerranéenne (Alpes, Himalaya), et les dorsales océaniques (zones de divergence).</p>"
+        },
+        {
+          "question": "<span style='font-weight: bold; color: #1a365d;'>4.</span> Distingue l'échelle de Richter de l'échelle de Mercalli.",
+          "reponse": "<p style='color: #2d3748;'>L'<strong>échelle de Richter</strong> mesure la magnitude du séisme, c'est-à-dire l'énergie libérée. C'est une échelle logarithmique (ouverte).<br>L'<strong>échelle de Mercalli</strong> mesure l'intensité du séisme, c'est-à-dire les dégâts observés en surface. Elle est basée sur des observations humaines (de I à XII).</p>"
+        },
+        {
+          "question": "<span style='font-weight: bold; color: #1a365d;'>5.</span> Cite trois mesures de protection contre les séismes.",
+          "reponse": "<p style='color: #2d3748;'>- L'éducation des populations (conduite à tenir en cas de séisme).<br>- La construction de bâtiments parasismiques (normes de construction adaptées).<br>- L'installation de sismographes pour détecter et prévoir les séismes.</p>"
+        }
+      ]
+    },
+    {
+      "titre": "Les roches et les sols",
+      "points": "4 pts",
+      "enonce": "<p style='color: #2d3748;'>La connaissance des roches et des sols est essentielle pour comprendre les paysages.</p><div style='background: #f0f4f8; padding: 12px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #2d3748;'><p style='color: #2d3748;'><strong>Document :</strong> Les familles de roches</p><ul style='color: #2d3748;'><li>Roches endogènes ou magmatiques : basalte (volcanique), granite (plutonique).</li><li>Roches exogènes ou sédimentaires : issues de la désagrégation et de l'accumulation de sédiments.</li><li>Roches métamorphiques ou cristallophylliennes : issues de la transformation d'une roche sous pression et température (gneiss).</li></ul></div>",
+      "questions": [
+        {
+          "question": "<span style='font-weight: bold; color: #1a365d;'>1.</span> Distingue les trois familles de roches en donnant un exemple pour chacune.",
+          "reponse": "<p style='color: #2d3748;'>- <strong>Roches magmatiques (endogènes)</strong> : formées par le refroidissement du magma. Exemple : le granite (plutonique) et le basalte (volcanique).<br>- <strong>Roches sédimentaires (exogènes)</strong> : formées par l'accumulation et la compaction de sédiments. Exemple : le calcaire, le grès.<br>- <strong>Roches métamorphiques</strong> : formées par la transformation d'une roche préexistante sous pression et température. Exemple : le gneiss (transformation du granite).</p>"
+        },
+        {
+          "question": "<span style='font-weight: bold; color: #1a365d;'>2.</span> Qu'est-ce qu'un sol ? Distingue les types de sols suivants : ferralitique, ferrugineux, limoneux.",
+          "reponse": "<p style='color: #2d3748;'>Un sol est le produit de la décomposition des roches du sous-sol sous l'action des agents atmosphériques et des êtres vivants.<br>- <strong>Sol ferralitique</strong> : riche en oxyde de fer et en alumine (sols des régions tropicales humides).<br>- <strong>Sol ferrugineux</strong> : riche en fer et en argile (sols des régions tropicales sèches).<br>- <strong>Sol limoneux</strong> : riche en humus (sol fertile des régions tempérées).</p>"
+        }
+      ]
+    },
+    {
+      "titre": "L'érosion des reliefs terrestres",
+      "points": "4 pts",
+      "enonce": "<p style='color: #2d3748;'>L'érosion est un processus de destruction des reliefs par des agents naturels.</p><div style='background: #fefcbf; padding: 12px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #d69e2e;'><p style='color: #2d3748;'><strong>Document :</strong> L'érosion en milieu tropical</p><ul style='color: #2d3748;'><li>L'eau est le principal agent d'érosion (ruissellement, cours d'eau).</li><li>Le vent transporte et dépose les particules, formant des dunes (ergs).</li><li>Les techniques de lutte contre l'érosion sont nombreuses : plantes fixatrices, banquettes anti-érosion, fumier, etc.</li></ul></div>",
+      "questions": [
+        {
+          "question": "<span style='font-weight: bold; color: #1a365d;'>1.</span> Explique l'érosion fluviale et l'érosion éolienne.",
+          "reponse": "<p style='color: #2d3748;'>- <strong>L'érosion fluviale</strong> est l'action des cours d'eau qui creusent le lit des rivières, transportent des sédiments et forment des vallées, des gorges, etc.<br>- <strong>L'érosion éolienne</strong> est l'action du vent qui arrache, transporte et dépose des particules, formant des dunes (comme dans le Sahara).</p>"
+        },
+        {
+          "question": "<span style='font-weight: bold; color: #1a365d;'>2.</span> Cite trois techniques de lutte contre l'érosion.",
+          "reponse": "<p style='color: #2d3748;'>- L'interdiction des feux de brousse (pour préserver la couverture végétale).<br>- L'utilisation de plantes fixatrices de sol (comme le vétiver).<br>- La construction de banquettes anti-érosion (terrasses) sur les pentes.<br>- L'emploi de fumier et d'engrais verts pour améliorer la structure du sol.</p>"
+        },
+        {
+          "question": "<span style='font-weight: bold; color: #1a365d;'>3.</span> Pourquoi l'érosion est-elle un problème grave dans les régions tropicales ?",
+          "reponse": "<p style='color: #2d3748;'>Dans les régions tropicales, l'érosion est un problème grave car elle appauvrit les sols en les débarrassant de leur couche fertile, ce qui réduit la productivité agricole. De plus, elle peut provoquer l'envasement des cours d'eau et des barrages.</p>"
+        }
+      ]
+    }
+  ]
+};
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,142 @@
+[
+  {
+    "intitule": "Comprendre l'objectif de la politique proximale",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>L'algorithme PPO (Proximal Policy Optimization) est une méthode d'apprentissage par renforcement qui vise à améliorer la stabilité de l'entraînement des politiques.</p><p>Considérons la fonction objectif suivante utilisée dans PPO-Clip :</p><p>$$L^{CLIP}(\\theta) = \\mathbb{E}_{s,a \\sim \\pi_{\\theta_{old}}} \\left[ \\min\\left( r_t(\\theta) A_t, \\text{clip}(r_t(\\theta), 1-\\epsilon, 1+\\epsilon) A_t \\right) \\right]$$</p><p>où $r_t(\\theta) = \\frac{\\pi_\\theta(a_t|s_t)}{\\pi_{\\theta_{old}}(a_t|s_t)}$ est le ratio de probabilité, $A_t$ l'avantage, et $\\epsilon$ est un hyperparamètre (généralement 0.1 ou 0.2).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer en détail le rôle de la fonction de clipping $\\text{clip}(r_t(\\theta), 1-\\epsilon, 1+\\epsilon)$ dans l'objectif de PPO. Pourquoi cette technique est-elle cruciale pour la stabilité de l'algorithme ?",
+        "niveau": "hard",
+        "reponse": "La fonction de clipping dans PPO joue un rôle fondamental dans la stabilité de l'apprentissage. Elle contraint le ratio de probabilité $r_t(\\theta)$ à rester dans l'intervalle $[1-\\epsilon, 1+\\epsilon]$. Cela signifie que les mises à jour de la politique sont limitées : on ne peut pas modifier la politique de plus d'un facteur $1+\\epsilon$ ou de moins d'un facteur $1-\\epsilon$ pour une action donnée. Cette contrainte empêche les mises à jour trop agressives qui pourraient déstabiliser l'apprentissage, un problème courant dans les méthodes de policy gradient classiques. En limitant le changement de politique, on reste dans une 'région de confiance' où l'approximation du gradient est valide, ce qui assure des améliorations monotones et stables.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Décrire le comportement de l'objectif $L^{CLIP}$ pour les actions ayant un avantage positif ($A_t > 0$) et celles ayant un avantage négatif ($A_t < 0$). Comment le clipping affecte-t-il la mise à jour dans chaque cas ?",
+            "niveau": "medium",
+            "reponse": "Pour les actions avec un avantage positif ($A_t > 0$), l'objectif encourage à augmenter la probabilité de ces actions (car $r_t(\\theta) A_t$ augmente avec $r_t$). Cependant, le clipping limite cette augmentation : si $r_t(\\theta)$ dépasse $1+\\epsilon$, la valeur prise par l'objectif est celle de $(1+\\epsilon) A_t$, ce qui empêche une augmentation trop brusque de la probabilité. Pour les actions avec un avantage négatif ($A_t < 0$), l'objectif encourage à diminuer leur probabilité. Le clipping limite la diminution : si $r_t(\\theta)$ descend en dessous de $1-\\epsilon$, l'objectif devient $(1-\\epsilon) A_t$, ce qui empêche de réduire trop fortement la probabilité de ces actions. Ainsi, le clipping protège à la fois contre les augmentations et les diminutions excessives de la politique."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Comparer PPO-Clip avec TRPO (Trust Region Policy Optimization). Quels sont les avantages de l'approche de PPO en termes d'implémentation et de calcul ?",
+            "niveau": "hard",
+            "reponse": "TRPO et PPO partagent l'objectif commun de limiter les changements de politique pour assurer des améliorations monotones. TRPO utilise une contrainte explicite sur la divergence KL (Kullback-Leibler) entre l'ancienne et la nouvelle politique, ce qui nécessite de résoudre un problème d'optimisation avec contrainte (généralement via la méthode des points intérieurs ou des approximations de la Hessienne). Cette approche est mathématiquement élégante mais complexe à implémenter et coûteuse en calcul. PPO, avec sa fonction de clipping, propose une alternative beaucoup plus simple : elle remplace la contrainte explicite sur la KL par une pénalisation implicite via le clipping. Cela permet d'utiliser des algorithmes d'optimisation standard (comme SGD ou Adam) sans avoir à résoudre de problèmes d'optimisation avec contraintes complexes. L'implémentation de PPO est donc plus simple, plus rapide et généralement aussi efficace que TRPO en pratique, tout en étant plus accessible pour les développeurs."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Analyser le choix de la valeur de $\\epsilon$ (hyperparamètre de clipping) dans PPO. Comment ce paramètre influence-t-il le compromis entre stabilité et capacité d'apprentissage de l'algorithme ?",
+        "niveau": "medium",
+        "reponse": "Le paramètre $\\epsilon$ contrôle le niveau de changement autorisé entre les politiques successives. Un $\\epsilon$ petit (ex: 0.05) rend l'algorithme plus conservateur : les mises à jour sont très petites, ce qui assure une grande stabilité mais peut ralentir l'apprentissage car l'algorithme explore lentement l'espace des politiques. Un $\\epsilon$ plus grand (ex: 0.3) permet des changements plus importants, ce qui peut accélérer l'apprentissage mais risque de provoquer des instabilités et des effondrements de performance si les mises à jour sont trop agressives. En pratique, la valeur standard de $\\epsilon = 0.2$ (ou $0.1$ pour certaines implémentations) représente un bon compromis pour la plupart des environnements. Il est important de noter que l'effet de $\\epsilon$ dépend également de l'environnement : pour des environnements où la politique est très sensible, une valeur plus petite peut être nécessaire, tandis que pour des environnements plus robustes, une valeur plus grande peut être acceptable."
+      }
+    ]
+  },
+  {
+    "intitule": "Application de PPO à un problème de contrôle",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous êtes ingénieur en robotique et devez développer un algorithme de contrôle pour un bras robotique à 2 degrés de liberté devant atteindre une cible dans un environnement 2D. L'état est composé de la position et de la vitesse du bout du bras, ainsi que de la position de la cible. L'action est un couple appliqué à chaque articulation (action continue).</p><p>Vous décidez d'utiliser PPO pour entraîner votre politique. L'environnement fournit une récompense négative proportionnelle à la distance à la cible, avec une pénalité pour les actions trop fortes afin de limiter la consommation d'énergie.</p><p>Vous disposez des hyperparamètres suivants : $\\epsilon = 0.2$, $\\gamma = 0.99$ (facteur d'actualisation), $\\lambda = 0.95$ (paramètre GAE pour l'estimation de l'avantage), une taille de batch de 2048 transitions, et 10 epochs de mise à jour par itération.</p>",
+      "images": [
+        "Schéma d'un bras robotique à 2 degrés de liberté avec ses deux articulations, le bout du bras (end-effector) et une cible à atteindre, dans un espace 2D."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer comment l'estimation de l'avantage via GAE (Generalized Advantage Estimation) fonctionne dans le contexte de PPO. Pourquoi utilise-t-on l'avantage plutôt que la récompense cumulative directe pour la mise à jour de la politique ?",
+        "niveau": "hard",
+        "reponse": "GAE (Generalized Advantage Estimation) est une méthode qui permet d'estimer l'avantage $A_t$ avec un compromis entre biais et variance. L'estimateur GAE est défini comme : $$A_t^{GAE(\\gamma,\\lambda)} = \\sum_{l=0}^{\\infty} (\\gamma\\lambda)^l \\delta_{t+l}$$ où $\\delta_t = r_t + \\gamma V(s_{t+1}) - V(s_t)$ est l'erreur TD. Le paramètre $\\lambda$ contrôle ce compromis : $\\lambda=0$ donne un estimateur avec un biais élevé mais une faible variance (équivalent à l'estimateur TD), tandis que $\\lambda=1$ donne un estimateur sans biais mais avec une variance élevée (équivalent au retour de Monte Carlo). En pratique, $\\lambda=0.95$ est un bon compromis. L'utilisation de l'avantage plutôt que de la récompense cumulative directe (ou du retour) permet de réduire la variance du gradient de la politique. L'avantage mesure l'écart entre la valeur de l'action choisie et la valeur moyenne de l'état, ce qui donne un signal d'apprentissage plus stable et plus informatif. Cela évite que des variations aléatoires dans les récompenses ne dominent le signal d'apprentissage.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Analyser l'impact du paramètre $\\lambda$ sur l'apprentissage de votre bras robotique. Comment choisiriez-vous la valeur de $\\lambda$ et pourquoi ?",
+            "niveau": "medium",
+            "reponse": "Le paramètre $\\lambda$ influence directement le compromis biais-variance de l'estimation de l'avantage. Pour le bras robotique, un environnement avec une dynamique relativement déterministe, une valeur de $\\lambda$ proche de 1 (par exemple 0.95 ou 0.98) serait appropriée car : 1) La faible stochasticité de l'environnement signifie que le biais des estimateurs de Monte Carlo est acceptable ; 2) Une valeur élevée de $\\lambda$ donne un estimateur avec moins de biais, ce qui permet de capturer les effets à long terme des actions, cruciaux pour atteindre la cible ; 3) La variance légèrement plus élevée peut être gérée par la taille de batch (2048 transitions) qui est suffisamment grande pour lisser les estimations. Cependant, si l'environnement présentait une forte stochasticité (bruit important dans les capteurs ou les actionneurs), une valeur plus petite de $\\lambda$ (ex: 0.9) pourrait être préférée pour réduire la variance au détriment d'un peu de biais."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Décrire la procédure complète d'entraînement avec PPO pour ce problème, en détaillant les étapes de collecte de données, de calcul des avantages, et de mise à jour de la politique et de la fonction de valeur.",
+            "niveau": "hard",
+            "reponse": "La procédure d'entraînement avec PPO pour le bras robotique se déroule comme suit :<br/><br/>1. <b>Initialisation</b> : Initialiser les paramètres de la politique $\\pi_\\theta$ et de la fonction de valeur $V_\\phi$.<br/><br/>2. <b>Collecte de données</b> : Pour chaque itération, exécuter la politique actuelle $\\pi_{\\theta_{old}}$ dans l'environnement pour collecter $N$ transitions (2048 dans ce cas). Chaque transition est un tuple $(s_t, a_t, r_t, s_{t+1}, \\text{done}_t)$.<br/><br/>3. <b>Calcul des avantages</b> : Calculer l'estimateur GAE pour chaque transition en utilisant $V_{\\phi_{old}}$, avec $\\gamma=0.99$ et $\\lambda=0.95$. Calculer également le retour cible $\\hat{R}_t = A_t^{GAE} + V_{\\phi_{old}}(s_t)$ pour l'entraînement de la fonction de valeur.<br/><br/>4. <b>Mise à jour de la politique</b> : Pour $K$ epochs (10 dans ce cas), échantillonner aléatoirement des mini-batches de données et mettre à jour la politique en maximisant l'objectif $L^{CLIP}(\\theta)$. Le gradient de l'objectif est calculé en utilisant les ratios $r_t(\\theta) = \\frac{\\pi_\\theta(a_t|s_t)}{\\pi_{\\theta_{old}}(a_t|s_t)}$ et les avantages calculés à l'étape 3.<br/><br/>5. <b>Mise à jour de la fonction de valeur</b> : Simultanément, mettre à jour la fonction de valeur $V_\\phi$ en minimisant l'erreur quadratique moyenne avec les retours cibles $\\hat{R}_t$ : $L^{VF}(\\phi) = \\mathbb{E}[(V_\\phi(s_t) - \\hat{R}_t)^2]$.<br/><br/>6. <b>Répétition</b> : Remplacer $\\pi_{\\theta_{old}}$ par la nouvelle politique et répéter les étapes 2 à 5 jusqu'à convergence ou atteinte du nombre maximal d'itérations."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Pendant l'entraînement, vous observez que la performance de la politique stagne puis chute brusquement. Quelles pourraient être les causes de ce phénomène et quelles solutions proposeriez-vous pour y remédier ?",
+        "niveau": "hard",
+        "reponse": "La stagnation suivie d'une chute brusque de performance est un phénomène classique en apprentissage par renforcement, souvent dû à une instabilité de l'apprentissage. Voici les causes possibles et les solutions associées :<br/><br/>1. <b>Valeur de $\\epsilon$ trop élevée</b> : Un $\\epsilon$ trop grand permet des mises à jour de politique trop importantes, pouvant mener à une divergence. <b>Solution</b> : Réduire $\\epsilon$ (ex: 0.1 ou 0.15) ou implémenter une décroissance de $\\epsilon$ au cours de l'entraînement.<br/><br/>2. <b>Taux d'apprentissage trop élevé</b> : L'optimiseur (Adam) fait des pas trop grands dans l'espace des paramètres. <b>Solution</b> : Réduire le taux d'apprentissage de l'acteur et/ou du critique, ou utiliser un scheduler de taux d'apprentissage (ex: décroissance linéaire).<br/><br/>3. <b>Nombre d'epochs par itération trop élevé</b> : Réutiliser trop souvent les mêmes données peut conduire à un sur-apprentissage et des mises à jour trop agressives. <b>Solution</b> : Réduire le nombre d'epochs (ex: 5 au lieu de 10).<br/><br/>4. <b>Fonction de valeur mal estimée</b> : Une fonction de valeur avec un biais élevé donne des avantages mal estimés. <b>Solution</b> : Augmenter le nombre d'epochs pour le critique, ajuster le taux d'apprentissage du critique, ou augmenter la taille du réseau de neurones.<br/><br/>5. <b>Stochasticité des récompenses</b> : L'environnement peut avoir une variance élevée dans les récompenses. <b>Solution</b> : Augmenter la taille du batch pour avoir des estimations plus stables, ou lisser les récompenses avec une moyenne mobile."
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation des hyperparamètres de PPO",
+    "type": "ressource",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>L'algorithme PPO est réputé pour être relativement robuste aux hyperparamètres comparé à d'autres méthodes de policy gradient, mais un réglage fin reste nécessaire pour des performances optimales. Considérons les hyperparamètres suivants d'une implémentation PPO :</p><ul><li>$\\epsilon$ : paramètre de clipping</li><li>$\\alpha_{actor}$ : taux d'apprentissage de l'acteur</li><li>$\\alpha_{critic}$ : taux d'apprentissage du critique</li><li>$N_{steps}$ : nombre de pas par itération</li><li>$K_{epochs}$ : nombre d'epochs par itération</li><li>$\\text{batch\\_size}$ : taille des mini-batches</li><li>$\\gamma$ : facteur d'actualisation</li><li>$\\lambda_{GAE}$ : paramètre de GAE</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analyser les interactions entre $\\epsilon$, $K_{epochs}$, et la taille du batch. Comment ces trois paramètres doivent-ils être ajustés ensemble pour maintenir un apprentissage stable et efficace ?",
+        "niveau": "very hard",
+        "reponse": "Ces trois paramètres sont fortement interconnectés dans PPO :<br/><br/>• <b>$\\epsilon$ et $K_{epochs}$</b> : Un $\\epsilon$ élevé autorise des changements de politique plus importants, mais avec plus d'epochs, la politique peut s'éloigner de manière excessive de la politique originale, violant les hypothèses de la région de confiance. Avec un $\\epsilon$ élevé, il est conseillé de réduire $K_{epochs}$ pour éviter une dérive trop importante. Inversement, avec un $\\epsilon$ faible, on peut augmenter $K_{epochs}$ pour tirer pleinement parti des données collectées, car les mises à jour restent dans une région de confiance.<br/><br/>• <b>$K_{epochs}$ et la taille du batch</b> : La taille du batch détermine la quantité de données utilisée pour chaque mise à jour de gradient pendant les epochs. Avec une grande taille de batch (ex: 1024), on peut utiliser moins d'epochs car chaque mise à jour est déjà basée sur un échantillon représentatif. Avec une petite taille de batch (ex: 64), on peut avoir besoin de plus d'epochs pour utiliser efficacement les données, mais cela peut augmenter la variance des gradients.<br/><br/>• <b>Recommandations pratiques</b> : Pour un environnement standard comme ceux de MuJoCo, une configuration typique est $\\epsilon=0.2$, $K_{epochs}=10$, et une taille de batch de 2048 transitions. Si l'on observe une instabilité, on peut réduire $\\epsilon$ à 0.1 et $K_{epochs}$ à 5-8 tout en augmentant la taille du batch. Si l'apprentissage est trop lent, on peut augmenter $\\epsilon$ à 0.25-0.3 mais réduire $K_{epochs}$ à 3-5 pour éviter la divergence.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Discuter de l'impact du choix de $\\gamma$ et $\\lambda_{GAE}$ sur l'estimation de l'avantage et donc sur l'apprentissage de la politique. Proposer une stratégie de réglage pour ces deux paramètres.",
+            "niveau": "hard",
+            "reponse": "Le couple $(\\gamma, \\lambda_{GAE})$ contrôle l'horizon temporel de l'estimation de l'avantage. $\\gamma$ détermine l'importance des récompenses futures : une valeur proche de 1 (ex: 0.99) capture les effets à long terme mais peut introduire de la variance, tandis qu'une valeur plus petite (ex: 0.95) favorise les récompenses à court terme avec moins de variance. $\\lambda_{GAE}$ contrôle le compromis biais-variance de l'estimateur GAE : $\\lambda$ proche de 0 donne un estimateur TD (bas biais, haute variance), $\\lambda$ proche de 1 donne un estimateur de Monte Carlo (haut biais, basse variance).<br/><br/><b>Stratégie de réglage</b> :<br/>1. <b>Pour des tâches avec horizon long</b> (ex: jeu Atari, robotique) : $\\gamma \\approx 0.99$ et $\\lambda \\approx 0.95$ (valeurs standard qui fonctionnent bien).<br/>2. <b>Pour des tâches avec horizon court</b> (ex: contrôle d'un pendule simple) : $\\gamma \\approx 0.95$ et $\\lambda \\approx 0.9$.<br/>3. <b>Pour des environnements très stochastiques</b> : Réduire $\\lambda$ (ex: 0.9) pour diminuer la variance, même si cela introduit un peu de biais.<br/>4. <b>Pour des environnements déterministes</b> : Augmenter $\\lambda$ (ex: 0.98) pour profiter d'un estimateur à faible biais.<br/>Il est recommandé de commencer par les valeurs standard $(0.99, 0.95)$ et d'ajuster en fonction des performances observées."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Expliquer pourquoi PPO est souvent préféré à TRPO dans les applications pratiques, malgré la base théorique plus solide de TRPO. Quels sont les avantages concrets de PPO pour un praticien ?",
+            "niveau": "medium",
+            "reponse": "PPO est préféré à TRPO pour plusieurs raisons pratiques :<br/><br/>1. <b>Simplicité d'implémentation</b> : PPO utilise une simple modification de la fonction objectif avec clipping, tandis que TRPO nécessite de résoudre un problème d'optimisation avec contrainte sur la divergence KL, ce qui implique le calcul de la Hessienne ou des approximations comme la recherche linéaire sur la KL. Cela rend l'implémentation de PPO beaucoup plus accessible.<br/><br/>2. <b>Efficacité computationnelle</b> : PPO n'a pas besoin de calculer des dérivées secondes (Hessienne) ou de résoudre des sous-problèmes d'optimisation à chaque itération. Il utilise des algorithmes d'optimisation standard (Adam, SGD) avec des mises à jour de gradient classiques, ce qui le rend significativement plus rapide.<br/><br/>3. <b>Compatibilité avec le deep learning</b> : PPO s'intègre parfaitement avec les frameworks de deep learning modernes (PyTorch, TensorFlow) sans nécessiter d'implémentations spécialisées pour les contraintes.<br/><br/>4. <b>Performance comparable</b> : En pratique, PPO atteint des performances similaires ou supérieures à TRPO sur la plupart des benchmarks, avec moins de réglage d'hyperparamètres.<br/><br/>5. <b>Scalabilité</b> : PPO est plus facilement scalable à des environnements avec de très grands espaces d'état ou d'action, et s'adapte mieux au parallélisme et au calcul distribué.<br/><br/>Ces avantages font de PPO l'algorithme de choix pour la plupart des applications industrielles et de recherche en RL."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Application de PPO au trading financier",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous êtes data scientist dans une société de trading algorithmique et souhaitez utiliser PPO pour développer un agent de trading sur des actifs financiers. L'environnement est composé de données historiques de prix et de volumes, et l'agent doit prendre des décisions d'achat, de vente ou de conservation à chaque pas de temps. L'état de l'environnement est constitué des prix passés, des indicateurs techniques (RSI, MACD, volatilité), et de la position actuelle de l'agent. L'action est discrète : 0 (vendre), 1 (conserver), 2 (acheter). La récompense est basée sur le profit réalisé, avec une pénalité pour les frais de transaction.</p>",
+      "images": [
+        "Graphique de cours boursier avec des indicateurs techniques superposés, montrant différents signaux d'achat et de vente."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Adapter l'algorithme PPO à ce problème de trading en décrivant précisément : (a) la représentation de l'état et de l'action, (b) la structure des réseaux de neurones pour l'acteur et le critique, (c) la définition de la récompense.",
+        "niveau": "hard",
+        "reponse": "<b>(a) Représentation de l'état et de l'action</b> : L'état $s_t$ sera un vecteur normalisé comprenant : les prix normalisés des $N$ derniers jours, les indicateurs techniques normalisés (RSI, MACD, volatilité), la position actuelle (0 si pas de position, 1 si long, -1 si short), et potentiellement les rendements passés. L'action $a_t$ est discrète avec 3 valeurs : $a_t \\in \\{0 \\text{ (vendre)}, 1 \\text{ (conserver)}, 2 \\text{ (acheter)}\\}$.<br/><br/><b>(b) Structure des réseaux</b> : L'acteur et le critique partageront une première couche de traitement commune (architecture à deux têtes) ou seront séparés selon la complexité. Une architecture possible :<br/>- Couche d'entrée : dimension du vecteur d'état<br/>- Couche cachée 1 : 256 neurones avec ReLU<br/>- Couche cachée 2 : 256 neurones avec ReLU<br/>- Tête acteur : couche linéaire vers 3 neurones avec softmax (pour les probabilités des actions)<br/>- Tête critique : couche linéaire vers 1 neurone (pour la valeur de l'état)<br/><br/><b>(c) Définition de la récompense</b> : La récompense $r_t$ à chaque pas de temps est :<br/>- Si action d'achat : $r_t = -\\text{frais}_{achat}$ (coût de transaction)<br/>- Si action de vente : $r_t = \\Delta P \\times \\text{quantité} - \\text{frais}_{vente}$ (profit - frais)<br/>- Si action de conserver : $r_t = \\Delta P \\times \\text{quantité}$ (variation du portefeuille)<br/>On peut également ajouter une pénalité pour les changements de position fréquents (pour éviter le sur-trading) et éventuellement une récompense de Sharpe pour encourager des rendements ajustés au risque.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer comment gérer le caractère non-stationnaire des données financières dans l'entraînement de l'agent. Proposer des stratégies d'adaptation pour maintenir la performance de l'agent dans le temps.",
+            "niveau": "very hard",
+            "reponse": "La non-stationnarité des données financières (changements de régime, volatilité variable) est un défi majeur. Voici plusieurs stratégies :<br/><br/>1. <b>Normalisation adaptative</b> : Utiliser une normalisation en temps réel (Z-score glissant) des caractéristiques d'entrée avec des fenêtres mobiles (ex: 30 jours). Mettre à jour les statistiques de normalisation en continu.<br/><br/>2. <b>Entraînement incrémental</b> : Ré-entraîner l'agent périodiquement (ex: chaque semaine) avec un mix de données récentes et historiques pour s'adapter aux nouveaux régimes tout en conservant les connaissances passées.<br/><br/>3. <b>Augmentation de données</b> : Générer des scénarios synthétiques en ajoutant du bruit ou en modifiant les paramètres de volatilité pour rendre l'agent robuste à différents régimes de marché.<br/><br/>4. <b>Détection de changement de régime</b> : Utiliser un détecteur de points de changement (ex: CUSUM, Bayesian change point) pour détecter les changements de régime de volatilité ou de tendance, et adapter les hyperparamètres de l'agent en conséquence.<br/><br/>5. <b>Transfert d'apprentissage</b> : Pré-entraîner l'agent sur des données simulées ou sur d'autres actifs, puis l'adapter aux données spécifiques de l'actif cible avec un fine-tuning limité.<br/><br/>6. <b>Approche ensembliste</b> : Entraîner plusieurs agents avec différents états ou hyperparamètres, et combiner leurs décisions (voting ou weighted average) pour une performance plus robuste."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Discuter des risques liés à l'utilisation de PPO pour le trading en conditions réelles. Quelles précautions doivent être prises avant de déployer un tel système ?",
+            "niveau": "hard",
+            "reponse": "Le déploiement d'un agent de trading RL comporte des risques significatifs :<br/><br/>1. <b>Overfitting aux données historiques</b> : L'agent peut apprendre des motifs qui ne se reproduisent pas dans le futur. <b>Précautions</b> : Utiliser des données de test hors-échantillon, effectuer un backtesting rigoureux, tester sur différentes périodes (bull/bear markets).<br/><br/>2. <b>Risque de liquidité et d'exécution</b> : L'agent peut générer des ordres qui impactent le marché. <b>Précautions</b> : Simuler l'impact de marché, limiter la taille des ordres, utiliser des ordres limites plutôt que des ordres au marché.<br/><br/>3. <b>Risques de modèles</b> : Les erreurs de modélisation peuvent conduire à des pertes. <b>Précautions</b> : Implémenter des garde-fous (limites de perte, stops-loss), avoir un mécanisme de 'kill switch' pour interrompre l'agent.<br/><br/>4. <b>Changements de régime</b> : L'agent peut ne pas s'adapter rapidement aux nouvelles conditions de marché. <b>Précautions</b> : Mettre en place un système de monitoring des performances et de ré-entraînement automatique.<br/><br/>5. <b>Sur-optimisation</b> : Optimiser les hyperparamètres sur les données de test peut créer un biais. <b>Précautions</b> : Utiliser une approche de validation hors-échantillon stricte, avec des périodes de validation distinctes.<br/><br/>6. <b>Conformité réglementaire</b> : L'agent doit respecter les régulations financières. <b>Précautions</b> : Intégrer des contraintes réglementaires dans la conception de l'agent, documenter les décisions, et avoir une supervision humaine."
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -1,0 +1,130 @@
+[
+  {
+    "intitule": "Mise en place d’un module sécurisé avec validation et interception",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Dans le cadre du développement d’une API de gestion de profils utilisateurs avec NestJS, on souhaite créer un module <strong>UserModule</strong> exposant les endpoints REST suivants :</p><ul><li><code>POST /users</code> – créer un utilisateur (email, mot de passe, rôle)</li><li><code>GET /users/profile</code> – récupérer son propre profil (authentification requise)</li></ul><p>Contraintes techniques :<br/>- Validation des entrées avec <code>class-validator</code> (email valide, mot de passe ≥ 6 caractères).<br/>- Authentification par JWT (guard <code>JwtAuthGuard</code>).<br/>- Un interceptor global pour mesurer le temps d’exécution de chaque requête.<br/>- Un filtre d’exception global personnalisé qui renvoie <code>{ statusCode, message, timestamp }</code>.</p><p>En vous appuyant sur ces exigences, répondez aux questions ci-dessous.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier les trois éléments essentiels que doit contenir le module UserModule pour respecter l’architecture NestJS (contrôleur, service, entité/DTO). Justifiez brièvement.",
+        "niveau": "easy",
+        "reponse": "UserModule doit contenir : un contrôleur (UserController) pour gérer les routes HTTP, un service (UserService) pour la logique métier (création, recherche), et un DTO (CreateUserDto) ou une entité TypeORM pour la validation et la structure des données.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Rédiger le DTO <code>CreateUserDto</code> avec les décorateurs <code>class-validator</code> nécessaires (email, mot de passe, rôle optionnel). Expliquez chaque validation.",
+        "niveau": "medium",
+        "reponse": "export class CreateUserDto {\n  @IsEmail()\n  email: string;\n\n  @MinLength(6)\n  @IsString()\n  password: string;\n\n  @IsOptional()\n  @IsString()\n  role?: string;\n}\nExplication : @IsEmail() vérifie le format email, @MinLength(6) impose une longueur minimale, @IsOptional() rend le champ optionnel.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Implémenter le guard <code>JwtAuthGuard</code> et l’appliquer sur la route <code>GET /users/profile</code>. Expliquer la stratégie d’extraction du token.",
+        "niveau": "hard",
+        "reponse": "On crée un JwtAuthGuard qui étend AuthGuard('jwt') de @nestjs/passport. On l’applique avec @UseGuards(JwtAuthGuard) sur la méthode getProfile(). La stratégie JwtStrategy extrait le token du header Authorization (Bearer) et valide sa signature via le secret JWT. Une fois validé, l’utilisateur est attaché à req.user.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 4,
+        "texte": "Décrire la structure d’un interceptor global mesurant le temps d’exécution. À quel moment sera-t-il exécuté par rapport au guard et au pipe ?",
+        "niveau": "hard",
+        "reponse": "L’interceptor implémente intercept(context, next) : const start = Date.now(); return next.handle().pipe(tap(() => console.log(`Temps : ${Date.now() - start}ms`))). L’ordre d’exécution est : global middleware → guard → interceptor (before) → pipe → controller → interceptor (after) → exception filter.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse d’une API existante – Décorateurs et filtres",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Voici un extrait de contrôleur NestJS :</p><pre><code>@Controller('orders')\n@UseGuards(JwtAuthGuard)\nexport class OrdersController {\n  @Get(':id')\n  @ApiOperation({ summary: 'Récupérer une commande' })\n  findOne(@Param('id', ParseIntPipe) id: number) {\n    return this.ordersService.findOne(id);\n  }\n\n  @Post()\n  @UsePipes(new ValidationPipe({ whitelist: true }))\n  create(@Body() createOrderDto: CreateOrderDto) {\n    return this.ordersService.create(createOrderDto);\n  }\n}</code></pre><p>Répondez aux questions en justifiant chaque réponse.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer le rôle de <code>@UseGuards(JwtAuthGuard)</code> au niveau du contrôleur. Quel est l’avantage par rapport à le placer sur une méthode unique ?",
+        "niveau": "easy",
+        "reponse": "@UseGuards(JwtAuthGuard) applique l’authentification à toutes les routes du contrôleur. Avantage : factorisation du code, moins d’erreurs, cohérence (toutes les commandes nécessitent un token sauf mention explicite).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Analyser le pipe <code>ParseIntPipe</code> sur le paramètre <code>id</code>. Quelle est son utilité et que se passe-t-il si on envoie une chaîne non numérique ?",
+        "niveau": "medium",
+        "reponse": "ParseIntPipe transforme automatiquement la chaîne reçue en nombre entier. Si la valeur n’est pas convertible (ex: 'abc'), le pipe lève une exception BadRequestException (400) avant même l’exécution de la méthode du contrôleur.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Décrire l’option <code>{ whitelist: true }</code> du ValidationPipe. Donner un exemple de propriété qui serait ignorée.",
+        "niveau": "medium",
+        "reponse": "whitelist: true supprime automatiquement les propriétés qui ne possèdent pas de décorateur de validation dans le DTO. Exemple : si le DTO CreateOrderDto n’a que 'productId' et 'quantity', et que l’on envoie aussi 'adminNote', cette propriété est supprimée (évite les injections de champs non désirés).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Conception d’un filtre d’exception global",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous devez créer un filtre d’exception global nommé <code>HttpExceptionFilter</code> qui capture toutes les exceptions non gérées. Il doit renvoyer une réponse HTTP uniforme :</p><pre><code>{\n  \"statusCode\": 404,\n  \"message\": \"Ressource non trouvée\",\n  \"timestamp\": \"2025-03-15T10:00:00Z\",\n  \"path\": \"/users/999\"\n}</code></pre><p>Le filtre doit traiter aussi bien les exceptions NestJS (<code>NotFoundException</code>) que les erreurs inattendues (500).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créer la classe <code>HttpExceptionFilter</code> implémentant <code>ExceptionFilter</code>. Expliquer la méthode <code>catch</code>.",
+        "niveau": "hard",
+        "reponse": "@Catch()\nexport class HttpExceptionFilter implements ExceptionFilter {\n  catch(exception: unknown, host: ArgumentsHost) {\n    const ctx = host.switchToHttp();\n    const response = ctx.getResponse();\n    const request = ctx.getRequest();\n    const status = exception instanceof HttpException ? exception.getStatus() : 500;\n    const message = exception instanceof HttpException ? exception.message : 'Erreur interne';\n    response.status(status).json({\n      statusCode: status,\n      message,\n      timestamp: new Date().toISOString(),\n      path: request.url\n    });\n  }\n}",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Où et comment enregistrer ce filtre pour qu’il soit global à toute l’application ? Proposer deux méthodes.",
+        "niveau": "medium",
+        "reponse": "Méthode 1 : dans main.ts, app.useGlobalFilters(new HttpExceptionFilter()). Méthode 2 : dans AppModule, ajouter { provide: APP_FILTER, useClass: HttpExceptionFilter } dans les providers du module racine. La seconde méthode permet l’injection de dépendances.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Implémentation de l’authentification JWT – Étapes clés",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>L’authentification par JWT dans NestJS repose sur plusieurs composants. À partir de vos connaissances, répondez aux questions.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Lister les quatre packages npm à installer pour une authentification JWT complète (hors validation). Expliquer rapidement le rôle de chacun.",
+        "niveau": "easy",
+        "reponse": "1. @nestjs/jwt : service d’émission/vérification de tokens. 2. @nestjs/passport : intégration de Passport dans Nest. 3. passport-jwt : stratégie JWT pour Passport. 4. passport (peer dependency) : framework d’authentification.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Décrire la méthode <code>validate(payload: any)</code> de la <code>JwtStrategy</code>. Quel est son rôle et que doit-elle retourner ?",
+        "niveau": "medium",
+        "reponse": "validate(payload) est appelée après que le token JWT a été vérifié. Elle reçoit le contenu décodé (typiquement sub, email, roles). Elle doit retourner l’utilisateur (ou une promesse) qui sera attaché à req.user. Exemple : return this.usersService.findById(payload.sub).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Pourquoi utilise-t-on un guard (<code>AuthGuard('jwt')</code>) plutôt que d’appeler manuellement le service JWT dans chaque contrôleur ? Citer deux bénéfices.",
+        "niveau": "easy",
+        "reponse": "1. Séparation des préoccupations : la logique d’authentification n’est pas polluée dans le contrôleur. 2. Réutilisabilité : on applique le guard sur plusieurs routes/modules sans duplication. 3. Testabilité : on peut mocker le guard facilement dans les tests unitaires.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

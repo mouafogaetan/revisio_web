@@ -1,0 +1,126 @@
+[
+  {
+    "intitule": "Optimisation d'une base de données e-commerce avec vues matérialisées",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Une plateforme de e-commerce constate des performances très lentes sur son tableau de bord des ventes. La requête suivante est exécutée plusieurs fois par heure et prend actuellement 45 secondes :</p><pre><code>SELECT DATE(date_commande) AS jour,<br>       SUM(montant_total) AS chiffre_affaires,<br>       COUNT(DISTINCT id_client) AS nb_clients_uniques,<br>       AVG(montant_total) AS panier_moyen<br>FROM commandes<br>WHERE date_commande >= CURRENT_DATE - INTERVAL '30 days'<br>GROUP BY DATE(date_commande)<br>ORDER BY jour DESC;</code></pre><p>La table <code>commandes</code> contient environ 10 millions de lignes et les données sont mises à jour en temps réel (nouvelles commandes, modifications de statut).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analysez la situation et identifiez le problème principal. Proposez l'utilisation d'une vue matérialisée comme solution. Expliquez son fonctionnement dans ce contexte.",
+        "niveau": "medium",
+        "reponse": "<p>Le problème principal est que la requête doit parcourir 10 millions de lignes, appliquer des fonctions (DATE, SUM, COUNT, AVG) et regrouper les données pour 30 jours seulement, ce qui est coûteux en calcul.</p><p>Une <strong>vue matérialisée</strong> est une vue dont les données sont physiquement stockées et rafraîchies périodiquement. Dans ce contexte, on pourrait créer une vue matérialisée qui pré-calculerait les agrégations par jour :</p><pre><code>CREATE MATERIALIZED VIEW mv_ventes_journalieres AS<br>SELECT DATE(date_commande) AS jour,<br>       SUM(montant_total) AS chiffre_affaires,<br>       COUNT(DISTINCT id_client) AS nb_clients_uniques,<br>       AVG(montant_total) AS panier_moyen<br>FROM commandes<br>GROUP BY DATE(date_commande);</code></pre><p>La requête sur le tableau de bord deviendrait alors :</p><pre><code>SELECT * FROM mv_ventes_journalieres<br>WHERE jour >= CURRENT_DATE - INTERVAL '30 days'<br>ORDER BY jour DESC;</code></pre><p>Cette requête serait extrêmement rapide car elle ne ferait qu'un scan d'index sur une petite table de 30 lignes.</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez comment rafraîchir cette vue matérialisée pour maintenir les données à jour. Comparez les approches REFRESH COMPLETE et REFRESH FAST.",
+            "niveau": "hard",
+            "reponse": "<p>Pour rafraîchir une vue matérialisée, on peut utiliser la commande :</p><pre><code>REFRESH MATERIALIZED VIEW mv_ventes_journalieres;</code></pre><p><strong>REFRESH COMPLETE</strong> : Recalcule toutes les données de la vue à partir des tables sources. C'est coûteux car il faut reparcourir toutes les commandes, mais c'est simple et garanti cohérent.</p><p><strong>REFRESH FAST (ou incrémental)</strong> : Ne met à jour que les lignes modifiées depuis le dernier rafraîchissement. Pour que cela soit possible, il faut que la vue ait une colonne de version ou que le SGBD supporte les vues matérialisées avec suivi des changements (matérialized view logs). C'est beaucoup plus efficace pour des mises à jour fréquentes.</p><p>Pour ce cas d'usage, un rafraîchissement toutes les heures ou toutes les 15 minutes avec REFRESH FAST (si disponible) serait idéal. Un <code>REFRESH COMPLETE</code> quotidien en heure creuse peut aussi être acceptable si les données ne doivent pas être en temps réel.</p>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Quelles sont les limites de l'utilisation des vues matérialisées dans ce contexte ? Que feriez-vous si les données doivent être en temps réel ?",
+            "niveau": "hard",
+            "reponse": "<p><strong>Limites :</strong></p><ul><li>Les données ne sont pas en temps réel (il y a un délai entre le rafraîchissement et les données sources)</li><li>L'espace de stockage supplémentaire (la vue matérialisée stocke physiquement les données)</li><li>Le coût du rafraîchissement (en termes de performances, surtout si la table source est volumineuse)</li><li>Certaines requêtes complexes (avec des sous-requêtes ou des jointures multiples) ne peuvent pas être matérialisées efficacement</li></ul><p><strong>Pour un besoin temps réel :</strong></p><ul><li>Utiliser des <strong>vues matérialisées avec rafraîchissement automatique</strong> sur chaque transaction (ex: REFRESH IMMEDIATE) - mais cela peut ralentir les insertions</li><li>Utiliser un <strong>pipeline de streaming</strong> (ex: Apache Kafka + Spark Streaming) pour maintenir des tables de synthèse en temps réel</li><li>Utiliser des <strong>déclencheurs (triggers)</strong> qui mettent à jour des tables d'agrégation à chaque insertion</li></ul>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Partitionnement d'une table de logs",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Une application web génère des logs d'accès dans une table <code>logs_acces</code> avec les colonnes suivantes :</p><ul><li><code>id_log</code> (BIGINT, PK)</li><li><code>timestamp</code> (TIMESTAMP)</li><li><code>ip_client</code> (VARCHAR(45))</li><li><code>url</code> (VARCHAR(255))</li><li><code>code_http</code> (INT)</li><li><code>temps_reponse</code> (INT, en ms)</li></ul><p>La table contient aujourd'hui 500 millions de lignes et reçoit environ 1000 insertions par seconde. Les requêtes principales sont :</p><ul><li>Requête 1 : <code>SELECT * FROM logs_acces WHERE timestamp BETWEEN '2025-01-01' AND '2025-01-31'</code></li><li>Requête 2 : <code>SELECT COUNT(*) FROM logs_acces WHERE code_http = 500 AND timestamp >= CURRENT_DATE - INTERVAL '7 days'</code></li><li>Requête 3 : Les requêtes d'analyse par mois pour des dashboards</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez une stratégie de partitionnement pour optimiser les performances de cette table. Justifiez votre choix de clé de partitionnement et le type de partitionnement.",
+        "niveau": "medium",
+        "reponse": "<p>Le partitionnement par <strong>RANGE</strong> sur la colonne <code>timestamp</code> est le plus adapté car :</p><ul><li>Les requêtes filtrent souvent sur une période temporelle</li><li>Le partitionnement par date permet de supprimer facilement les anciennes données (DROP PARTITION)</li><li>Les données sont naturellement ordonnées dans le temps</li></ul><p>Proposition de partitionnement mensuel :</p><pre><code>CREATE TABLE logs_acces (<br>    id_log BIGINT,<br>    timestamp TIMESTAMP,<br>    ip_client VARCHAR(45),<br>    url VARCHAR(255),<br>    code_http INT,<br>    temps_reponse INT<br>) PARTITION BY RANGE (timestamp);<br><br>CREATE TABLE logs_acces_2025_01 PARTITION OF logs_acces<br>FOR VALUES FROM ('2025-01-01') TO ('2025-02-01');<br><br>CREATE TABLE logs_acces_2025_02 PARTITION OF logs_acces<br>FOR VALUES FROM ('2025-02-01') TO ('2025-03-01');<br>-- ...</code></pre><p>Un index local sur <code>(timestamp, code_http)</code> peut être ajouté sur chaque partition pour optimiser la Requête 2.</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comparez le partitionnement RANGE avec le partitionnement LIST pour ce cas d'usage. Le partitionnement LIST serait-il approprié ?",
+            "niveau": "medium",
+            "reponse": "<p>Le <strong>partitionnement RANGE</strong> est le plus approprié car :</p><ul><li>Les données sont temporelles et les requêtes portent sur des plages de dates</li><li>On peut facilement ajouter de nouvelles partitions pour les mois à venir</li><li>On peut supprimer facilement les anciennes partitions (archivage)</li></ul><p>Le <strong>partitionnement LIST</strong> n'est pas adapté car il nécessite de connaître à l'avance toutes les valeurs possibles (ex: code_http = 200, 404, 500, etc.). Les données temporelles ne peuvent pas être partitionnées par liste de valeurs finies. On pourrait partitionner par mois (chaque mois est une valeur), mais le RANGE est plus naturel et permet de gérer des plages continues.</p>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Quel serait l'impact de ce partitionnement sur les requêtes d'insertion ? Et sur les requêtes qui ne filtrent pas sur la clé de partitionnement ?",
+            "niveau": "hard",
+            "reponse": "<p><strong>Impact sur les insertions :</strong></p><ul><li>Les insertions sont plus rapides car elles n'affectent qu'une seule partition (celle du mois en cours)</li><li>Il y a moins de contention sur les index (chaque partition a son propre index)</li><li>Les opérations de maintenance (VACUUM, ANALYZE) sont plus légères car elles s'appliquent à des partitions individuelles</li></ul><p><strong>Impact sur les requêtes sans filtre de partitionnement :</strong></p><ul><li>Les requêtes qui ne filtrent pas sur <code>timestamp</code> devront parcourir <strong>toutes</strong> les partitions, ce qui peut être plus lent qu'une table non partitionnée</li><li>C'est le coût du partitionnement : il faut adapter les requêtes pour qu'elles filtrent sur la clé de partitionnement</li><li>Il est recommandé d'ajouter des index locaux sur d'autres colonnes (ex: <code>code_http</code>) pour que chaque partition puisse être recherchée efficacement</li></ul>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation de requêtes avec CTE et analyse de performances",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Une société d'analyse de données exécute régulièrement la requête suivante pour générer un rapport sur les clients :</p><pre><code>SELECT c.id_client, c.nom, c.email,<br>       (SELECT COUNT(*) FROM commandes WHERE id_client = c.id_client) AS nb_commandes,<br>       (SELECT AVG(montant_total) FROM commandes WHERE id_client = c.id_client) AS panier_moyen,<br>       (SELECT SUM(montant_total) FROM commandes WHERE id_client = c.id_client) AS total_depenses<br>FROM clients c<br>WHERE c.date_inscription >= '2024-01-01'<br>AND EXISTS (SELECT 1 FROM commandes WHERE id_client = c.id_client)<br>ORDER BY total_depenses DESC<br>LIMIT 100;</code></pre><p>La requête est très lente et les performances se dégradent à mesure que les tables <code>clients</code> (1 million) et <code>commandes</code> (50 millions) grandissent.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analysez les problèmes de performance de cette requête. Pourquoi est-elle si lente et comment une CTE (Common Table Expression) pourrait-elle l'optimiser ?",
+        "niveau": "hard",
+        "reponse": "<p><strong>Problèmes identifiés :</strong></p><ul><li>La requête exécute <strong>3 sous-requêtes corrélées</strong> pour <strong>chaque</strong> client du résultat (jusqu'à 1 million de clients). Chaque sous-requête parcourt la table commandes pour le client concerné.</li><li>La sous-requête EXISTS est également exécutée pour chaque client.</li><li>L'ORDER BY sur <code>total_depenses</code> (une colonne calculée) nécessite un tri de tous les clients.</li></ul><p><strong>Optimisation avec CTE :</strong></p><pre><code>WITH stats_commandes AS (<br>    SELECT id_client,<br>           COUNT(*) AS nb_commandes,<br>           AVG(montant_total) AS panier_moyen,<br>           SUM(montant_total) AS total_depenses<br>    FROM commandes<br>    GROUP BY id_client<br>)<br>SELECT c.id_client, c.nom, c.email,<br>       s.nb_commandes, s.panier_moyen, s.total_depenses<br>FROM clients c<br>INNER JOIN stats_commandes s ON c.id_client = s.id_client<br>WHERE c.date_inscription >= '2024-01-01'<br>ORDER BY s.total_depenses DESC<br>LIMIT 100;</code></pre><p>La CTE calcule les statistiques en <strong>une seule passe</strong> sur la table commandes, puis la jointure avec clients est rapide grâce à un index sur <code>id_client</code>.</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposez une solution encore plus performante pour ce cas d'usage, en utilisant une vue matérialisée ou une table d'agrégation.",
+            "niveau": "hard",
+            "reponse": "<p><strong>Solution avec vue matérialisée :</strong></p><pre><code>CREATE MATERIALIZED VIEW mv_stats_clients AS<br>SELECT id_client,<br>       COUNT(*) AS nb_commandes,<br>       AVG(montant_total) AS panier_moyen,<br>       SUM(montant_total) AS total_depenses<br>FROM commandes<br>GROUP BY id_client;</code></pre><p>La requête devient alors :</p><pre><code>SELECT c.id_client, c.nom, c.email,<br>       s.nb_commandes, s.panier_moyen, s.total_depenses<br>FROM clients c<br>INNER JOIN mv_stats_clients s ON c.id_client = s.id_client<br>WHERE c.date_inscription >= '2024-01-01'<br>ORDER BY s.total_depenses DESC<br>LIMIT 100;</code></pre><p>Cette approche est la plus performante car la vue matérialisée est pré-calculée. On peut la rafraîchir périodiquement (ex: toutes les heures). C'est idéal pour des rapports qui n'ont pas besoin d'être en temps réel.</p>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Si les statistiques doivent être en temps réel, comment pourriez-vous mettre en place une solution hybride combinant une table d'agrégation et des triggers ?",
+            "niveau": "very hard",
+            "reponse": "<p><strong>Solution hybride avec table d'agrégation et triggers :</strong></p><ol><li><strong>Créer une table d'agrégation</strong> :<br/><code>CREATE TABLE stats_clients (id_client BIGINT PRIMARY KEY, nb_commandes INT, panier_moyen DECIMAL, total_depenses DECIMAL);</code></li><li><strong>Initialiser la table</strong> avec les données historiques.</li><li><strong>Créer des triggers</strong> sur la table commandes :<br/><pre><code>CREATE TRIGGER trig_stats_insert<br>AFTER INSERT ON commandes<br>FOR EACH ROW<br>EXECUTE FUNCTION update_stats_clients();</code></pre></li><li><strong>La fonction de mise à jour</strong> :<br/><pre><code>CREATE OR REPLACE FUNCTION update_stats_clients() RETURNS TRIGGER AS $$\nBEGIN<br>    INSERT INTO stats_clients (id_client, nb_commandes, panier_moyen, total_depenses)\n    VALUES (NEW.id_client, 1, NEW.montant_total, NEW.montant_total)\n    ON CONFLICT (id_client) DO UPDATE<br>    SET nb_commandes = stats_clients.nb_commandes + 1,<br>        panier_moyen = (stats_clients.total_depenses + NEW.montant_total) / (stats_clients.nb_commandes + 1),<br>        total_depenses = stats_clients.total_depenses + NEW.montant_total;<br>    RETURN NEW;<br>END;\n$$ LANGUAGE plpgsql;</code></pre></li></ol><p><strong>Avantages :</strong></p><ul><li>Les statistiques sont maintenues en temps réel</li><li>Les requêtes de lecture sont très rapides (accès direct à la table d'agrégation)</li><li>La table d'agrégation est beaucoup plus petite que la table des commandes</li></ul><p><strong>Inconvénients :</strong></p><ul><li>Les insertions dans commandes sont légèrement plus lentes (à cause du trigger)</li><li>La gestion des mises à jour (ex: modification d'une commande) est plus complexe</li></ul>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Choix technologique pour l'optimisation d'un entrepôt de données",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Une entreprise de distribution souhaite optimiser son entrepôt de données. Le schéma actuel est en étoile avec :</p><ul><li>Une table de faits <code>ventes</code> (1 milliard de lignes, 50 GB)</li><li>Des tables de dimensions : <code>produits</code> (1 million), <code>clients</code> (5 millions), <code>magasins</code> (1000), <code>temps</code> (10 ans)</li><li>Les requêtes sont des agrégations (SUM, COUNT, AVG) avec des GROUP BY sur plusieurs dimensions</li><li>Les données sont chargées en batch quotidien</li></ul><p>Plusieurs solutions sont envisagées :</p><ul><li>A. Utiliser des vues matérialisées</li><li>B. Partitionner la table de faits</li><li>C. Utiliser des index sur les clés étrangères</li><li>D. Combiner plusieurs techniques</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Évaluez chaque solution proposée (A, B, C, D) en termes de bénéfices et d'inconvénients. Classez-les par ordre de priorité et justifiez votre choix.",
+        "niveau": "medium",
+        "reponse": "<p><strong>Analyse des solutions :</strong></p><ul><li><strong>A. Vues matérialisées :</strong> Bénéfice élevé pour les requêtes répétitives (pré-agrégation). Mais ne couvre pas toutes les combinaisons possibles de dimensions. Inconvénient : espace de stockage supplémentaire.</li><li><strong>B. Partitionnement :</strong> Très bénéfique pour les requêtes filtrant sur le temps (ex: par mois). Réduit le coût des scans séquentiels. Facilite l'archivage.</li><li><strong>C. Index sur clés étrangères :</strong> Bénéfice modéré pour les jointures, mais les index sur de grandes tables sont coûteux à maintenir.</li></ul><p><strong>Ordre de priorité recommandé :</strong></p><ol><li><strong>Partitionnement (B)</strong> - Priorité 1 : La table de faits est volumineuse, le partitionnement par date est essentiel pour les performances des requêtes temporelles et pour la maintenance.</li><li><strong>Index sur clés étrangères (C)</strong> - Priorité 2 : Pour accélérer les jointures entre la table de faits et les dimensions.</li><li><strong>Vues matérialisées (A)</strong> - Priorité 3 : Pour pré-agréger les requêtes les plus fréquentes (ex: ventes par produit et par mois).</li><li><strong>Combinaison (D)</strong> - Solution finale : Combiner les trois techniques est la solution idéale.</li></ol>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposez une architecture complète intégrant ces techniques. Détaillez les bénéfices de la combinaison.",
+            "niveau": "hard",
+            "reponse": "<p><strong>Architecture proposée :</strong></p><ol><li><strong>Partitionnement :</strong> La table <code>ventes</code> est partitionnée par mois (RANGE sur la colonne date_vente). Cela permet :<br/>- Des scans rapides pour les requêtes sur une période donnée<br/>- Une suppression facile des données anciennes<br/>- Des opérations de maintenance (VACUUM) sur des partitions individuelles</li><li><strong>Index :</strong> Chaque partition a un index local sur <code>(id_produit, id_client, id_magasin, id_temps)</code> pour accélérer les jointures et les GROUP BY.</li><li><strong>Vues matérialisées :</strong> Créer des vues matérialisées pour les agrégations les plus fréquentes :<br/>- <code>mv_ventes_produit_mois</code><br/>- <code>mv_ventes_magasin_mois</code><br/>Ces vues sont rafraîchies quotidiennement.</li></ol><p><strong>Bénéfices de la combinaison :</strong></p><ul><li>Le partitionnement et les index permettent des requêtes détaillées rapides</li><li>Les vues matérialisées permettent des requêtes agrégées instantanées</li><li>L'ensemble offre un bon compromis entre performance des lectures et coût des mises à jour</li><li>Le système est scalable : ajout de nouvelles partitions, nouvelles vues matérialisées si besoin</li></ul>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Pourquoi les index sur les colonnes de dimension sont-ils importants dans ce contexte ? Quelle serait l'alternative si les index sont trop coûteux ?",
+            "niveau": "medium",
+            "reponse": "<p><strong>Importance des index :</strong></p><ul><li>Les jointures entre la table de faits et les tables de dimensions sont l'opération la plus coûteuse dans les entrepôts de données</li><li>Un index sur <code>id_produit</code>, <code>id_client</code>, etc., permet de trouver rapidement les lignes correspondantes dans la table de faits</li><li>Pour les requêtes avec GROUP BY sur une dimension, l'index permet d'éviter un full scan de la table de faits</li></ul><p><strong>Alternatives aux index :</strong></p><ul><li><strong>Utiliser le partitionnement</strong> pour réduire la taille des scans (si la requête filtre sur la date)</li><li><strong>Réorganiser les données</strong> (cluster) pour que les données soient physiquement triées par dimension</li><li><strong>Utiliser des index bitmap</strong> (pour les colonnes à faible cardinalité)</li><li><strong>Accepter le full scan</strong> si la requête porte sur la majorité des données (ex: analyse annuelle)</li><li><strong>Utiliser des colonnes stockées</strong> (columnar storage) pour réduire le nombre de blocs à lire</li></ul>"
+          }
+        ]
+      }
+    ]
+  }
+]

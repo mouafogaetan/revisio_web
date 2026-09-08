@@ -1,0 +1,126 @@
+[
+  {
+    "intitule": "Manipulation des processus avec les commandes système",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Un élève exécute les commandes suivantes dans un terminal Linux. Il lance d'abord <code>sleep 200 &</code>, puis <code>sleep 300 &</code>, et enfin <code>sleep 150</code> (sans &amp;).</p>\n<p>Il tape ensuite <code>jobs</code>. Décrivez l'état de chaque tâche affichée par <code>jobs</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier les états des trois processus après la commande `jobs`.",
+        "niveau": "easy",
+        "reponse": "Le premier `sleep 200 &` est en arrière-plan et en cours d'exécution (Running). Le second `sleep 300 &` est également en arrière-plan et en cours d'exécution (Running). Le troisième `sleep 150` (sans &) s'exécute au premier plan ; tant qu'il n'est pas interrompu ou terminé, `jobs` ne l'affiche pas comme un job en arrière-plan. Si on suspend ce dernier avec Ctrl+Z, alors `jobs` affichera `Stopped` pour celui-ci.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer pourquoi le troisième `sleep 150` n'apparaît pas dans la sortie de `jobs` immédiatement après son lancement.",
+            "niveau": "easy",
+            "reponse": "Parce que `jobs` liste uniquement les tâches du shell courant qui sont en arrière-plan ou suspendues. Une tâche lancée sans `&` occupe le premier plan et n'est pas considérée comme un job géré en arrière-plan tant qu'elle n'est pas suspendue."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Envoi de signaux pour contrôler un processus",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un serveur Web fictif tourne sous Linux avec le PID 1234. Il ne répond plus aux requêtes. Vous devez :</p>\n<ul>\n<li>D'abord tenter une fermeture propre,</li>\n<li>Puis si cela échoue, forcer l'arrêt,</li>\n<li>Enfin, recharger sa configuration sans l'arrêter.</li>\n</ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Choisir les commandes `kill` appropriées pour chaque étape en justifiant le signal utilisé.",
+        "niveau": "medium",
+        "reponse": "1) `kill -SIGTERM 1234` (ou `kill -15 1234`) pour une terminaison propre. 2) Si le processus ignore SIGTERM, `kill -SIGKILL 1234` (ou `kill -9 1234`) pour forcer l'arrêt immédiat. 3) `kill -SIGHUP 1234` (ou `kill -1 1234`) pour recharger la configuration sans interrompre le processus (beaucoup de démons utilisent SIGHUP à cet effet).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Distinguer les effets de SIGTERM et SIGKILL sur un processus en attente d'entrées-sorties.",
+            "niveau": "medium",
+            "reponse": "SIGTERM peut être intercepté, ignoré ou nettoyé par le processus (fermeture des fichiers, libération des ressources). SIGKILL ne peut ni être intercepté ni ignoré ; le noyau termine le processus immédiatement sans aucun nettoyage, ce qui peut laisser des ressources verrouillées ou des données incohérentes."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Planification d'une tâche récurrente en arrière-plan",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans le cadre de l'administration d'un serveur, vous devez lancer un script de sauvegarde nommé <code>/usr/local/bin/backup.sh</code> chaque nuit à 2h00. Le script doit s'exécuter même si vous êtes déconnecté du serveur. Proposez une solution complète.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Formuler la commande ou la configuration permettant d'exécuter ce script chaque nuit à 2h00, en s'affranchissant de la session utilisateur.",
+        "niveau": "medium",
+        "reponse": "Utiliser `crontab -e` (ou un fichier dans /etc/cron.d/) avec la ligne : `0 2 * * * /usr/local/bin/backup.sh`. Pour être indépendant de la session, le script ne doit pas dépendre de variables d'environnement interactives ; on peut aussi utiliser `nohup` ou la redirection dans la crontab.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Justifier pourquoi un simple `./backup.sh &` lancé en session interactive ne suffirait pas pour une exécution nocturne fiable.",
+            "niveau": "medium",
+            "reponse": "Parce que si la session se ferme (déconnexion SSH, fermeture du terminal), le processus peut recevoir SIGHUP et être terminé. `cron` (ou `systemd timer`) garantit l'exécution indépendante de toute session utilisateur, avec un environnement propre."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse de performances avec ps, top et kill",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Un utilisateur constate que son poste Linux est très lent. En exécutant <code>top</code>, il voit un processus <code>malicious_miner</code> occupant 95% du CPU. Le PID est 9876. Les commandes <code>kill -15 9876</code> puis <code>kill -9 9876</code> sont inefficaces (le processus réapparaît avec un nouveau PID après quelques secondes).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Diagnostiquer pourquoi le processus réapparaît malgré SIGKILL et proposer une méthode pour l'éradiquer définitivement.",
+        "niveau": "hard",
+        "reponse": "Le processus est probablement un processus fils relancé par un processus père (un 'watcher') ou par une tâche cron/systemd qui le redémarre automatiquement. Il faut d'abord identifier le père (`ps -ef | grep 9876`, ou `pstree -p 9876`), puis tuer également le père ou désactiver la tâche planifiée/le service responsable du redémarrage.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Décrire la commande permettant de tuer un processus ET tous ses descendants en une seule opération.",
+            "niveau": "hard",
+            "reponse": "On peut utiliser `kill -9 -- -9876` (tue tout le groupe de processus du PID 9876) ou plus simplement `pkill -P 9876` pour tuer les enfants, puis `kill -9 9876`, ou `killall -9 malicious_miner`. La solution la plus radicale : `pkill -9 -f malicious_miner` (tue tous les processus dont la ligne de commande contient 'malicious_miner')."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Proposer une commande `ps` avec les options appropriées pour trouver le PID parent du processus incriminé.",
+            "niveau": "medium",
+            "reponse": "`ps -o pid,ppid,cmd -p 9876` ou `ps -ef | grep 9876 | grep -v grep` (la colonne PPID est le parent)."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Comparaison des modes de lancement : foreground, background, nohup",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Pour chaque mode d'exécution d'une commande longue (<code>long_task</code>), dites ce qu'il se passe quand on ferme le terminal :</p>\n<ul>\n<li>Mode 1 : <code>long_task</code> (sans &amp;)</li>\n<li>Mode 2 : <code>long_task &amp;</code></li>\n<li>Mode 3 : <code>nohup long_task &amp;</code></li>\n</ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rappeler la réaction de chaque mode à la fermeture du terminal.",
+        "niveau": "easy",
+        "reponse": "Mode 1 : le processus reçoit SIGHUP et est terminé. Mode 2 : le processus reçoit également SIGHUP (car toujours rattaché au terminal) et est terminé. Mode 3 : nohup ignore SIGHUP et redirige la sortie vers nohup.out ; le processus continue après fermeture du terminal.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

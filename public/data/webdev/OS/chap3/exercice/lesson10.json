@@ -1,0 +1,158 @@
+[
+  {
+    "intitule": "Décoder l'adressage paginé",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>On considère un système utilisant une pagination simple. La taille de la mémoire virtuelle est de $2^{32}$ octets (4 Go) et la taille d'une page est de $2^{12}$ octets (4 Ko). La table des pages d'un processus contient les entrées suivantes pour les pages 0, 1, 2 et 3 :</p><ul><li>Page 0 → Cadre 5</li><li>Page 1 → Cadre 12</li><li>Page 2 → Cadre 0</li><li>Page 3 → Page non présente en mémoire (page fault)</li></ul><p>Répondez aux questions suivantes.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Calculer le nombre de bits nécessaires pour le déplacement (offset) dans une adresse virtuelle.",
+        "niveau": "easy",
+        "reponse": "Le déplacement nécessite 12 bits car la taille de la page est de 2^12 octets.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Calculer le nombre de bits nécessaires pour le numéro de page virtuelle.",
+        "niveau": "easy",
+        "reponse": "L'espace d'adressage virtuel est 2^32 octets et la page fait 2^12 octets, donc le nombre de pages virtuelles est 2^32 / 2^12 = 2^20 pages. Il faut donc 20 bits pour le numéro de page.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Convertir l'adresse virtuelle 0x0000F123 (hexadécimal) en adresse physique. Justifier chaque étape.",
+        "niveau": "medium",
+        "reponse": "1. 0x0000F123 = 0xF123 en décimal 61731. 2. Décomposer : numéro de page = 0xF123 / 4096 = 15 (0x000F) ; déplacement = 0xF123 % 4096 = 0x123. 3. Vérifier dans la table : page 15 absente (seules pages 0-3 sont listées). 4. Conclusion : une page fault se produit car la page 15 n'est pas chargée en mémoire.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 4,
+        "texte": "Convertir l'adresse virtuelle 0x0000312A en adresse physique, sachant que la table des pages donnée s'applique uniquement aux pages 0-3.",
+        "niveau": "medium",
+        "reponse": "1. 0x312A = 12586. 2. Numéro de page = 12586 / 4096 = 3 (0x0003) ; déplacement = 12586 % 4096 = 0x12A. 3. La page 3 n'est pas présente en mémoire selon la table des pages. 4. Donc une page fault est déclenchée. Pas d'adresse physique possible.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 5,
+        "texte": "Une adresse physique est composée de 24 bits (16 Mo de RAM). Combien de bits sont utilisés pour le numéro de cadre et combien pour le déplacement ?",
+        "niveau": "hard",
+        "reponse": "La taille de page étant 4 Ko (2^12), le déplacement utilise toujours 12 bits. Les 24 bits d'adresse physique se divisent donc en : numéro de cadre (24 - 12 = 12 bits) et déplacement (12 bits). Soit 4096 cadres physiques maximum.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Pagination dans un système embarqué",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous développez un système d'exploitation pour un microcontrôleur avec une mémoire physique de 64 Ko et une mémoire virtuelle maximale de 1 Mo. Chaque page fait 1 Ko.</p><p>Un programme a besoin d'accéder régulièrement à trois grandes structures de données :</p><ul><li>Buffer A (taille 8 Ko) accédé de façon séquentielle</li><li>Buffer B (taille 12 Ko) accédé aléatoirement</li><li>Buffer C (taille 4 Ko) accédé très fréquemment</li></ul><p>Actuellement, la mémoire physique ne peut contenir que 64 pages maximum.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Calculer le nombre maximum de pages virtuelles possibles dans ce système.",
+        "niveau": "easy",
+        "reponse": "Mémoire virtuelle = 1 Mo = 1024 Ko. Taille page = 1 Ko. Nombre pages virtuelles max = 1024 Ko / 1 Ko = 1024 pages.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Calculer le nombre maximum de cadres physiques disponibles.",
+        "niveau": "easy",
+        "reponse": "Mémoire physique = 64 Ko. Taille page = 1 Ko. Nombre cadres physiques = 64 Ko / 1 Ko = 64 cadres.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposer une stratégie d'allocation des pages physiques pour minimiser les défauts de page. Justifier votre choix en fonction des accès mémoire.",
+        "niveau": "hard",
+        "reponse": "Stratégie proposée : 1. Allouer en permanence les 4 pages du buffer C (accès fréquent) - 4 cadres. 2. Allouer 12 cadres pour le buffer B (accès aléatoire mais taille 12 pages) - 12 cadres. 3. Pour le buffer A (8 pages, accès séquentiel), utiliser un algorithme de remplacement FIFO ou LRU et ne lui allouer que 6 cadres seulement. Les 2 pages restantes du buffer A seront gérées par défauts de page. 4. Pages restantes (64 - 4 - 12 - 6 = 42 cadres) pour le système et autres processus. Justification : L'accès séquentiel supporte mieux les défauts de page qu'un accès aléatoire.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 4,
+        "texte": "Si le buffer B passe à 20 Ko et que la mémoire physique reste à 64 Ko, quelles modifications apportez-vous ?",
+        "niveau": "very hard",
+        "reponse": "Buffer B demande 20 pages. Stratégie révisée : 1. Buffer C toujours 4 pages. 2. Buffer B réduit à 10 pages allouées physiquement (au lieu de 20) - on accepte des défauts de page sur accès aléatoire. 3. Buffer A réduit à 4 pages physiques allouées (au lieu de 8). Soit total = 4 + 10 + 4 = 18 cadres pour données. Reste 46 cadres pour système. Compensation possible : utiliser un algorithme de remplacement plus intelligent pour buffer B (ex: LRU), ou implémenter un pré-chargement pour buffer A.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Calcul et analyse des défauts de page",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Une séquence d'accès aux pages virtuelles est la suivante : [7, 0, 1, 2, 0, 3, 0, 4, 2, 3, 0, 3, 2, 1, 2, 0, 1, 7, 0, 1]. Le système dispose de 3 cadres physiques initialement vides.</p><p>On vous demande d'analyser et d'implémenter mentalement deux algorithmes de remplacement de pages.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Calculer le nombre de défauts de page pour l'algorithme FIFO (First In, First Out) sur cette séquence.",
+        "niveau": "hard",
+        "reponse": "On simule FIFO avec 3 cadres :\nAccès 7 → défaut [7]\nAccès 0 → défaut [7,0]\nAccès 1 → défaut [7,0,1]\nAccès 2 → défaut (sort 7) [0,1,2]\nAccès 0 → présent\nAccès 3 → défaut (sort 0) [1,2,3]\nAccès 0 → défaut (sort 1) [2,3,0]\nAccès 4 → défaut (sort 2) [3,0,4]\nAccès 2 → défaut (sort 3) [0,4,2]\nAccès 3 → défaut (sort 0) [4,2,3]\nAccès 0 → défaut (sort 4) [2,3,0]\nAccès 3 → présent\nAccès 2 → présent\nAccès 1 → défaut (sort 2) [3,0,1]\nAccès 2 → défaut (sort 3) [0,1,2]\nAccès 0 → présent\nAccès 1 → présent\nAccès 7 → défaut (sort 0) [1,2,7]\nAccès 0 → défaut (sort 1) [2,7,0]\nAccès 1 → défaut (sort 2) [7,0,1]\nTotal défauts = 15.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Calculer le nombre de défauts de page pour l'algorithme LRU (Least Recently Used) sur la même séquence.",
+        "niveau": "hard",
+        "reponse": "Simulation LRU avec 3 cadres :\n7→[7]; 0→[7,0]; 1→[7,0,1]\n2→défaut remplace 7 (le moins récent) → [0,1,2]\n0→présent → [1,2,0]\n3→défaut remplace 1 → [2,0,3]\n0→présent → [2,3,0]\n4→défaut remplace 2 → [3,0,4]\n2→défaut remplace 3 → [0,4,2]\n3→défaut remplace 0 → [4,2,3]\n0→défaut remplace 4 → [2,3,0]\n3→présent → [2,0,3]\n2→présent → [0,3,2]\n1→défaut remplace 0 → [3,2,1]\n2→présent → [3,1,2]\n0→défaut remplace 3 → [1,2,0]\n1→présent → [2,0,1]\n7→défaut remplace 2 → [0,1,7]\n0→présent → [1,7,0]\n1→présent → [7,0,1]\nTotal défauts = 12.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Comparer les résultats. Expliquer pourquoi LRU est souvent préféré à FIFO pour la gestion de la mémoire virtuelle.",
+        "niveau": "medium",
+        "reponse": "LRU donne 12 défauts contre 15 pour FIFO sur cette séquence. LRU est préféré car il prend en compte la localité temporelle des accès (une page utilisée récemment a plus de chance d'être réutilisée bientôt). FIFO peut éliminer une page fréquemment utilisée simplement parce qu'elle est la plus ancienne (anomalie de Bélady).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Implémentation simplifiée d'une table des pages",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>On souhaite implémenter une table des pages à deux niveaux pour un processeur 32 bits avec des pages de 4 Ko. Le premier niveau de la table contient 1024 entrées (10 bits). Le second niveau contient également 1024 entrées par table de page (10 bits). Les 12 bits restants sont le déplacement.</p><p>Une adresse virtuelle se décompose ainsi : <code>p1 (10 bits) | p2 (10 bits) | offset (12 bits)</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Donner en hexadécimal la décomposition de l'adresse virtuelle 0x00403004 en (p1, p2, offset).",
+        "niveau": "medium",
+        "reponse": "0x00403004 = binaire 0000 0000 0100 0000 0011 0000 0000 0100.\nDécoupage : \n- p1 (10 bits de poids forts) : 0000000001 (bits 31-22) = 0x001\n- p2 (10 bits suivants) : 0000001100 (bits 21-12) = 0x00C\n- offset (12 bits faibles) : 000000000100 = 0x004\nSoit p1=1, p2=12, offset=4.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Si la table des pages de premier niveau est stockée à l'adresse physique 0x10000, et chaque entrée occupe 4 octets, calculer l'adresse physique de l'entrée p1=1.",
+        "niveau": "hard",
+        "reponse": "Adresse base table L1 = 0x10000. Chaque entrée = 4 octets. Pour p1=1 (index 1), l'adresse = base + (index * taille_entrée) = 0x10000 + (1 * 4) = 0x10004.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Cette entrée p1=1 contient l'adresse physique 0x20000 vers une table de pages de niveau 2. Calculer l'adresse physique de l'entrée p2=12 dans cette table L2.",
+        "niveau": "very hard",
+        "reponse": "Base table L2 = 0x20000. p2=12 (index 12). Taille entrée L2 = 4 octets. Adresse = 0x20000 + (12 * 4) = 0x20000 + 0x30 = 0x20030.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 4,
+        "texte": "L'entrée L2 lue à 0x20030 contient le numéro de cadre physique 0x12345. Calculer l'adresse physique finale correspondant à l'adresse virtuelle 0x00403004.",
+        "niveau": "very hard",
+        "reponse": "Adresse physique = (numéro_cadre * taille_page) + offset = (0x12345 * 4096) + 0x004 = (0x12345 * 0x1000) + 0x4 = 0x12345000 + 0x4 = 0x12345004.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

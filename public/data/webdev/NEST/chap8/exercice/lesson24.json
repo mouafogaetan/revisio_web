@@ -1,0 +1,162 @@
+[
+  {
+    "intitule": "Mock du service utilisateur avec jest.spyOn",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous développez une API NestJS pour la gestion des étudiants d'une université camerounaise (Université de Yaoundé I). Vous avez le service <code>UserService</code> suivant :</p><pre><code>@Injectable()\nexport class UserService {\n  private users = [\n    { id: 1, name: 'Alice', email: 'alice@example.com' },\n    { id: 2, name: 'Bob', email: 'bob@example.com' }\n  ];\n\n  findAll() { return this.users; }\n  findOne(id: number) { return this.users.find(u => u.id === id); }\n  create(userData) { this.users.push(userData); return userData; }\n}\n</code></pre><p>Vous devez tester le contrôleur <code>UserController</code> en utilisant <code>jest.spyOn</code> pour mocker les méthodes du service.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer comment créer un module de test avec <code>Test.createTestingModule</code> pour tester <code>UserController</code> en mockant <code>UserService</code>.",
+        "niveau": "medium",
+        "reponse": "Il faut utiliser : <code>const module = await Test.createTestingModule({ controllers: [UserController], providers: [{ provide: UserService, useValue: { findAll: jest.fn(), findOne: jest.fn(), create: jest.fn() } }] }).compile();</code>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Décrire la procédure pour utiliser <code>jest.spyOn</code> afin de mocker la méthode <code>findAll</code> du service et vérifier qu'elle retourne un tableau vide.",
+        "niveau": "medium",
+        "reponse": "Il faut : 1) Spy la méthode avec <code>jest.spyOn(service, 'findAll').mockResolvedValue([]);</code> 2) Appeler <code>controller.findAll()</code> 3) Vérifier avec <code>expect(service.findAll).toHaveBeenCalled()</code> et <code>expect(result).toEqual([])</code>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Juger de l'utilité des mocks dans les tests unitaires par rapport aux tests d'intégration dans le contexte d'une application NestJS.",
+        "niveau": "hard",
+        "reponse": "Les mocks isolent l'unité testée (ex: contrôleur) de ses dépendances réelles (ex: base de données, API externes), rendant les tests plus rapides, prévisibles et sans effets de bord. Les tests d'intégration utilisent les composants réels pour vérifier les interactions. Une bonne stratégie combine les deux : tests unitaires mockés pour la logique métier, tests d'intégration pour les endpoints critiques.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Test du RoleGuard personnalisé",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Dans une application de gestion des notes au Cameroun (système LMD), vous avez implémenté un guard qui vérifie si l'utilisateur a le rôle d'enseignant (<code>RolesGuard</code>). Voici son code :</p><pre><code>@Injectable()\nexport class RolesGuard implements CanActivate {\n  constructor(private reflector: Reflector) {}\n  canActivate(context: ExecutionContext): boolean {\n    const requiredRoles = this.reflector.get&lt;string[]&gt;('roles', context.getHandler());\n    if (!requiredRoles) return true;\n    const { user } = context.switchToHttp().getRequest();\n    return requiredRoles.includes(user?.role);\n  }\n}\n</code></pre><p>Le décorateur <code>@Roles('teacher')</code> est utilisé sur les routes réservées aux enseignants.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire un test unitaire pour <code>RolesGuard</code> qui vérifie que l'accès est REFUSÉ lorsque l'utilisateur a le rôle 'student' et que le handler requiert le rôle 'teacher'.",
+        "niveau": "hard",
+        "reponse": "Il faut : 1) Créer un module de test avec <code>Reflector</code> réel ou mocké, 2) Mock <code>context.getHandler()</code> pour retourner une fonction factice, 3) Configurer <code>reflector.get</code> pour retourner <code>['teacher']</code>, 4) Mock <code>context.switchToHttp().getRequest()</code> pour retourner <code>{ user: { role: 'student' } }</code>, 5) Appeler <code>guard.canActivate(context)</code> et vérifier qu'il retourne <code>false</code>.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Analyser la différence entre un guard et un interceptor dans le cycle de vie d'une requête NestJS. Illustrer avec un cas d'usage concret pour une application de délibération universitaire.",
+        "niveau": "hard",
+        "reponse": "Le guard s'exécute AVANT l'interceptor et détermine si la requête peut atteindre le contrôleur (autorisation, authentification). L'interceptor s'exécute APRÈS le guard mais AVANT et APRÈS le contrôleur (transformation, logging, timing).\nCas concret pour une délibération : un guard vérifie que l'utilisateur est membre du jury, un interceptor journalise l'action et transforme la réponse pour n'afficher que les notes anonymisées aux étudiants.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Détecter une erreur potentielle dans le code du guard ci-dessus si le décorateur <code>@Roles</code> n'est PAS utilisé sur une route.",
+        "niveau": "medium",
+        "reponse": "Le code gère correctement ce cas : la ligne <code>if (!requiredRoles) return true;</code> permet à la requête de passer sans restriction. C'est un comportement sécurisé car il n'ajoute pas de blocage involontaire.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "ValidationPipe avec transformation de types",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous créez un endpoint <code>GET /etudiants/:id</code> dans une application pour le MINESUP (Ministère de l'Enseignement Supérieur du Cameroun). Vous utilisez <code>ValidationPipe</code> avec l'option <code>transform: true</code>. Le DTO ressemble à :</p><pre><code>export class GetEtudiantParams {\n  @IsInt()\n  @Type(() => Number)\n  id: number;\n}\n</code></pre><p>La route : <code>@Get(':id') getEtudiant(@Param() params: GetEtudiantParams)</code></p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer ce que fait l'option <code>transform: true</code> sur <code>ValidationPipe</code>.",
+        "niveau": "easy",
+        "reponse": "L'option <code>transform: true</code> permet au pipe de transformer automatiquement les données entrantes (comme les paramètres de route, query, body) vers les types spécifiés dans le DTO. Par exemple, convertir la chaîne '42' en nombre 42.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Rédiger un test unitaire pour ce contrôleur en utilisant <code>Test.createTestingModule</code> et en mockant le service appelé. Vérifier que <code>params.id</code> est bien un nombre.",
+        "niveau": "hard",
+        "reponse": "Il faut : 1) Créer le module de test avec <code>app.useGlobalPipes(new ValidationPipe({ transform: true }))</code>, 2) Mock du service, 3) Utiliser <code>request()</code> de supertest pour appeler <code>GET /etudiants/42</code>, 4) Dans le contrôleur réel (non mocké), vérifier que <code>typeof params.id === 'number'</code> et que <code>params.id === 42</code>. On peut aussi spy sur le service pour vérifier qu'il reçoit un nombre.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Déduire ce qui se passe si l'utilisateur appelle <code>/etudiants/abc</code> (lettres au lieu d'un nombre) avec <code>transform: true</code> actif.",
+        "niveau": "medium",
+        "reponse": "La validation échoue car <code>class-validator</code> avec <code>@IsInt()</code> ne peut pas transformer 'abc' en nombre valide. NestJS retourne automatiquement une erreur <code>400 Bad Request</code> avec un message expliquant que l'id doit être un nombre entier. Le contrôleur n'est même pas atteint.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "LoggingInterceptor pour le suivi des performances",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Pour le portail e-learning d'une université camerounaise, vous devez créer un interceptor qui mesure et journalise le temps d'exécution de chaque requête HTTP.</p><p>L'interceptor doit :</p><ul><li>Enregistrer l'heure de début</li><li>Appeler le handler avec <code>next.handle()</code></li><li>Utiliser <code>tap()</code> ou <code>map()</code> pour calculer la durée après l'exécution</li><li>Logger le résultat avec <code>console.log</code> ou un service de logging</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implanter l'interceptor complet selon les spécifications ci-dessus.",
+        "niveau": "hard",
+        "reponse": "<pre><code>@Injectable()\nexport class LoggingInterceptor implements NestInterceptor {\n  intercept(context: ExecutionContext, next: CallHandler): Observable&lt;any&gt; {\n    const req = context.switchToHttp().getRequest();\n    const method = req.method;\n    const url = req.url;\n    const start = Date.now();\n    \n    return next.handle().pipe(\n      tap(() => {\n        const duration = Date.now() - start;\n        console.log(`${method} ${url} - ${duration}ms`);\n      })\n    );\n  }\n}\n</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Rédiger un test unitaire pour cet interceptor en utilisant <code>Test.createTestingModule</code> et en vérifiant que <code>console.log</code> a bien été appelé.",
+        "niveau": "hard",
+        "reponse": "<pre><code>it('should log request duration', async () => {\n  const consoleSpy = jest.spyOn(console, 'log').mockImplementation();\n  const module = await Test.createTestingModule({\n    providers: [LoggingInterceptor]\n  }).compile();\n  const interceptor = module.get(LoggingInterceptor);\n  const context = mockExecutionContext();\n  const next = { handle: () => of('test') };\n  \n  await lastValueFrom(interceptor.intercept(context, next));\n  \n  expect(consoleSpy).toHaveBeenCalledWith(\n    expect.stringMatching(/GET \\/test - \\d+ms/)\n  );\n  consoleSpy.mockRestore();\n});\n</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Analyser l'ordre d'exécution entre un guard, un interceptor et un pipe sur une route donnée.",
+        "niveau": "medium",
+        "reponse": "L'ordre est : 1) Middleware (global et module) -> 2) Guard -> 3) Interceptor (avant le contrôleur) -> 4) Pipe (sur les paramètres) -> 5) Contrôleur -> 6) Interceptor (après le contrôleur) -> 7) Exception Filter (si erreur). Les pipes s'exécutent APRÈS les guards et interceptor, mais AVANT l'entrée dans la méthode du contrôleur.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Création de mocks pour les tests e2e",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous testez une API NestJS de gestion des soutenances de mémoire dans une université camerounaise. Vous avez un service <code>MailService</code> qui envoie de vrais emails via SendGrid. Pour les tests end-to-end, vous ne voulez PAS envoyer de vrais emails.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire la méthode pour remplacer <code>MailService</code> par un mock dans un test e2e avec <code>Test.createTestingModule</code>.",
+        "niveau": "medium",
+        "reponse": "On peut utiliser <code>.overrideProvider(MailService).useValue({ sendEmail: jest.fn().mockResolvedValue(true) })</code> avant <code>.compile()</code>. On peut ensuite injecter le service mocké et espionner <code>sendEmail</code> pour vérifier qu'il a été appelé.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Évaluer les avantages et inconvénients de mocker une dépendance externe (comme un service d'email) dans un test e2e plutôt que de l'utiliser réellement.",
+        "niveau": "hard",
+        "reponse": "Avantages : tests plus rapides, pas de consommation de crédits API, pas de risque d'envoyer des vrais emails aux utilisateurs, tests déterministes. Inconvénients : on ne teste pas l'intégration réelle avec le fournisseur externe, on peut manquer des problèmes de format d'email, de latence, ou de changement d'API. Solution hybride : tests e2e mockés dans la CI + tests d'intégration séparés avec un vrai service sandbox.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquer comment utiliser <code>jest.spyOn</code> pour vérifier qu'un service mocké a bien été appelé avec les bons paramètres.",
+        "niveau": "easy",
+        "reponse": "Après avoir remplacé le service par un mock, on récupère l'instance via <code>module.get(MailService)</code>. Ensuite, on fait <code>const spy = jest.spyOn(mockMailService, 'sendEmail')</code>. On exécute l'action qui déclenche l'envoi, puis on vérifie avec <code>expect(spy).toHaveBeenCalledWith(expectedParams)</code>.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

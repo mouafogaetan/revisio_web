@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+  "matiere": "Initiation à la Cybersécurité",
+  "classe": "Développement Web",
+  "sequence": "Séquence 2",
+  "anneeScolaire": "2025-2026",
+  "exercices": [
+    {
+      "titre": "Comprendre la DLP",
+      "points": "4 pts",
+      "enonce": "<p>La prévention des pertes de données (DLP) est un ensemble de stratégies et d'outils visant à protéger les données sensibles contre les fuites, qu'elles soient accidentelles ou malveillantes [citation:1][citation:4].</p><p>Pour une entreprise camerounaise qui gère des données clients, la mise en place d'une solution DLP est essentielle pour se conformer à la loi sur la protection des données personnelles.</p>",
+      "questions": [
+        {
+          "question": "<p><strong>1. (2 pts)</strong> Expliquez en quoi une solution DLP peut aider à protéger les <strong>PII</strong> (Personally Identifiable Information) d'une entreprise. Donnez <strong>deux exemples concrets</strong> de règles DLP qui pourraient être mises en place.</p>",
+          "reponse": "<p><strong>Réponse :</strong> Une solution DLP permet de surveiller, détecter et bloquer les transferts non autorisés de données PII, comme les noms, adresses, numéros de téléphone ou de CNI [citation:4].</p><p><strong>Exemples de règles :</strong></p><ul><li>Bloquer l'envoi par email de tout fichier contenant des numéros de carte d'identité nationale.</li><li>Interdire le transfert de fichiers vers des clés USB non autorisées [citation:4].</li><li>Détecter et alerter lorsqu'un employé tente de copier des données clients vers un service cloud personnel [citation:4].</li></ul>"
+        },
+        {
+          "question": "<p><strong>2. (1 pt)</strong> Selon vous, quelle est la principale cause de fuite de données dans une entreprise ?</p>",
+          "reponse": "<p><strong>Réponse :</strong> La principale cause de fuite de données est la <strong>négligence des employés</strong> [citation:4]. Cela inclut des erreurs comme l'envoi d'informations à la mauvaise personne, la perte d'un appareil, ou le partage de données via des canaux non sécurisés [citation:1].</p>"
+        },
+        {
+          "question": "<p><strong>3. (1 pt)</strong> Pourquoi est-il important qu'une entreprise camerounaise mette en place une stratégie DLP ?</p>",
+          "reponse": "<p><strong>Réponse :</strong> Mettre en place une DLP est une étape clé pour se conformer à la <strong>loi camerounaise sur la protection des données personnelles</strong>. Cela permet d'éviter les fuites de données, de protéger la réputation de l'entreprise et de prévenir des sanctions financières [citation:4].</p>"
+        }
+      ]
+    },
+    {
+      "titre": "Les bases du Pentest",
+      "points": "6 pts",
+      "enonce": "<p>Le test d'intrusion, ou pentest, est une simulation d'attaque autorisée visant à identifier les vulnérabilités d'un système avant qu'un attaquant malveillant ne les exploite [citation:2][citation:8].</p>",
+      "questions": [
+        {
+          "question": "<p><strong>4. (2 pts)</strong> Décrivez brièvement les <strong>trois types de boîtes</strong> (black box, grey box, white box) utilisés en pentest. Précisez quel est le niveau d'information du testeur dans chaque cas.</p>",
+          "reponse": "<p><strong>Réponse :</strong></p><ul><li><strong>Boîte noire :</strong> Le testeur ne dispose d'<strong>aucune information</strong> préalable sur le système. Il agit comme un attaquant externe [citation:8].</li><li><strong>Boîte grise :</strong> Le testeur dispose d'<strong>informations partielles</strong> sur le système, comme des identifiants ou la documentation [citation:2].</li><li><strong>Boîte blanche :</strong> Le testeur a un <strong>accès complet</strong> à toutes les informations (code source, architecture, etc.) pour une analyse approfondie [citation:2].</li></ul>"
+        },
+        {
+          "question": "<p><strong>5. (2 pts)</strong> Quelles sont les <strong>cinq phases</strong> d'un test d'intrusion selon le standard PTES ? Nommez-les et expliquez brièvement l'objectif de la dernière phase.</p>",
+          "reponse": "<p><strong>Réponse :</strong> Les 5 phases du pentest (PTES) sont :</p><ol><li>Reconnaissance : Collecte d'informations sur la cible [citation:2].</li><li>Scanning : Découverte des ports ouverts et des services [citation:2].</li><li>Exploitation : Utilisation des vulnérabilités pour pénétrer le système [citation:2].</li><li>Post-exploitation : Maintien de l'accès et collecte de données [citation:2].</li><li><strong>Reporting (Rapport) :</strong> Rédaction d'un rapport détaillé listant les vulnérabilités, leur impact, et proposant des recommandations de correction. C'est la phase la plus importante pour l'entreprise [citation:2][citation:8].</li></ol>"
+        },
+        {
+          "question": "<p><strong>6. (1 pt)</strong> Quelle est la <strong>règle d'or</strong> à respecter avant de réaliser un pentest ?</p>",
+          "reponse": "<p><strong>Réponse :</strong> La règle d'or est d'obtenir une <strong>autorisation écrite</strong> et de définir clairement le <strong>périmètre</strong> du test avant de commencer [citation:2][citation:8]. Sans cela, les actions du testeur sont considérées comme illégales.</p>"
+        },
+        {
+          "question": "<p><strong>7. (1 pt)</strong> Citez <strong>deux outils</strong> utilisés par les pentesteurs et précisez à quelle phase ils sont généralement associés.</p>",
+          "reponse": "<p><strong>Réponse :</strong></p><ul><li><strong>Nmap</strong> : Utilisé lors de la phase de <strong>scanning</strong> pour découvrir les ports ouverts et les services [citation:2].</li><li><strong>Metasploit</strong> : Utilisé lors de la phase d'<strong>exploitation</strong> pour tester et exploiter les vulnérabilités [citation:2].</li></ul>"
+        }
+      ]
+    },
+    {
+      "titre": "Étude de cas : Analyse de risque",
+      "points": "4 pts",
+      "enonce": "<p>Une jeune entreprise camerounaise de e-commerce, <strong>\"AfriShop\"</strong>, stocke dans sa base de données les informations de ses clients : nom, adresse, numéro de téléphone, email et historique d'achat.</p><p>L'entreprise fait face à des tentatives de piratage et souhaite renforcer sa sécurité.</p>",
+      "questions": [
+        {
+          "question": "<p><strong>8. (2 pts)</strong> Identifiez <strong>deux risques majeurs</strong> pour AfriShop concernant la protection de ses données. Expliquez pourquoi ces risques sont critiques.</p>",
+          "reponse": "<p><strong>Réponse :</strong></p><ol><li><strong>Fuite des données clients (PII)</strong> : La divulgation des noms, numéros de téléphone et adresses exposerait l'entreprise à des sanctions légales, à une perte de confiance et à un préjudice réputationnel [citation:1][citation:4].</li><li><strong>Perte d'intégrité des données</strong> : Un attaquant pourrait modifier les historiques d'achat ou les adresses de livraison, causant des pertes financières et une insatisfaction client.</li></ol>"
+        },
+        {
+          "question": "<p><strong>9. (2 pts)</strong> Proposez une <strong>solution DLP</strong> et une <strong>bonne pratique de développement</strong> pour aider AfriShop à se protéger contre les fuites de données.</p>",
+          "reponse": "<p><strong>Réponse :</strong></p><ul><li><strong>Solution DLP :</strong> Mettre en place une règle DLP qui <strong>bloque l'envoi par email</strong> de tout fichier contenant des numéros de téléphone ou des adresses email des clients [citation:1].</li><li><strong>Bonne pratique de développement :</strong> <strong>Valider et échapper systématiquement les entrées utilisateur</strong> pour prévenir les injections SQL, une des failles les plus critiques [citation:8].</li></ul>"
+        }
+      ]
+    },
+    {
+      "titre": "Question de réflexion",
+      "points": "4 pts",
+      "enonce": "<p>La cybersécurité est un enjeu crucial pour les entreprises et les États.</p>",
+      "questions": [
+        {
+          "question": "<p><strong>10. (4 pts)</strong> Rédigez un court paragraphe (environ 5 à 7 lignes) argumenté dans lequel vous expliquez pourquoi la <strong>sensibilisation des employés</strong> est une composante aussi importante que la technologie (comme un antivirus ou un pare-feu) dans la stratégie de cybersécurité d'une entreprise camerounaise.</p>",
+          "reponse": "<p><strong>Réponse (exemple) :</strong> La technologie seule ne peut pas garantir une sécurité absolue, car la majorité des incidents de sécurité proviennent d'erreurs humaines [citation:4]. Un employé non formé peut facilement tomber dans un piège de phishing ou envoyer des données sensibles à la mauvaise personne, rendant inutiles les pare-feu les plus sophistiqués. Former régulièrement les équipes aux bonnes pratiques, comme la création de mots de passe forts ou la reconnaissance des emails suspects, crée une véritable \"culture de la sécurité\". C'est un investissement rentable qui, couplé à une solution DLP, réduit considérablement les risques de fuite de données [citation:1][citation:4]. Au Cameroun, face à la recrudescence des cyberattaques, une équipe sensibilisée est la meilleure des défenses.</p>"
+        }
+      ]
+    }
+  ]
+};
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

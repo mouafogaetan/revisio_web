@@ -1,0 +1,133 @@
+[
+  {
+    "intitule": "Stocker et récupérer des préférences utilisateur avec AsyncStorage",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans une application React Native, on souhaite mémoriser le thème choisi par l’utilisateur (clair ou sombre) afin de le réappliquer au prochain lancement. On utilise <code>@react-native-async-storage/async-storage</code>.</p>\n<p>Rappel : <code>setItem(key, value)</code> et <code>getItem(key)</code> sont asynchrones.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer pourquoi AsyncStorage est adapté pour stocker des préférences utilisateur locales, mais pas pour des données sensibles comme un mot de passe.",
+        "niveau": "medium",
+        "reponse": "AsyncStorage est adapté car il persiste les données en local de façon non chiffrée et non sécurisée. Il ne doit pas être utilisé pour des tokens d’authentification sensibles ou mots de passe, car une personne ayant accès au stockage du terminal pourrait les lire. Pour des données sensibles, on préférera SecureStore (Expo) ou React Native Keychain.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrire une fonction asynchrone <code>saveTheme(theme)</code> qui enregistre le thème choisi (<code>'light'</code> ou <code>'dark'</code>) dans AsyncStorage, puis une fonction <code>loadTheme()</code> qui le récupère et retourne la valeur ou <code>'light'</code> par défaut.",
+        "niveau": "medium",
+        "reponse": "Exemple de code :\n\n```javascript\nimport AsyncStorage from '@react-native-async-storage/async-storage';\n\nconst saveTheme = async (theme) => {\n  try {\n    await AsyncStorage.setItem('user_theme', theme);\n  } catch (error) {\n    console.error('Erreur sauvegarde thème', error);\n  }\n};\n\nconst loadTheme = async () => {\n  try {\n    const theme = await AsyncStorage.getItem('user_theme');\n    return theme !== null ? theme : 'light';\n  } catch (error) {\n    console.error('Erreur chargement thème', error);\n    return 'light';\n  }\n};\n```",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Justifier l’usage de <code>try/catch</code> dans ces fonctions.",
+            "niveau": "easy",
+            "reponse": "L’utilisation de try/catch permet de capturer les éventuelles erreurs asynchrones (exemple : espace de stockage insuffisant, accès non autorisé, problème d’écriture) et d’éviter que l’application ne plante, tout en gérant proprement l’erreur (log, fallback)."
+          }
+        ]
+      },
+      {
+        "numero": 3,
+        "texte": "Créer un composant React Native simple (nommé <code>ThemeSwitcher</code>) qui :\n- lit la valeur enregistrée dans AsyncStorage au montage,\n- affiche un bouton pour basculer entre 'light' et 'dark',\n- sauvegarde le nouveau thème dans AsyncStorage à chaque changement.",
+        "niveau": "hard",
+        "reponse": "Exemple de composant fonctionnel utilisant useState et useEffect :\n\n```jsx\nimport React, { useState, useEffect } from 'react';\nimport { View, Text, Button, StyleSheet } from 'react-native';\nimport AsyncStorage from '@react-native-async-storage/async-storage';\n\nconst ThemeSwitcher = () => {\n  const [theme, setTheme] = useState('light');\n\n  useEffect(() => {\n    const loadStoredTheme = async () => {\n      const savedTheme = await AsyncStorage.getItem('user_theme');\n      if (savedTheme) setTheme(savedTheme);\n    };\n    loadStoredTheme();\n  }, []);\n\n  const toggleTheme = async () => {\n    const newTheme = theme === 'light' ? 'dark' : 'light';\n    setTheme(newTheme);\n    await AsyncStorage.setItem('user_theme', newTheme);\n  };\n\n  return (\n    <View style={[styles.container, theme === 'dark' && styles.darkBackground]}>\n      <Text style={theme === 'dark' ? styles.darkText : styles.lightText}>\n        Thème actuel : {theme}\n      </Text>\n      <Button title=\"Changer de thème\" onPress={toggleTheme} />\n    </View>\n  );\n};\n\nconst styles = StyleSheet.create({\n  container: { flex: 1, justifyContent: 'center', alignItems: 'center' },\n  darkBackground: { backgroundColor: '#333' },\n  lightText: { color: '#000' },\n  darkText: { color: '#fff' },\n});\n\nexport default ThemeSwitcher;\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Application de liste de tâches avec persistance locale",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous devez concevoir une petite application de TODO list en React Native. L'utilisateur doit pouvoir ajouter des tâches, les supprimer et les marquer comme terminées. Toutes les tâches doivent être sauvegardées dans AsyncStorage pour ne pas être perdues quand l'application est fermée.</p>\n<p>Contraintes : chaque tâche est un objet contenant <code>id</code> (chaîne unique), <code>text</code> (description) et <code>completed</code> (booléen). La liste complète est stockée sous une clé unique <code>'todos'</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire la stratégie de chargement et de sauvegarde des tâches. À quel moment doit-on lire depuis AsyncStorage ? À quel moment doit-on écrire ?",
+        "niveau": "medium",
+        "reponse": "Le chargement doit se faire au montage du composant principal (useEffect) pour récupérer la liste existante. L’écriture doit se faire après chaque modification de la liste (ajout, suppression, toggle completed) pour que les changements soient immédiatement persistés. On peut également sauvegarder avant la fermeture de l’app (mais la méthode recommandée est de persister à chaque mutation).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrire une fonction <code>saveTodos(todos)</code> qui stocke le tableau de tâches dans AsyncStorage après l’avoir converti en JSON, et une fonction <code>loadTodos()</code> qui le récupère et retourne un tableau (vide par défaut si aucune donnée).",
+        "niveau": "medium",
+        "reponse": "```javascript\nimport AsyncStorage from '@react-native-async-storage/async-storage';\n\nconst STORAGE_KEY = 'todos';\n\nconst saveTodos = async (todos) => {\n  try {\n    const jsonValue = JSON.stringify(todos);\n    await AsyncStorage.setItem(STORAGE_KEY, jsonValue);\n  } catch (e) {\n    console.error('Erreur sauvegarde todos', e);\n  }\n};\n\nconst loadTodos = async () => {\n  try {\n    const jsonValue = await AsyncStorage.getItem(STORAGE_KEY);\n    return jsonValue != null ? JSON.parse(jsonValue) : [];\n  } catch (e) {\n    console.error('Erreur chargement todos', e);\n    return [];\n  }\n};\n```",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Justifier pourquoi on utilise <code>JSON.stringify</code> et <code>JSON.parse</code>.",
+            "niveau": "easy",
+            "reponse": "AsyncStorage ne stocke que des chaînes de caractères. Pour sauvegarder un tableau ou un objet, il faut le convertir en chaîne JSON (stringify) avant stockage, puis le reconvertir en objet JavaScript (parse) après lecture."
+          }
+        ]
+      },
+      {
+        "numero": 3,
+        "texte": "Implémenter la fonction <code>addTodo(text)</code> qui prend le texte d’une nouvelle tâche, génère un identifiant unique (ex: <code>Date.now().toString()</code>), ajoute la tâche à la liste existante, puis persiste la liste mise à jour.",
+        "niveau": "hard",
+        "reponse": "```javascript\nconst addTodo = async (text) => {\n  if (text.trim() === '') return;\n  const currentTodos = await loadTodos();\n  const newTodo = {\n    id: Date.now().toString(),\n    text: text,\n    completed: false,\n  };\n  const updatedTodos = [...currentTodos, newTodo];\n  await saveTodos(updatedTodos);\n  return updatedTodos;\n};\n```\nCette fonction charge l’état actuel, construit la nouvelle tâche, met à jour le tableau et persiste immédiatement le résultat.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 4,
+        "texte": "Expliquer comment tester manuellement que les données persistent après un redémarrage complet de l’application (kill de l’app). Proposer deux méthodes de vérification.",
+        "niveau": "medium",
+        "reponse": "Méthode 1 : ajouter quelques tâches, fermer complètement l’application (glisser vers le haut sur iOS, fermer depuis le gestionnaire d’applications Android), puis rouvrir l’app et vérifier que les tâches sont toujours présentes. Méthode 2 : utiliser les outils de développement (React Native Debugger, ou AsyncStorage explorer) pour inspecter directement la clé 'todos' avant et après redémarrage. On peut aussi ajouter un bouton d’affichage du contenu brut pour debug.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Persistance du token d’authentification",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Dans une application mobile, après connexion, le serveur retourne un token JWT (JSON Web Token) qui doit être conservé entre deux sessions. Vous décidez d’utiliser AsyncStorage pour stocker ce token.</p>\n<p><strong>Mise en garde</strong> : AsyncStorage n’est pas sécurisé. Pour un vrai projet, il faudrait utiliser SecureStore ou équivalent. Cependant, pour les besoins de cet exercice, on suppose que l’application n’a pas de données ultra-sensibles.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédiger une fonction <code>storeToken(token)</code> et <code>getToken()</code> utilisant AsyncStorage pour enregistrer et récupérer le token. La clé utilisée sera <code>'user_token'</code>.",
+        "niveau": "easy",
+        "reponse": "```javascript\nconst storeToken = async (token) => {\n  try {\n    await AsyncStorage.setItem('user_token', token);\n  } catch (error) {\n    console.error('Erreur stockage token', error);\n  }\n};\n\nconst getToken = async () => {\n  try {\n    return await AsyncStorage.getItem('user_token');\n  } catch (error) {\n    console.error('Erreur lecture token', error);\n    return null;\n  }\n};\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer pourquoi stocker un token d’authentification dans AsyncStorage pose un risque de sécurité. Proposer deux alternatives plus sûres pour Expo et pour React Native CLI.",
+        "niveau": "hard",
+        "reponse": "AsyncStorage stocke les données en clair dans le système de fichiers local. Sur un appareil rooté ou jailbreaké, une autre application malveillante pourrait accéder à ces données. De plus, certaines versions d’Android stockent les backups non chiffrés. Alternatives :\n1) Pour Expo : utiliser SecureStore (expo-secure-store) qui chiffre les données.\n2) Pour React Native CLI : utiliser react-native-keychain (iOS Keychain / Android Keystore) qui offre un niveau de sécurité élevé.",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Citer un scénario concret où l’utilisation d’AsyncStorage pour un token pourrait être exploitée.",
+            "niveau": "medium",
+            "reponse": "Si l’utilisateur installe une application malveillante qui scanne le stockage local, celle-ci pourrait lire la clé 'user_token' et utiliser le token pour usurper l’identité de l’utilisateur sur le serveur backend, accédant ainsi à ses données personnelles."
+          }
+        ]
+      },
+      {
+        "numero": 3,
+        "texte": "Créer une fonction <code>logout()</code> qui supprime le token stocké dans AsyncStorage et redirige l’utilisateur vers l’écran de connexion (simuler la redirection par un commentaire).",
+        "niveau": "medium",
+        "reponse": "```javascript\nconst logout = async (navigation) => {\n  try {\n    await AsyncStorage.removeItem('user_token');\n    // navigation.replace('Login');  // redirection simulée\n    console.log('Token supprimé, utilisateur déconnecté');\n  } catch (error) {\n    console.error('Erreur lors de la déconnexion', error);\n  }\n};\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 4,
+        "texte": "Évaluer les conséquences d’une absence de gestion d’erreur lors de l’appel à <code>getToken()</code>. Donner un exemple de code avec une gestion robuste des erreurs.",
+        "niveau": "hard",
+        "reponse": "Sans gestion d’erreur, si AsyncStorage échoue (problème de lecture, permission manquante), l’application pourrait planter ou considérer que l’utilisateur n’a pas de token, le déconnectant intempestivement. Une gestion robuste inclut try/catch et une valeur par défaut. Exemple :\n```javascript\nconst getTokenSafely = async () => {\n  try {\n    const token = await AsyncStorage.getItem('user_token');\n    return token;\n  } catch (error) {\n    console.warn('Impossible de récupérer le token', error);\n    return null; // on retourne null pour indiquer l'absence de token\n  }\n};\n```\nCela évite une erreur non rattrapée et permet un comportement prévisible (considérer l’utilisateur comme déconnecté).",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

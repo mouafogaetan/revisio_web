@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+  "matiere": "Initiation au TypeScript",
+  "classe": "Développement Web",
+  "sequence": "Séquence 6",
+  "anneeScolaire": "2025-2026",
+  "exercices": [
+    {
+      "titre": "Exercice 1 : Maîtrise des concepts fondamentaux et de la mise en place",
+      "points": "4 pts",
+      "enonce": "<p style='margin-bottom: 10px;'>Ce premier exercice porte sur les bases de TypeScript, son installation et sa compilation.</p>",
+      "questions": [
+        {
+          "question": "<p style='font-weight: bold;'>1) Définition et avantages (2 pts)</p><p style='margin-top: 5px;'>a) Définissez TypeScript en précisant ce qu'est un <strong>sur-ensemble typé</strong> de JavaScript. (0.75 pt)</p><p>b) Citez deux avantages majeurs apportés par le typage statique de TypeScript par rapport à JavaScript pur. (0.75 pt)</p><p>c) Quelle est la différence fondamentale entre un fichier <code>.ts</code> et un fichier <code>.js</code> ? (0.5 pt)</p>",
+          "reponse": "<p><strong>a) Définition :</strong> TypeScript est un <strong>sur-ensemble typé de JavaScript</strong>. Cela signifie qu'il partage la même syntaxe de base que JavaScript, tout en y ajoutant des fonctionnalités, notamment un système de <strong>typage statique</strong>.</p><p style='margin-top: 8px;'><strong>b) Avantages :</strong></p><ul><li><strong>Meilleure maintenabilité :</strong> Le code devient plus prévisible et facile à comprendre, ce qui facilite les évolutions et la maintenance à long terme.</li><li><strong>Refactoring sécurisé :</strong> Le compilateur détecte les erreurs lors des modifications, ce qui réduit considérablement les risques de régression.</li></ul><p style='margin-top: 8px;'><strong>c) Différence :</strong> Un fichier <code>.ts</code> contient du code TypeScript avec des annotations de type. Un fichier <code>.js</code> contient du code JavaScript standard qui peut être exécuté directement par un navigateur ou Node.js.</p>"
+        },
+        {
+          "question": "<p style='font-weight: bold;'>2) Installation et compilation (2 pts)</p><p style='margin-top: 5px;'>a) Quelle commande npm permet d'installer TypeScript globalement sur votre machine ? (0.5 pt)</p><p>b) Donnez la commande pour compiler un fichier <code>index.ts</code> en JavaScript. (0.5 pt)</p><p>c) Expliquez l'utilité du fichier <code>tsconfig.json</code> et nommez <strong>deux</strong> options que l'on peut y configurer. (1 pt)</p>",
+          "reponse": "<p><strong>a) Installation globale :</strong> <code style='background: #f4f6f7; padding: 2px 6px; border-radius: 4px;'>npm install -g typescript</code></p><p style='margin-top: 8px;'><strong>b) Compilation :</strong> <code style='background: #f4f6f7; padding: 2px 6px; border-radius: 4px;'>tsc index.ts</code></p><p style='margin-top: 8px;'><strong>c) <code>tsconfig.json</code> :</strong> C'est un fichier de configuration qui permet de définir les options du compilateur TypeScript pour un projet. Il évite de répéter les options en ligne de commande.</p><p><strong>Exemples d'options :</strong></p><ul><li><code>target</code> : Définit la version ECMAScript de sortie (ex: <code>ES2020</code>).</li><li><code>strict</code> : Active un ensemble de contrôles de types stricts.</li><li><code>outDir</code> : Spécifie le dossier de sortie pour les fichiers JavaScript compilés.</li></ul>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 2 : Système de typage et structures de données",
+      "points": "6 pts",
+      "enonce": "<p style='margin-bottom: 10px;'>Cet exercice évalue votre compréhension du système de typage de TypeScript.</p>",
+      "questions": [
+        {
+          "question": "<p style='font-weight: bold;'>1) Types primitifs et spéciaux (2 pts)</p><p style='margin-top: 5px;'>Définissez brièvement les types suivants en donnant un exemple d'utilisation pour chacun : <code>number</code>, <code>string</code>, <code>boolean</code>, <code>any</code>, <code>unknown</code>, <code>void</code>.</p>",
+          "reponse": "<ul><li><strong><code>number</code> :</strong> Représente tous les nombres. <em>Exemple :</em> <code>let age: number = 25;</code></li><li><strong><code>string</code> :</strong> Représente une chaîne de caractères. <em>Exemple :</em> <code>let nom: string = \"Zahra\";</code></li><li><strong><code>boolean</code> :</strong> Représente une valeur vraie ou fausse. <em>Exemple :</em> <code>let estConnecte: boolean = true;</code></li><li><strong><code>any</code> :</strong> Désactive le contrôle de type (à éviter). <em>Exemple :</em> <code>let donnee: any = \"Bonjour\";</code></li><li><strong><code>unknown</code> :</strong> Représente une valeur inconnue, nécessite une vérification avant utilisation. <em>Exemple :</em> <code>let donnee: unknown = \"Bonjour\";</code></li><li><strong><code>void</code> :</strong> Utilisé pour les fonctions qui ne retournent rien. <em>Exemple :</em> <code>function log(): void { console.log(\"Log\"); }</code></li></ul>"
+        },
+        {
+          "question": "<p style='font-weight: bold;'>2) Tableaux et tuples (1.5 pts)</p><p style='margin-top: 5px;'>a) Déclarez un tableau de chaînes de caractères de deux manières différentes. (0.5 pt)</p><p>b) Déclarez un tuple correspondant aux coordonnées d'un point : (latitude: number, longitude: number, nom: string). Donnez un exemple de valeur pour ce tuple. (0.5 pt)</p><p>c) Quelle est la différence entre un tableau et un tuple ? (0.5 pt)</p>",
+          "reponse": "<p><strong>a) Deux manières de déclarer un tableau de chaînes :</strong></p><ul><li><code>let villes: string[] = [\"Douala\", \"Yaoundé\"];</code></li><li><code>let villes: Array&lt;string&gt; = [\"Douala\", \"Yaoundé\"];</code></li></ul><p style='margin-top: 8px;'><strong>b) Tuple pour les coordonnées :</strong></p><pre style='background: #1a2634; color: #e8e8e8; padding: 10px; border-radius: 6px; overflow-x: auto; font-size: 0.9em;'>let point: [number, number, string] = [4.0511, 9.7679, \"Douala\"];</pre><p style='margin-top: 8px;'><strong>c) Différence :</strong></p><ul><li>Un <strong>tableau</strong> a une taille variable et tous les éléments sont du même type.</li><li>Un <strong>tuple</strong> a une taille fixe et chaque élément peut avoir un type différent.</li></ul>"
+        },
+        {
+          "question": "<p style='font-weight: bold;'>3) Types union, intersection et narrowing (2.5 pts)</p><p style='margin-top: 5px;'>a) Définissez un type union qui peut être soit une chaîne de caractères, soit un nombre. (0.5 pt)</p><p>b) Écrivez une fonction qui prend un paramètre de ce type union et retourne une chaîne. Utilisez le <strong>narrowing</strong> pour gérer les deux cas. (1 pt)</p><p>c) Expliquez brièvement ce qu'est un type intersection (<code>A & B</code>) et donnez un exemple de cas d'usage. (1 pt)</p>",
+          "reponse": "<p><strong>a) Type union :</strong> <code>type Identifiant = string | number;</code></p><p style='margin-top: 8px;'><strong>b) Fonction avec narrowing :</strong></p><pre style='background: #1a2634; color: #e8e8e8; padding: 10px; border-radius: 6px; overflow-x: auto; font-size: 0.9em;'>function formaterIdentifiant(id: string | number): string {\n  if (typeof id === 'string') {\n    return `ID (chaîne) : ${id.toUpperCase()}`;\n  } else {\n    return `ID (nombre) : ${id}`;\n  }\n}</pre><p style='margin-top: 8px;'><strong>c) Type intersection (<code>A & B</code>) :</strong></p><ul><li>Un type intersection combine plusieurs types en un seul. Un objet du type intersection doit posséder <strong>toutes</strong> les propriétés des types combinés.</li><li><strong>Exemple :</strong></li></ul><pre style='background: #1a2634; color: #e8e8e8; padding: 10px; border-radius: 6px; overflow-x: auto; font-size: 0.9em;'>type Personne = { nom: string };\ntype Employe = { salaire: number };\ntype EmployePersonne = Personne & Employe;\nlet employe: EmployePersonne = { nom: \"Zahra\", salaire: 500000 };</pre>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 3 : Programmation Orientée Objet et Génériques",
+      "points": "6 pts",
+      "enonce": "<p style='margin-bottom: 10px;'>Cet exercice porte sur les classes et les génériques en TypeScript.</p>",
+      "questions": [
+        {
+          "question": "<p style='font-weight: bold;'>1) Classe simple (2 pts)</p><p style='margin-top: 5px;'>Créez une classe <code>Animal</code> avec :</p><ul><li>Deux propriétés <code>nom</code> (string) et <code>age</code> (number).</li><li>Un constructeur pour initialiser ces propriétés.</li><li>Une méthode <code>parler()</code> qui retourne une chaîne.</li></ul><p>Écrivez le code TypeScript complet.</p>",
+          "reponse": "<pre style='background: #1a2634; color: #e8e8e8; padding: 10px; border-radius: 6px; overflow-x: auto; font-size: 0.9em;'>class Animal {\n  nom: string;\n  age: number;\n\n  constructor(nom: string, age: number) {\n    this.nom = nom;\n    this.age = age;\n  }\n\n  parler(): string {\n    return `${this.nom} fait un bruit.`;\n  }\n}</pre>"
+        },
+        {
+          "question": "<p style='font-weight: bold;'>2) Héritage et modificateurs d'accès (2 pts)</p><p style='margin-top: 5px;'>Créez une classe <code>Chat</code> qui hérite de <code>Animal</code> :</p><ul><li>Ajoutez une propriété <code>couleur</code> (string) à la classe <code>Chat</code>.</li><li>Redéfinissez (override) la méthode <code>parler()</code> pour qu'elle retourne un miaulement.</li><li>Expliquez la différence entre <code>public</code>, <code>private</code> et <code>protected</code>.</li></ul>",
+          "reponse": "<pre style='background: #1a2634; color: #e8e8e8; padding: 10px; border-radius: 6px; overflow-x: auto; font-size: 0.9em;'>class Chat extends Animal {\n  couleur: string;\n\n  constructor(nom: string, age: number, couleur: string) {\n    super(nom, age); // Appel du constructeur parent\n    this.couleur = couleur;\n  }\n\n  parler(): string {\n    return `${this.nom} miaule !`;\n  }\n}</pre><p style='margin-top: 8px;'><strong>Différence des modificateurs :</strong></p><ul><li><strong><code>public</code> :</strong> Accessible partout (par défaut).</li><li><strong><code>private</code> :</strong> Accessible uniquement à l'intérieur de la classe.</li><li><strong><code>protected</code> :</strong> Accessible à l'intérieur de la classe et dans les classes héritées.</li></ul>"
+        },
+        {
+          "question": "<p style='font-weight: bold;'>3) Fonctions génériques (2 pts)</p><p style='margin-top: 5px;'>a) Écrivez une fonction générique <code>identite</code> qui prend un paramètre de type <code>T</code> et retourne ce même paramètre. (0.5 pt)</p><p>b) Écrivez une fonction générique <code>premiereValeur</code> qui prend un tableau de type <code>T[]</code> et retourne le premier élément du tableau. Ajoutez une contrainte pour que le tableau ne soit pas vide (vous pouvez utiliser une assertion ou une vérification à l'exécution). (0.75 pt)</p><p>c) Expliquez l'utilité des génériques dans une fonction. (0.75 pt)</p>",
+          "reponse": "<p><strong>a) Fonction identité :</strong></p><pre style='background: #1a2634; color: #e8e8e8; padding: 10px; border-radius: 6px; overflow-x: auto; font-size: 0.9em;'>function identite&lt;T&gt;(valeur: T): T {\n  return valeur;\n}</pre><p style='margin-top: 8px;'><strong>b) Fonction première valeur :</strong></p><pre style='background: #1a2634; color: #e8e8e8; padding: 10px; border-radius: 6px; overflow-x: auto; font-size: 0.9em;'>function premiereValeur&lt;T&gt;(tableau: T[]): T {\n  if (tableau.length === 0) {\n    throw new Error('Le tableau ne peut pas être vide');\n  }\n  return tableau[0];\n}</pre><p style='margin-top: 8px;'><strong>c) Utilité des génériques :</strong></p><ul><li>Les génériques permettent de créer des composants <strong>réutilisables</strong> qui fonctionnent avec différents types.</li><li>Ils garantissent la <strong>sécurité du typage</strong> en conservant le type exact, contrairement à l'utilisation de <code>any</code>.</li></ul>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 4 : Concepts avancés et écosystème",
+      "points": "4 pts",
+      "enonce": "<p style='margin-bottom: 10px;'>Cet exercice aborde les concepts avancés de TypeScript.</p>",
+      "questions": [
+        {
+          "question": "<p style='font-weight: bold;'>1) Inférence et assertions (1.5 pts)</p><p style='margin-top: 5px;'>a) Expliquez ce qu'est l'<strong>inférence de type</strong> et donnez un exemple où elle est utilisée automatiquement. (0.5 pt)</p><p>b) À quoi sert l'opérateur <code>as</code> (assertion de type) ? Donnez un exemple. (0.5 pt)</p><p>c) Expliquez l'utilité de l'opérateur <code>!</code> (assertion non-null). (0.5 pt)</p>",
+          "reponse": "<p><strong>a) Inférence de type :</strong> C'est la capacité de TypeScript à déduire automatiquement le type d'une variable à partir de la valeur qui lui est assignée.</p><p><em>Exemple :</em> <code>let nom = \"Zahra\";</code> TypeScript déduit que <code>nom</code> est de type <code>string</code>.</p><p style='margin-top: 8px;'><strong>b) Opérateur <code>as</code> :</strong> Il permet de dire à TypeScript qu'une variable est d'un type spécifique, même s'il ne peut pas le déduire.</p><p><em>Exemple :</em> <code>const element = document.getElementById('monId') as HTMLInputElement;</code></p><p style='margin-top: 8px;'><strong>c) Opérateur <code>!</code> (non-null) :</strong> Il indique à TypeScript qu'une valeur ne sera jamais <code>null</code> ou <code>undefined</code>, même si son type le suggère.</p><p><em>Exemple :</em> <code>const nom = getNom()!; // Je certifie que nom n'est pas null</code></p>"
+        },
+        {
+          "question": "<p style='font-weight: bold;'>2) Écosystème et typage des bibliothèques (2.5 pts)</p><p style='margin-top: 5px;'>a) Qu'est-ce que <strong>DefinitelyTyped</strong> et quel est son rôle dans l'écosystème TypeScript ? (0.75 pt)</p><p>b) Comment installe-t-on les types pour une bibliothèque JavaScript via npm ? Donnez un exemple avec la bibliothèque <code>lodash</code>. (0.75 pt)</p><p>c) À quoi sert un fichier <code>.d.ts</code> ? Dans quel cas en créer un ? (1 pt)</p>",
+          "reponse": "<p><strong>a) DefinitelyTyped :</strong> C'est un dépôt communautaire qui contient des fichiers de déclaration de types pour des milliers de bibliothèques JavaScript. Son rôle est de fournir des types pour que les bibliothèques JavaScript puissent être utilisées en TypeScript avec un typage complet.</p><p style='margin-top: 8px;'><strong>b) Installation des types :</strong> Les types sont installés via npm dans le namespace <code>@types/</code>.</p><pre style='background: #1a2634; color: #e8e8e8; padding: 10px; border-radius: 6px; overflow-x: auto; font-size: 0.9em;'>npm install --save-dev @types/lodash</pre><p style='margin-top: 8px;'><strong>c) Fichier <code>.d.ts</code> :</strong></p><ul><li>Un fichier <code>.d.ts</code> est un fichier de <strong>déclaration de types</strong> qui ne contient que des informations de type, pas de code exécutable.</li><li>On en crée un pour :</li><ul><li>Déclarer des types pour une bibliothèque JavaScript qui n'a pas de types officiels.</li><li>Déclarer des variables globales dans un projet.</li><li>Fournir des types pour des modules que l'on souhaite publier.</li></ul></ul>"
+        }
+      ]
+    }
+  ]
+};
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+  "matiere": "SVT Tle A",
+  "classe": "Terminale A",
+  "sequence": "Séquence 3",
+  "anneeScolaire": "2025-2026",
+  "exercices": [
+    {
+      "titre": "Exercice 1 : Évaluation des ressources",
+      "points": "8 pts",
+      "enonce": "<p>Cet exercice porte sur les connaissances fondamentales concernant l'unité du vivant, le programme génétique, l'immunité et la santé reproductive.</p>",
+      "questions": [
+        {
+          "question": "<div class='question-text'>1) Citez deux organites cellulaires et précisez leur rôle respectif dans la cellule animale.</div>",
+          "reponse": "<div><p><strong>Noyau</strong> : contient l'information génétique (ADN) et contrôle l'activité cellulaire.</p><p><strong>Mitochondrie</strong> : siège de la respiration cellulaire, elle produit l'énergie (ATP) nécessaire à la cellule.</p></div>"
+        },
+        {
+          "question": "<div class='question-text'>2) Expliquez brièvement ce qu'est la transcription et où elle se déroule dans la cellule.</div>",
+          "reponse": "<div><p>La <strong>transcription</strong> est la première étape de la biosynthèse des protéines. Elle consiste en la synthèse d'une molécule d'ARN messager (ARNm) à partir d'un gène (fragment d'ADN). Cette étape se déroule dans le <strong>noyau</strong> de la cellule.</p></div>"
+        },
+        {
+          "question": "<div class='question-text'>3) Définissez ce qu'est une maladie auto-immune et donnez un exemple.</div>",
+          "reponse": "<div><p>Une <strong>maladie auto-immune</strong> est une pathologie dans laquelle le système immunitaire de l'organisme, normalement chargé de le protéger contre les agressions extérieures, se retourne contre ses propres cellules et tissus en les considérant comme étrangers. Un exemple est le <strong>diabète de type 1</strong> ou le <strong>vitiligo</strong>.</p></div>"
+        },
+        {
+          "question": "<div class='question-text'>4) Décrivez un mode de transmission du VIH et un moyen de prévention associé.</div>",
+          "reponse": "<div><p>Un mode de transmission du VIH est la <strong>voie sexuelle</strong> (rapports sexuels non protégés). Le moyen de prévention associé est l'utilisation systématique du <strong>préservatif</strong> (masculin ou féminin).</p></div>"
+        },
+        {
+          "question": "<div class='question-text'>5) Quelle est la principale différence entre un ADN et un ARN au niveau de leur sucre et de leur structure ?</div>",
+          "reponse": "<div><p>Au niveau du sucre, l'ADN contient du <strong>désoxyribose</strong> tandis que l'ARN contient du <strong>ribose</strong>. Au niveau de la structure, l'ADN est généralement une <strong>double hélice</strong> alors que l'ARN est une chaîne simple (monocaténaire).</p></div>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 2 : La méiose et la diversité génétique",
+      "points": "6 pts",
+      "enonce": "<p>La reproduction sexuée est un processus fondamental qui assure à la fois la stabilité de l'espèce et la diversité génétique des individus.</p>",
+      "questions": [
+        {
+          "question": "<div class='question-text'>1) Décrivez les deux grandes divisions qui constituent la méiose et précisez le résultat final de ce processus.</div>",
+          "reponse": "<div><p>La méiose se déroule en deux divisions successives :</p><p><strong>La première division de méiose (méiose I)</strong> est une division réductionnelle. Les chromosomes homologues se séparent, ce qui fait passer la cellule d'un état diploïde (2n chromosomes) à un état haploïde (n chromosomes).</p><p><strong>La deuxième division de méiose (méiose II)</strong> est une division équationnelle, similaire à une mitose. Les chromatides de chaque chromosome se séparent.</p><p>Le résultat final de la méiose est la formation de <strong>quatre cellules filles haploïdes</strong> (n chromosomes), génétiquement différentes entre elles.</p></div>"
+        },
+        {
+          "question": "<div class='question-text'>2) Expliquez comment la méiose et la fécondation assurent le maintien du caryotype (nombre de chromosomes) d'une espèce.</div>",
+          "reponse": "<div><p>La <strong>méiose</strong> permet de former des gamètes haploïdes (n chromosomes) à partir d'une cellule mère diploïde (2n chromosomes). La <strong>fécondation</strong> est la fusion de deux gamètes haploïdes (un mâle et un femelle) pour former une cellule-œuf ou zygote diploïde (2n chromosomes). Ainsi, le nombre de chromosomes est maintenu constant de génération en génération.</p></div>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 3 : Le milieu intérieur et le sang",
+      "points": "6 pts",
+      "enonce": "<p>Le maintien de la constance du milieu intérieur est essentiel à la santé de l'organisme.</p>",
+      "questions": [
+        {
+          "question": "<div class='question-text'>1) Définissez la notion de \"milieu intérieur\".</div>",
+          "reponse": "<div><p>Le <strong>milieu intérieur</strong> est le liquide qui baigne toutes les cellules de l'organisme. Il est constitué du plasma sanguin et de la lymphe. Il a pour rôle de transporter les nutriments et l'oxygène jusqu'aux cellules et d'évacuer les déchets qu'elles produisent, assurant ainsi un environnement stable nécessaire au bon fonctionnement cellulaire.</p></div>"
+        },
+        {
+          "question": "<div class='question-text'>2) Identifiez les trois principaux éléments figurés du sang et associez à chacun un rôle.</div>",
+          "reponse": "<div><ul><li><strong>Les globules rouges (hématies)</strong> : transportent le dioxygène (O₂) et une partie du dioxyde de carbone (CO₂).</li><li><strong>Les globules blancs (leucocytes)</strong> : jouent un rôle majeur dans la défense immunitaire de l'organisme.</li><li><strong>Les plaquettes (thrombocytes)</strong> : participent à la coagulation du sang, arrêtant les saignements.</li></ul></div>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 4 : Comprendre les conséquences socioculturelles du VIH/SIDA",
+      "points": "5 pts",
+      "enonce": "<div class='highlight-box'><p><strong>Contexte :</strong> Dans une communauté rurale du Cameroun, Madame Mbarga, une veuve séropositive, est exclue de ses activités agricoles et de sa communauté. Ses voisins évitent tout contact avec elle, refusent de partager ses repas et ont retiré leurs enfants de l'école qu'elle fréquentait. Cette situation l'a plongée dans un profond isolement et une grande détresse morale.</p></div>",
+      "questions": [
+        {
+          "question": "<div class='question-text'>1) Analysez les conséquences socioculturelles de la stigmatisation vécue par Madame Mbarga sur sa vie quotidienne et sa santé.</div>",
+          "reponse": "<div><p>La stigmatisation a des conséquences graves sur la vie de Madame Mbarga :</p><ul><li>Sur le plan <strong>social</strong>, elle est rejetée par sa communauté, ce qui la prive de soutien et peut mener à un isolement complet.</li><li>Sur le plan <strong>économique</strong>, l'exclusion de ses activités agricoles la prive de revenus, aggravant sa précarité.</li><li>Sur le plan <strong>psychologique</strong>, ce rejet et cette discrimination engendrent une profonde détresse morale et un sentiment d'humiliation.</li><li>Sur le plan de la <strong>santé</strong>, la stigmatisation peut la dissuader de se rendre au centre de santé pour suivre son traitement, ce qui aggrave son état immunitaire.</li></ul></div>"
+        },
+        {
+          "question": "<div class='question-text'>2) Proposez deux actions concrètes que vous pourriez mettre en place pour lutter contre cette stigmatisation et soutenir Madame Mbarga.</div>",
+          "reponse": "<div><p><strong>Action 1 : Sensibilisation et éducation de la communauté</strong></p><ul><li>Organiser des séances d'information sur les modes de transmission du VIH (pour montrer qu'il ne se transmet pas par les contacts sociaux ordinaires).</li><li>Impliquer les leaders communautaires et religieux pour qu'ils diffusent un message de tolérance et de solidarité.</li></ul><p><strong>Action 2 : Soutien direct à Madame Mbarga</strong></p><ul><li>Mettre en place un groupe de soutien de personnes vivant avec le VIH pour briser son isolement.</li><li>L'accompagner dans ses démarches de santé pour s'assurer qu'elle a accès à son traitement et le suit correctement.</li><li>L'aider à trouver de nouvelles activités génératrices de revenus.</li></ul></div>"
+        }
+      ]
+    }
+  ]
+};
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

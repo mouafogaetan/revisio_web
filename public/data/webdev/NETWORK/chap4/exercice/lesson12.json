@@ -1,0 +1,129 @@
+[
+  {
+    "intitule": "Analyse comparative UDP vs TCP",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Le protocole UDP (User Datagram Protocol) est souvent opposé à TCP. Pour chaque caractéristique ci-dessous, indiquez si elle correspond à UDP, TCP, ou aux deux, puis justifiez brièvement.</p>\n<ol>\n  <li>Protocole orienté connexion</li>\n  <li>Contrôle de flux et de congestion</li>\n  <li>Utilise des numéros de port</li>\n  <li>Garantit la livraison des données (acquittements)</li>\n  <li>Reçoit les données sous forme de datagrammes sans réassemblage</li>\n  <li>Fournit un checksum pour la vérification d'intégrité</li>\n</ol>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Classez chacune des six caractéristiques en spécifiant le(s) protocole(s) concerné(s) et expliquez pourquoi.",
+        "niveau": "medium",
+        "reponse": "1. **TCP uniquement** : TCP établit une connexion avant tout échange (3-way handshake). UDP est sans connexion, chaque datagramme est envoyé indépendamment.\n\n2. **TCP uniquement** : TCP gère l'encombrement du réseau (congestion avoidance, slow start) et adapte son débit. UDP n'a aucun mécanisme de contrôle.\n\n3. **Les deux** : UDP et TCP utilisent tous deux des numéros de port (source et destination) sur 16 bits pour identifier les applications.\n\n4. **TCP uniquement** : TCP garantit la livraison grâce aux accusés de réception (ACK) et aux retransmissions. UDP ne garantit rien (pas d'ACK, pas de retransmission).\n\n5. **UDP uniquement** : UDP préserve les limites des datagrammes : l'application reçoit exactement ce qui a été envoyé. TCP segmente les données et l'application reçoit un flux continu.\n\n6. **Les deux** : UDP possède un checksum optionnel (obligatoire en IPv6) sur l'en-tête et les données. TCP possède également un checksum obligatoire. Les deux permettent de détecter les erreurs de transmission.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Décodage d'un datagramme UDP",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un analyste réseau capture le datagramme UDP suivant (représentation hexadécimale) :</p>\n<pre><code>0x0C 0x78 0x00 0x35 0x00 0x24 0x9E 0x3F</code></pre>\n<p>Le datagramme transporte une requête DNS.</p>\n<p>Structure de l'en-tête UDP (8 octets) :</p>\n<ul>\n  <li>Source port : 2 octets</li>\n  <li>Destination port : 2 octets</li>\n  <li>Length : 2 octets (taille totale en octets = en-tête + données)</li>\n  <li>Checksum : 2 octets</li>\n</ul>",
+      "images": [
+        "structure en-tête UDP avec champs de 16 bits chacun",
+        "datagramme UDP avec données DNS"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Déterminer le port source, le port destination, la longueur totale du datagramme et la longueur des données utiles (payload). Convertir les valeurs hexadécimales en décimal.",
+        "niveau": "medium",
+        "reponse": "**Conversion hexadécimal → décimal :**\n\n- **Port source** : `0x0C 0x78` = `0x0C78` = $12 \\times 256 + 120 = 3192 + 120 = 3192$ (en décimal : 3192)\n\n- **Port destination** : `0x00 0x35` = `0x0035` = $0 \\times 256 + 53 = 53$\n  (Port 53 = DNS)\n\n- **Longueur totale (Length)** : `0x00 0x24` = `0x0024` = $0 \\times 256 + 36 = 36$ octets\n\n- **Checksum** : `0x9E 0x3F` = `0x9E3F` = $158 \\times 256 + 63 = 40448 + 63 = 40511$\n\n- **Longueur des données utiles** = Length - 8 (en-tête UDP) = $36 - 8 = 28$ octets\n\n**Résumé :**\n- Port source : 3192 (port dynamique/éphémère)\n- Port destination : 53 (DNS)\n- Longueur totale : 36 octets\n- Payload : 28 octets",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer pourquoi le checksum UDP n'est pas obligatoire en IPv4 mais le devient en IPv6. Quelle conséquence cela a-t-il sur la fiabilité du protocole ?",
+        "niveau": "hard",
+        "reponse": "**En IPv4** : Le checksum UDP est optionnel. Si le checksum est nul (0x0000), le récepteur ne vérifie pas l'intégrité. Cela permet de gagner en performance pour certains usages où la rapidité prime sur l'intégrité (ex: streaming vidéo).\n\n**En IPv6** : Le checksum UDP est obligatoire. IPv6 a supprimé le checksum de l'en-tête IP (car les couches supérieures s'en chargent). Pour garantir l'intégrité des données au niveau transport, le checksum UDP est imposé. De plus, IPv6 inclut une pseudo-en-tête qui protège également les adresses source et destination contre les corruptions.\n\n**Conséquence sur la fiabilité** :\n- Avec checksum = 0, les erreurs de transmission (bits inversés) peuvent passer inaperçues.\n- Le checksum détecte les erreurs mais ne les corrige pas (contrairement à TCP qui retransmet).\n- UDP reste non fiable même avec checksum : un paquet corrompu est simplement ignoré, sans retransmission ni acquittement.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Calcul du temps d'émission pour une application VoIP",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Une application de voix sur IP (VoIP) utilise UDP pour transporter la voix. La voix est échantillonnée à 8 kHz (8000 échantillons par seconde) et chaque échantillon est quantifié sur 8 bits (1 octet). Les données vocales sont envoyées par paquets UDP contenant 20 ms de conversation.</p>\n<p>Formules :</p>\n<ul>\n  <li>Débit binaire brut = $f\\_e \\times N\\_bits$ (en bps)</li>\n  <li>Taille des données par paquet (octets) = $d\\_e \\times R\\_bits / 8$</li>\n  <li>$R\\_bits = f\\_e \\times N\\_bits$</li>\n</ul>\n<p>On néglige les en-têtes UDP/IP/Ethernet pour cet exercice.</p>",
+      "images": [
+        "schéma transmission VoIP avec paquets UDP de 20ms",
+        "courbe de latence et gigue pour la voix sur IP"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Calculer le débit binaire brut nécessaire pour cette communication vocale.",
+        "niveau": "easy",
+        "reponse": "Débit binaire = $f\\_e \\times N\\_bits = 8000 \\times 8 = 64 000$ bps = **64 kbps**.\n\nC'est le débit classique de la voix téléphonique non compressée (PCM - Pulse Code Modulation).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Déterminer la taille des données vocales (payload) dans chaque paquet UDP.",
+        "niveau": "easy",
+        "reponse": "Pour 20 ms de conversation :\n\nTemps par paquet = $20\\ ms = 0.02\\ s$\n\nNombre d'échantillons par paquet = $8000 \\times 0.02 = 160$ échantillons\n\nTaille payload = $160 \\times 1\\ octet = 160$ octets\n\n**Vérification alternative** : $64\\ kbps = 8000$ octets par seconde. Sur 20 ms : $8000 \\times 0.02 = 160$ octets.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Si on ajoute les en-têtes : UDP (8 octets), IP (20 octets) et Ethernet (14 octets + 4 FCS), calculer l'efficacité du protocole (ratio payload / taille totale transmise sur le support).",
+        "niveau": "hard",
+        "reponse": "**Taille totale sur le support physique :**\n\nPayload UDP = 160 octets\nEn-tête UDP = 8 octets\nEn-tête IP = 20 octets\nEn-tête Ethernet = 14 octets (MAC destination + source + type)\nFCS (Frame Check Sequence) = 4 octets\n\nTotal = $160 + 8 + 20 + 14 + 4 = 206$ octets\n\n**Efficacité** = $\\frac{160}{206} \\approx 0.7767 = 77.67\\%$\n\nCela signifie que **22,33%** de la bande passante est utilisée pour la signalisation (en-têtes), une perte non négligeable qui explique pourquoi la VoIP utilise souvent la compression vocale (ex: G.729 à 8 kbps au lieu de 64 kbps) pour réduire la bande passante consommée.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 4,
+        "texte": "Comparer l'utilisation de TCP vs UDP pour la VoIP. Justifier pourquoi UDP est préféré malgré son absence de fiabilité.",
+        "niveau": "hard",
+        "reponse": "**Pourquoi UDP est préféré pour la VoIP :**\n\n1. **Sensibilité au délai** : La voix humaine tolère une latence allant jusqu'à 150-200 ms. Au-delà, la conversation devient difficile. TCP, avec ses retransmissions et son contrôle de congestion, peut introduire des délais variables et imprévisibles.\n\n2. **Perte de paquets tolérable** : Une perte de 1-2% des paquets vocaux reste acceptable (l'oreille humaine comble les micro-coupures). TCP retransmettrait les paquets perdus, créant un délai supplémentaire, ce qui est pire que la perte elle-même.\n\n3. **Pas de contrôle de flux bloquant** : TCP réduit son débit en cas de congestion. Pour la voix, il vaut mieux perdre quelques paquets que de ralentir le flux, car la conversation est temps réel.\n\n4. **Overhead plus faible** : L'en-tête UDP ne fait que 8 octets contre 20 octets pour TCP (sans options), soit un gain de 12 octets par paquet.\n\n**Inconvénients acceptés :**\n- Pas de garantie de livraison\n- Ordre non garanti (mais les applications VoIP réordonnent avec des numéros de séquence applicatifs)\n- Risque de gigue géré par des buffers de réception\n\nEn résumé : **UDP offre le meilleur compromis pour les applications temps réel où la rapidité prime sur la fiabilité absolue.**",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse de scénarios : quel protocole de transport choisir ?",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Pour chaque scénario applicatif ci-dessous, déterminez si UDP ou TCP est le plus approprié. Justifiez votre choix en utilisant les verbes de la taxonomie de Bloom (analyser, évaluer, justifier).</p>\n<ol>\n  <li><strong>Navigation web (HTTP/HTTPS)</strong></li>\n  <li><strong>Jeu vidéo multijoueur rapide (FPS - First Person Shooter)</strong></li>\n  <li><strong>Transfert de fichier volumineux (ex: sauvegarde cloud)</strong></li>\n  <li><strong>Streaming vidéo en direct (live)</strong></li>\n  <li><strong>Requête DNS (résolution de nom de domaine)</strong></li>\n  <li><strong>Email (envoi SMTP)</strong></li>\n</ol>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Pour chaque scénario, analyser les contraintes (fiabilité, délai, bande passante) et justifier le choix du protocole.",
+        "niveau": "medium",
+        "reponse": "**1. Navigation web (HTTP/HTTPS) → TCP**\n- Contrainte : intégrité des données (page web complète sans erreur)\n- Justification : L'utilisateur préfère attendre que la page charge correctement plutôt que d'avoir des éléments manquants ou corrompus.\n\n**2. Jeu vidéo multijoueur rapide (FPS) → UDP (majoritairement)**\n- Contrainte : latence ultra-faible (< 50 ms), réactivité\n- Justification : Un paquet perdu est moins grave qu'un délai. TCP introduirait des retransmissions et du head-of-line blocking qui rendraient le jeu injouable. Certains jeux mélangent UDP pour les données critiques (position, tirs) et TCP pour les données non critiques (chat, inventaire).\n\n**3. Transfert de fichier volumineux → TCP**\n- Contrainte : intégrité absolue, fiabilité\n- Justification : Un fichier corrompu est inutilisable. Les retransmissions TCP sont acceptables car le délai n'est pas critique. UDP nécessiterait une couche applicative pour gérer les pertes.\n\n**4. Streaming vidéo en direct → UDP (ou QUIC)**\n- Contrainte : faible latence, flux continu\n- Justification : Les spectateurs préfèrent une légère perte d'image (pixels, micro-freezes) plutôt qu'une mise en buffer. TCP en cas de perte de paquet stopperait le flux pour retransmettre. Les plateformes modernes utilisent HTTP/3 (basé sur QUIC) qui combine les avantages.\n\n**5. Requête DNS → UDP (par défaut)**\n- Contrainte : rapidité, faible charge\n- Justification : Une requête DNS tient dans un seul paquet UDP. Si perte, le client retente après timeout (2 secondes). Si la réponse est trop longue (>512 octets), DNS bascule sur TCP.\n\n**6. Email (envoi SMTP) → TCP**\n- Contrainte : fiabilité, pas de perte\n- Justification : Un email doit arriver intact et dans l'ordre. Le délai n'est pas critique (quelques secondes à quelques minutes). Les serveurs mail utilisent TCP pour garantir la livraison.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Calcul du checksum UDP",
+    "type": "ressource",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Le checksum UDP est calculé sur une pseudo-en-tête IP (12 octets), l'en-tête UDP (8 octets) et les données. La formule est le complément à 1 de la somme des mots de 16 bits (complément à 1).</p>\n<p>Pseudo-en-tête (pour calcul checksum) :</p>\n<ul>\n  <li>Adresse IP source : 192.168.1.10 (hexa : C0 A8 01 0A)</li>\n  <li>Adresse IP destination : 192.168.1.20 (hexa : C0 A8 01 14)</li>\n  <li>Protocole : 17 (UDP)</li>\n  <li>Longueur UDP : 16 (0x0010) octets (en-tête 8 + données 8)</li>\n</ul>\n<p>Données UDP : 0x12 0x34 0x56 0x78 0x9A 0xBC 0xDE 0xF0 (8 octets)</p>\n<p>En-tête UDP : port source 0x1F90, port dest 0x0035, longueur 0x0010, checksum initialisé à 0x0000.</p>",
+      "images": [
+        "schéma calcul checksum UDP avec pseudo-en-tête",
+        "format pseudo-en-tête IPv4 pour UDP"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Calculer le checksum UDP étape par étape pour ce datagramme.",
+        "niveau": "very hard",
+        "reponse": "**Étape 1 : Construction de la pseudo-en-tête (12 octets = 6 mots de 16 bits)**\n\n| Champ | Valeur hexa | Mot 16 bits |\n|-------|-------------|-------------|\n| Source IP | C0 A8 01 0A | 0xC0A8, 0x010A |\n| Dest IP | C0 A8 01 14 | 0xC0A8, 0x0114 |\n| Zéro | 00 | 0x0000 |\n| Protocole | 11 (UDP=17=0x11) | 0x0011 |\n| Longueur UDP | 0x0010 | 0x0010 |\n\nMots de 16 bits de la pseudo-en-tête :\n1. 0xC0A8\n2. 0x010A\n3. 0xC0A8\n4. 0x0114\n5. 0x0000 + 0x0011 = 0x0011\n6. 0x0010\n\n**Étape 2 : En-tête UDP (avec checksum = 0x0000)**\n\n| Champ | Valeur | Mot 16 bits |\n|-------|--------|-------------|\n| Source port | 0x1F90 | 0x1F90 |\n| Dest port | 0x0035 | 0x0035 |\n| Longueur | 0x0010 | 0x0010 |\n| Checksum | 0x0000 | 0x0000 |\n\n**Étape 3 : Données (8 octets = 4 mots de 16 bits)**\n\nDonnées : 0x12 0x34 0x56 0x78 0x9A 0xBC 0xDE 0xF0\n\nMots :\n- 0x1234\n- 0x5678\n- 0x9ABC\n- 0xDEF0\n\n**Étape 4 : Somme des mots de 16 bits (cumul en complément à 1)**\n\nPseudo-en-tête :\n0xC0A8 + 0x010A = 0xC1B2\n0xC1B2 + 0xC0A8 = 0x1825A (retenue 1) → garder 0x825A + 1 = 0x825B\n0x825B + 0x0114 = 0x836F\n0x836F + 0x0011 = 0x8380\n0x8380 + 0x0010 = 0x8390\n\nEn-tête UDP :\n0x8390 + 0x1F90 = 0xA320\n0xA320 + 0x0035 = 0xA355\n0xA355 + 0x0010 = 0xA365\n0xA365 + 0x0000 = 0xA365\n\nDonnées :\n0xA365 + 0x1234 = 0xB599\n0xB599 + 0x5678 = 0x10C11 (retenue 1) → 0x0C11 + 1 = 0x0C12\n0x0C12 + 0x9ABC = 0xA6CE\n0xA6CE + 0xDEF0 = 0x185BE (retenue 1) → 0x85BE + 1 = 0x85BF\n\n**Étape 5 : Complément à 1**\n\nSomme totale = 0x85BF\n\nChecksum = ~0x85BF = 0x7A40 (complément à 1)\n\n**Résultat** : Le checksum UDP est **0x7A40**.\n\n*Note : Le récepteur recalcule la somme (y compris le checksum 0x7A40). Si le résultat est 0xFFFF, le paquet est valide.*",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

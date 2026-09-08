@@ -1,0 +1,169 @@
+[
+  {
+    "intitule": "Comprendre l'utilité des tests d'intégration pour une API",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Dans une API REST développée avec Express et Node.js, les tests unitaires ne suffisent pas toujours. Les tests d'intégration permettent de vérifier le bon fonctionnement des routes, de la base de données et des middlewares ensemble. Réponds aux questions suivantes pour montrer que tu as compris l'intérêt de Supertest.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décris la différence entre un test unitaire et un test d'intégration pour une API backend.",
+        "niveau": "easy",
+        "reponse": "Un test unitaire isole une petite partie du code (ex: une fonction utilitaire) sans dépendances externes (base de données, réseau). Un test d'intégration vérifie qu'un ensemble de composants fonctionnent ensemble (ex: une route Express qui appelle un contrôleur, interagit avec une base de données et retourne une réponse JSON). Supertest est souvent utilisé pour ces tests d'intégration.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Explique à quoi sert le module Supertest dans l'écosystème Node.js.",
+        "niveau": "easy",
+        "reponse": "Supertest permet de simuler des requêtes HTTP sur une application Express (sans vraiment écouter sur un port) et de tester les réponses : statuts HTTP, en-têtes, corps JSON. Il s'utilise avec un framework de test comme Jest ou Mocha.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Configurer Supertest avec Jest pour tester une route simple",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Tu as une API Express avec une route GET /api/hello qui retourne <code>{ \"message\": \"Bonjour monde\" }</code>. Tu dois écrire un test d'intégration avec <strong>Jest</strong> et <strong>Supertest</strong>. La configuration initiale de Jest est déjà faite.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écris la commande npm permettant d'installer Supertest et Jest (en tant que devDependencies).",
+        "niveau": "easy",
+        "reponse": "npm install --save-dev jest supertest",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Rédige le code complet d'un fichier de test <code>api.test.js</code> qui :<br> - Importe l'application Express (app).<br> - Utilise Supertest pour envoyer une requête GET vers <code>/api/hello</code>.<br> - Vérifie que le statut HTTP est 200 et que le message JSON est \"Bonjour monde\".",
+        "niveau": "medium",
+        "reponse": "const request = require('supertest');\nconst app = require('../app'); // chemin vers ton app Express\n\ndescribe('GET /api/hello', () => {\n  it('devrait retourner un message de bienvenue', async () => {\n    const response = await request(app)\n      .get('/api/hello')\n      .expect(200);\n    expect(response.body.message).toBe('Bonjour monde');\n  });\n});",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Explique pourquoi on ne lance pas le serveur avec app.listen() dans le test.",
+            "niveau": "medium",
+            "reponse": "Supertest n'a pas besoin que le serveur écoute réellement sur un port. Il utilise directement l'application Express (l'objet app) pour traiter les requêtes en mémoire, ce qui rend les tests plus rapides et évite les conflits de ports."
+          }
+        ]
+      },
+      {
+        "numero": 3,
+        "texte": "Ajoute un test qui vérifie qu'une route non définie (ex: /api/unknown) retourne une erreur 404.",
+        "niveau": "medium",
+        "reponse": "it('devrait retourner 404 pour une route inexistante', async () => {\n  await request(app)\n    .get('/api/unknown')\n    .expect(404);\n});",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Tester une route POST avec authentification et base de données",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Tu développes une API de gestion d'articles. Une route <code>POST /api/articles</code> permet de créer un article. Elle nécessite un token JWT dans l'en-tête <code>Authorization</code> et un corps JSON valide (<code>{ title, content }</code>). En cas de succès, elle retourne l'article créé avec un id et un statut 201.</p><p>On suppose que tu as une base de données de test (MongoDB en mémoire ou SQLite). Tu disposes déjà d'un utilitaire pour générer un token valide et d'une fonction <code>connectTestDB()</code> / <code>disconnectTestDB()</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédige un bloc de test Jest (describe / it) qui :<br> - Se connecte à la base de données de test avant tous les tests.<br> - Nettoie la collection des articles après chaque test pour éviter les interférences.<br> - Se déconnecte après tous les tests.",
+        "niveau": "hard",
+        "reponse": "beforeAll(async () => {\n  await connectTestDB();\n});\n\nafterEach(async () => {\n  await Article.deleteMany({}); // nettoie les articles\n});\n\nafterAll(async () => {\n  await disconnectTestDB();\n});",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écris un test Supertest pour la route POST /api/articles avec les étapes :<br> - Générer un token JWT valide pour un utilisateur de test.<br> - Envoyer une requête POST avec les données <code>{ title: \"Mon article\", content: \"Contenu super\" }</code> et le token dans l'en-tête.<br> - Vérifier le statut 201 et que la réponse contient bien le titre et un id.",
+        "niveau": "hard",
+        "reponse": "it('devrait créer un article avec un token valide', async () => {\n  const token = generateTestToken(); // fonction utilitaire\n  const newArticle = { title: 'Mon article', content: 'Contenu super' };\n\n  const response = await request(app)\n    .post('/api/articles')\n    .set('Authorization', `Bearer ${token}`)\n    .send(newArticle)\n    .expect(201);\n\n  expect(response.body).toHaveProperty('_id');\n  expect(response.body.title).toBe('Mon article');\n  expect(response.body.content).toBe('Contenu super');\n});",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Ajoute une vérification supplémentaire : l'article a bien été sauvegardé en base de données.",
+            "niveau": "hard",
+            "reponse": "const articleInDb = await Article.findById(response.body._id);\nexpect(articleInDb).not.toBeNull();\nexpect(articleInDb.title).toBe('Mon article');"
+          }
+        ]
+      },
+      {
+        "numero": 3,
+        "texte": "Crée un test qui vérifie que la route retourne une erreur 401 (Unauthorized) si le token JWT est absent ou invalide.",
+        "niveau": "medium",
+        "reponse": "it('devrait retourner 401 sans token', async () => {\n  await request(app)\n    .post('/api/articles')\n    .send({ title: 'test', content: 'ok' })\n    .expect(401);\n});\n\nit('devrait retourner 401 avec un token invalide', async () => {\n  await request(app)\n    .post('/api/articles')\n    .set('Authorization', 'Bearer mauvais_token')\n    .send({ title: 'test', content: 'ok' })\n    .expect(401);\n});",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyser et corriger des tests défaillants sur une API de réservation",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Tu reprends une API de réservation de spectacles. Voici un extrait de test qui échoue. Le but est d'identifier les problèmes et proposer des corrections.</p>\n<pre><code>\ndescribe('DELETE /api/bookings/:id', () => {\n  it('devrait supprimer une réservation existante', async () => {\n    const booking = await Booking.create({ userId: 'user123', showId: 'show456' });\n    const res = await request(app)\n      .delete(`/api/bookings/${booking._id}`)\n      .set('Authorization', 'Bearer admin_token')\n      .expect(204);\n\n    const deleted = await Booking.findById(booking._id);\n    expect(deleted).toBeNull();\n  });\n\n  it('devrait retourner 404 si la réservation n\\'existe pas', async () => {\n    await request(app)\n      .delete('/api/bookings/61f8c8d9e4d8a2b3c4d5e6f7')\n      .set('Authorization', 'Bearer admin_token')\n      .expect(200);  // Le test attend 200 mais devrait être 404\n  });\n});\n</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifie et corrige l'erreur dans le deuxième test (celui qui attend un statut 200). Quelle est la valeur attendue correcte ?",
+        "niveau": "medium",
+        "reponse": "La valeur correcte est 404 (Not Found) car la réservation n'existe pas. Le test actuel attend 200, ce qui est faux. Il faut modifier .expect(404).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Dans le premier test, suppose que la route DELETE nécessite que l'utilisateur soit le propriétaire de la réservation ou un administrateur. Propose une amélioration du test pour couvrir le cas où un utilisateur non autorisé tente de supprimer la réservation d'un autre.",
+        "niveau": "very hard",
+        "reponse": "it('ne devrait pas supprimer la réservation d\\'un autre utilisateur', async () => {\n  const booking = await Booking.create({ userId: 'user456', showId: 'show456' });\n  const otherUserToken = generateToken({ userId: 'user789', role: 'user' });\n  \n  await request(app)\n    .delete(`/api/bookings/${booking._id}`)\n    .set('Authorization', `Bearer ${otherUserToken}`)\n    .expect(403); // Forbidden\n\n  const stillExists = await Booking.findById(booking._id);\n  expect(stillExists).not.toBeNull();\n});",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Explique pourquoi il est important d'utiliser une base de données de test propre entre chaque test (isolation). Quelle modification apporterais-tu dans ce fichier de test pour garantir cette isolation ?",
+        "niveau": "hard",
+        "reponse": "Sans isolation, les tests peuvent s'influencer mutuellement (ex: une réservation créée dans un premier test peut impacter le second). On ajoute un bloc afterEach ou beforeEach qui supprime toutes les données de la collection Booking. Exemple : afterEach(async () => { await Booking.deleteMany({}); }); Ainsi chaque test commence avec une base vide.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Tester une route avec upload de fichier et validation",
+    "type": "ressource",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Une route <code>POST /api/upload/avatar</code> permet de téléverser une image (avatar) avec Multer. Les contraintes : fichier image (jpeg, png) de taille inférieure à 2 Mo. En cas de succès, on retourne l'URL de l'image. Tu dois rédiger des tests Supertest qui simulent l'envoi d'un fichier.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décris comment simuler l'envoi d'un fichier avec Supertest en utilisant la méthode <code>.attach()</code>. Donne un exemple de test qui attache un faux fichier image.",
+        "niveau": "hard",
+        "reponse": "Supertest fournit .attach('nomDuChamp', cheminDuFichier). On peut créer un buffer ou utiliser un chemin. Exemple :\nawait request(app)\n  .post('/api/upload/avatar')\n  .set('Authorization', `Bearer ${token}`)\n  .attach('avatar', Buffer.from('contenu image factice', 'utf-8'), 'test.png')\n  .expect(200);",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quelle assertion ajouterais-tu pour vérifier que la réponse contient une propriété 'url' ?",
+            "niveau": "easy",
+            "reponse": "expect(response.body).toHaveProperty('url');"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Crée un test qui envoie un fichier texte (.txt) au lieu d'une image et vérifie que le serveur refuse avec un statut 400 (Bad Request) ou 415 (Unsupported Media Type).",
+        "niveau": "hard",
+        "reponse": "it('devrait refuser un fichier texte', async () => {\n  const response = await request(app)\n    .post('/api/upload/avatar')\n    .set('Authorization', `Bearer ${token}`)\n    .attach('avatar', Buffer.from('fake txt content'), 'fichier.txt')\n    .expect(400);\n  expect(response.body.error).toMatch(/format.*image/i);\n});",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

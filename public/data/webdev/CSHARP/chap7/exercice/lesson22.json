@@ -1,0 +1,103 @@
+[
+  {
+    "intitule": "Comparaison entre struct et class : gestion d'un point geo-localise",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous devez developper une application de cartographie pour le service des impots au Cameroun. Pour representer des points d'interet (bornes, ecoles, marches), vous hesitez entre <code>struct</code> et <code>class</code>. Un point est constitue de coordonnees GPS (latitude, longitude) et d'une altitude optionnelle.</p><p>Questions :</p>",
+      "images": [
+        "carte du Cameroun avec des points GPS marquant des lieux publics",
+        "schema simplifie comparant allocation memoire stack vs heap"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Justifier pourquoi un point GPS serait mieux represente par un <code>struct</code> en C#, en vous appuyant sur les differences fondamentales entre type valeur et type reference.",
+        "niveau": "medium",
+        "reponse": "Un point GPS est un petit objet (2-3 doubles) immuable dans le temps. En tant que type valeur (struct) stocke sur la pile, il evite l'allocation memoire sur le tas, reduit la pression sur le GC et ameliore les performances en lecture intensive. De plus, son comportement par copie correspond au modele mathematique d'un point.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer l'implementation de cette structure <code>PointGeo</code> avec ses coordonnees, un constructeur et une methode <code>Distance</code>.",
+        "niveau": "medium",
+        "reponse": "```csharp\npublic struct PointGeo\n{\n    public double Latitude { get; }\n    public double Longitude { get; }\n    public double? Altitude { get; }\n\n    public PointGeo(double latitude, double longitude, double? altitude = null)\n    {\n        Latitude = latitude;\n        Longitude = longitude;\n        Altitude = altitude;\n    }\n\n    public double Distance(PointGeo other)\n    {\n        // Formule simplifiee (Haversine)\n        const double R = 6371.0;\n        double lat1 = Latitude * Math.PI / 180;\n        double lat2 = other.Latitude * Math.PI / 180;\n        double dlat = (other.Latitude - Latitude) * Math.PI / 180;\n        double dlon = (other.Longitude - Longitude) * Math.PI / 180;\n        double a = Math.Sin(dlat/2)*Math.Sin(dlat/2) + Math.Cos(lat1)*Math.Cos(lat2)*Math.Sin(dlon/2)*Math.Sin(dlon/2);\n        double c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1-a));\n        return R * c;\n    }\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Discuter d'une situation reelle dans laquelle l'utilisation d'un <code>record</code> serait preferable a un <code>struct</code> dans le meme contexte metier.",
+        "niveau": "hard",
+        "reponse": "L'utilisation d'un record serait preferable si le point doit etre mutable (ex: vehicule de collecte des impots en deplacement), si vous avez besoin d'heritage (ex: PointAvecHistorique) ou si vous voulez beneficier des comportements d'egalite structurelle sans les limitations d'un struct (taille > 16 bytes, mutations frequentes). Par exemple, un record class pour une trajectoire complete permet de modifier l'heure associee.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Migration d'un systeme de transaction financiere : struct vs record",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Une banque camerounaise utilise l'ancien code suivant pour les transactions. Le code souffre de bugs mysterieux : des modifications accidentelles apparaissent. Analysez et corrigez.</p><pre><code>public struct Transaction\n{\n    public string Id;\n    public double Montant;\n    public DateTime Date;\n    public string Description;\n    \n    public void AppliquerRemise(double pourcentage) {\n        Montant -= Montant * pourcentage / 100;\n    }\n}\n// Utilisation :\nTransaction t1 = new Transaction { Id = \"T001\", Montant = 10000, Date = DateTime.Now };\nTransaction t2 = t1;\nt2.AppliquerRemise(10);\n// t1.Montant reste 10000 ? Mais bug sur l'egalite...\n</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer pourquoi le code ci-dessus pose probleme, en analysant le comportement des types valeurs pour les modifications d'etat.",
+        "niveau": "medium",
+        "reponse": "Le struct etant un type valeur, 't2 = t1' cree une COPIE independante. Modifier 't2' via 'AppliquerRemise' n'affecte PAS 't1'. Ceci peut etre source d'erreurs silencieuses. De plus, un struct mutable va a l'encontre des recommandations MS (les structs devraient etre immutables). 'Montant' est un champ public modifiable, brisant l'encapsulation.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer deux corrections differentes : l'une en utilisant un <code>record struct</code> (C# 10+), l'autre en utilisant une <code>readonly struct</code> classique.",
+        "niveau": "hard",
+        "reponse": "Solution 1 (readonly struct immuable) :\n```csharp\npublic readonly struct Transaction\n{\n    public string Id { get; }\n    public double Montant { get; }\n    public DateTime Date { get; }\n    public string Description { get; }\n    \n    public Transaction(string id, double montant, DateTime date, string description)\n    {\n        Id = id; Montant = montant; Date = date; Description = description;\n    }\n    \n    public Transaction AppliquerRemise(double pourcentage) =>\n        this with { Montant = Montant - Montant * pourcentage / 100 };\n}\n```\n\nSolution 2 (record struct) :\n```csharp\npublic record struct Transaction(\n    string Id,\n    double Montant,\n    DateTime Date,\n    string Description\n)\n{\n    public Transaction AppliquerRemise(double pourcentage) =>\n        this with { Montant = Montant - Montant * pourcentage / 100 };\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Evaluer les performances memoire et la securite d'utilisation de chaque solution pour 1 million de transactions traitees quotidiennement.",
+        "niveau": "very hard",
+        "reponse": "readonly struct : allocation sur pile si taille <= 16-24 octets, pas de GC, tres rapide. Mais copie systematique (cout O(n)). record struct : identique en memoire mais apporte des methodes d'egalite et ToString() generees. Pour 1M transactions, l'important est d'eviter les grandes copies frequentes. Les deux sont equivalents. Le choix doit se baser sur l'immutabilite exigee (bonne pratique). Les structs mutables causeraient des bugs. Les records struct offrent la concision. Aucune difference notable de performance entre 'readonly struct' classique et 'record struct'.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Implementation d'un etat civil avec les records C# 9+",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Le ministere de l'administration territoriale du Cameroun veut numeriser les actes de naissance. Chaque acte contient : un numero unique (string), un nom complet, une date de naissance, un lieu de naissance (ville).</p><p>Utilisez un <code>record class</code> pour modeliser <code>ActeNaissance</code>.</p>",
+      "images": [
+        "exemple d'acte de naissance camerounais (anonymise)"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Ecrire la declaration du record <code>ActeNaissance</code> avec les proprietes immutables et un constructeur principal.",
+        "niveau": "easy",
+        "reponse": "```csharp\npublic record ActeNaissance(\n    string NumeroUnique,\n    string NomComplet,\n    DateOnly DateNaissance,\n    string LieuNaissance\n);\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Instancier deux actes differents pour 'Jean NDI' ne le 15/08/2000 a Douala et 'Jean NDI' ne le meme jour a Yaounde. Verifier s'ils sont consideres egaux par le record.",
+        "niveau": "easy",
+        "reponse": "```csharp\nvar acte1 = new ActeNaissance(\"CM001\", \"Jean NDI\", new DateOnly(2000, 8, 15), \"Douala\");\nvar acte2 = new ActeNaissance(\"CM002\", \"Jean NDI\", new DateOnly(2000, 8, 15), \"Yaounde\");\nConsole.WriteLine(acte1 == acte2); // False car lieux differents\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Creer une copie de <code>acte1</code> en changeant seulement le numero unique grace a l'expression <code>with</code>.",
+        "niveau": "easy",
+        "reponse": "```csharp\nvar acte1Modifie = acte1 with { NumeroUnique = \"CM003\" };\n// acte1 reste \"CM001\" (immuable)\n```",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

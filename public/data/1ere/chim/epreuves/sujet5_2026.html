@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = [
+  {
+    "questionText": "<p>Quelle est la formule permettant de calculer le pH d'une solution d'acide chlorhydrique (HCl) de concentration molaire C₀ ?</p>",
+    "options": [
+      "<p>pH = 14 + log C₀</p>",
+      "<p>pH = -log C₀</p>",
+      "<p>pH = 14 - log C₀</p>",
+      "<p>pH = -log (2C₀)</p>"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "easy",
+    "explanation": "<p>Pour un acide fort comme HCl, la concentration en ions oxonium [H₃O⁺] est égale à la concentration C₀ de l'acide. Donc pH = -log[H₃O⁺] = -log C₀.</p>"
+  },
+  {
+    "questionText": "<p>Quelle est la formule permettant de calculer le pH d'une solution d'hydroxyde de sodium (NaOH) de concentration molaire C<sub>b</sub> ?</p>",
+    "options": [
+      "<p>pH = -log C<sub>b</sub></p>",
+      "<p>pH = 14 + log C<sub>b</sub></p>",
+      "<p>pH = 14 - log C<sub>b</sub></p>",
+      "<p>pH = -log (2C<sub>b</sub>)</p>"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "easy",
+    "explanation": "<p>Pour une base forte comme NaOH, la concentration en ions hydroxyde [OH⁻] est égale à C<sub>b</sub>. On a [H₃O⁺] = K<sub>e</sub>/[OH⁻] = 10⁻¹⁴/C<sub>b</sub>. Donc pH = -log(10⁻¹⁴/C<sub>b</sub>) = 14 + log C<sub>b</sub>.</p>"
+  },
+  {
+    "questionText": "<p>Une solution d'acide chlorhydrique a un pH = 2,5. Quelle est sa concentration molaire C₀ ?</p>",
+    "options": [
+      "<p>2,5 mol/L</p>",
+      "<p>3,16 × 10⁻³ mol/L</p>",
+      "<p>3,16 × 10⁻² mol/L</p>",
+      "<p>10⁻²,⁵ mol/L</p>"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "medium",
+    "explanation": "<p>Pour un acide fort, C₀ = [H₃O⁺] = 10⁻<sup>pH</sup> = 10⁻²,⁵ = 3,16 × 10⁻³ mol/L.</p>"
+  },
+  {
+    "questionText": "<p>Une solution d'hydroxyde de sodium a un pH = 12,3. Quelle est sa concentration molaire C<sub>b</sub> ?</p>",
+    "options": [
+      "<p>10⁻¹²,³ mol/L</p>",
+      "<p>2,0 × 10⁻² mol/L</p>",
+      "<p>1,26 × 10⁻² mol/L</p>",
+      "<p>12,3 mol/L</p>"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "medium",
+    "explanation": "<p>Pour une base forte, [OH⁻] = C<sub>b</sub>. On a pH = 14 + log C<sub>b</sub> donc log C<sub>b</sub> = pH - 14 = 12,3 - 14 = -1,7. Donc C<sub>b</sub> = 10⁻¹,⁷ = 2,0 × 10⁻² mol/L.</p>"
+  },
+  {
+    "questionText": "<p>On prélève 10 mL d'une solution d'acide chlorhydrique de concentration 0,1 mol/L et on la dilue pour obtenir 100 mL de solution. Quel est le pH de la solution diluée ?</p>",
+    "options": [
+      "<p>1</p>",
+      "<p>2</p>",
+      "<p>3</p>",
+      "<p>4</p>"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "hard",
+    "explanation": "<p>La dilution obéit à la relation C₁V₁ = C₂V₂. Donc C₂ = (C₁V₁)/V₂ = (0,1 × 10)/100 = 0,01 mol/L. Pour un acide fort, pH = -log C₂ = -log(10⁻²) = 2.</p>"
+  },
+  {
+    "questionText": "<p>Quel est le pH d'une solution obtenue en mélangeant 50 mL d'une solution d'HCl de pH = 2 et 50 mL d'une solution de NaOH de pH = 12 ?</p>",
+    "options": [
+      "<p>7</p>",
+      "<p>2</p>",
+      "<p>12</p>",
+      "<p>14</p>"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "hard",
+    "explanation": "<p>Pour la solution d'HCl de pH = 2, [H₃O⁺] = 10⁻² = 0,01 mol/L. n(H₃O⁺) = 0,01 × 0,05 = 5 × 10⁻⁴ mol. Pour la solution de NaOH de pH = 12, pOH = 2 donc [OH⁻] = 10⁻² = 0,01 mol/L. n(OH⁻) = 0,01 × 0,05 = 5 × 10⁻⁴ mol. Les quantités sont égales, la réaction de neutralisation est totale. Le pH est donc 7.</p>"
+  },
+  {
+    "questionText": "<p>Une solution aqueuse d'acide nitrique (HNO₃) de concentration C₀ = 2 × 10⁻³ mol/L a un pH de :</p>",
+    "options": [
+      "<p>2,30</p>",
+      "<p>2,70</p>",
+      "<p>3,00</p>",
+      "<p>11,30</p>"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium",
+    "explanation": "<p>HNO₃ est un acide fort, donc [H₃O⁺] = C₀ = 2 × 10⁻³ mol/L. pH = -log(2 × 10⁻³) = -[log 2 + log 10⁻³] = -[0,30 - 3] = 2,70.</p>"
+  },
+  {
+    "questionText": "<p>Une solution d'hydroxyde de potassium (KOH) de concentration C<sub>b</sub> = 5 × 10⁻⁴ mol/L a un pH de :</p>",
+    "options": [
+      "<p>3,30</p>",
+      "<p>10,70</p>",
+      "<p>11,00</p>",
+      "<p>10,30</p>"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "medium",
+    "explanation": "<p>KOH est une base forte, donc [OH⁻] = C<sub>b</sub> = 5 × 10⁻⁴ mol/L. pOH = -log(5 × 10⁻⁴) = 3,30. pH = 14 - pOH = 14 - 3,30 = 10,70.</p>"
+  },
+  {
+    "questionText": "<p>Quelle est la concentration en ions oxonium [H₃O⁺] d'une solution de pH = 4,5 ?</p>",
+    "options": [
+      "<p>4,5 mol/L</p>",
+      "<p>3,16 × 10⁻⁵ mol/L</p>",
+      "<p>3,16 × 10⁻⁴ mol/L</p>",
+      "<p>10⁻⁴,⁵ mol/L</p>"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "easy",
+    "explanation": "<p>[H₃O⁺] = 10⁻<sup>pH</sup> = 10⁻⁴,⁵ = 3,16 × 10⁻⁵ mol/L.</p>"
+  },
+  {
+    "questionText": "<p>On mélange un volume V₁ d'une solution d'acide fort de concentration C₁ avec un volume V₂ d'une solution de base forte de concentration C₂. À l'équivalence, on a :</p>",
+    "options": [
+      "<p>C₁V₁ = C₂V₂</p>",
+      "<p>C₁V₁ = 2C₂V₂</p>",
+      "<p>C₁V₁ + C₂V₂ = 0</p>",
+      "<p>pH = 14</p>"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "easy",
+    "explanation": "<p>À l'équivalence d'un dosage acide fort par base forte, les quantités de matière d'ions H₃O⁺ et OH⁻ sont égales : n(H₃O⁺) = n(OH⁻), soit C₁V₁ = C₂V₂.</p>"
+  },
+  {
+    "questionText": "<p>Une solution d'acide chlorhydrique de pH = 3 est diluée 100 fois. Quel est le nouveau pH ?</p>",
+    "options": [
+      "<p>1</p>",
+      "<p>5</p>",
+      "<p>3</p>",
+      "<p>4</p>"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "hard",
+    "explanation": "<p>La solution initiale a un pH = 3, donc C₀ = 10⁻³ mol/L. Après dilution 100 fois, C' = C₀/100 = 10⁻⁵ mol/L. pH' = -log(10⁻⁵) = 5.</p>"
+  },
+  {
+    "questionText": "<p>Le pH d'une solution d'acide fort de concentration C₀ est donnée par pH = -log C₀. Cette relation est valable si :</p>",
+    "options": [
+      "<p>La concentration C₀ est très faible</p>",
+      "<p>La concentration C₀ est très grande</p>",
+      "<p>La concentration C₀ n'est pas trop faible (C₀ ≥ 10⁻⁶ mol/L)</p>",
+      "<p>Toujours valable</p>"
+    ],
+    "correctAnswer": 2,
+    "difficulty": "hard",
+    "explanation": "<p>La relation pH = -log C₀ pour un acide fort n'est valable que si l'autoprotolyse de l'eau est négligeable, c'est-à-dire lorsque C₀ est suffisamment grande (généralement C₀ ≥ 10⁻⁶ mol/L). Pour des concentrations très faibles, on doit tenir compte de l'autoprotolyse de l'eau.</p>"
+  },
+  {
+    "questionText": "<p>Quelle est la nature d'une solution dont le pH est égal à 7 à 25°C ?</p>",
+    "options": [
+      "<p>Acide</p>",
+      "<p>Basique</p>",
+      "<p>Neutre</p>",
+      "<p>Indéterminée</p>"
+    ],
+    "correctAnswer": 2,
+    "difficulty": "easy",
+    "explanation": "<p>À 25°C, une solution est neutre lorsque pH = 7. En effet, dans l'eau pure à 25°C, [H₃O⁺] = [OH⁻] = 10⁻⁷ mol/L, donc pH = 7.</p>"
+  },
+  {
+    "questionText": "<p>Une solution d'acide fort a un pH = 1. Sa concentration en ions hydroxyde [OH⁻] est :</p>",
+    "options": [
+      "<p>10⁻¹ mol/L</p>",
+      "<p>10⁻¹³ mol/L</p>",
+      "<p>10⁻⁷ mol/L</p>",
+      "<p>10⁻¹⁴ mol/L</p>"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium",
+    "explanation": "<p>pH = 1 donc [H₃O⁺] = 10⁻¹ mol/L. On a [OH⁻] = K<sub>e</sub>/[H₃O⁺] = 10⁻¹⁴/10⁻¹ = 10⁻¹³ mol/L.</p>"
+  },
+  {
+    "questionText": "<p>Une solution de base forte a un pH = 13. Sa concentration en ions oxonium [H₃O⁺] est :</p>",
+    "options": [
+      "<p>10⁻¹³ mol/L</p>",
+      "<p>10⁻¹ mol/L</p>",
+      "<p>10⁻⁷ mol/L</p>",
+      "<p>10⁻¹⁴ mol/L</p>"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "easy",
+    "explanation": "<p>pH = 13 donc [H₃O⁺] = 10⁻¹³ mol/L. La solution est basique car pH > 7.</p>"
+  }
+];
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

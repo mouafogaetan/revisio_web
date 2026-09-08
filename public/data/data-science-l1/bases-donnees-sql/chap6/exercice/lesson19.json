@@ -1,0 +1,152 @@
+[
+  {
+    "intitule": "Exercice 1 : Extraction d'un Dataset pour un Modèle de Prédiction",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Une entreprise de télécommunications au Cameroun souhaite construire un modèle de prédiction du désabonnement des clients (churn). La base de données contient les tables suivantes :</p><ul><li><strong>Clients</strong> : <code>ID</code>, <code>Nom</code>, <code>Prenom</code>, <code>Date_Inscription</code>, <code>Ville</code>, <code>Age</code>, <code>Type_Abonnement</code> (ex: 'Premium', 'Standard', 'Basique'), <code>Actif</code> (booléen)</li><li><strong>Appels</strong> : <code>ID_Client</code>, <code>Date_Appel</code>, <code>Duree</code> (en minutes), <code>Type_Appel</code> (ex: 'Local', 'National', 'International')</li><li><strong>Factures</strong> : <code>ID_Client</code>, <code>Mois</code>, <code>Montant</code>, <code>Date_Paiement</code>, <code>Statut</code> (ex: 'Payée', 'Impayée')</li><li><strong>Reclamations</strong> : <code>ID_Client</code>, <code>Date_Reclamation</code>, <code>Sujet</code>, <code>Resolue</code> (booléen)</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez une requête SQL pour extraire un dataset contenant les informations suivantes pour chaque client : ID, Ville, Age, Type_Abonnement, le nombre total d'appels, la durée totale des appels, le montant moyen des factures, le nombre de réclamations non résolues et le statut actif.",
+        "niveau": "hard",
+        "reponse": "SELECT <br>    c.ID,<br>    c.Ville,<br>    c.Age,<br>    c.Type_Abonnement,<br>    COUNT(a.ID_Client) AS Nombre_Appels,<br>    SUM(a.Duree) AS Duree_Total_Appels,<br>    AVG(f.Montant) AS Montant_Moyen_Facture,<br>    SUM(CASE WHEN r.Resolue = FALSE THEN 1 ELSE 0 END) AS Reclamations_Non_Resolues,<br>    c.Actif<br>FROM Clients c<br>LEFT JOIN Appels a ON c.ID = a.ID_Client<br>LEFT JOIN Factures f ON c.ID = f.ID_Client<br>LEFT JOIN Reclamations r ON c.ID = r.ID_Client<br>GROUP BY c.ID, c.Ville, c.Age, c.Type_Abonnement, c.Actif;",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Ajoutez une colonne calculée qui représente l'âge du client en années (à partir de la date d'inscription). La date d'aujourd'hui est '2025-08-08'.",
+        "niveau": "hard",
+        "reponse": "SELECT <br>    c.ID,<br>    c.Ville,<br>    c.Age,<br>    c.Type_Abonnement,<br>    COUNT(a.ID_Client) AS Nombre_Appels,<br>    SUM(a.Duree) AS Duree_Total_Appels,<br>    AVG(f.Montant) AS Montant_Moyen_Facture,<br>    SUM(CASE WHEN r.Resolue = FALSE THEN 1 ELSE 0 END) AS Reclamations_Non_Resolues,<br>    c.Actif,<br>    DATEDIFF('2025-08-08', c.Date_Inscription) / 365 AS Anciennete_Annees<br>FROM Clients c<br>LEFT JOIN Appels a ON c.ID = a.ID_Client<br>LEFT JOIN Factures f ON c.ID = f.ID_Client<br>LEFT JOIN Reclamations r ON c.ID = r.ID_Client<br>GROUP BY c.ID, c.Ville, c.Age, c.Type_Abonnement, c.Actif, c.Date_Inscription;",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 2 : Agrégation et Création de Features pour un Dataset ML",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Une startup de e-commerce souhaite prédire le montant des futurs achats de ses clients. La base de données contient les tables suivantes :</p><ul><li><strong>Clients</strong> : <code>ID</code>, <code>Date_Inscription</code>, <code>Ville</code></li><li><strong>Commandes</strong> : <code>ID</code>, <code>ID_Client</code>, <code>Date_Commande</code>, <code>Montant_Total</code></li><li><strong>Lignes_Commandes</strong> : <code>ID_Commande</code>, <code>ID_Produit</code>, <code>Quantite</code>, <code>Prix_Unitaire</code></li><li><strong>Produits</strong> : <code>ID</code>, <code>Nom</code>, <code>Categorie</code></li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez une requête SQL pour construire un dataset où chaque client a les features suivantes : nombre total de commandes, montant total des achats, montant moyen des commandes, nombre de produits distincts achetés, et les catégories de produits les plus achetées (catégorie la plus fréquente).",
+        "niveau": "hard",
+        "reponse": "WITH Client_Stats AS (<br>    SELECT <br>        c.ID,<br>        COUNT(DISTINCT co.ID) AS Nb_Commandes,<br>        SUM(co.Montant_Total) AS Montant_Total,<br>        AVG(co.Montant_Total) AS Montant_Moyen_Commande,<br>        COUNT(DISTINCT p.Categorie) AS Nb_Categories_Distinctes<br>    FROM Clients c<br>    LEFT JOIN Commandes co ON c.ID = co.ID_Client<br>    LEFT JOIN Lignes_Commandes lc ON co.ID = lc.ID_Commande<br>    LEFT JOIN Produits p ON lc.ID_Produit = p.ID<br>    GROUP BY c.ID<br>),<br>Categorie_Plus_Achetee AS (<br>    SELECT <br>        c.ID,<br>        p.Categorie,<br>        COUNT(*) AS Nb_Achats,<br>        ROW_NUMBER() OVER (PARTITION BY c.ID ORDER BY COUNT(*) DESC) AS rn<br>    FROM Clients c<br>    LEFT JOIN Commandes co ON c.ID = co.ID_Client<br>    LEFT JOIN Lignes_Commandes lc ON co.ID = lc.ID_Commande<br>    LEFT JOIN Produits p ON lc.ID_Produit = p.ID<br>    GROUP BY c.ID, p.Categorie<br>)<br>SELECT <br>    cs.ID,<br>    cs.Nb_Commandes,<br>    cs.Montant_Total,<br>    cs.Montant_Moyen_Commande,<br>    cs.Nb_Categories_Distinctes,<br>    cpa.Categorie AS Categorie_Plus_Achetee<br>FROM Client_Stats cs<br>LEFT JOIN Categorie_Plus_Achetee cpa ON cs.ID = cpa.ID AND cpa.rn = 1;",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Pourquoi est-il important d'utiliser des LEFT JOIN plutôt que des INNER JOIN dans ce type d'extraction ?",
+        "niveau": "medium",
+        "reponse": "Les LEFT JOIN permettent de conserver tous les clients, même ceux qui n'ont pas encore passé de commande. Avec un INNER JOIN, les clients sans commande seraient exclus du dataset. Or, en Machine Learning, il est important d'avoir des données pour tous les clients, y compris ceux qui n'ont pas encore acheté, car le modèle doit pouvoir prédire leur comportement futur. Les valeurs NULL pour ces clients seront traitées lors du prétraitement (imputation).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 3 : Construction d'un Dataset Temporel",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Une entreprise de logistique souhaite prédire le volume de livraisons par jour. La table <strong>Livraisons</strong> contient les colonnes : <code>ID</code>, <code>Date_Livraison</code>, <code>ID_Client</code>, <code>Ville</code>, <code>Poids</code> (kg), <code>Volume</code> (m³).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez une requête SQL pour créer un dataset d'entraînement avec les colonnes suivantes pour chaque jour de l'année 2024 : Date, Nombre de livraisons, Poids total, Volume total, et la moyenne mobile sur 7 jours du nombre de livraisons.",
+        "niveau": "very hard",
+        "reponse": "WITH Daily_Stats AS (<br>    SELECT <br>        Date_Livraison AS Date,<br>        COUNT(*) AS Nb_Livraisons,<br>        SUM(Poids) AS Poids_Total,<br>        SUM(Volume) AS Volume_Total<br>    FROM Livraisons<br>    WHERE Date_Livraison BETWEEN '2024-01-01' AND '2024-12-31'<br>    GROUP BY Date_Livraison<br>),<br>Dates_Serie AS (<br>    SELECT <br>        DATE_ADD('2024-01-01', INTERVAL n DAY) AS Date<br>    FROM <br>        (SELECT 0 AS n UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION SELECT 9) t1,<br>        (SELECT 0 AS n UNION SELECT 10 UNION SELECT 20 UNION SELECT 30) t2<br>    WHERE DATE_ADD('2024-01-01', INTERVAL n DAY) <= '2024-12-31'<br>)<br>SELECT <br>    ds.Date,<br>    COALESCE(ds2.Nb_Livraisons, 0) AS Nb_Livraisons,<br>    COALESCE(ds2.Poids_Total, 0) AS Poids_Total,<br>    COALESCE(ds2.Volume_Total, 0) AS Volume_Total,<br>    AVG(COALESCE(ds2.Nb_Livraisons, 0)) OVER (ORDER BY ds.Date ROWS BETWEEN 6 PRECEDING AND CURRENT ROW) AS Moyenne_Mobile_7_Jours<br>FROM Dates_Serie ds<br>LEFT JOIN Daily_Stats ds2 ON ds.Date = ds2.Date<br>ORDER BY ds.Date;",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez l'utilité de la colonne Moyenne_Mobile_7_Jours pour un modèle prédictif.",
+        "niveau": "medium",
+        "reponse": "La moyenne mobile sur 7 jours permet de lisser les variations quotidiennes et de capturer la tendance de fond du volume de livraisons. Elle aide le modèle à identifier les patterns hebdomadaires (ex: plus de livraisons en début de semaine) et réduit l'impact des jours exceptionnels (jours fériés, promotions). C'est une feature importante pour les modèles de séries temporelles.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 4 : Extraction de Données pour l'Analyse d'Achat Groupé (Market Basket Analysis)",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Un supermarché souhaite analyser les associations de produits pour optimiser le placement en rayon. La base de données contient :</p><ul><li><strong>Transactions</strong> : <code>ID_Transaction</code>, <code>Date</code>, <code>ID_Client</code></li><li><strong>Details_Transaction</strong> : <code>ID_Transaction</code>, <code>ID_Produit</code>, <code>Quantite</code></li><li><strong>Produits</strong> : <code>ID</code>, <code>Nom</code>, <code>Categorie</code></li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez une requête SQL pour extraire les paires de produits qui apparaissent ensemble dans les transactions (au moins 5 fois). Chaque ligne doit contenir : ID_Produit1, Nom_Produit1, ID_Produit2, Nom_Produit2, Nombre de co-occurrences.",
+        "niveau": "very hard",
+        "reponse": "SELECT <br>    p1.ID AS ID_Produit1,<br>    p1.Nom AS Nom_Produit1,<br>    p2.ID AS ID_Produit2,<br>    p2.Nom AS Nom_Produit2,<br>    COUNT(*) AS Nb_Cooccurrences<br>FROM Details_Transaction dt1<br>JOIN Details_Transaction dt2 ON dt1.ID_Transaction = dt2.ID_Transaction AND dt1.ID_Produit < dt2.ID_Produit<br>JOIN Produits p1 ON dt1.ID_Produit = p1.ID<br>JOIN Produits p2 ON dt2.ID_Produit = p2.ID<br>GROUP BY p1.ID, p1.Nom, p2.ID, p2.Nom<br>HAVING COUNT(*) >= 5<br>ORDER BY Nb_Cooccurrences DESC;",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Pourquoi utilisons-nous <code>dt1.ID_Produit < dt2.ID_Produit</code> dans la condition de jointure ?",
+        "niveau": "medium",
+        "reponse": "Cette condition évite les doublons dans les paires de produits. Sans elle, on obtiendrait à la fois la paire (A, B) et (B, A) pour la même combinaison. En imposant que l'ID du premier produit soit inférieur à l'ID du second, on ne garde qu'une seule combinaison par paire, ce qui simplifie l'analyse.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 5 : Exportation des Données pour Python (Pandas)",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous avez construit un dataset avec la requête suivante :</p><pre>SELECT ID, Nom, Ville, Age, Solde<br>FROM Clients<br>WHERE Age > 18 AND Solde > 10000;</pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez comment vous exporteriez les résultats de cette requête depuis MySQL pour les utiliser dans un notebook Jupyter avec Pandas.",
+        "niveau": "medium",
+        "reponse": "Il existe plusieurs méthodes :<br><br>1. **Utiliser la librairie pymysql ou mysql-connector-python** :<br><pre>import pandas as pd<br>import pymysql<br><br>conn = pymysql.connect(host='localhost', user='root', password='', db='ma_base')<br>df = pd.read_sql('SELECT ID, Nom, Ville, Age, Solde FROM Clients WHERE Age > 18 AND Solde > 10000', conn)<br>conn.close()</pre><br><br>2. **Utiliser SQLAlchemy** :<br><pre>from sqlalchemy import create_engine<br>engine = create_engine('mysql+pymysql://root:@localhost/ma_base')<br>df = pd.read_sql('SELECT ID, Nom, Ville, Age, Solde FROM Clients WHERE Age > 18 AND Solde > 10000', engine)</pre><br><br>3. **Exporter en CSV puis importer** : Utiliser <code>SELECT ... INTO OUTFILE</code> ou l'outil en ligne de commande mysqldump, puis lire le fichier CSV avec Pandas.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Quels sont les avantages de réaliser l'extraction directement en SQL plutôt que de charger toutes les données en Python puis de les filtrer ?",
+        "niveau": "hard",
+        "reponse": "Les avantages sont :<br><ul><li><strong>Performance :</strong> Le filtrage est effectué par le SGBD, qui est optimisé pour ces opérations. On transfère moins de données sur le réseau (seulement les données filtrées).</li><li><strong>Mémoire :</strong> On évite de charger des millions de lignes en mémoire Python, ce qui pourrait causer des problèmes de mémoire.</li><li><strong>Simplicité :</strong> On utilise la puissance du SGBD pour les agrégations, les jointures et les transformations complexes.</li><li><strong>Reproductibilité :</strong> La logique d'extraction est centralisée dans la requête SQL, plus facile à documenter et à réutiliser.</li></ul>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 6 : Construction d'un Dataset pour un Modèle de Classification",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Une banque souhaite prédire si un client va accepter une offre de crédit. Les tables disponibles sont :</p><ul><li><strong>Clients</strong> : <code>ID</code>, <code>Age</code>, <code>Revenu_Mensuel</code>, <code>Situation_Familiale</code> (ex: 'Célibataire', 'Marié', 'Divorcé'), <code>Nb_Enfants</code>, <code>Ville</code></li><li><strong>Comptes</strong> : <code>ID_Client</code>, <code>Type_Compte</code> (ex: 'Courant', 'Épargne'), <code>Solde</code>, <code>Date_Ouverture</code></li><li><strong>Credit_Offres</strong> : <code>ID_Client</code>, <code>Montant_Offre</code>, <code>Accepte</code> (booléen, la variable cible)</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez une requête SQL pour extraire un dataset d'entraînement avec les features suivantes pour chaque client : Age, Revenu_Mensuel, Situation_Familiale, Nb_Enfants, Ville, Nombre total de comptes, Solde total des comptes, Ancienneté du compte la plus ancienne (en années), Montant_Offre, et la variable cible Accepte.",
+        "niveau": "very hard",
+        "reponse": "SELECT <br>    c.ID,<br>    c.Age,<br>    c.Revenu_Mensuel,<br>    c.Situation_Familiale,<br>    c.Nb_Enfants,<br>    c.Ville,<br>    COUNT(cp.ID_Client) AS Nb_Comptes,<br>    SUM(cp.Solde) AS Solde_Total,<br>    DATEDIFF('2025-08-08', MIN(cp.Date_Ouverture)) / 365 AS Anciennete_Max_Annees,<br>    co.Montant_Offre,<br>    co.Accepte<br>FROM Clients c<br>LEFT JOIN Comptes cp ON c.ID = cp.ID_Client<br>LEFT JOIN Credit_Offres co ON c.ID = co.ID_Client<br>GROUP BY <br>    c.ID, c.Age, c.Revenu_Mensuel, c.Situation_Familiale, <br>    c.Nb_Enfants, c.Ville, co.Montant_Offre, co.Accepte;",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Quelles précautions devez-vous prendre concernant les valeurs NULL dans ce dataset avant de l'utiliser pour l'entraînement ?",
+        "niveau": "hard",
+        "reponse": "Les clients qui n'ont pas de compte (Nb_Comptes = 0, Solde_Total = NULL, Anciennete_Max_Annees = NULL) ou qui n'ont pas encore reçu d'offre (Montant_Offre = NULL, Accepte = NULL) doivent être traités. Il faut :<br><ul><li>Soit les exclure du dataset d'entraînement (car on ne peut pas entraîner sur des données sans variable cible).</li><li>Soit imputer les valeurs NULL pour les features (ex: remplacer par 0 pour les comptes, par la moyenne de l'âge ou du revenu).</li><li>Utiliser des techniques comme COALESCE ou IFNULL dans la requête pour définir des valeurs par défaut.</li></ul>",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

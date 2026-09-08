@@ -1,0 +1,132 @@
+[
+  {
+    "intitule": "Identifier les caractéristiques du serverless",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Lisez les affirmations suivantes concernant le modèle <strong>serverless</strong> (FaaS – Function as a Service) et cochez celles qui sont correctes.</p><ul><li>A. Le développeur doit gérer manuellement le système d’exploitation du serveur.</li><li>B. L’exécution est déclenchée par des événements (requête HTTP, upload de fichier, message, etc.).</li><li>C. La facturation est basée sur le temps d’exécution et la mémoire consommée, pas sur des serveurs allumés en continu.</li><li>D. Les fonctions serverless ne peuvent pas être écrites en Python ou JavaScript.</li><li>E. Le cloud provider met à l’échelle automatiquement les instances de la fonction selon la charge.</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Sélectionnez les affirmations correctes et expliquez pourquoi les autres sont fausses.",
+        "niveau": "easy",
+        "reponse": "Les affirmations correctes sont B, C et E.\n- A est faux : le modèle serverless abstrait totalement la gestion du serveur (OS, runtime).\n- D est faux : la plupart des providers supportent Python, JavaScript (Node.js), Java, Go, etc.\n- B, C, E décrivent les piliers du serverless : événementiel, facturation à l’usage, scaling automatique.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Comparer les modèles d’exécution : VM, conteneur, serverless",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous êtes consultant cloud pour une startup qui développe une API de traitement d’images. Les requêtes sont très irrégulières : parfois 0 par minute, parfois 500 en quelques secondes. L’équipe hésite entre :</p><ol><li>Une VM classique (EC2, Compute Engine) toujours allumée,</li><li>Des conteneurs sur Kubernetes (auto-scaling),</li><li>Une fonction serverless (AWS Lambda, Cloud Functions, Azure Functions).</li></ol><p>Comparez ces trois modèles selon les critères : coût pour une charge très intermittente, complexité opérationnelle, latence de démarrage à froid (<em>cold start</em>).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Pour chaque modèle (VM, conteneur, serverless), analysez son adéquation avec une charge très irrégulière. Justifiez votre recommandation finale.",
+        "niveau": "medium",
+        "reponse": "**VM** : Coût élevé même à 0 requêtes (paiement à l’heure), latence faible (toujours allumé), mais complexe à scaler manuellement → non recommandé.\n**Conteneurs (K8s)** : Bon scaling, mais cluster à gérer (coût fixe des nœuds), cold start faible si pods chauds, complexité opérationnelle moyenne → acceptable mais lourd.\n**Serverless** : Coût nul à 0 requêtes, scaling automatique parfait, mais cold start (latence de ~100ms à quelques secondes). Parfait si tolérance à la latence initiale.\n**Recommandation** : Serverless (AWS Lambda ou Google Cloud Functions) car coût optimisé pour charge sporadique. Si cold start rédhibitoire, provisioned concurrency (AWS) ou garder un minimum de conteneurs chauds.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment atténuer l’impact du <em>cold start</em> dans un projet serverless ?",
+            "niveau": "medium",
+            "reponse": "Utiliser des fonctions plus petites en taille (moins de dépendances), provisioned concurrency (AWS), garder la fonction « chaude » avec un déclencheur périodique (CloudWatch Events), choisir un runtime plus rapide (Node.js, Python plutôt que Java ou .NET)."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Développer et analyser une fonction serverless",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>On vous donne la fonction AWS Lambda suivante (Python 3.9) qui traite des commandes utilisateur. Déclencheur : API Gateway (HTTP POST). Objectif : calculer le prix total d’une commande avec réduction.</p>\n<pre><code>\ndef lambda_handler(event, context):\n    try:\n        body = json.loads(event['body'])\n        produits = body['produits']   # liste de dict {'prix': float, 'quantite': int}\n        code_promo = body.get('code', '')\n        \n        total = sum(p['prix'] * p['quantite'] for p in produits)\n        \n        if code_promo == 'CLOUD10':\n            total = total * 0.9\n        elif code_promo == 'CLOUD20':\n            total = total * 0.8\n            \n        # Simulation d'un appel à une API externe lente (ex: vérification de stock)\n        time.sleep(2)\n        \n        return {\n            'statusCode': 200,\n            'body': json.dumps({'total': total})\n        }\n    except Exception as e:\n        return {'statusCode': 500, 'body': str(e)}\n</code></pre>\n<p>Le timeout de la Lambda est configuré à 3 secondes. La mémoire allouée : 512 Mo.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifiez au moins deux limitations du modèle serverless que ce code illustre (en vous appuyant sur le cours : timeout, mémoire, cold start, etc.). Proposez des corrections.",
+        "niveau": "hard",
+        "reponse": "**Limitations illustrées :**\n1. **Timeout** – `time.sleep(2)` + temps de traitement peut dépasser 3s si la fonction est froide ou si l’API externe varie → risque d’erreur `Task timed out`.\n2. **Dépendance synchrone** – L’appel à l’API externe bloque toute la fonction (pas d’async), mauvaise pour serverless.\n\n**Corrections :**\n- Remplacer l’appel synchrone par un workflow asynchrone : la fonction déclenche une étape séparée (Step Functions, SQS + second Lambda).\n- Augmenter le timeout à une valeur raisonnable (ex: 10s) ou utiliser `async/await` avec un client HTTP asynchrone (`aiohttp`).\n- Mettre en cache les résultats d’API externe si possible (ElastiCache ou DynamoDB).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Cette fonction utilise 512 Mo de mémoire. Comment le choix de la mémoire affecte-t-il le coût et les performances ?",
+            "niveau": "medium",
+            "reponse": "Sur AWS Lambda, la mémoire (de 128 Mo à 10 Go) détermine aussi la puissance CPU allouée linéairement. Plus de mémoire → plus de CPU → exécution plus rapide, mais coût plus élevé (coût = (mémoire/1024) * temps_exécution * prix_Go-seconde). Il faut trouver un équilibre (généralement 1769 Mo pour un bon ratio prix/performance)."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Ajoutez une validation d’entrée pour vérifier que `produits` est une liste non vide. Écrivez le code correspondant.",
+            "niveau": "medium",
+            "reponse": "```python\nif not isinstance(produits, list) or len(produits) == 0:\n    return {'statusCode': 400, 'body': 'La liste produits est vide ou invalide'}\n```"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation des coûts et des performances serverless",
+    "type": "ressource",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Une fonction AWS Lambda est invoquée 2 millions de fois par mois. Sa durée moyenne d’exécution est de 250 ms avec 1024 Mo de mémoire. Le prix AWS Lambda (région us-east-1) est : 0,0000166667 $ par Go-seconde (tranche gratuite : 400 000 Go-secondes/mois). Calculez le coût mensuel <strong>sans la tranche gratuite</strong>.</p>\n<p>Ensuite, expliquez comment réduire ce coût en modifiant un paramètre de configuration (sans changer la logique métier), même si la durée augmente légèrement.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Calculez le coût mensuel en dollars. Formule : $Coût = (Invocations \\times Durée_{secondes} \\times Mémoire_{Go}) \\times Prix_{Go-seconde}$.",
+        "niveau": "hard",
+        "reponse": "**Calcul :**\n- Invocations = 2 000 000\n- Durée = 0,25 s\n- Mémoire = 1024 Mo = 1 Go\n- Go-secondes = 2 000 000 × 0,25 × 1 = 500 000 Go-seconde\n- Prix = 500 000 × 0,0000166667 $ = **8,33335 $**\n- (Avec tranche gratuite 400k Go-s : 100 000 × 0,0000166667 = 1,66667 $)",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposez une modification de la configuration (seulement paramètres, pas le code) pour baisser le coût. Expliquez le compromis.",
+            "niveau": "very hard",
+            "reponse": "**Solution** : Réduire la mémoire allouée, par exemple à 512 Mo (0,5 Go). La durée va augmenter car le CPU alloué est proportionnel à la mémoire (environ 2x plus long, 500 ms).\nNouveau Go-seconde : 2M × 0,5 × 0,5 = 500 000 Go-secondes (identique !). Mais attention : le prix unitaire est le même, donc le coût reste identique si la durée double quand mémoire moitié. **Cependant**, si la fonction n’est pas CPU-bound, la durée augmente moins que proportionnellement. Par exemple, si elle passe de 250 ms à 300 ms :\n2M × 0,3 × 0,5 = 300 000 Go-seconde → 300 000 × 0,0000166667 = 5,00 $ → économie de 40%.\n**Compromis** : latence plus élevée pour les utilisateurs.\nAlternative : utiliser **Provisioned Concurrency** (coût fixe) si les cold starts sont fréquentes et nuisent à l’expérience – mais cela augmente le coût."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Concevoir une architecture serverless résiliente",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Une entreprise veut traiter des fichiers CSV uploadés par des utilisateurs sur un bucket S3. Chaque fichier peut faire jusqu’à 100 Mo. Les traitements sont : validation, transformation (ajout d’une colonne), insertion dans une base de données relationnelle (Amazon RDS). La fonction actuelle (Lambda) échoue souvent sur les gros fichiers à cause du timeout (15 minutes max) et de la limite mémoire (10 Go max).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "En vous basant sur les limites serverless (timeout 15 min, mémoire 10 Go, espace disque `/tmp` limité à 512 Mo à 10 Go selon mémoire), proposez une architecture alternative utilisant plusieurs services AWS (S3, Lambda, Step Functions, ECS/Fargate, SQS).",
+        "niveau": "very hard",
+        "reponse": "**Architecture proposée :**\n1. **Déclencheur** : Événement `s3:ObjectCreated` → SQS (file d’attente) → Lambda de déclenchement (très légère).\n2. **Lambda d’orchestration** (petite) qui lance une **Step Function**.\n3. **Step Function** :\n   - Étape 1 : Lancer un job **AWS Batch** ou **ECS Fargate** (conteneur) avec le fichier S3 en entrée. Les conteneurs n’ont pas de timeout de 15 min et peuvent avoir plus de mémoire/CPU.\n   - Étape 2 : Le job traite le CSV par streaming (lecture ligne par ligne, pas de chargement total en mémoire).\n   - Étape 3 : Insertion batch dans RDS via connexion poolée.\n4. Si une erreur survient, Step Function peut réessayer ou rediriger vers une file DLQ (Dead Letter Queue).\n\n**Pourquoi c’est serverless-friendly ?**\n- On reste dans le paradigme serverless (Fargate = serverless containers, Step Functions = orchestration serverless, S3, SQS).\n- On contourne les limites Lambda (temps, mémoire) en déléguant le traitement lourd à Fargate.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quel avantage apporte SQS entre S3 et la première Lambda ?",
+            "niveau": "medium",
+            "reponse": "SQS découple l’ingestion du traitement. Il permet de gérer des pics de charge (buffer), d’éviter de perdre des événements si la Lambda échoue (visibilité + redrive), et de contrôler la concurrence (réservée dans Lambda)."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Citez deux limitations que cette architecture ne résout pas (ou ajoute).",
+            "niveau": "hard",
+            "reponse": "1. **Complexité** : plus de services à gérer (Step Functions, Fargate, SQS) → debugging plus difficile.\n2. **Latence** : le traitement asynchrone par Step Functions + Fargate est plus lent qu’une simple Lambda (plusieurs secondes de démarrage de conteneur).\n3. **Coût potentiel** : Fargate a un coût fixe minimum de facturation (1 minute) vs Lambda à la milliseconde."
+          }
+        ]
+      }
+    ]
+  }
+]

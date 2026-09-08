@@ -1,0 +1,101 @@
+[
+  {
+    "intitule": "Configuration de Google OAuth avec react-oauth/google",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans une application e-commerce React, vous devez intégrer l'authentification via Google. Vous utilisez la bibliothèque <code>@react-oauth/google</code>. Le backend expose un endpoint <code>POST /auth/google</code> qui attend un <code>credential</code> (token Google) et retourne <code>{ access_token, refresh_token, user }</code>.</p><p><strong>Question :</strong> Implémentez le composant <code>GoogleLoginButton</code> qui :</p><ul><li>Affiche le bouton \"Se connecter avec Google\"</li><li>Capture le credential retourné par Google</li><li>Envoie ce credential au backend via Axios</li><li>Stocke les tokens reçus dans localStorage</li><li>Gère les états de chargement et les erreurs</li><li>Redirige vers la page d'accueil après succès</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédiger le code complet du composant d'authentification Google avec gestion des erreurs et redirection.",
+        "niveau": "hard",
+        "reponse": "```typescript\n// GoogleLoginButton.tsx\nimport { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';\nimport { useNavigate } from 'react-router-dom';\nimport { useState } from 'react';\nimport api from '../services/api';\nimport { useAuthStore } from '../stores/authStore';\n\nconst GoogleLoginButtonContent = () => {\n  const navigate = useNavigate();\n  const [isLoading, setIsLoading] = useState(false);\n  const [error, setError] = useState('');\n  const { setAuth } = useAuthStore();\n\n  const handleSuccess = async (credentialResponse: any) => {\n    setIsLoading(true);\n    setError('');\n    try {\n      const { data } = await api.post('/auth/google', {\n        credential: credentialResponse.credential\n      });\n      \n      // Stockage des tokens\n      localStorage.setItem('access_token', data.access_token);\n      localStorage.setItem('refresh_token', data.refresh_token);\n      \n      // Mise à jour du store Zustand\n      setAuth(data.user, data.access_token);\n      \n      // Configuration de l'intercepteur Axios\n      api.defaults.headers.common['Authorization'] = `Bearer ${data.access_token}`;\n      \n      // Redirection vers la page d'accueil\n      navigate('/');\n    } catch (err: any) {\n      setError(err.response?.data?.message || 'Erreur lors de l\\'authentification Google');\n    } finally {\n      setIsLoading(false);\n    }\n  };\n\n  const handleError = () => {\n    setError('La connexion Google a échoué. Veuillez réessayer.');\n  };\n\n  return (\n    <div className=\"flex flex-col items-center gap-3\">\n      <GoogleLogin\n        onSuccess={handleSuccess}\n        onError={handleError}\n        useOneTap\n        theme=\"filled_blue\"\n        size=\"large\"\n        text=\"continue_with\"\n        shape=\"rectangular\"\n      />\n      {isLoading && <p className=\"text-gray-500\">Connexion en cours...</p>}\n      {error && <p className=\"text-red-500 text-sm\">{error}</p>}\n    </div>\n  );\n};\n\n// Composant wrapper avec le provider\nexport const GoogleLoginButton = () => {\n  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;\n  \n  if (!clientId) {\n    console.error('Google Client ID manquant');\n    return null;\n  }\n  \n  return (\n    <GoogleOAuthProvider clientId={clientId}>\n      <GoogleLoginButtonContent />\n    </GoogleOAuthProvider>\n  );\n};\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer pourquoi on utilise un wrapper séparé avec `GoogleOAuthProvider` et comment gérer le Client ID dans un environnement de production.",
+            "niveau": "medium",
+            "reponse": "`GoogleOAuthProvider` est un contexte React qui fournit la configuration OAuth à tous les composants enfants. Il est nécessaire car la bibliothèque `@react-oauth/google` utilise ce contexte pour initialiser le SDK Google. Le Client ID doit être stocké dans une variable d'environnement (`.env`) car il est public mais doit être différent selon l'environnement (dev, staging, prod). En production, on utilise le Client ID spécifique à l'application enregistrée sur Google Cloud Console, avec les origines autorisées configurées."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Migration de l'authentification standard vers OAuth social",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Votre application e-commerce dispose déjà d'une authentification par email/mot de passe. Vous devez ajouter la connexion par Google OAuth. Cependant, un même utilisateur pourrait :</p><ul><li>S'inscrire d'abord avec email, puis se connecter avec Google</li><li>S'inscrire d'abord avec Google, puis se connecter avec email</li><li>Utiliser plusieurs comptes Google différents</li></ul><p><strong>Question :</strong> Proposez une stratégie pour gérer le \"linking\" des comptes sociaux avec les comptes existants, et implémentez la fonction de liaison dans un hook personnalisé.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevoir une fonction `linkSocialAccount` qui permet de lier un compte Google à un compte utilisateur existant après authentification. Décrire également la logique de fusion des données.",
+        "niveau": "very hard",
+        "reponse": "```typescript\n// hooks/useSocialLinking.ts\nimport { useState } from 'react';\nimport api from '../services/api';\nimport { useAuthStore } from '../stores/authStore';\n\ninterface LinkResult {\n  success: boolean;\n  requiresLinking: boolean;\n  message: string;\n}\n\nexport const useSocialLinking = () => {\n  const [isLinking, setIsLinking] = useState(false);\n  const { user, accessToken } = useAuthStore();\n\n  const handleGoogleSuccess = async (credential: string, existingEmail?: string) => {\n    setIsLinking(true);\n    try {\n      // Étape 1: Tenter la connexion/liaison\n      const { data } = await api.post('/auth/google/callback', {\n        credential,\n        existingEmail,\n        linkWithCurrentUser: !!user\n      });\n\n      if (data.requiresLinking) {\n        // L'email existe déjà mais n'est pas lié à ce compte Google\n        return { success: false, requiresLinking: true, message: 'Un compte existe déjà avec cet email. Souhaitez-vous le lier ?' };\n      }\n\n      if (data.linked) {\n        // Liaison réussie\n        localStorage.setItem('access_token', data.access_token);\n        useAuthStore.getState().setAuth(data.user, data.access_token);\n        return { success: true, requiresLinking: false, message: 'Compte lié avec succès' };\n      }\n\n      if (data.newAccount) {\n        // Nouveau compte créé\n        localStorage.setItem('access_token', data.access_token);\n        useAuthStore.getState().setAuth(data.user, data.access_token);\n        return { success: true, requiresLinking: false, message: 'Compte créé avec Google' };\n      }\n\n      return { success: true, requiresLinking: false, message: 'Connexion réussie' };\n    } catch (error) {\n      return { success: false, requiresLinking: false, message: 'Erreur lors de l\\'authentification' };\n    } finally {\n      setIsLinking(false);\n    }\n  };\n\n  const linkAccount = async (credential: string) => {\n    if (!user) throw new Error('Utilisateur non connecté');\n    \n    setIsLinking(true);\n    try {\n      await api.post('/auth/google/link', {\n        credential,\n        userId: user.id\n      }, {\n        headers: { Authorization: `Bearer ${accessToken}` }\n      });\n      return { success: true, message: 'Compte Google lié avec succès' };\n    } catch (error: any) {\n      return { success: false, message: error.response?.data?.message || 'Erreur de liaison' };\n    } finally {\n      setIsLinking(false);\n    }\n  };\n\n  return { handleGoogleSuccess, linkAccount, isLinking };\n};\n\n// Backend (Node.js/NestJS) - schéma de base de données\n// Table users: id, email, password_hash, created_at\n// Table social_accounts: id, user_id, provider (google), provider_id, email, linked_at\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Décrire comment gérer le cas où un utilisateur a déjà un compte avec email standard, puis tente de se connecter avec Google en utilisant la même adresse email.",
+            "niveau": "medium",
+            "reponse": "Le backend doit détecter cette situation : après réception du credential Google, on extrait l'email du token. On cherche dans la base de données si un utilisateur avec cet email existe. Si oui et qu'aucun compte social n'est lié, on retourne `requiresLinking: true`. Le frontend affiche alors une modale demandant à l'utilisateur de confirmer la liaison. Une fois confirmé, on lie le compte Google à l'utilisateur existant. Ensuite, on connecte l'utilisateur avec ses comptes liés. Cette approche évite la création de comptes en double."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Identifier les risques de sécurité liés au linking de comptes et proposer des mesures d'atténuation.",
+            "niveau": "hard",
+            "reponse": "Risques principaux : 1) Un attaquant pourrait tenter de lier son compte Google à un compte utilisateur existant (account takeover). 2) Un utilisateur malveillant pourrait lier un compte Google à un compte qui ne lui appartient pas si le mécanisme de vérification est faible. Mesures : a) Exiger que l'utilisateur soit déjà authentifié (session active) pour lier un compte. b) Pour le linking lors de la première connexion, demander une confirmation par email (envoi d'un code de vérification à l'adresse existante). c) Limiter le nombre de tentatives de linking. d) Logger toutes les actions de linking pour audit. e) Permettre à l'utilisateur de visualiser et supprimer les comptes liés dans son tableau de bord."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Débogage et résolution d'erreurs OAuth",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un développeur junior a intégré Google OAuth dans l'application e-commerce. Cependant, le bouton Google s'affiche mais après la sélection du compte, rien ne se passe et aucune erreur n'apparaît dans la console. Voici le code actuel :</p><pre><code>import { GoogleLogin } from '@react-oauth/google';\n\nconst GoogleAuth = () => {\n  const handleSuccess = (res) => {\n    console.log(res);\n    // Appel API manquant\n  };\n\n  return (\n    &lt;GoogleLogin\n      onSuccess={handleSuccess}\n      onError={() => console.log('error')}\n    /&gt;\n  );\n};</code></pre><p><strong>Question :</strong> Identifiez au moins 3 problèmes potentiels dans cette intégration et proposez les corrections nécessaires.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Lister les problèmes et fournir le code corrigé avec gestion complète des cas d'erreur.",
+        "niveau": "medium",
+        "reponse": "Problèmes identifiés :\n1. Absence du `GoogleOAuthProvider` wrapper avec le clientId valide\n2. Pas de gestion des états de chargement (l'utilisateur ne sait pas si l'action est en cours)\n3. Pas d'appel API pour envoyer le credential au backend\n4. Pas de gestion des erreurs réseau ou serveur\n5. Pas de redirection après authentification\n6. `useOneTap` non configuré peut causer des problèmes d'UX\n\nCode corrigé :\n```typescript\nimport { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';\nimport { useState } from 'react';\nimport { useNavigate } from 'react-router-dom';\nimport api from '../services/api';\n\nconst GoogleAuthContent = () => {\n  const navigate = useNavigate();\n  const [isLoading, setIsLoading] = useState(false);\n  const [error, setError] = useState('');\n\n  const handleSuccess = async (credentialResponse: any) => {\n    setIsLoading(true);\n    setError('');\n    try {\n      const { data } = await api.post('/auth/google', {\n        credential: credentialResponse.credential\n      });\n      localStorage.setItem('access_token', data.access_token);\n      navigate('/');\n    } catch (err: any) {\n      setError(err.response?.data?.message || 'Échec de l\\'authentification');\n    } finally {\n      setIsLoading(false);\n    }\n  };\n\n  const handleError = () => {\n    setError('La fenêtre Google a été fermée ou une erreur est survenue');\n  };\n\n  return (\n    <div>\n      <GoogleLogin\n        onSuccess={handleSuccess}\n        onError={handleError}\n        useOneTap={false}\n        shape=\"rectangular\"\n      />\n      {isLoading && <p>Connexion en cours...</p>}\n      {error && <p className=\"error\">{error}</p>}\n    </div>\n  );\n};\n\nexport const GoogleAuth = () => {\n  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;\n  if (!clientId) return <p>Configuration OAuth manquante</p>;\n  return (\n    <GoogleOAuthProvider clientId={clientId}>\n      <GoogleAuthContent />\n    </GoogleOAuthProvider>\n  );\n};\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Interface de gestion des comptes sociaux liés",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Après avoir implémenté Google OAuth, vous devez créer une interface dans le tableau de bord utilisateur (\"Mon compte\") permettant de :</p><ul><li>Voir les comptes sociaux liés (Google, et bientôt Facebook/Apple)</li><li>Lier un nouveau compte social</li><li>Dissocier un compte social (sauf si c'est le seul moyen de connexion)</li></ul><p><strong>Question :</strong> Créez le composant <code>SocialAccountsManager</code> qui affiche la liste des comptes liés, avec les actions appropriées. Utilisez un hook personnalisé pour la logique métier.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémenter le composant et le hook associé pour la gestion des comptes sociaux liés.",
+        "niveau": "hard",
+        "reponse": "```typescript\n// hooks/useSocialAccounts.ts\nimport { useState, useEffect } from 'react';\nimport api from '../services/api';\nimport { useAuthStore } from '../stores/authStore';\n\ninterface SocialAccount {\n  id: string;\n  provider: 'google' | 'facebook' | 'apple';\n  email: string;\n  linkedAt: string;\n}\n\nexport const useSocialAccounts = () => {\n  const [accounts, setAccounts] = useState<SocialAccount[]>([]);\n  const [isLoading, setIsLoading] = useState(true);\n  const [isLinking, setIsLinking] = useState(false);\n  const { user, accessToken } = useAuthStore();\n\n  const fetchAccounts = async () => {\n    setIsLoading(true);\n    try {\n      const { data } = await api.get('/user/social-accounts');\n      setAccounts(data);\n    } catch (error) {\n      console.error('Erreur chargement comptes sociaux', error);\n    } finally {\n      setIsLoading(false);\n    }\n  };\n\n  const linkGoogleAccount = async (credential: string) => {\n    setIsLinking(true);\n    try {\n      await api.post('/user/social-accounts/link', { credential, provider: 'google' });\n      await fetchAccounts();\n      return { success: true, message: 'Compte Google lié avec succès' };\n    } catch (error: any) {\n      return { success: false, message: error.response?.data?.message || 'Erreur de liaison' };\n    } finally {\n      setIsLinking(false);\n    }\n  };\n\n  const unlinkAccount = async (accountId: string) => {\n    const account = accounts.find(a => a.id === accountId);\n    if (accounts.length === 1 && !user?.passwordHash) {\n      throw new Error('Impossible de dissocier le seul moyen de connexion. Veuillez d\\'abord définir un mot de passe.');\n    }\n    \n    try {\n      await api.delete(`/user/social-accounts/${accountId}`);\n      await fetchAccounts();\n      return { success: true, message: `Compte ${account?.provider} dissocié` };\n    } catch (error: any) {\n      return { success: false, message: error.response?.data?.message || 'Erreur de dissociation' };\n    }\n  };\n\n  useEffect(() => {\n    if (accessToken) fetchAccounts();\n  }, [accessToken]);\n\n  return { accounts, isLoading, isLinking, linkGoogleAccount, unlinkAccount, refetch: fetchAccounts };\n};\n\n// Composant SocialAccountsManager.tsx\nimport { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';\nimport { useSocialAccounts } from '../hooks/useSocialAccounts';\nimport { TrashIcon, LinkIcon } from '@heroicons/react/24/outline';\n\nconst SocialAccountsManagerContent = () => {\n  const { accounts, isLoading, isLinking, linkGoogleAccount, unlinkAccount } = useSocialAccounts();\n  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);\n\n  const handleGoogleSuccess = async (response: any) => {\n    const result = await linkGoogleAccount(response.credential);\n    setMessage({ type: result.success ? 'success' : 'error', text: result.message });\n    setTimeout(() => setMessage(null), 3000);\n  };\n\n  const handleUnlink = async (accountId: string, provider: string) => {\n    if (confirm(`Voulez-vous vraiment dissocier votre compte ${provider} ?`)) {\n      const result = await unlinkAccount(accountId);\n      setMessage({ type: result.success ? 'success' : 'error', text: result.message });\n    }\n  };\n\n  if (isLoading) return <div className=\"animate-pulse\">Chargement...</div>;\n\n  return (\n    <div className=\"p-4 border rounded-lg\">\n      <h3 className=\"text-lg font-semibold mb-4\">Comptes sociaux liés</h3>\n      \n      {message && (\n        <div className={`p-3 mb-4 rounded ${message.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>\n          {message.text}\n        </div>\n      )}\n      \n      <ul className=\"space-y-3 mb-6\">\n        {accounts.map(account => (\n          <li key={account.id} className=\"flex justify-between items-center p-3 bg-gray-50 rounded\">\n            <div>\n              <span className=\"font-medium capitalize\">{account.provider}</span>\n              <span className=\"text-sm text-gray-500 ml-2\">{account.email}</span>\n              <span className=\"text-xs text-gray-400 ml-2\">Lié le {new Date(account.linkedAt).toLocaleDateString()}</span>\n            </div>\n            <button\n              onClick={() => handleUnlink(account.id, account.provider)}\n              className=\"text-red-600 hover:text-red-800\"\n              title=\"Dissocier\"\n            >\n              <TrashIcon className=\"w-5 h-5\" />\n            </button>\n          </li>\n        ))}\n      </ul>\n      \n      {!accounts.some(a => a.provider === 'google') && (\n        <div className=\"mt-4\">\n          <p className=\"text-sm text-gray-600 mb-2\">Lier un compte Google :</p>\n          <GoogleLogin\n            onSuccess={handleGoogleSuccess}\n            onError={() => setMessage({ type: 'error', text: 'Échec de la liaison Google' })}\n            text=\"signin_with\"\n            size=\"medium\"\n          />\n          {isLinking && <p className=\"text-sm mt-2\">Liaison en cours...</p>}\n        </div>\n      )}\n    </div>\n  );\n};\n\nexport const SocialAccountsManager = () => {\n  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;\n  if (!clientId) return <p>Configuration OAuth non disponible</p>;\n  return (\n    <GoogleOAuthProvider clientId={clientId}>\n      <SocialAccountsManagerContent />\n    </GoogleOAuthProvider>\n  );\n};\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Justifier la condition `accounts.length === 1 && !user?.passwordHash` dans la fonction `unlinkAccount`.",
+            "niveau": "medium",
+            "reponse": "Cette condition empêche l'utilisateur de se retrouver sans aucun moyen de se connecter à son compte. Si l'utilisateur n'a qu'un seul compte social lié et n'a pas défini de mot de passe, dissocier ce compte le rendrait incapable de se reconnecter. On exige donc soit d'avoir plusieurs comptes liés, soit d'avoir un mot de passe défini avant de permettre la dissociation. C'est une mesure de sécurité essentielle pour éviter le lock-out de l'utilisateur."
+          }
+        ]
+      }
+    ]
+  }
+]

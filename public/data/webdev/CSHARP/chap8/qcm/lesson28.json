@@ -1,0 +1,98 @@
+[
+  {
+    "questionText": "En LINQ, que retourne exactement l'opérateur `GroupBy` sur une séquence d'étudiants (classe `Student`) lorsqu'on le groupe par `Student.Department` ?",
+    "options": [
+      "`IEnumerable&lt;Student&gt;` : une liste plate de tous les étudiants triés par département.",
+      "`IEnumerable&lt;IGrouping&lt;string, Student&gt;&gt;` : une collection de groupes où chaque groupe a une clé (le nom du département) et une liste d'étudiants.",
+      "`Dictionary&lt;string, List&lt;Student&gt;&gt;` : un dictionnaire direct clé/valeur sans utiliser d'interface `IGrouping`.",
+      "`ILookup&lt;string, Student&gt;` : une structure de recherche immuable sans itération possible."
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium",
+    "explanation": "`GroupBy` retourne une séquence d'objets `IGrouping&lt;TKey, TElement&gt;`. Chaque `IGrouping` possède une propriété `Key` (le critère de regroupement, ici le département) et implémente `IEnumerable&lt;TElement&gt;` (la liste des étudiants de ce groupe). Cela permet d'itérer sur les groupes, puis à l'intérieur de chaque groupe."
+  },
+  {
+    "questionText": "Soient deux collections : `List&lt;Author&gt;` (Id, Name) et `List&lt;Book&gt;` (Title, AuthorId). Vous voulez lister tous les livres avec le nom de leur auteur, Y COMPRIS les auteurs qui n'ont écrit aucun livre. Quelle jointure LINQ devez-vous utiliser ?",
+    "options": [
+      "`authors.Join(books, a =&gt; a.Id, b =&gt; b.AuthorId, (a, b) =&gt; new { a.Name, b.Title })`",
+      "`books.Join(authors, b =&gt; b.AuthorId, a =&gt; a.Id, (b, a) =&gt; new { a.Name, b.Title })`",
+      "`authors.GroupJoin(books, a =&gt; a.Id, b =&gt; b.AuthorId, (a, booksOfAuthor) =&gt; new { Author = a.Name, Books = booksOfAuthor.Select(b =&gt; b.Title) })`",
+      "`authors.Zip(books, (a, b) =&gt; new { a.Name, b.Title })`"
+    ],
+    "correctAnswer": 2,
+    "difficulty": "hard",
+    "explanation": "`GroupJoin` réalise une jointure gauche (left join) : pour chaque élément de la première séquence (les auteurs), il met en correspondance tous les éléments de la seconde séquence (livres) correspondants. Même si un auteur n'a aucun livre, il apparaitra avec une collection vide. La réponse 1 est une inner join (ignore les auteurs sans livres). `Zip` fonctionne sur l'index et ne fait pas de jointure par clé."
+  },
+  {
+    "questionText": "Avec la méthode `Zip`, que produit le code suivant ?\n```csharp\nvar ids = new[] { 1, 2, 3 };\nvar names = new[] { \"Alice\", \"Bob\" };\nvar result = ids.Zip(names, (id, name) =&gt; $\"{id}:{name}\");\n```",
+    "options": [
+      "Une erreur car les deux séquences n'ont pas la même longueur.",
+      "`[ \"1:Alice\", \"2:Bob\" ]` (la troisième valeur 3 est ignorée)",
+      "`[ \"1:Alice\", \"2:Bob\", \"3:null\" ]`",
+      "`[ (1, \"Alice\"), (2, \"Bob\") ]` avec des tuples."
+    ],
+    "correctAnswer": 1,
+    "difficulty": "easy",
+    "explanation": "`Zip` combine deux séquences élément par élément jusqu'à ce que la plus courte soit épuisée. Les éléments surnuméraires de la plus longue séquence (ici `3`) sont ignorés sans erreur. Le résultat est une séquence de chaînes formatées."
+  },
+  {
+    "questionText": "Quelle est la différence essentielle entre `Join` et `GroupJoin` lorsque l'on travaille avec des bases de données via Entity Framework ?",
+    "options": [
+      "Il n'y a aucune différence ; `GroupJoin` est juste un alias plus récent de `Join`.",
+      "`Join` s'exécute côté client, `GroupJoin` s'exécute côté serveur SQL.",
+      "`Join` génère du SQL avec `INNER JOIN`. `GroupJoin` génère du SQL avec `LEFT JOIN` et une sous-requête pour ne pas dupliquer la ligne parent.",
+      "`GroupJoin` ne permet pas de projeter un résultat plat, contrairement à `Join`."
+    ],
+    "correctAnswer": 2,
+    "difficulty": "hard",
+    "explanation": "En LINQ to Entities (EF Core), `Join` se traduit par un `INNER JOIN` SQL. `GroupJoin` sans `SelectMany` se traduit par un `LEFT JOIN` + regroupement. Quand on utilise `SelectMany` après un `GroupJoin` (mot-clé `join ... into` suivi de `from`), EF Core le traduit souvent en `LEFT JOIN` standard. Mais la réponse 2 est la plus précise sur la nature des deux opérateurs."
+  },
+  {
+    "questionText": "Quel code LINQ produit exactement cet affichage ? (Groupe par note, puis affiche la note et les noms concaténés)\n```\nNote A : Alice, Charlie\nNote B : Bob\n```",
+    "options": [
+      "`students.GroupBy(s =&gt; s.Grade).Select(g =&gt; $\"Note {g.Key} : {string.Join(\", \", g.Select(s =&gt; s.Name))}\")`",
+      "`students.GroupBy(s =&gt; s.Grade, (key, group) =&gt; $\"Note {key} : {string.Join(\", \", group.Select(s =&gt; s.Name))}\")`",
+      "`students.ToLookup(s =&gt; s.Grade).Select(g =&gt; $\"Note {g.Key} : {string.Join(\", \", g.Select(s =&gt; s.Name))}\")`",
+      "Les réponses A et B sont toutes deux correctes."
+    ],
+    "correctAnswer": 3,
+    "difficulty": "medium",
+    "explanation": "Les deux syntaxes fonctionnent : la surcharge simple `GroupBy` retourne `IGrouping` qu'on projette avec `Select` (A). La surcharge avec paramètre `resultSelector` (B) permet d'appliquer directement la projection sans `Select` supplémentaire. `ToLookup` crée une structure indexée, mais on peut aussi itérer dessus : elle n'est pas optimale pour un simple affichage ordonné mais techniquement possible. L'option D est la plus complète."
+  },
+  {
+    "questionText": "Vous avez `List&lt;string&gt; words = new() { \"chat\", \"chien\", \"oiseau\", \"cheval\" };` et `List&lt;int&gt; lengths = new() { 3, 5, 7 };`. Vous voulez associer chaque mot à sa longueur idéale. Que produit `words.Zip(lengths)` (sans fonction de résultat) en C# moderne (.NET 6+) ?",
+    "options": [
+      "Une erreur de compilation car `Zip` exige toujours une fonction de projection.",
+      "Une séquence de tuples `(string, int)` contenant `[(\"chat\", 3), (\"chien\", 5), (\"oiseau\", 7)]`.",
+      "Une séquence de chaînes concaténées `[\"chat3\", \"chien5\", \"oiseau7\"]`.",
+      "Une séquence de `KeyValuePair&lt;string, int&gt;`."
+    ],
+    "correctAnswer": 1,
+    "difficulty": "easy",
+    "explanation": "Depuis .NET 6, il existe une surcharge de `Zip` qui ne prend pas de fonction de résultat et retourne directement une séquence de tuples `(TFirst, TSecond)`. Cela simplifie le code lorsqu'on veut juste associer deux séquences 1 à 1 sans transformation supplémentaire."
+  },
+  {
+    "questionText": "En termes de performance sur une grande collection en mémoire (LINQ to Objects), que se passe-t-il si j'enchaîne `collection.GroupBy(x =&gt; x.Category).SelectMany(g =&gt; g)` ?",
+    "options": [
+      "Cela double la mémoire utilisée mais ne change pas le résultat final.",
+      "Cela annule l'effet du `GroupBy` et retourne tous les éléments dans l'ordre original.",
+      "Cela retourne les mêmes éléments que la collection d'origine, mais groupés puis aplatis (ordre potentiellement différent selon la clé).",
+      "Cela génère une erreur car `SelectMany` ne peut pas s'appliquer sur `IGrouping`."
+    ],
+    "correctAnswer": 2,
+    "difficulty": "hard",
+    "explanation": "`GroupBy` réorganise les éléments par groupe (chaque groupe est une séquence). `SelectMany` aplatit tous les groupes en une seule séquence plate. Résultat : la collection contient bien les mêmes éléments, mais ils ne sont plus dans l'ordre original ; ils apparaissent groupe par groupe. Par exemple `[1,2,1]` groupé par valeur deviendrait `[1,1,2]` après `SelectMany`."
+  },
+  {
+    "questionText": "Avec LINQ, comment réaliser l'équivalent SQL de `SELECT * FROM Products p LEFT JOIN Categories c ON p.CatId = c.Id` en obtenant une liste plate (chaque ligne = produit + infos catégorie) ?",
+    "options": [
+      "`categories.GroupJoin(products, c =&gt; c.Id, p =&gt; p.CatId, (c, prods) =&gt; new { c, prods }).SelectMany(x =&gt; x.prods, (x, p) =&gt; new { Produit = p, Categorie = x.c })`",
+      "`products.Join(categories, p =&gt; p.CatId, c =&gt; c.Id, (p, c) =&gt; new { p, c })`",
+      "`products.SelectMany(p =&gt; categories.Where(c =&gt; c.Id == p.CatId).DefaultIfEmpty(), (p, c) =&gt; new { p, c })`",
+      "Les réponses A et C sont toutes deux des façons valides d'obtenir un LEFT JOIN plat."
+    ],
+    "correctAnswer": 3,
+    "difficulty": "very hard",
+    "explanation": "En LINQ, il n'y a pas de mot-clé `LEFT JOIN` natif. La méthode A (GroupJoin + SelectMany) est la méthode recommandée par Microsoft pour un left join. La méthode C utilise `SelectMany` avec `DefaultIfEmpty` : elle fonctionne mais peut être moins efficace. La réponse B est un `INNER JOIN`. Donc A et C sont corrects même si A est la plus idiomatique."
+  }
+]

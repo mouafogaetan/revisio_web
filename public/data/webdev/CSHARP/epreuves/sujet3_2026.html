@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+  "matiere": "Initiation au C#",
+  "classe": "Développement Web",
+  "sequence": "Évaluation Séquentielle N°3",
+  "anneeScolaire": "2025-2026",
+  "exercices": [
+    {
+      "titre": "Exercice 1 : Questions de Cours (6 pts)",
+      "points": "6 pts",
+      "enonce": "Cet exercice porte sur les concepts fondamentaux du langage C# et de la programmation orientée objet vus en cours. Lisez attentivement chaque question et répondez-y de manière précise.",
+      "questions": [
+        {
+          "question": "<strong>1.1 (1 pt)</strong> - Citez deux caractéristiques essentielles du langage C#.",
+          "reponse": "<div style='background-color: #f1f5f9; padding: 1rem; border-radius: 8px;'>C# est un langage orienté objet moderne, développé par Microsoft. Deux de ses caractéristiques essentielles sont :<br><br><ul><li>Il est <strong>fortement typé</strong> et <strong>type-safe</strong>, ce qui permet de détecter les erreurs de type à la compilation.</li><li>Il prend en charge la <strong>programmation orientée objet</strong> avec des concepts comme l'héritage, le polymorphisme et l'encapsulation.</li></ul></div>"
+        },
+        {
+          "question": "<strong>1.2 (1.5 pts)</strong> - Expliquez la différence entre un type valeur (<code>struct</code>) et un type référence (<code>class</code>) en C#. Donnez un exemple concret pour chaque.",
+          "reponse": "<div style='background-color: #f1f5f9; padding: 1rem; border-radius: 8px;'><ul><li><strong>Type valeur (struct)</strong> : Stocké dans la pile (stack). Il contient directement les données. Exemple : <code>int</code>, <code>float</code>, <code>bool</code>, <code>DateTime</code>.</li><li><strong>Type référence (class)</strong> : Stocké dans le tas (heap). Une référence est stockée dans la pile et pointe vers les données dans le tas. Exemple : <code>string</code>, <code>List&lt;T&gt;</code>, une classe personnalisée comme <code>Client</code>.</li></ul></div>"
+        },
+        {
+          "question": "<strong>1.3 (1.5 pts)</strong> - Qu'est-ce qu'une méthode d'extension en C# ? À quoi sert-elle et comment la déclare-t-on ?",
+          "reponse": "<div style='background-color: #f1f5f9; padding: 1rem; border-radius: 8px;'>Une méthode d'extension permet d'ajouter de nouvelles méthodes à un type existant sans modifier le code source du type ni créer un nouveau type dérivé.<br><br>Pour la déclarer :<br><ul><li>On crée une classe <strong>statique</strong>.</li><li>La méthode doit être <strong>statique</strong>.</li><li>Le premier paramètre utilise le mot-clé <strong>this</strong> pour spécifier le type à étendre.<br>Exemple : <code>public static bool EstMajeur(this Personne p) { return p.Age >= 18; }</code></li></ul></div>"
+        },
+        {
+          "question": "<strong>1.4 (2 pts)</strong> - Expliquez ce qu'est LINQ (Language Integrated Query) et citez deux opérateurs LINQ couramment utilisés avec un exemple d'utilisation.",
+          "reponse": "<div style='background-color: #f1f5f9; padding: 1rem; border-radius: 8px;'>LINQ est un ensemble de fonctionnalités qui permet d'effectuer des requêtes directement dans la syntaxe C#. Il permet d'interroger et de manipuler des collections de données de manière déclarative, comme on le ferait avec SQL.<br><br><strong>Opérateurs courants :</strong><br><ul><li><strong>Where</strong> : Filtre les éléments selon une condition.<br>Exemple : <code>var adultes = personnes.Where(p => p.Age >= 18);</code></li><li><strong>Select</strong> : Projette les éléments dans un nouveau format.<br>Exemple : <code>var noms = personnes.Select(p => p.NomComplet);</code></li></ul></div>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 2 : Manipulation de Collections et LINQ (7 pts)",
+      "points": "7 pts",
+      "enonce": "La startup camerounaise 'AfriTech' stocke des informations sur ses employés dans une collection <code>List&lt;Employe&gt;</code>. La classe <code>Employe</code> est définie comme suit :<br><br><div style='background-color: #0f172a; padding: 1rem; border-radius: 8px; color: #f8fafc; font-family: monospace;'>public class Employe<br>{<br>    public int Id { get; set; }<br>    public string Nom { get; set; }<br>    public string Prenom { get; set; }<br>    public string Departement { get; set; }<br>    public decimal Salaire { get; set; }<br>    public DateTime DateEmbauche { get; set; }<br>}</div><br>Vous disposez de la liste suivante :<br><div style='background-color: #f8fafc; padding: 0.75rem; border-radius: 4px; font-family: monospace;'>var employes = new List&lt;Employe&gt;<br>{<br>    new Employe { Id = 1, Nom = \"Nkolo\", Prenom = \"Jean\", Departement = \"IT\", Salaire = 850000, DateEmbauche = new DateTime(2022, 5, 10) },<br>    new Employe { Id = 2, Nom = \"Mbarga\", Prenom = \"Marie\", Departement = \"RH\", Salaire = 600000, DateEmbauche = new DateTime(2021, 8, 15) },<br>    new Employe { Id = 3, Nom = \"Tchoumi\", Prenom = \"Paul\", Departement = \"Commercial\", Salaire = 700000, DateEmbauche = new DateTime(2023, 1, 20) },<br>    new Employe { Id = 4, Nom = \"Essomba\", Prenom = \"Alice\", Departement = \"IT\", Salaire = 900000, DateEmbauche = new DateTime(2020, 11, 5) },<br>    new Employe { Id = 5, Nom = \"Atangana\", Prenom = \"Pierre\", Departement = \"RH\", Salaire = 550000, DateEmbauche = new DateTime(2022, 9, 3) }<br>};</div>",
+      "questions": [
+        {
+          "question": "<strong>2.1 (1.5 pts)</strong> - Écrire une requête LINQ (syntaxe de méthode) pour récupérer tous les employés du département \"IT\".",
+          "reponse": "<div style='background-color: #0f172a; padding: 1rem; border-radius: 8px; color: #f8fafc; font-family: monospace;'>var employesIT = employes.Where(e => e.Departement == \"IT\");</div>"
+        },
+        {
+          "question": "<strong>2.2 (1.5 pts)</strong> - Écrire une requête LINQ pour obtenir la liste des noms et prénoms des employés triés par salaire décroissant.",
+          "reponse": "<div style='background-color: #0f172a; padding: 1rem; border-radius: 8px; color: #f8fafc; font-family: monospace;'>var employesTries = employes<br>    .OrderByDescending(e => e.Salaire)<br>    .Select(e => <span style='color: #fbbf24;'>$\"{e.Prenom} {e.Nom}\"</span>);</div>"
+        },
+        {
+          "question": "<strong>2.3 (1.5 pts)</strong> - Calculer le salaire moyen des employés du département \"IT\".",
+          "reponse": "<div style='background-color: #0f172a; padding: 1rem; border-radius: 8px; color: #f8fafc; font-family: monospace;'>decimal salaireMoyenIT = employes<br>    .Where(e => e.Departement == \"IT\")<br>    .Average(e => e.Salaire);</div>"
+        },
+        {
+          "question": "<strong>2.4 (2.5 pts)</strong> - Écrire une requête LINQ qui regroupe les employés par département et affiche pour chaque département le nombre d'employés et le salaire total.",
+          "reponse": "<div style='background-color: #0f172a; padding: 1rem; border-radius: 8px; color: #f8fafc; font-family: monospace;'>var statistiques = employes<br>    .GroupBy(e => e.Departement)<br>    .Select(g => <span style='color: #38bdf8;'>new</span><br>    {<br>        Departement = g.Key,<br>        Effectif = g.Count(),<br>        SalaireTotal = g.Sum(e => e.Salaire)<br>    });</div>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 3 : Gestion des Exceptions et Système de Fichiers (7 pts)",
+      "points": "7 pts",
+      "enonce": "Vous développez une application console pour une PME camerounaise. Cette application doit lire un fichier de configuration contenant des chemins de dossiers, puis créer ces dossiers sur le système.",
+      "questions": [
+        {
+          "question": "<strong>3.1 (1 pt)</strong> - Écrire le code C# pour lire le contenu d'un fichier texte nommé 'config.txt' situé dans le répertoire de l'application.",
+          "reponse": "<div style='background-color: #0f172a; padding: 1rem; border-radius: 8px; color: #f8fafc; font-family: monospace;'><span style='color: #38bdf8;'>string</span> contenu = File.ReadAllText(<span style='color: #fbbf24;'>\"config.txt\"</span>);</div>"
+        },
+        {
+          "question": "<strong>3.2 (1.5 pts)</strong> - Supposons que 'config.txt' contient une ligne par chemin de dossier. Écrire le code pour créer tous ces dossiers.",
+          "reponse": "<div style='background-color: #0f172a; padding: 1rem; border-radius: 8px; color: #f8fafc; font-family: monospace;'><span style='color: #38bdf8;'>string</span> contenu = File.ReadAllText(<span style='color: #fbbf24;'>\"config.txt\"</span>);<br><span style='color: #38bdf8;'>string</span>[] chemins = contenu.Split(<span style='color: #38bdf8;'>new</span>[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries);<br><span style='color: #38bdf8;'>foreach</span> (<span style='color: #38bdf8;'>var</span> chemin <span style='color: #38bdf8;'>in</span> chemins)<br>{<br>    Directory.CreateDirectory(chemin.Trim());<br>}</div>"
+        },
+        {
+          "question": "<strong>3.3 (2.5 pts)</strong> - Écrire le code complet en utilisant <code>try-catch</code> pour gérer les erreurs potentielles (fichier absent, accès refusé, chemin invalide).",
+          "reponse": "<div style='background-color: #0f172a; padding: 1rem; border-radius: 8px; color: #f8fafc; font-family: monospace;'><span style='color: #38bdf8;'>try</span><br>{<br>    <span style='color: #38bdf8;'>if</span> (!File.Exists(<span style='color: #fbbf24;'>\"config.txt\"</span>))<br>    {<br>        Console.WriteLine(<span style='color: #fbbf24;'>\"Erreur : Le fichier config.txt est introuvable.\"</span>);<br>        <span style='color: #38bdf8;'>return</span>;<br>    }<br>    <span style='color: #38bdf8;'>string</span> contenu = File.ReadAllText(<span style='color: #fbbf24;'>\"config.txt\"</span>);<br>    <span style='color: #38bdf8;'>string</span>[] chemins = contenu.Split(<span style='color: #38bdf8;'>new</span>[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries);<br>    <span style='color: #38bdf8;'>foreach</span> (<span style='color: #38bdf8;'>var</span> chemin <span style='color: #38bdf8;'>in</span> chemins)<br>    {<br>        Directory.CreateDirectory(chemin.Trim());<br>    }<br>    Console.WriteLine(<span style='color: #fbbf24;'>\"Tous les dossiers ont été créés avec succès.\"</span>);<br>}<br><span style='color: #38bdf8;'>catch</span> (UnauthorizedAccessException ex)<br>{<br>    Console.WriteLine(<span style='color: #fbbf24;'>$\"Erreur d'accès : {ex.Message}\"</span>);<br>}<br><span style='color: #38bdf8;'>catch</span> (IOException ex)<br>{<br>    Console.WriteLine(<span style='color: #fbbf24;'>$\"Erreur d'entrée/sortie : {ex.Message}\"</span>);<br>}<br><span style='color: #38bdf8;'>catch</span> (Exception ex)<br>{<br>    Console.WriteLine(<span style='color: #fbbf24;'>$\"Erreur inattendue : {ex.Message}\"</span>);<br>}</div>"
+        },
+        {
+          "question": "<strong>3.4 (2 pts)</strong> - Proposer une modification du code pour que le programme puisse être exécuté sur différents systèmes (Windows, Linux) en utilisant <code>Path.Combine</code> pour construire les chemins.",
+          "reponse": "<div style='background-color: #f1f5f9; padding: 1rem; border-radius: 8px;'>Pour rendre le code portable, on utilise <code>Path.Combine</code> au lieu de concaténer les chaînes avec des antislashs.<br><br><div style='background-color: #0f172a; padding: 0.75rem; border-radius: 4px; color: #f8fafc; font-family: monospace;'><span style='color: #38bdf8;'>string</span> basePath = <span style='color: #fbbf24;'>@\"C:\\MesDossiers\"</span>;<br><span style='color: #38bdf8;'>string</span> dossier1 = Path.Combine(basePath, <span style='color: #fbbf24;'>\"Projets\"</span>, <span style='color: #fbbf24;'>\"2025\"</span>);<br>Directory.CreateDirectory(dossier1);</div><br>Sur Linux, le même code fonctionnera avec des slashes comme séparateurs (<code>/</code>).</div>"
+        }
+      ]
+    }
+  ]
+};
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

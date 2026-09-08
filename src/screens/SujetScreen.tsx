@@ -7,6 +7,7 @@ import { Loader2, ArrowLeft, ChevronLeft, ChevronRight, RefreshCw, Eye, FileText
 import { DATA_SOURCE_URL } from '@/constants'
 import { MathJaxContent } from '@/components/common/MathJaxContent'
 import { getEpreuves } from '@/services/api'
+import { NotFoundScreen } from './NotFoundScreen'
 
 interface Question {
   question: string
@@ -56,6 +57,7 @@ export const SujetScreen: React.FC = () => {
   const [subjectError, setSubjectError] = useState<string | null>(null)
   const [routeLoading, setRouteLoading] = useState(true)
   const [renderKey, setRenderKey] = useState(0)
+  const [notFound, setNotFound] = useState(false)
   
   const contentRef = useRef<HTMLDivElement>(null)
 
@@ -85,19 +87,28 @@ export const SujetScreen: React.FC = () => {
 
   useEffect(() => {
     const loadEpreuves = async () => {
-      if (!classeId || !matiereId) return
-      try {
-        setLoadingList(true)
-        setError(null)
-        const data = await getEpreuves(classeId, matiereId)
-        setEpreuves(data)
-      } catch (err) {
-        setError('Impossible de charger les épreuves')
-        console.error(err)
-      } finally {
-        setLoadingList(false)
-      }
+  if (!classeId || !matiereId) return
+  try {
+    setLoadingList(true)
+    setError(null)
+    const data = await getEpreuves(classeId, matiereId)
+    if (!data || data.length === 0) {
+      setNotFound(true)
+      setLoadingList(false)
+      return
     }
+    setEpreuves(data)
+  } catch (err:any) {
+    if (err.response && err.response.status === 404) {
+      setNotFound(true)
+    } else {
+      setError('Impossible de charger les épreuves')
+      console.error(err)
+    }
+  } finally {
+    setLoadingList(false)
+  }
+}
     loadEpreuves()
   }, [classeId, matiereId])
 
@@ -282,6 +293,10 @@ export const SujetScreen: React.FC = () => {
       'bg-teal-50 hover:bg-teal-100 border-teal-200',
     ]
     return colors[index % colors.length]
+  }
+
+  if (!classe || !matiere) {
+   return <NotFoundScreen message="La matière demandée n'existe pas." redirectTo="/" delay={5000} />
   }
 
   if (routeLoading || loadingList) {

@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+  "matiere": "Anglais Tle A",
+  "classe": "Terminale",
+  "sequence": "Séquence 1",
+  "anneeScolaire": "2025-2026",
+  "exercices": [
+    {
+      "titre": "Exercice 1 : Grammaire (Temps et modaux)",
+      "points": "4 pts",
+      "enonce": "<div style='font-size: 1.1rem; line-height: 1.6;'><p>Complétez les phrases suivantes avec la forme correcte du verbe ou du modal entre parenthèses.</p></div>",
+      "questions": [
+        {
+          "question": "<div style='margin-bottom: 12px;'><strong>1.</strong> If he <input type='text' style='border: none; border-bottom: 1px solid #000; width: 120px;' placeholder='...'> (to read) this book, he would be very happy.</div>",
+          "reponse": "<div><strong>1.</strong> If he <strong>read</strong> this book, he would be very happy. (Conditionnel type 2).</div>"
+        },
+        {
+          "question": "<div style='margin-bottom: 12px;'><strong>2.</strong> By 2025, I <input type='text' style='border: none; border-bottom: 1px solid #000; width: 120px;' placeholder='...'> (to get) my Baccalaureate.</div>",
+          "reponse": "<div><strong>2.</strong> By 2025, I <strong>will have gotten</strong> my Baccalaureate. (Futur antérieur).</div>"
+        },
+        {
+          "question": "<div style='margin-bottom: 12px;'><strong>3.</strong> Have you ever <input type='text' style='border: none; border-bottom: 1px solid #000; width: 120px;' placeholder='...'> (to go) to Paris before?</div>",
+          "reponse": "<div><strong>3.</strong> Have you ever <strong>been</strong> to Paris before? (Present perfect).</div>"
+        },
+        {
+          "question": "<div style='margin-bottom: 12px;'><strong>4.</strong> Many young girls <input type='text' style='border: none; border-bottom: 1px solid #000; width: 120px;' placeholder='...'> (to be) no longer faithful nowadays.</div>",
+          "reponse": "<div><strong>4.</strong> Many young girls <strong>are</strong> no longer faithful nowadays. (Présent simple).</div>"
+        },
+        {
+          "question": "<div style='margin-bottom: 12px;'><strong>5.</strong> Had I known, I <input type='text' style='border: none; border-bottom: 1px solid #000; width: 120px;' placeholder='...'> (not / to undertake) such a big project.</div>",
+          "reponse": "<div><strong>5.</strong> Had I known, I <strong>would not have undertaken</strong> such a big project. (Conditionnel type 3 avec inversion).</div>"
+        },
+        {
+          "question": "<div style='margin-bottom: 12px;'><strong>6.</strong> It is high time you <input type='text' style='border: none; border-bottom: 1px solid #000; width: 120px;' placeholder='...'> (to study) your lessons.</div>",
+          "reponse": "<div><strong>6.</strong> It is high time you <strong>studied</strong> your lessons. (Subjonctif).</div>"
+        },
+        {
+          "question": "<div style='margin-bottom: 12px;'><strong>7.</strong> It is <input type='text' style='border: none; border-bottom: 1px solid #000; width: 120px;' placeholder='...'> (to forbid) to smoke in many public spaces.</div>",
+          "reponse": "<div><strong>7.</strong> It is <strong>forbidden</strong> to smoke in many public spaces. (Participe passé).</div>"
+        },
+        {
+          "question": "<div style='margin-bottom: 12px;'><strong>8.</strong> You <input type='text' style='border: none; border-bottom: 1px solid #000; width: 120px;' placeholder='...'> (should / have to) wear a seatbelt when driving.</div>",
+          "reponse": "<div><strong>8.</strong> You <strong>have to</strong> wear a seatbelt when driving. (Obligation externe).</div>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 2 : Vocabulaire",
+      "points": "4 pts",
+      "enonce": "<div style='font-size: 1.1rem; line-height: 1.6;'><p><strong>Partie A :</strong> Choisissez le mot qui convient pour compléter les phrases.</p><p><strong>Partie B :</strong> Complétez les phrases avec un mot ou une expression de votre choix.</p></div>",
+      "questions": [
+        {
+          "question": "<div style='margin-bottom: 8px;'><strong>Partie A (2 pts)</strong></div><div style='margin-bottom: 12px;'>1. I always forget to wake up. Could you please <input type='text' style='border: none; border-bottom: 1px solid #000; width: 120px;' placeholder='...'> me each time? (remind / remember / tell)</div>",
+          "reponse": "<div><strong>1.</strong> Could you please <strong>remind</strong> me each time?</div>"
+        },
+        {
+          "question": "<div style='margin-bottom: 12px;'>2. I can no longer <input type='text' style='border: none; border-bottom: 1px solid #000; width: 120px;' placeholder='...'> the suffering she went through. (put on with / endure / support)</div>",
+          "reponse": "<div><strong>2.</strong> I can no longer <strong>endure</strong> the suffering she went through.</div>"
+        },
+        {
+          "question": "<div style='margin-bottom: 12px;'>3. We make bread from <input type='text' style='border: none; border-bottom: 1px solid #000; width: 120px;' placeholder='...'>. (flour / flower / floor)</div>",
+          "reponse": "<div><strong>3.</strong> We make bread from <strong>flour</strong>.</div>"
+        },
+        {
+          "question": "<div style='margin-bottom: 12px;'>4. I have not seen <input type='text' style='border: none; border-bottom: 1px solid #000; width: 120px;' placeholder='...'> in the street after 6 pm. (somebody / nobody / anybody)</div>",
+          "reponse": "<div><strong>4.</strong> I have not seen <strong>anybody</strong> in the street after 6 pm.</div>"
+        },
+        {
+          "question": "<div style='margin-bottom: 8px;'><strong>Partie B (2 pts)</strong></div><div style='margin-bottom: 12px;'>1. Samuel Eto'o Fils <input type='text' style='border: none; border-bottom: 1px solid #000; width: 150px;' placeholder='...'> his living as a professional footballer.</div>",
+          "reponse": "<div><strong>1.</strong> Samuel Eto'o Fils <strong>earns</strong> his living as a professional footballer.</div>"
+        },
+        {
+          "question": "<div style='margin-bottom: 12px;'>2. My friend is an artist. He makes <input type='text' style='border: none; border-bottom: 1px solid #000; width: 150px;' placeholder='...'> like hoes and axes.</div>",
+          "reponse": "<div><strong>2.</strong> He makes <strong>tools</strong> like hoes and axes.</div>"
+        },
+        {
+          "question": "<div style='margin-bottom: 12px;'>3. We always use <input type='text' style='border: none; border-bottom: 1px solid #000; width: 150px;' placeholder='...'> in front of proper nouns.</div>",
+          "reponse": "<div><strong>3.</strong> We always use <strong>capital letters</strong> in front of proper nouns.</div>"
+        },
+        {
+          "question": "<div style='margin-bottom: 12px;'>4. When my sister married, she became his <input type='text' style='border: none; border-bottom: 1px solid #000; width: 150px;' placeholder='...'>.</div>",
+          "reponse": "<div><strong>4.</strong> She became his <strong>wife</strong>.</div>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 3 : Compréhension écrite",
+      "points": "6 pts",
+      "enonce": "<div style='font-size: 1.1rem; line-height: 1.6;'><p><strong>Lisez le texte suivant et répondez aux questions.</strong></p><div style='background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0; color: #1a1a1a;'><p><em>The Divisional Officer, The Principal and all the staff, Honorable members of the evaluation committee, Dear parents, Fellow students, Ladies and gentlemen.</em></p><p><em>The pleasure is mine to take the floor in front of you today as the coordinator of the extra-curricular activities, the day when our school is celebrating its cultural day, for the 48th Edition of the National Youth Day. The theme for this edition is \"Youth, patriotism and promotion of national integration\".</em></p><p><em>The youth in this context, being the entire young people that is, the set of people who have gone beyond childhood and have not yet reached the old age. As concerned with patriotism, it is all about the love of our Fatherland, the love of our Nation, of our Country. The Nation in this context represents the whole people and goods that we have around us. So, by respecting people who are around us and by living in perfect harmony with them, by protecting all goods that surround us, we are actually exhibiting our sense of patriotism.</em></p><p><em>Patriotism and the promotion of national integration within our school are therefore two values amongst others that we must implement so as to help contributing to the building of an emerging Cameroon by the year 2035.</em></p><p style='text-align: right;'><em>Extract from the speech of a coordinator of extra-curricular activities in his school. 2014-2015 (Unpublished)</em></p></div></div>",
+      "questions": [
+        {
+          "question": "<div style='margin-bottom: 12px;'><strong>1.</strong> What is the main theme of the speech?</div>",
+          "reponse": "<div><strong>1.</strong> The main theme is <strong>\"Youth, patriotism and promotion of national integration\"</strong>.</div>"
+        },
+        {
+          "question": "<div style='margin-bottom: 12px;'><strong>2.</strong> According to the text, who is considered as a youth?</div>",
+          "reponse": "<div><strong>2.</strong> The youth are <strong>young people who have gone beyond childhood but have not yet reached old age</strong>.</div>"
+        },
+        {
+          "question": "<div style='margin-bottom: 12px;'><strong>3.</strong> What does \"living in perfect harmony\" mean according to the speaker?</div>",
+          "reponse": "<div><strong>3.</strong> It means <strong>respecting people around us, coexisting peacefully, and protecting the environment and goods around us</strong>.</div>"
+        },
+        {
+          "question": "<div style='margin-bottom: 12px;'><strong>4.</strong> What two values should we promote, apart from those mentioned, to build an emerging Cameroon? (Open-ended)</div>",
+          "reponse": "<div><strong>4.</strong> We should promote values like <strong>tolerance and unity</strong> (or honesty, hard work, etc.).</div>"
+        },
+        {
+          "question": "<div style='margin-bottom: 12px;'><strong>5.</strong> What can destroy harmony among citizens in a country? (Open-ended)</div>",
+          "reponse": "<div><strong>5.</strong> Factors like <strong>tribalism, corruption, inequality, or lack of communication</strong> can destroy harmony.</div>"
+        },
+        {
+          "question": "<div style='margin-bottom: 12px;'><strong>6.</strong> The speaker is the coordinator of extra-curricular activities. True or False? Justify.</div>",
+          "reponse": "<div><strong>6.</strong> <strong>True</strong>. The speaker says: <em>\"The pleasure is mine to take the floor in front of you today as the coordinator of the extra-curricular activities.\"</em></div>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 4 : Production écrite",
+      "points": "6 pts",
+      "enonce": "<div style='font-size: 1.1rem; line-height: 1.6;'><p>Choisissez l’un des deux sujets suivants et rédigez un texte d’environ <strong>150 à 200 mots</strong>.</p></div>",
+      "questions": [
+        {
+          "question": "<div style='margin-bottom: 12px;'><strong>Sujet 1 :</strong> <em>\"Youth, preservation of peace for an emerging Cameroon.\"</em> Suggest any four strategies that Cameroonian citizens can develop in order to live in peace for an emerging nation.</div>",
+          "reponse": "<div><strong>Sujet 1 :</strong> (Exemple de réponse)<br/><br/><em>To preserve peace for an emerging Cameroon, citizens can adopt the following strategies. First, promote education and awareness about the importance of peace and national unity. Second, encourage dialogue and mediation to resolve disputes before they escalate. Third, foster economic development by creating job opportunities to reduce poverty and social unrest. Fourth, strengthen legal systems to ensure justice and equality for all citizens. By implementing these strategies, Cameroon can achieve lasting peace and emerge as a strong, united nation.</em></div>"
+        },
+        {
+          "question": "<div style='margin-bottom: 12px;'><strong>Sujet 2 :</strong> You are the president of the English Club in your school. Write a speech in which you address your classmates during the hoisting of the flag, on the importance of Bilingualism nowadays.</div>",
+          "reponse": "<div><strong>Sujet 2 :</strong> (Exemple de réponse)<br/><br/><em>Dear classmates, today, as we hoist our national flag, I want to emphasize the importance of bilingualism in our modern world. Cameroon is a bilingual country, and mastering both English and French is not just a skill but a necessity. Bilingualism opens doors to better job opportunities, enhances communication, and fosters national unity. It allows us to connect with people from different backgrounds and cultures. Let us embrace bilingualism as a tool for personal growth and national development. Thank you.</em></div>"
+        }
+      ]
+    }
+  ]
+};
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

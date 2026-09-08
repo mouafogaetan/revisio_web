@@ -1,0 +1,163 @@
+[
+  {
+    "intitule": "Exercice 1 : Identifier les composants d'un layout d'administration",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Dans une application e-commerce, l'interface d'administration (dashboard) permet de gérer les produits, commandes et utilisateurs. Elle est généralement séparée du front-office (site public).</p><p><strong>Consigne :</strong> À partir de vos connaissances, listez les éléments essentiels que l'on trouve dans un layout d'administration (sidebar, header, zone de contenu).</p>",
+      "images": [
+        "schéma d'un dashboard admin avec sidebar à gauche, header en haut et zone de contenu principale",
+        "exemple de sidebar admin avec icônes : produits, commandes, utilisateurs, paramètres"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Énumérez au moins 5 éléments de navigation que l'on trouve généralement dans la sidebar d'un panneau d'administration e-commerce.",
+        "niveau": "easy",
+        "reponse": "1. Tableau de bord (Dashboard) avec indicateurs clés. 2. Gestion des produits (liste, ajout, modification). 3. Gestion des commandes (suivi, statuts). 4. Gestion des utilisateurs (clients, vendeurs, administrateurs). 5. Gestion des catégories et marques. 6. Promotions et codes promo. 7. Paramètres généraux du site.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez pourquoi il est important d'avoir un layout séparé pour l'administration, différent du front-office.",
+        "niveau": "easy",
+        "reponse": "Le layout admin inclut une sidebar dense et des outils de gestion qui ne doivent pas être visibles par les clients. De plus, les styles et scripts peuvent être différents (ex: graphiques, tableaux de données). La séparation améliore la sécurité (routes protégées par rôle) et l'expérience utilisateur (interfaces dédiées).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 2 : Créer un layout admin protégé avec React Router",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous développez le backoffice d'un e-commerce. Seuls les utilisateurs ayant le rôle <code>admin</code> peuvent accéder aux routes commençant par <code>/admin</code>. Vous devez créer un composant <code>AdminLayout</code> qui contient une Sidebar et un Header, et protéger l'accès en vérifiant le rôle.</p><p><strong>Consigne :</strong> Écrivez le code React (avec React Router v6) pour le layout admin protégé et l'intégration des routes.</p>",
+      "images": [
+        "extrait de code React Router avec élément AdminLayout et vérification de rôle",
+        "schéma d'arborescence des routes admin / tableau de bord, produits, commandes"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémentez le composant <code>AdminLayout</code> qui vérifie le rôle de l'utilisateur via un store Zustand (<code>useAuthStore</code>). Si l'utilisateur n'est pas admin, redirigez-le vers la page d'accueil ou login.",
+        "niveau": "medium",
+        "reponse": "```jsx\nimport { Navigate, Outlet } from 'react-router-dom';\nimport useAuthStore from '../stores/authStore';\nimport Sidebar from './Sidebar';\nimport AdminHeader from './AdminHeader';\n\nconst AdminLayout = () => {\n  const user = useAuthStore((state) => state.user);\n  const isAdmin = user?.role === 'admin';\n  if (!isAdmin) {\n    return <Navigate to=\"/\" replace />;\n  }\n  return (\n    <div className=\"flex h-screen bg-gray-100\">\n      <Sidebar />\n      <div className=\"flex-1 flex flex-col overflow-y-auto\">\n        <AdminHeader />\n        <main className=\"p-4 md:p-6\">\n          <Outlet />\n        </main>\n      </div>\n    </div>\n  );\n};\nexport default AdminLayout;\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment configurer les routes enfants (dashboard, produits, commandes) pour qu'elles s'affichent dans l'<code>Outlet</code> ?",
+            "niveau": "easy",
+            "reponse": "Dans le fichier de routes, on utilise la propriété `children` : `<Route element={<AdminLayout />}><Route path=\"admin/dashboard\" element={<Dashboard />} /><Route path=\"admin/products\" element={<ProductList />} /></Route>`. Ainsi, tous ces composants s'afficheront dans l'`Outlet` du layout."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Ajoutez une vérification supplémentaire : si l'utilisateur n'est pas connecté du tout, redirigez-le vers la page de login. Utilisez un composant <code>ProtectedRoute</code> générique avant le layout admin.",
+        "niveau": "medium",
+        "reponse": "On crée un composant `ProtectedRoute` qui vérifie l'authentification (token présent). On l'utilise ensuite comme parent : `<Route element={<ProtectedRoute />}><Route element={<AdminLayout />}>... </Route></Route>`. Ou on intègre la vérification dans `AdminLayout` en priorité. Exemple : `if (!user) return <Navigate to=\"/login\" />;` puis la vérification admin.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 3 : Analyser les risques de sécurité d'un layout admin mal protégé",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Un développeur débutant a exposé les routes d'administration sans vérification de rôle. Les URLs comme <code>/admin/products</code> sont accessibles à tout utilisateur connecté (même client normal). Un attaquant pourrait tenter d'accéder à ces pages.</p><p><strong>Consigne :</strong> Analysez les conséquences potentielles et proposez un plan de correction (frontend et backend).</p>",
+      "images": [
+        "capture d'écran d'une URL admin accessible depuis un compte non privilégié",
+        "schéma d'attaque par élévation de privilèges"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifiez trois risques majeurs si les routes admin ne sont pas protégées par vérification de rôle.",
+        "niveau": "hard",
+        "reponse": "1. Un client ordinaire peut modifier ou supprimer des produits (sabotage). 2. Accès aux commandes des autres utilisateurs (violation de données personnelles). 3. Modification des paramètres du site (taux de taxe, frais de livraison), impactant les finances. 4. Création de comptes admin pour prendre le contrôle total.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi la protection côté frontend (masquer les boutons, rediriger) ne suffit-elle pas ?",
+            "niveau": "hard",
+            "reponse": "La protection frontend est contournable : un utilisateur malveillant peut modifier le code JavaScript, appeler directement l'API via un outil comme Postman, ou accéder à l'URL admin même si le lien est masqué. La sécurité doit être obligatoirement validée côté backend à chaque requête API (vérification du rôle dans les tokens JWT)."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Proposez des mesures correctives à appliquer immédiatement (frontend et backend) pour sécuriser l'application.",
+        "niveau": "hard",
+        "reponse": "Backend : ajouter un middleware `isAdmin` qui vérifie le rôle dans le token JWT pour chaque endpoint `/admin/*`. Frontend : utiliser un `RoleBasedRoute` qui vérifie le rôle avant d'afficher le layout admin. Supprimer les liens vers l'admin pour les non-admins. Mettre en place des logs d'accès suspects.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 4 : Planifier la navigation admin (sidebar dynamique)",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Le backoffice doit afficher une sidebar dont les éléments de navigation dépendent des permissions de l'admin (super admin, gestionnaire de produits, gestionnaire de commandes). Certains utilisateurs admin peuvent avoir des droits limités.</p><p><strong>Consigne :</strong> Concevez une structure de données pour les liens de navigation et écrivez la logique de filtrage des liens selon les permissions de l'utilisateur.</p>",
+      "images": [
+        "exemple de sidebar admin avec sections tableau de bord, produits, commandes, utilisateurs",
+        "schéma de droits : lecture seule vs écriture pour chaque module"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Définissez un tableau d'objets `navItems` contenant au moins 4 liens (dashboard, produits, commandes, utilisateurs) avec une propriété `permission` (ex: 'products:read', 'orders:manage').",
+        "niveau": "easy",
+        "reponse": "```js\nconst navItems = [\n  { to: '/admin', label: 'Tableau de bord', icon: '📊', permission: 'dashboard:view' },\n  { to: '/admin/products', label: 'Produits', icon: '📦', permission: 'products:read' },\n  { to: '/admin/orders', label: 'Commandes', icon: '🛒', permission: 'orders:manage' },\n  { to: '/admin/users', label: 'Utilisateurs', icon: '👥', permission: 'users:manage' }\n];\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrivez une fonction `filterNavItems(userPermissions, navItems)` qui retourne uniquement les éléments dont la permission est incluse dans les permissions de l'utilisateur. Appliquez-la dans le composant Sidebar.",
+        "niveau": "medium",
+        "reponse": "```jsx\nconst Sidebar = () => {\n  const user = useAuthStore(state => state.user);\n  const userPermissions = user?.permissions || [];\n  const visibleItems = navItems.filter(item => userPermissions.includes(item.permission));\n  return (\n    <nav>\n      {visibleItems.map(item => (\n        <NavLink key={item.to} to={item.to}>{item.icon} {item.label}</NavLink>\n      ))}\n    </nav>\n  );\n};\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 5 : Implémenter un layout admin responsive avec TailwindCSS",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Le dashboard admin doit être utilisable sur tablette et mobile. Sur desktop, la sidebar est toujours visible. Sur mobile, la sidebar se transforme en drawer (menu latéral escamotable) avec un bouton hamburger dans le header.</p><p><strong>Consigne :</strong> Écrivez le code TailwindCSS et la logique d'état (useState) pour gérer l'ouverture/fermeture du drawer sur mobile. Assurez-vous que le layout reste fonctionnel sur toutes les tailles.</p>",
+      "images": [
+        "layout admin desktop avec sidebar fixe à gauche",
+        "layout admin mobile avec bouton hamburger et sidebar glissante"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez la structure JSX du composant <code>AdminLayout</code> avec les classes Tailwind pour le drawer mobile et la sidebar fixe desktop.",
+        "niveau": "very hard",
+        "reponse": "```jsx\nconst [sidebarOpen, setSidebarOpen] = useState(false);\nreturn (\n  <div className=\"flex h-screen bg-gray-100\">\n    {/* Sidebar pour desktop */}\n    <aside className=\"hidden md:flex md:w-64 md:flex-col\">\n      <SidebarContent />\n    </aside>\n    {/* Drawer mobile */}\n    {sidebarOpen && (\n      <div className=\"fixed inset-0 z-40 md:hidden\" onClick={() => setSidebarOpen(false)}>\n        <div className=\"fixed inset-0 bg-black bg-opacity-50\" />\n        <div className=\"relative w-64 bg-white h-full shadow-xl\" onClick={e => e.stopPropagation()}>\n          <SidebarContent />\n        </div>\n      </div>\n    )}\n    {/* Contenu principal */}\n    <div className=\"flex-1 flex flex-col overflow-y-auto\">\n      <header className=\"bg-white shadow p-4 flex items-center md:hidden\">\n        <button onClick={() => setSidebarOpen(true)}>☰</button>\n        <h1>Admin</h1>\n      </header>\n      <main className=\"p-4\"><Outlet /></main>\n    </div>\n  </div>\n);\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment gérer le focus et l'accessibilité (clavier) pour le drawer mobile ?",
+            "niveau": "hard",
+            "reponse": "On peut ajouter `role=\"dialog\"`, `aria-modal=\"true\"`, et capturer l'événement `Escape` pour fermer le drawer. Utiliser `useEffect` pour déplacer le focus sur le premier élément du menu lors de l'ouverture, et le restaurer sur le bouton hamburger à la fermeture."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Optimisez le code pour que le drawer ne se ferme pas lorsqu'on clique à l'intérieur (uniquement sur l'overlay ou le bouton de fermeture).",
+        "niveau": "medium",
+        "reponse": "Dans le JSX, on a déjà `onClick={e => e.stopPropagation()}` sur le contenu du drawer. Cela empêche la propagation de l'événement de clic vers l'overlay. On place l'overlay avec `onClick={() => setSidebarOpen(false)}` et le contenu avec `stopPropagation`.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

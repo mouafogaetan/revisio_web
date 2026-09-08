@@ -1,0 +1,151 @@
+[
+  {
+    "intitule": "Calcul et récapitulatif de la commande",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans une application e-commerce React, avant validation de la commande, on affiche un récapitulatif contenant :</p><ul><li>Les produits (nom, quantité, prix unitaire, prix total)</li><li>Le sous-total</li><li>La TVA (19\\%)</li><li>Les frais de livraison (3000 FCFA si sous-total < 50000, sinon gratuits)</li><li>Le montant total à payer</li></ul><p>Un produit avec réduction de $r = 15\\%$ a un prix unitaire de $P = 12000$ FCFA. Le client en commande 3 unités.</p>",
+      "images": [
+        "Maquette de récapitulatif de commande avec détails produits et totaux"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Calculer le prix unitaire après réduction, le prix total pour ce produit, puis le sous-total de la commande si c'est le seul produit.",
+        "niveau": "easy",
+        "reponse": "Prix réduit = $12000 \\times (1 - 0,15) = 10200$ FCFA. Prix total produit = $10200 \\times 3 = 30600$ FCFA. Sous-total = 30600 FCFA.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Calculer la TVA, les frais de livraison et le total TTC pour cette commande.",
+        "niveau": "medium",
+        "reponse": "TVA = $30600 \\times 0,19 = 5814$ FCFA. Frais de livraison = 3000 FCFA (car 30600 < 50000). Total TTC = $30600 + 5814 + 3000 = 39414$ FCFA.",
+        "sousQuestions": []
+      },
+      {
+        "numero": "3",
+        "texte": "Écrire une fonction JavaScript `calculateOrderTotals(items, shippingMethod)` qui retourne un objet contenant subtotal, tax, shipping, total.",
+        "niveau": "hard",
+        "reponse": "```js\nfunction calculateOrderTotals(items, shippingMethod = 'standard') {\n  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);\n  const tax = subtotal * 0.19;\n  const shipping = subtotal >= 50000 ? 0 : 3000;\n  const total = subtotal + tax + shipping;\n  return { subtotal, tax, shipping, total };\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Validation et création de commande avec React Query",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Lors de la validation de commande, l'utilisateur clique sur un bouton 'Confirmer la commande'. Le backend expose un endpoint <code>POST /api/orders</code> qui accepte le panier, l'adresse de livraison et le mode de paiement, et retourne un objet <code>{ orderId, status, total }</code>.</p><p>Le panier contient trois produits d'une valeur totale de $T = 125600$ FCFA HT. La TVA est de $19\\%$, les frais de port sont offerts car $T > 50000$ FCFA.</p>",
+      "images": [
+        "Diagramme de séquence de validation de commande avec React Query mutation"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire la structure du hook personnalisé <code>useCreateOrder</code> utilisant React Query (useMutation). Inclure les états de chargement, succès, erreur, et l'invalidation du cache du panier.",
+        "niveau": "hard",
+        "reponse": "```js\nconst useCreateOrder = () => {\n  const queryClient = useQueryClient();\n  return useMutation({\n    mutationFn: (orderData) => apiClient.post('/orders', orderData),\n    onSuccess: () => {\n      queryClient.invalidateQueries(['cart']);\n      queryClient.invalidateQueries(['orders']);\n    },\n  });\n};\n\n// Utilisation\nconst { mutate, isLoading, error } = useCreateOrder();\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": "1.a",
+        "texte": "Comment gérer l'affichage d'un spinner pendant la création et rediriger vers la page de confirmation en cas de succès ?",
+        "niveau": "medium",
+        "reponse": "```js\nconst handleSubmit = (orderData) => {\n  mutate(orderData, {\n    onSuccess: (data) => {\n      navigate(`/commande/confirmation/${data.orderId}`);\n    }\n  });\n};\n\nif (isLoading) return <Spinner />;\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": "2",
+        "texte": "Calculer le montant total TTC de cette commande.",
+        "niveau": "easy",
+        "reponse": "TVA = $125600 \\times 0,19 = 23864$ FCFA. Frais de port = 0 FCFA. Total TTC = $125600 + 23864 = 149464$ FCFA.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Page de confirmation et gestion des erreurs de paiement",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Après validation de la commande, l'utilisateur est redirigé vers <code>/commande/confirmation/:orderId</code>. Cette page doit afficher les détails de la commande (numéro, date, total, adresse de livraison, statut) et permettre à l'utilisateur de suivre le paiement si celui-ci est en attente.</p><p>Le backend peut retourner un statut <code>pending_payment</code> si le paiement échoue (ex: carte refusée).</p>",
+      "images": [
+        "Capture d'écran d'une page de confirmation de commande e-commerce"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevoir un composant <code>OrderConfirmation</code> qui utilise le paramètre d'URL <code>orderId</code> pour charger les données via React Query (useQuery). Gérer les états de chargement, d'erreur et afficher le contenu si la commande existe.",
+        "niveau": "hard",
+        "reponse": "```jsx\nfunction OrderConfirmation() {\n  const { orderId } = useParams();\n  const { data: order, isLoading, error } = useQuery({\n    queryKey: ['order', orderId],\n    queryFn: () => fetchOrder(orderId),\n  });\n\n  if (isLoading) return <OrderSkeleton />;\n  if (error) return <ErrorMessage message=\"Commande introuvable\" />;\n\n  return (\n    <div>\n      <h1>Merci pour votre commande !</h1>\n      <p>Numéro : {order.orderNumber}</p>\n      <p>Total : {order.total} FCFA</p>\n      <p>Statut : {order.status}</p>\n    </div>\n  );\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": "1.a",
+        "texte": "Comment afficher un message spécifique et un bouton de réessai de paiement si le statut est 'pending_payment' ?",
+        "niveau": "medium",
+        "reponse": "```jsx\nif (order.status === 'pending_payment') {\n  return (\n    <div>\n      <p>⚠️ Le paiement est en attente ou a échoué.</p>\n      <button onClick={() => retryPayment(order.id)}>\n        Réessayer le paiement\n      </button>\n    </div>\n  );\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Diagnostic et correction d'un bug de validation",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Un développeur a implémenté la page de récapitulation de commande. Cependant, certains utilisateurs signalent qu'ils peuvent valider une commande même si leur panier est vide. Voici le code actuel :</p><pre>function OrderSummary() {\n  const { items, getTotal } = useCartStore();\n  const { user } = useAuthStore();\n  const createOrder = useCreateOrder();\n\n  const handleSubmit = () => {\n    createOrder.mutate({ userId: user.id, items, total: getTotal() });\n  };\n\n  return (\n    &lt;div&gt;\n      {items.map(item => &lt;CartItem key={item.id} item={item} /&gt;)}\n      &lt;button onClick={handleSubmit}&gt;Confirmer&lt;/button&gt;\n    &lt;/div&gt;\n  );\n}</pre><p>Le panier vide affiche 'Aucun produit' mais le bouton reste actif.</p>",
+      "images": [
+        "Capture d'écran d'un panier vide avec bouton de validation actif"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier l'erreur dans ce code et expliquer pourquoi elle se produit.",
+        "niveau": "medium",
+        "reponse": "L'erreur est que le bouton 'Confirmer' n'est pas désactivé quand `items.length === 0`. Il n'y a aucune validation empêchant l'envoi d'une commande vide. L'utilisateur peut cliquer sur le bouton, ce qui enverra une requête avec un tableau `items` vide, potentiellement créant une commande sans produit.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer une correction complète incluant : désactivation du bouton si panier vide, affichage d'un message approprié, et validation supplémentaire dans le store avant mutation.",
+        "niveau": "hard",
+        "reponse": "```jsx\nconst handleSubmit = () => {\n  if (items.length === 0) {\n    toast.error('Votre panier est vide');\n    return;\n  }\n  createOrder.mutate({ userId: user.id, items, total: getTotal() });\n};\n\nreturn (\n  <div>\n    {items.length === 0 ? (\n      <p>Votre panier est vide</p>\n    ) : (\n      items.map(item => <CartItem key={item.id} item={item} />)\n    )}\n    <button onClick={handleSubmit} disabled={items.length === 0 || createOrder.isLoading}>\n      {createOrder.isLoading ? 'Validation...' : 'Confirmer la commande'}\n    </button>\n  </div>\n);\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation du récapitulatif avec useMemo",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Le composant <code>OrderSummary</code> recalcule le sous-total, la TVA et les frais de port à chaque rendu. Le panier peut contenir jusqu'à 50 articles. Le client modifie fréquemment la quantité, entraînant des rendus répétés.</p><p>Le prix d'un article est $P = 4500$ FCFA, la quantité commandée est $q = 2$. La TVA est $t = 19\\%$.</p>",
+      "images": [
+        "Schéma d'optimisation des performances avec useMemo"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier pourquoi ce calcul entraîne des problèmes de performance et proposer une solution utilisant les hooks d'optimisation React.",
+        "niveau": "medium",
+        "reponse": "Sans optimisation, le calcul des totaux est refait à chaque rendu du composant, même si les données du panier n'ont pas changé. La solution est d'utiliser `useMemo` pour mémoriser le résultat du calcul. Les totaux ne seront recalculés que lorsque `items` change.",
+        "sousQuestions": []
+      },
+      {
+        "numero": "2",
+        "texte": "Écrire la version optimisée du composant en utilisant `useMemo` pour les totaux.",
+        "niveau": "hard",
+        "reponse": "```jsx\nfunction OrderSummary() {\n  const { items } = useCartStore();\n\n  const totals = useMemo(() => {\n    const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);\n    const tax = subtotal * 0.19;\n    const shipping = subtotal >= 50000 ? 0 : 3000;\n    const total = subtotal + tax + shipping;\n    return { subtotal, tax, shipping, total };\n  }, [items]);\n\n  return (\n    <div>\n      <p>Sous-total : {totals.subtotal} FCFA</p>\n      <p>TVA : {totals.tax} FCFA</p>\n      <p>Livraison : {totals.shipping} FCFA</p>\n      <p>Total : {totals.total} FCFA</p>\n    </div>\n  );\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

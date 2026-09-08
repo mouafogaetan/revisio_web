@@ -1,0 +1,144 @@
+[
+  {
+    "intitule": "Analyse d'une Architecture ML en Production",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Une entreprise camerounaise de microfinance souhaite déployer un système de <strong>scoring de crédit</strong> pour automatiser l'octroi des prêts. Le système doit :</p><ul><li>Recevoir les demandes de prêt via une application mobile</li><li>Effectuer une prédiction en moins de 300ms</li><li>Traiter jusqu'à 1000 demandes par minute</li><li>Stocker l'historique des prédictions pour audit</li><li>Permettre un ré-entraînement hebdomadaire du modèle avec les nouvelles données de remboursement</li></ul><p>L'équipe technique propose l'architecture suivante :</p><ul><li><strong>Ingestion</strong> : API REST (FastAPI) pour recevoir les demandes</li><li><strong>Stockage</strong> : Base de données PostgreSQL pour les données clients et les prédictions</li><li><strong>Traitement</strong> : Modèle XGBoost entraîné en batch, chargé en mémoire sur le serveur API</li><li><strong>Serving</strong> : Le modèle est servi directement par le serveur FastAPI</li><li><strong>Monitoring</strong> : Logs des prédictions avec leur performance (remboursement effectif) collectés mensuellement</li></ul>",
+      "images": [
+        "Diagramme d'architecture simplifié montrant les composants : Application Mobile -> API Gateway -> FastAPI (avec modèle XGBoost) -> PostgreSQL, avec des flèches indiquant les flux de données. Les logs de performance sont collectés mensuellement pour le ré-entraînement."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifiez les composants principaux de cette architecture selon le cours (ingestion, stockage, traitement, serveur de modèles). Justifiez votre réponse en les assignant aux éléments proposés.",
+        "niveau": "medium",
+        "reponse": "<p><strong>Ingestion</strong> : L'API REST FastAPI, car c'est la porte d'entrée des données (les demandes de prêt).<br/><strong>Stockage</strong> : PostgreSQL, car il persiste les données clients et l'historique des prédictions.<br/><strong>Traitement</strong> : XGBoost, car il effectue la transformation des données d'entrée en prédiction (scoring).<br/><strong>Serveur de modèles</strong> : Le serveur FastAPI lui-même, car il charge le modèle en mémoire et sert les prédictions via l'API.</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Évaluez la pertinence de l'architecture proposée pour les contraintes de <strong>latence</strong> (< 300ms) et de <strong>scalabilité</strong> (1000 req/min). Quels seraient les points de blocage potentiels ?",
+            "niveau": "hard",
+            "reponse": "<p><strong>Latence</strong> : Servir le modèle via FastAPI peut être pertinent car XGBoost est rapide pour l'inférence. Cependant, le chargement du modèle en mémoire et les accès à PostgreSQL peuvent ajouter de la latence. Il faudrait optimiser les requêtes et potentiellement utiliser un cache.<br/><strong>Scalabilité</strong> : C'est un point critique. Le serveur FastAPI qui héberge le modèle pourrait devenir un goulot d'étranglement. 1000 req/min nécessite un scaling horizontal. L'architecture actuelle ne le permet pas facilement car le modèle est lié au serveur. Un serveur de modèles dédié (ex: TensorFlow Serving, TorchServe) ou un déploiement en conteneurs orchestrés serait plus adapté pour le scaling.</p>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Pourquoi l'approche proposée pour le <strong>monitoring</strong> (collecte mensuelle des logs de performance) est-elle insuffisante pour un système de scoring de crédit ? Proposez des améliorations basées sur les concepts du cours.",
+            "niveau": "hard",
+            "reponse": "<p>La collecte mensuelle est insuffisante car :<br/>1. <strong>Data drift</strong> : Les caractéristiques des demandeurs de prêt peuvent changer rapidement (ex: crise économique). Un délai d'un mois pour détecter une dérive est trop long.<br/>2. <strong>Concept drift</strong> : La relation entre les caractéristiques et la capacité de remboursement peut évoluer.<br/><strong>Améliorations</strong> :<br/>- Mettre en place un monitoring en temps réel ou quasi réel des métriques de performance du modèle (précision, AUC, etc.) sur un échantillon de données.<br/>- Automatiser la détection de data drift (ex: avec des tests statistiques sur les distributions des features).<br/>- Mettre en place des alertes pour signaler les dérives détectées.<br/>- Raccourcir le cycle de ré-entraînement pour qu'il soit plus réactif (ex: tous les jours si les données arrivent rapidement).</p>"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "En vous basant sur l'architecture proposée, décrivez comment vous pourriez séparer clairement les responsabilités en utilisant des composants dédiés (serveur de modèles, service d'ingestion, service de stockage).",
+        "niveau": "medium",
+        "reponse": "<p>Pour mieux respecter les principes d'une architecture distribuée, nous pourrions :<br/>- <strong>Service d'Ingestion</strong> : Garder FastAPI comme service dédié à la réception des requêtes, à la validation et à l'acheminement des données vers le service de prédiction.<br/>- <strong>Service de Prédiction</strong> : Déployer le modèle XGBoost dans un serveur de modèles dédié (ex: TensorFlow Serving ou un conteneur Python spécifique). Ce service serait appelé par le service d'ingestion via une API (HTTP ou gRPC).<br/>- <strong>Service de Stockage</strong> : PostgreSQL reste le service de persistance, mais il serait désormais découplé. Le service de prédiction pourrait écrire les résultats dans une file d'attente (ex: Kafka) et un service séparé s'occuperait de l'écriture dans PostgreSQL pour ne pas bloquer la prédiction.<br/>- <strong>Orchestration</strong> : Chaque service serait conteneurisé (Docker) et orchestré (Kubernetes) pour faciliter le scaling et la gestion.</p>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Choix de l'Architecture de Données pour un Projet de Détection de Fraude",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous êtes consultant MLOps pour une banque panafricaine. Ils souhaitent déployer un modèle de <strong>détection de fraude bancaire</strong> en temps réel. Vous devez proposer une architecture complète adaptée à leurs besoins.</p><p><strong>Contexte métier :</strong></p><ul><li>Le modèle doit analyser les transactions dès qu'elles sont effectuées (temps réel).</li><li>Chaque transaction doit être notée (score de fraude) en moins de <strong>100ms</strong>.</li><li>Le volume de transactions est de <strong>500 000 par jour</strong>.</li><li>Les données de transaction incluent : ID client, montant, catégorie, localisation, horodatage.</li><li>Le modèle utilise aussi des données historiques sur les clients (ancienneté, historique de transactions).</li><li>Il faut un système de <strong>rétroaction</strong> pour ré-entraîner le modèle avec les vrais positifs (fraudes confirmées).</li></ul>",
+      "images": [
+        "Schéma fonctionnel d'un système de détection de fraude en temps réel avec les composants suivants : Source de transactions -> Ingestion (Kafka) -> Traitement (Apache Flink avec modèle) -> Alerte (temps réel) -> Stockage des résultats (base de données). Un composant 'Ré-entraînement' est connecté au stockage pour mettre à jour le modèle avec les fraudes confirmées."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Distinguez les modes de prédiction (batch, online, streaming) et justifiez lequel est le plus adapté pour ce cas d'usage en expliquant pourquoi.",
+        "niveau": "medium",
+        "reponse": "<p><strong>Batch</strong> : Traitement par lots (ex: toutes les nuits). Pas adapté car la fraude doit être détectée instantanément.<br/><strong>Online</strong> : Prédiction à la demande via une API. Adapté, mais nécessite une latence très faible. Le modèle est servi par un serveur qui reçoit chaque transaction individuellement.<br/><strong>Streaming</strong> : Traitement continu des données en mouvement (ex: Apache Flink, Spark Streaming). Idéal ici car les transactions arrivent en flux continu, avec une latence très faible (< 100ms) et une grande scalabilité.<br/><strong>Choix : Streaming</strong> car il permet le traitement à très faible latence d'un flux de données volumineux et continu, avec la possibilité de faire de l'état (état du client) et des fenêtres (ex: nombre de transactions en 5min).</p>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "En utilisant les concepts du cours, proposez une architecture complète pour ce système en détaillant les composants suivants : (a) Ingestion, (b) Traitement, (c) Serveur de Modèles, (d) Stockage. Justifiez vos choix technologiques.",
+        "niveau": "hard",
+        "reponse": "<p><strong>(a) Ingestion</strong> : <strong>Apache Kafka</strong>. Permet de collecter les transactions en temps réel, de les bufferiser et de les distribuer aux consommateurs. Utiliser des topics pour les transactions brutes et les résultats.<br/><strong>(b) Traitement</strong> : <strong>Apache Flink</strong>. Idéal pour le streaming à faible latence (< 100ms). Il peut consommer depuis Kafka, appliquer des transformations, effectuer des jointures avec des données de référence (ex: historique client stocké dans un cache ou base), et appeler le modèle.<br/><strong>(c) Serveur de Modèles</strong> : <strong>TensorFlow Serving</strong> ou <strong>ONNX Runtime</strong>. Le modèle (entraîné périodiquement) sera exposé via gRPC pour de hautes performances. Flink enverra les données en batch (micro-batch) au serveur pour la prédiction.<br/><strong>(d) Stockage</strong> : <strong>Données brutes et résultats</strong> : Un Data Lake (ex: AWS S3) ou une base de données NoSQL (ex: Cassandra) pour la rétention des transactions et des scores. <strong>Données de référence pour l'état</strong> : Redis ou un cache pour stocker les données client nécessaires aux jointures en temps réel. <strong>Données historiques pour le ré-entraînement</strong> : Data Warehouse (ex: BigQuery) pour stocker les transactions étiquetées (fraude confirmée) et les features préparées pour l'entraînement.</p>",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Expliquez comment vous géreriez la phase de ré-entraînement du modèle dans cette architecture sans perturber le service en production.",
+            "niveau": "hard",
+            "reponse": "<p>Pour assurer un ré-entraînement sans impact sur le service en production :<br/>1. Les données étiquetées (transactions confirmées comme frauduleuses ou non) sont collectées périodiquement depuis le stockage et préparées dans un DWH.<br/>2. Un pipeline de ré-entraînement (ex: avec Kubeflow ou Airflow) est exécuté (ex: toutes les nuits). Il prend les données préparées, entraîne un nouveau modèle, et évalue ses performances sur un jeu de test.<br/>3. Le nouveau modèle est versionné (ex: avec MLflow) et enregistré dans un registre de modèles.<br/>4. Le déploiement du nouveau modèle se fait via une stratégie de <strong>blue-green deployment</strong> ou <strong>canary deployment</strong> :<br/>   - Un nouveau conteneur (version 'green') avec le nouveau modèle est déployé sur TensorFlow Serving.<br/>   - Les requêtes sont progressivement redirigées du service 'blue' (ancien modèle) vers le service 'green'.<br/>   - Les métriques de performance sont comparées.<br/>   - Si les performances du nouveau modèle sont satisfaisantes, le service 'blue' est arrêté.<br/>5. La nouvelle version du modèle devient la version de production.</p>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Évaluation d'une Architecture de Système de Recommandation",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Une startup de e-commerce propose un système de recommandation de produits. Le modèle actuel est entraîné en batch chaque soir sur l'ensemble des données de la journée. Les prédictions sont stockées dans une base de données et servies via une API REST (FastAPI).</p><p>Le système ne parvient pas à suivre la charge lors des soldes (pic de connexion de 5x le trafic normal) et la latence augmente de manière significative.</p>",
+      "images": [
+        "Diagramme montrant un pipeline batch : Base de données de transactions -> Script Python d'entraînement (batch) -> Modèle -> Base de données de recommandations -> API REST -> Application client."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Distinguez les composants de l'architecture proposée et ceux qui sont manquants pour un système en production robuste selon le cours.",
+        "niveau": "medium",
+        "reponse": "<p><strong>Composants identifiés</strong> : Serveur de modèles (FastAPI), un mécanisme de stockage (Base de données).<br/><strong>Éléments manquants</strong> :<br/>- Un <strong>serveur de modèles</strong> dédié pour le serving à haute performance, séparé du code métier.<br/>- Un mécanisme de <strong>scalabilité</strong> (load balancing, conteneurisation).<br/>- Un système de <strong>monitoring</strong> pour les performances du modèle et du système.<br/>- Une <strong>gestion des versions</strong> du modèle.<br/>- Un pipeline de <strong>CI/CD</strong> pour le déploiement automatisé des nouvelles versions.</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi l'architecture batch est-elle inadaptée face aux pics de connexion ? Comment la transformer pour un système en ligne (online) plus résilient ?",
+            "niveau": "hard",
+            "reponse": "<p>L'architecture batch précalcule les recommandations pour tous les utilisateurs, ce qui est coûteux en temps et en ressources. En cas de pic de trafic, il n'y a pas de nouveaux utilisateurs, mais les requêtes API augmentent, menant à une saturation de la base de données et du serveur.<br/><strong>Transformation en système online</strong> :<br/>1. Calculer les recommandations à la demande (online) pour chaque utilisateur lorsqu'il se connecte.<br/>2. Utiliser un <strong>serveur de modèles</strong> (ex: TensorFlow Serving) qui peut scaler horizontalement.<br/>3. Mettre en place un <strong>cache</strong> (ex: Redis) pour stocker les recommandations des utilisateurs les plus actifs et réduire la charge sur le serveur de modèle.<br/>4. Conteneuriser le serveur de modèles et utiliser <strong>Kubernetes</strong> pour gérer le scaling automatique en fonction de la charge (HPA - Horizontal Pod Autoscaler).<br/>5. Utiliser un <strong>load balancer</strong> pour répartir le trafic entre les instances du serveur de modèles.</p>"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Proposez des améliorations concrètes pour cette architecture en vous basant sur les composants clés du cours : ingestion, stockage, traitement, serving, monitoring.",
+        "niveau": "hard",
+        "reponse": "<p><strong>Ingestion</strong> : Utiliser un système de file d'attente (ex: <strong>Apache Kafka</strong>) pour capturer les événements utilisateurs (vues, clics, achats) en temps réel. Cela permettra d'avoir un profil utilisateur à jour pour le modèle online.<br/><strong>Stockage</strong> : Séparer le stockage des données brutes (Data Lake) et des données utilisées pour l'entraînement (Feature Store). Utiliser un cache (Redis) pour les recommandations pré-calculées pour les utilisateurs les plus actifs.<br/><strong>Traitement</strong> : Un pipeline <strong>batch</strong> pour l'entraînement du modèle (avec des données agrégées) et un pipeline <strong>streaming</strong> pour mettre à jour les profils utilisateurs.<br/><strong>Serving</strong> : Remplacer l'API FastAPI qui héberge le modèle par un <strong>serveur de modèles</strong> dédié (ex: <strong>TensorFlow Serving</strong>). Le serveur de modèles sera déployé sur <strong>Kubernetes</strong> pour permettre le scaling horizontal automatique. L'API FastAPI sera un service d'ingestion qui interroge le serveur de modèles pour obtenir la prédiction.<br/><strong>Monitoring</strong> : Mettre en place <strong>Prometheus</strong> pour collecter les métriques (latence du serveur, taux d'erreur, charge CPU, performance du modèle) et <strong>Grafana</strong> pour la visualisation. Mettre en place des alertes sur les métriques critiques (ex: latence > 1s pendant 5 minutes).</p>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Diagramme d'Architecture ML en Production",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>À partir du diagramme fourni, répondre aux questions.</p>",
+      "images": [
+        "Diagramme d'architecture de Machine Learning en production avec les composants suivants : 1. Sources de données (Base de données, API, Logs), 2. Ingestion (Kafka), 3. Stockage des données brutes (S3), 4. Feature Store, 5. Entraînement (avec validation et test), 6. Registre de Modèles, 7. Serveur de Modèles (TensorFlow Serving), 8. Application Client, 9. Monitoring (Prometheus/Grafana), 10. Boucle de feedback vers le ré-entraînement."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifiez et expliquez le rôle des composants suivants dans ce diagramme : (a) Ingestion (Kafka), (b) Feature Store, (c) Registre de Modèles, (d) Monitoring.",
+        "niveau": "medium",
+        "reponse": "<p><strong>(a) Ingestion (Kafka)</strong> : Kafka est la plateforme de messagerie qui collecte les données en temps réel ou par batch depuis les sources. Elle sert de tampon et de bus d'événements pour acheminer les données vers les différents consommateurs (ex: stockage, entraînement).<br/><strong>(b) Feature Store</strong> : C'est un entrepôt centralisé pour les features calculées. Il sert à : 1. Servir les features pour l'entraînement (batch), 2. Servir les features en temps réel pour l'inférence (online), 3. Assurer la cohérence entre l'entraînement et le serving.<br/><strong>(c) Registre de Modèles</strong> : C'est un registre qui stocke et versionne les modèles entraînés. Il permet de gérer le cycle de vie des modèles, de les déployer en production et de faire des rollbacks en cas de problème.<br/><strong>(d) Monitoring</strong> : Le système de monitoring collecte des métriques sur la performance du modèle (précision, latence, taux d'erreur) et sur la santé du système (CPU, mémoire). Il permet de détecter des dérives (data drift, concept drift) et de déclencher des alertes.</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quelle est la différence entre le Feature Store et la base de données de stockage des données brutes (S3) ?",
+            "niveau": "medium",
+            "reponse": "<p><strong>Données brutes (S3)</strong> : Stocke les données en leur forme originale, non transformées. C'est une archive pour l'historique et pour le ré-entraînement complet. Les données sont lourdes et non optimisées pour les requêtes en temps réel.<br/><strong>Feature Store</strong> : Stocke les données après transformation, agrégation et ingénierie de features. Les données sont optimisées pour :<br/>- L'entraînement (batch) : lecture rapide de grands volumes.<br/>- Le serving (online) : lecture à faible latence pour les prédictions en temps réel.<br/>Il assure la cohérence entre les features utilisées pour l'entraînement et celles servies en production.</p>"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "En vous appuyant sur le diagramme, décrivez le flux de données depuis une source jusqu'à la prédiction en passant par tous les composants.",
+        "niveau": "medium",
+        "reponse": "<p>Le flux complet est le suivant :<br/>1. Les <strong>sources de données</strong> (Base de données, API, Logs) produisent des événements.<br/>2. Les événements sont collectés et <strong>ingérés</strong> par <strong>Kafka</strong>.<br/>3. Un processus de <strong>streaming</strong> (ex: Flink) lit depuis Kafka, calcule les features en temps réel, et les écrit à la fois dans le <strong>Feature Store</strong> (pour la version online) et dans <strong>S3</strong> (pour l'archivage).<br/>4. Pour l'<strong>entraînement</strong>, un pipeline batch lit les données depuis <strong>S3</strong> (via un Data Lake), les prépare (avec les features du Feature Store), entraîne un modèle, le valide et l'enregistre dans le <strong>Registre de Modèles</strong>.<br/>5. Le <strong>Serveur de Modèles</strong> (TensorFlow Serving) déploie la version approuvée du modèle.<br/>6. L'<strong>Application Client</strong> envoie une requête de prédiction. L'API d'ingestion récupère les features nécessaires depuis le <strong>Feature Store</strong>, les envoie au <strong>Serveur de Modèles</strong> qui retourne la prédiction.<br/>7. Le résultat est renvoyé au client et le <strong>Monitoring</strong> collecte les métriques de performance.</p>",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

@@ -1,0 +1,109 @@
+[
+  {
+    "intitule": "Quiz : Verrous et concurrence en bases de données",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Répondez aux questions suivantes concernant les verrous partagés (SHARED), exclusifs (EXCLUSIVE) et les transactions concurrentes.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier et décrire la différence principale entre un verrou partagé (SHARED) et un verrou exclusif (EXCLUSIVE).",
+        "niveau": "easy",
+        "reponse": "Un verrou partagé (SHARED) permet à plusieurs transactions de lire simultanément une ressource mais aucune de la modifier. Un verrou exclusif (EXCLUSIVE) permet à une seule transaction de lire ET de modifier une ressource ; aucune autre transaction ne peut lire ou modifier cette ressource tant que le verrou est maintenu.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer ce qu'est un deadlock (interblocage) et citer une condition nécessaire à son apparition.",
+        "niveau": "medium",
+        "reponse": "Un deadlock est une situation où deux transactions ou plus attendent chacune qu'une autre libère un verrou, ce qui bloque indéfiniment leur progression. Une condition nécessaire est l'attente circulaire (cycle de dépendances entre transactions).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "À quoi sert la clause `SELECT ... FOR UPDATE` dans une transaction ? Donner un exemple d'utilisation.",
+        "niveau": "medium",
+        "reponse": "`SELECT ... FOR UPDATE` verrouille exclusivement les lignes sélectionnées afin qu'aucune autre transaction ne puisse les modifier (ni les verrouiller avec un verrou exclusif) avant la fin de la transaction. Exemple : `START TRANSACTION; SELECT stock FROM produits WHERE id=1 FOR UPDATE; -- puis mise à jour selon calcul; UPDATE produits SET stock = stock - 1 WHERE id=1; COMMIT;`",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Cas pratique : Analyse d'un deadlock bancaire",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Deux transactions s'exécutent simultanément sur un compte bancaire :</p><ul><li><strong>Transaction A</strong> : virement de 100€ du Compte1 au Compte2</li><li><strong>Transaction B</strong> : virement de 50€ du Compte2 au Compte1</li></ul><p>Chaque transaction utilise <code>SELECT ... FOR UPDATE</code> sur les deux comptes concernés dans l'ordre (A : Compte1 puis Compte2 ; B : Compte2 puis Compte1).</p><p>Décrivez la situation d'interblocage qui se produit, puis proposez <strong>deux solutions</strong> pour l'éviter en modifiant uniquement l'ordre d'accès ou la stratégie de verrouillage.</p>",
+      "images": ["Schéma d'interblocage avec deux flèches croisées entre deux transactions et deux ressources"]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire l'enchaînement des verrous conduisant au deadlock.",
+        "niveau": "hard",
+        "reponse": "Transaction A verrouille exclusivement Compte1. Transaction B verrouille exclusivement Compte2. Ensuite A essaie de verrouiller Compte2 mais B le détient déjà. B essaie de verrouiller Compte1 mais A le détient déjà. Aucune ne peut avancer : interblocage.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer deux stratégies d'évitement du deadlock et expliquer pourquoi elles fonctionnent.",
+        "niveau": "hard",
+        "reponse": "1) Ordonnancement global des ressources : imposer que toutes les transactions accèdent aux comptes dans un ordre croissant (par exemple toujours Compte1 puis Compte2). Ainsi A : Compte1 puis Compte2 ; B : Compte1 puis Compte2 : plus d'interblocage. 2) Timeout et abandon : si une transaction attend trop longtemps, elle libère ses verrous (ROLLBACK) et retente après un délai aléatoire. 3) Détection active du deadlock par le SGBD et annulation d'une transaction.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Mise en situation : Gestion de réservations de vols",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans une base de données de réservation aérienne, une transaction doit :</p><ol><li>Vérifier qu'il reste au moins une place sur un vol donné (lecture du champ <code>places_libres</code>)</li><li>Réserver une place (décrémenter <code>places_libres</code>)</li><li>Enregistrer la réservation dans une table <code>reservations</code></li></ol><p>Deux clients tentent de réserver la dernière place en même temps.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer le problème de 'race condition' qui surviendrait sans verrou approprié. Illustrer par un scénario.",
+        "niveau": "medium",
+        "reponse": "Sans verrou, les deux transactions lisent en même temps 'places_libres = 1'. Toutes deux voient une place disponible. Toutes deux décrémentent et écrivent 'places_libres = 0'. Aucune n'a détecté l'autre, et deux réservations sont créées pour une seule place, ce qui est invalide.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Rédiger la séquence SQL (MySQL / PostgreSQL) utilisant `SELECT ... FOR UPDATE` pour garantir l'intégrité.",
+        "niveau": "hard",
+        "reponse": "```sql\nSTART TRANSACTION;\nSELECT places_libres FROM vols WHERE id_vol = 123 FOR UPDATE;\n-- Si places_libres > 0\nUPDATE vols SET places_libres = places_libres - 1 WHERE id_vol = 123;\nINSERT INTO reservations (id_vol, id_client, date_res) VALUES (123, 42, NOW());\nCOMMIT;\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice : Comparaison des niveaux d'isolation et des verrous",
+    "type": "ressource",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Associez chaque niveau d'isolation SQL standard (<code>READ UNCOMMITTED</code>, <code>READ COMMITTED</code>, <code>REPEATABLE READ</code>, <code>SERIALIZABLE</code>) au type de verrous principalement utilisé et aux phénomènes d'anomalies qu'il autorise ou empêche (dirty read, non-repeatable read, phantom read).</p><p>Répondez sous forme de tableau synthétique.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Compléter le tableau des niveaux d'isolation avec : verrous utilisés (partagé/exclusif, gap locks), et présence (Oui/Non) des 3 anomalies.",
+        "niveau": "very hard",
+        "reponse": "| Isolation | Verrous principaux | Dirty Read | Non-Repeatable Read | Phantom Read |\n|-----------|--------------------|------------|---------------------|-------------|\n| READ UNCOMMITTED | Aucun verrou en lecture | Oui | Oui | Oui |\n| READ COMMITTED | Verrou partagé temporaire (relâché après SELECT) | Non | Oui | Oui |\n| REPEATABLE READ | Verrou partagé maintenu jusqu'à COMMIT (InnoDB) | Non | Non | Oui (sauf gap locks) |\n| SERIALIZABLE | Verrou partagé + gap locks / verrouillage de plage | Non | Non | Non |",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Justifier pourquoi `SELECT ... FOR UPDATE` est souvent nécessaire même en niveau `REPEATABLE READ` pour certaines opérations de réservation.",
+        "niveau": "medium",
+        "reponse": "En `REPEATABLE READ`, les lectures simples (SELECT sans FOR UPDATE) ne prennent que des verrous partagés. Une autre transaction peut donc lire et modifier les mêmes données avant la validation de la première transaction, créant des mises à jour perdues. `SELECT ... FOR UPDATE` place un verrou exclusif empêchant toute modification concurrente, garantissant l'exclusivité pour la mise à jour.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

@@ -1,0 +1,130 @@
+[
+  {
+    "intitule": "Comparaison des types d'index",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un SGBD propose plusieurs structures d’index : <strong>B-Tree</strong>, <strong>Hash</strong>, <strong>Bitmap</strong>, <strong>Full-text</strong>. Pour chacun des cas d’usage suivants, identifiez le type d’index le plus adapté et justifiez votre choix en une phrase.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Colonne `sexe` avec seulement 2 valeurs possibles ('M', 'F') dans une table de 10 millions de lignes. Requêtes fréquentes : `WHERE sexe = 'F'`.",
+        "niveau": "medium",
+        "reponse": "Index Bitmap. Car il est très efficace pour les colonnes à faible cardinalité (peu de valeurs distinctes) et les requêtes de type égalité.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Recherche d’égalité exacte sur une colonne `email` (valeurs uniques) : `WHERE email = 'user@example.com`.",
+        "niveau": "easy",
+        "reponse": "Index Hash. Car il offre un accès direct en O(1) pour les recherches d'égalité exacte, idéal pour les clés uniques.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Requêtes de recherche textuelle sur le champ `description_article` : `WHERE MATCH(description) AGAINST('base de données relationnelle')`.",
+        "niveau": "easy",
+        "reponse": "Index Full-text. Car il est spécialisé dans la recherche de mots ou expressions dans de longs textes, avec gestion des stop words et stemming.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 4,
+        "texte": "Requêtes de recherche par intervalle sur une colonne `date_commande` : `WHERE date_commande BETWEEN '2025-01-01' AND '2025-06-01`.",
+        "niveau": "medium",
+        "reponse": "Index B-Tree. Car il maintient les données triées, ce qui permet de parcourir efficacement les intervalles (recherche par plage).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse du coût d’un index",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Une table `Commandes` (1 million de lignes) possède une colonne `statut` (5 valeurs possibles) et une colonne `date_creation`. Un index B-Tree existe sur `date_creation`.</p><p>On souhaite ajouter un index sur `statut` pour accélérer les requêtes de comptage : `SELECT statut, COUNT(*) FROM Commandes GROUP BY statut`.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Comparez le gain en lecture et le coût en écriture qu’apporterait l’index sur `statut`. Justifiez avec la notion de cardinalité.",
+        "niveau": "hard",
+        "reponse": "Gain en lecture : important pour GROUP BY car l'index permet d'éviter un full scan. Coût en écriture : chaque INSERT/UPDATE/DELETE devra mettre à jour cet index supplémentaire. Avec une cardinalité très faible (5 valeurs), l'index Bitmap serait plus performant qu'un B-Tree pour ce cas.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposez un scénario métier où cet index devient indispensable malgré le coût en écriture.",
+        "niveau": "hard",
+        "reponse": "Exemple : tableau de bord temps réel affichant le nombre de commandes par statut toutes les 5 secondes. Sans index, chaque requête ferait un scan complet de 1M de lignes, rendant l'application trop lente. Le coût d'écriture est acceptable car les commandes sont insérées/modifiées beaucoup moins souvent qu'elles ne sont lues pour le tableau de bord.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Choisir le bon index pour une application e-commerce",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous développez une boutique en ligne avec une table `Produits` contenant 500 000 enregistrements. Voici les requêtes les plus fréquentes :</p><ul><li>R1 : `SELECT * FROM Produits WHERE categorie = 'Electronique' AND prix BETWEEN 100 AND 500;` (categorie : 20 valeurs possibles)</li><li>R2 : `SELECT * FROM Produits WHERE nom_produit LIKE '%smartphone%';` (recherche plein texte)</li><li>R3 : `SELECT * FROM Produits WHERE reference = 'REF123456';` (recherche exacte, référence unique)</li><li>R4 : `SELECT categorie, AVG(prix) FROM Produits GROUP BY categorie;`</li></ul><p>Proposez un type d’index pour chaque requête (B-Tree, Hash, Bitmap, Full-text) et expliquez votre choix en 1 phrase.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Index pour la requête R1 (categorie + intervalle de prix).",
+        "niveau": "hard",
+        "reponse": "B-Tree composite sur (categorie, prix). Car il permet de filtrer d'abord sur categorie (égalité) puis d'exploiter l'ordre pour l'intervalle sur prix.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Index pour la requête R2 (recherche textuelle sur nom_produit).",
+        "niveau": "easy",
+        "reponse": "Full-text index. Car il est conçu pour la recherche de mots ou expressions dans du texte, contrairement à LIKE '%...%' qui serait très lent.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Index pour la requête R3 (recherche exacte sur référence unique).",
+        "niveau": "easy",
+        "reponse": "Index Hash. Car pour une recherche d'égalité exacte sur une clé unique, le hash donne un accès direct en O(1) optimal.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 4,
+        "texte": "Index pour la requête R4 (GROUP BY categorie).",
+        "niveau": "medium",
+        "reponse": "Index Bitmap sur categorie. Car la cardinalité de categorie est faible (20 valeurs), le bitmap permet un regroupement très efficace sans tri ni table temporaire.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Identifier l’impact d’un mauvais index",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un développeur a créé un index Hash sur la colonne `date_naissance` d’une table `Employes`. Or l’application exécute souvent : `SELECT * FROM Employes WHERE date_naissance BETWEEN '1990-01-01' AND '2000-12-31';`.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez pourquoi cet index Hash est inadapté à cette requête.",
+        "niveau": "medium",
+        "reponse": "L’index Hash ne supporte pas les recherches par intervalle (BETWEEN) car il n’organise pas les données dans un ordre trié. Le SGBD devra donc faire un scan complet de la table, rendant l’index inutile pour cette requête.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposez une alternative plus performante pour cette requête.",
+        "niveau": "easy",
+        "reponse": "Un index B-Tree sur date_naissance, car il maintient l'ordre et permet un parcours efficace des intervalles.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

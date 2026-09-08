@@ -1,0 +1,136 @@
+[
+  {
+    "intitule": "Découverte des fichiers et dossiers",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Dans le cadre d’une application console C#, on souhaite lire l’intégralité d’un fichier texte nommé <code>cours.txt</code> situé dans le dossier <code>Donnees</code> sur le bureau de l’utilisateur. Une fois lu, le contenu doit être affiché dans la console, puis on veut ajouter une ligne de texte à la fin du même fichier sans effacer l’existant.</p>",
+      "images": [
+        "Arborescence simple avec un dossier Donnees sur le Bureau contenant un fichier cours.txt"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Quelles méthodes de la classe `File` utiliserais-tu pour (a) lire tout le texte du fichier et (b) ajouter du texte à la fin du fichier ? Justifie ton choix.",
+        "niveau": "easy",
+        "reponse": "(a) `File.ReadAllText(chemin)` pour lire tout le contenu d’un coup. (b) `File.AppendAllText(chemin, texte)` pour ajouter du texte en fin de fichier sans écraser.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Identifie la classe C# qui fournit ces méthodes sans instanciation d’objet.",
+            "niveau": "easy",
+            "reponse": "La classe `File` (statique)."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Explique pourquoi on ne peut pas utiliser `File.WriteAllText` pour ajouter du texte.",
+            "niveau": "medium",
+            "reponse": "`File.WriteAllText` remplace tout le contenu du fichier par le nouveau texte, ce qui efface l’existant. Pour ajouter sans supprimer, il faut `AppendAllText` ou `StreamWriter` en mode append."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Propose une ligne de code pour construire le chemin complet du fichier `cours.txt`, en supposant que le bureau de l’utilisateur est accessible via `Environment.GetFolderPath(Environment.SpecialFolder.Desktop)`.",
+        "niveau": "easy",
+        "reponse": "```csharp\nstring chemin = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), \"Donnees\", \"cours.txt\");\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Lecture efficace avec flux (StreamReader)",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Tu travailles dans une école camerounaise et tu dois analyser un fichier CSV contenant les notes de 10 000 élèves (<code>notes_eleves.csv</code>). Chaque ligne contient : <code>Nom,Note1,Note2,Note3</code>. Tu dois lire le fichier ligne par ligne, calculer la moyenne de chaque élève, et afficher ceux dont la moyenne est supérieure ou égale à 12/20.</p>",
+      "images": [
+        "Extrait d’un fichier CSV avec colonnes Nom, Note1, Note2, Note3"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédige un extrait de code C# utilisant `StreamReader` pour lire le fichier ligne par ligne et calculer la moyenne de chaque élève. Explique pourquoi `StreamReader` est plus adapté qu’un simple `File.ReadAllLines` dans ce contexte.",
+        "niveau": "medium",
+        "reponse": "`StreamReader` lit le fichier en flux, sans tout charger en mémoire, ce qui est essentiel pour 10 000 lignes ou plus. `File.ReadAllLines` chargerait tout le tableau en RAM, ce qui est lourd et risqué pour un gros fichier.\n\n```csharp\nusing (var reader = new StreamReader(\"notes_eleves.csv\"))\n{\n    string ligne;\n    while ((ligne = reader.ReadLine()) != null)\n    {\n        string[] parties = ligne.Split(',');\n        string nom = parties[0];\n        double note1 = double.Parse(parties[1]);\n        double note2 = double.Parse(parties[2]);\n        double note3 = double.Parse(parties[3]);\n        double moyenne = (note1 + note2 + note3) / 3;\n        if (moyenne >= 12)\n            Console.WriteLine($\"{nom} : {moyenne:F2}\");\n    }\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion d’un fichier de notes (écriture binaire)",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Dans une application de gestion scolaire, on te demande d’enregistrer les informations des étudiants (matricule (int), moyenne (double), redoublant (bool)) dans un fichier binaire <code>eleves.dat</code>. Ces données seront ensuite relues pour générer un bulletin personnalisé. L’enseignant doit pouvoir ajouter un élève à la fin du fichier sans détruire les anciens.</p>",
+      "images": [
+        "Représentation d’un enregistrement binaire avec champ int, double et bool"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Crée une méthode `AjouterEleve(string cheminFichier, int matricule, double moyenne, bool redoublant)` qui utilise `BinaryWriter` pour ajouter l’élève à la fin du fichier. Explique l’importance du mode `FileMode.Append`.",
+        "niveau": "hard",
+        "reponse": "Le mode `FileMode.Append` ouvre le fichier en positionnant le curseur à la fin, ou crée le fichier s’il n’existe pas. Avec `BinaryWriter`, on écrit les types en binaire, ce qui est plus compact et précis.\n\n```csharp\nstatic void AjouterEleve(string chemin, int matricule, double moyenne, bool redoublant)\n{\n    using (var stream = new FileStream(chemin, FileMode.Append, FileAccess.Write))\n    using (var writer = new BinaryWriter(stream))\n    {\n        writer.Write(matricule);\n        writer.Write(moyenne);\n        writer.Write(redoublant);\n    }\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quelle exception pourrait être levée si l’utilisateur n’a pas les droits d’écriture dans le dossier ?",
+            "niveau": "medium",
+            "reponse": "`UnauthorizedAccessException`."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Écris la méthode `LireTousLesEleves(string cheminFichier)` qui utilise `BinaryReader` pour lire tous les élèves enregistrés et les afficher dans la console.",
+        "niveau": "hard",
+        "reponse": "```csharp\nstatic void LireTousLesEleves(string chemin)\n{\n    using (var stream = new FileStream(chemin, FileMode.Open, FileAccess.Read))\n    using (var reader = new BinaryReader(stream))\n    {\n        while (reader.BaseStream.Position != reader.BaseStream.Length)\n        {\n            int matricule = reader.ReadInt32();\n            double moyenne = reader.ReadDouble();\n            bool redoublant = reader.ReadBoolean();\n            Console.WriteLine($\"Matricule: {matricule}, Moyenne: {moyenne:F2}, Redoublant: {redoublant}\");\n        }\n    }\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Organisation des dossiers de projets",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Tu es formateur en développement web à Douala. Chaque apprenant doit rendre un projet dans un dossier portant son nom. Tu veux automatiser la création de la structure suivante pour chaque nouvel apprenant :</p>\n<ul>\n<li>Dossier principal : <code>Projets/NomApprenant/</code></li>\n<li>Sous-dossiers : <code>src/</code>, <code>docs/</code>, <code>tests/</code></li>\n<li>Un fichier <code>readme.md</code> vide dans le dossier principal</li>\n</ul>\n<p>Si le dossier existe déjà, tu dois afficher un message d’erreur.</p>",
+      "images": [
+        "Arborescence de dossiers avec Projets, NomApprenant, src, docs, tests, readme.md"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédige une fonction C# qui prend en paramètre le nom de l’apprenant et crée cette structure complète. Utilise `Directory.CreateDirectory`, `Directory.Exists` et `File.WriteAllText`.",
+        "niveau": "medium",
+        "reponse": "```csharp\nstatic void CreerStructureProjet(string nomApprenant)\n{\n    string cheminBase = Path.Combine(\"Projets\", nomApprenant);\n    if (Directory.Exists(cheminBase))\n    {\n        Console.WriteLine($\"Erreur : le dossier {cheminBase} existe déjà.\");\n        return;\n    }\n    Directory.CreateDirectory(cheminBase);\n    Directory.CreateDirectory(Path.Combine(cheminBase, \"src\"));\n    Directory.CreateDirectory(Path.Combine(cheminBase, \"docs\"));\n    Directory.CreateDirectory(Path.Combine(cheminBase, \"tests\"));\n    string readmePath = Path.Combine(cheminBase, \"readme.md\");\n    File.WriteAllText(readmePath, \"\"); // fichier vide\n    Console.WriteLine($\"Structure créée pour {nomApprenant}\");\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Recherche d’un fichier dans l’arborescence",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Un utilisateur veut retrouver tous les fichiers <code>.cs</code> (code C#) dans un dossier <code>ProjetsCSharp</code> et tous ses sous-dossiers. Il souhaite également compter le nombre total de fichiers trouvés et afficher leur chemin complet.</p>",
+      "images": [
+        "Arborescence de dossiers avec plusieurs fichiers .cs éparpillés"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Explique comment parcourir récursivement les dossiers en utilisant `Directory.GetFiles` avec l’option `SearchOption.AllDirectories`. Écris le code correspondant.",
+        "niveau": "hard",
+        "reponse": "```csharp\nstring dossierRacine = @\"C:\\ProjetsCSharp\";\nstring[] fichiers = Directory.GetFiles(dossierRacine, \"*.cs\", SearchOption.AllDirectories);\nConsole.WriteLine($\"Total fichiers .cs : {fichiers.Length}\");\nforeach (string f in fichiers)\n{\n    Console.WriteLine(f);\n}\n```\n\n`SearchOption.AllDirectories` permet de chercher récursivement dans tous les sous-dossiers, contrairement à `TopDirectoryOnly`.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

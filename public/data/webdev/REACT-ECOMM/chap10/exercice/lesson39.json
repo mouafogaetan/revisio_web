@@ -1,0 +1,112 @@
+[
+  {
+    "intitule": "Analyse des fonctionnalités de gestion des utilisateurs",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Dans l'interface d'administration d'un e-commerce, le module de gestion des utilisateurs permet à l'administrateur de :</p><ul><li>Lister tous les utilisateurs inscrits</li><li>Filtrer par rôle (client, vendeur, admin)</li><li>Rechercher par nom ou email</li><li>Changer le rôle d'un utilisateur</li><li>Bloquer/débloquer un compte</li></ul><p>La base de données contient 5000 utilisateurs.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Justifiez pourquoi il est préférable d'implémenter la recherche et les filtres côté serveur plutôt que côté client pour 5000 utilisateurs.",
+        "niveau": "easy",
+        "reponse": "Avec 5000 utilisateurs, une recherche côté client nécessiterait de charger tous les utilisateurs en mémoire (poids élevé, temps de chargement initial long) puis d'effectuer les filtres dans le navigateur. Le filtrage côté serveur permet :\n1. De ne renvoyer que les données nécessaires (pagination)\n2. De réduire la charge réseau et mémoire\n3. D'utiliser les index de la base de données pour des recherches rapides\n4. D'éviter les ralentissements sur les appareils mobiles peu puissants\n5. De garantir que l'affichage reflète toujours les dernières modifications (pas de cache obsolète)",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Nommez deux avantages de l'utilisation de React Query pour gérer l'état des utilisateurs dans ce contexte admin.",
+            "niveau": "easy",
+            "reponse": "1. **Mise en cache automatique** : React Query met en cache les résultats des requêtes. Lorsqu'on change de page ou qu'on revient à la liste, les données sont affichées immédiatement pendant le re-fetch en arrière-plan.\n2. **Revalidation intelligente** : Après une mutation (changement de rôle, blocage), on peut invalider la query pour que la liste se mette à jour automatiquement sans rechargement manuel.\n3. **Gestion native de la pagination** : `keepPreviousData: true` évite l'affichage d'un écran blanc pendant le chargement de la page suivante.\n4. **État de chargement et erreur** : `isLoading`, `isError` sont fournis prêts à l'emploi."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Implémentation du tableau des utilisateurs avec filtres",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous développez un tableau d'administration des utilisateurs avec les fonctionnalités suivantes :</p><ul><li>Affichage paginé des utilisateurs</li><li>Champ de recherche (email ou nom)</li><li>Filtre par rôle (admin / vendeur / client)</li><li>Bouton pour bloquer/débloquer un compte</li><li>Bouton pour changer le rôle</li></ul><p>L'API backend expose : <code>GET /admin/users?page=1&limit=10&search=...&role=...</code> et <code>PATCH /admin/users/:userId/role</code> et <code>PATCH /admin/users/:userId/block</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le code TypeScript d'un composant <code>UserManagement</code> utilisant React Query pour la pagination, la recherche et les filtres. Incluez la mutation pour bloquer/débloquer un utilisateur.",
+        "niveau": "very hard",
+        "reponse": "```tsx\nimport { useState } from 'react';\nimport { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';\nimport { api } from '@/lib/api';\nimport { toast } from 'sonner';\nimport { Button } from '@/components/ui/button';\nimport { Input } from '@/components/ui/input';\nimport { Select } from '@/components/ui/select';\n\ninterface User {\n  id: string;\n  email: string;\n  firstName: string;\n  lastName: string;\n  role: 'admin' | 'seller' | 'customer';\n  isBlocked: boolean;\n  createdAt: string;\n}\n\ninterface UsersResponse {\n  users: User[];\n  total: number;\n  page: number;\n  totalPages: number;\n}\n\nconst UserManagement = () => {\n  const queryClient = useQueryClient();\n  const [page, setPage] = useState(1);\n  const [search, setSearch] = useState('');\n  const [roleFilter, setRoleFilter] = useState('');\n  const limit = 10;\n\n  // Requête pour récupérer les utilisateurs\n  const { data, isLoading, isError } = useQuery<UsersResponse>({\n    queryKey: ['admin-users', page, search, roleFilter],\n    queryFn: () => api.get('/admin/users', { params: { page, limit, search: search || undefined, role: roleFilter || undefined } }),\n    keepPreviousData: true,\n  });\n\n  // Mutation pour bloquer/débloquer\n  const toggleBlockMutation = useMutation({\n    mutationFn: ({ userId, isBlocked }: { userId: string; isBlocked: boolean }) =>\n      api.patch(`/admin/users/${userId}/block`, { isBlocked }),\n    onSuccess: () => {\n      queryClient.invalidateQueries({ queryKey: ['admin-users'] });\n      toast.success('Statut du compte mis à jour');\n    },\n    onError: () => toast.error('Erreur lors de la mise à jour'),\n  });\n\n  // Mutation pour changer le rôle\n  const changeRoleMutation = useMutation({\n    mutationFn: ({ userId, role }: { userId: string; role: User['role'] }) =>\n      api.patch(`/admin/users/${userId}/role`, { role }),\n    onSuccess: () => {\n      queryClient.invalidateQueries({ queryKey: ['admin-users'] });\n      toast.success('Rôle modifié avec succès');\n    },\n  });\n\n  if (isLoading) return <div className=\"p-8 text-center\">Chargement des utilisateurs...</div>;\n  if (isError) return <div className=\"p-8 text-center text-red-500\">Erreur lors du chargement</div>;\n\n  return (\n    <div className=\"p-6\">\n      <h2 className=\"text-2xl font-bold mb-4\">Gestion des utilisateurs</h2>\n      \n      {/* Barre de filtres */}\n      <div className=\"flex flex-col md:flex-row gap-4 mb-6\">\n        <Input\n          placeholder=\"Rechercher par nom ou email...\"\n          value={search}\n          onChange={(e) => { setSearch(e.target.value); setPage(1); }}\n          className=\"md:w-80\"\n        />\n        <Select value={roleFilter} onValueChange={(val) => { setRoleFilter(val); setPage(1); }}>\n          <option value=\"\">Tous les rôles</option>\n          <option value=\"admin\">Administrateurs</option>\n          <option value=\"seller\">Vendeurs</option>\n          <option value=\"customer\">Clients</option>\n        </Select>\n      </div>\n\n      {/* Tableau */}\n      <div className=\"overflow-x-auto\">\n        <table className=\"w-full border-collapse\">\n          <thead className=\"bg-gray-100\">\n            <tr><th className=\"p-3 text-left\">Nom</th><th>Email</th><th>Rôle</th><th>Statut</th><th>Date inscription</th><th>Actions</th></tr>\n          </thead>\n          <tbody>\n            {data?.users.map((user) => (\n              <tr key={user.id} className=\"border-b hover:bg-gray-50\">\n                <td className=\"p-3\">{user.firstName} {user.lastName}</td>\n                <td className=\"p-3\">{user.email}</td>\n                <td className=\"p-3\">\n                  <Select\n                    value={user.role}\n                    onValueChange={(role) => changeRoleMutation.mutate({ userId: user.id, role: role as User['role'] })}\n                  >\n                    <option value=\"customer\">Client</option>\n                    <option value=\"seller\">Vendeur</option>\n                    <option value=\"admin\">Admin</option>\n                  </Select>\n                </td>\n                <td className=\"p-3\">\n                  <span className={`px-2 py-1 rounded-full text-xs ${user.isBlocked ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>\n                    {user.isBlocked ? 'Bloqué' : 'Actif'}\n                  </span>\n                </td>\n                <td className=\"p-3\">{new Date(user.createdAt).toLocaleDateString('fr-FR')}</td>\n                <td className=\"p-3\">\n                  <Button\n                    variant={user.isBlocked ? 'outline' : 'destructive'}\n                    size=\"sm\"\n                    onClick={() => toggleBlockMutation.mutate({ userId: user.id, isBlocked: !user.isBlocked })}\n                  >\n                    {user.isBlocked ? 'Débloquer' : 'Bloquer'}\n                  </Button>\n                </td>\n              </tr>\n            ))}\n          </tbody>\n        </table>\n      </div>\n\n      {/* Pagination */}\n      <div className=\"flex justify-between items-center mt-6\">\n        <span className=\"text-sm text-gray-500\">\n          Page {data?.page} sur {data?.totalPages}\n        </span>\n        <div className=\"flex gap-2\">\n          <Button onClick={() => setPage(p => Math.max(1, p-1))} disabled={page === 1}>\n            Précédent\n          </Button>\n          <Button onClick={() => setPage(p => Math.min(data?.totalPages || 1, p+1))} disabled={page === data?.totalPages}>\n            Suivant\n          </Button>\n        </div>\n      </div>\n    </div>\n  );\n};\n\nexport default UserManagement;\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez pourquoi on utilise `keepPreviousData: true` dans la query et quel problème cela résout.",
+            "niveau": "medium",
+            "reponse": "`keepPreviousData: true` permet de conserver les données de la page précédente pendant que la nouvelle page se charge. Sans cette option, le composant afficherait un écran vide ou un spinner entre le moment où l'utilisateur clique sur 'Suivant' et le moment où les nouvelles données arrivent. Cela améliore l'expérience utilisateur en évitant les 'flashs' blancs et permet de voir encore l'ancienne page pendant le chargement."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Pourquoi est-il important de réinitialiser la page à 1 lorsque l'utilisateur modifie la recherche ou le filtre ?",
+            "niveau": "easy",
+            "reponse": "Lorsque l'utilisateur change le filtre ou la recherche, les résultats obtenus sont différents. Si on reste sur la même page (ex: page 3) alors que le nouveau filtre ne contient que 5 résultats, on risque d'afficher une page vide ou hors limites. Réinitialiser à la page 1 garantit que l'utilisateur voit les premiers résultats du nouveau filtre, ce qui est le comportement attendu intuitivement."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation de la recherche utilisateur avec debounce",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans le composant de gestion des utilisateurs, le champ de recherche déclenche un appel API à chaque frappe clavier. Un administrateur se plaint de lenteurs lors de la saisie d'un nom comme 'Jean-Philippe Martin'.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémentez une optimisation avec debounce pour n'effectuer la recherche qu'après que l'utilisateur a arrêté de taper pendant 300ms.",
+        "niveau": "medium",
+        "reponse": "```tsx\nimport { useState, useCallback, useRef } from 'react';\n\nconst UserManagement = () => {\n  const [searchInput, setSearchInput] = useState('');\n  const [debouncedSearch, setDebouncedSearch] = useState('');\n  const timerRef = useRef<NodeJS.Timeout>();\n\n  const handleSearchChange = useCallback((value: string) => {\n    setSearchInput(value);\n    \n    // Annuler le timer précédent\n    if (timerRef.current) {\n      clearTimeout(timerRef.current);\n    }\n    \n    // Démarrer un nouveau timer\n    timerRef.current = setTimeout(() => {\n      setDebouncedSearch(value);\n    }, 300);\n  }, []);\n\n  // Utiliser debouncedSearch dans la queryKey\n  const { data } = useQuery({\n    queryKey: ['admin-users', page, debouncedSearch, roleFilter],\n    queryFn: () => api.get('/admin/users', { params: { page, limit, search: debouncedSearch || undefined } }),\n    keepPreviousData: true,\n  });\n\n  return (\n    <Input\n      value={searchInput}\n      onChange={(e) => handleSearchChange(e.target.value)}\n      placeholder=\"Rechercher...\"\n    />\n  );\n};\n```\n\n**Explication** : Sans debounce, taper 'Jean-Philippe Martin' (18 caractères) déclencherait 18 appels API inutiles. Avec debounce, un seul appel est fait 300ms après la dernière frappe, réduisant la charge serveur et évitant les erreurs de 'race conditions' où les réponses arrivent dans un ordre différent de la saisie.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion des erreurs et feedback utilisateur",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un administrateur tente de bloquer un utilisateur qui est actuellement connecté sur le site. L'API renvoie une erreur 409 avec le message : \"Impossible de bloquer un administrateur actif\".</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Améliorez la mutation de blocage pour gérer cette erreur spécifique et afficher un toast approprié. Proposez également une solution pour éviter que l'administrateur ne se bloque lui-même.",
+        "niveau": "medium",
+        "reponse": "```tsx\nimport { useAuthStore } from '@/stores/authStore';\n\nconst toggleBlockMutation = useMutation({\n  mutationFn: ({ userId, isBlocked }: { userId: string; isBlocked: boolean }) =>\n    api.patch(`/admin/users/${userId}/block`, { isBlocked }),\n  onSuccess: () => {\n    queryClient.invalidateQueries({ queryKey: ['admin-users'] });\n    toast.success('Statut du compte mis à jour');\n  },\n  onError: (error: any) => {\n    if (error.response?.status === 409) {\n      toast.error(error.response?.data?.message || 'Action non autorisée sur cet utilisateur');\n    } else if (error.response?.status === 403) {\n      toast.error('Vous ne pouvez pas bloquer votre propre compte');\n    } else {\n      toast.error('Erreur lors de la mise à jour du statut');\n    }\n  },\n});\n\n// Dans le composant, désactiver le bouton si l'utilisateur essaie de se bloquer lui-même\nconst currentUserId = useAuthStore((state) => state.user?.id);\nconst isSelf = user.id === currentUserId;\n\n<Button\n  variant={user.isBlocked ? 'outline' : 'destructive'}\n  size=\"sm\"\n  onClick={() => toggleBlockMutation.mutate({ userId: user.id, isBlocked: !user.isBlocked })}\n  disabled={isSelf}\n  title={isSelf ? \"Vous ne pouvez pas bloquer votre propre compte\" : \"\"}\n>\n  {user.isBlocked ? 'Débloquer' : 'Bloquer'}\n</Button>\n```\n\n**Améliorations supplémentaires** :\n- Ajouter une confirmation avant de bloquer un utilisateur (modal)\n- Afficher un tooltip expliquant pourquoi le bouton est désactivé\n- Dans le cas d'un blocage réussi, déconnecter immédiatement l'utilisateur concerné via un WebSocket ou en invalidant son token",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Export des utilisateurs filtrés",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>L'administrateur souhaite exporter la liste des utilisateurs (filtres appliqués) au format CSV pour effectuer des analyses externes.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez une fonction JavaScript qui convertit un tableau d'utilisateurs en CSV et déclenche le téléchargement. Expliquez comment récupérer tous les utilisateurs (pas seulement la page courante) pour l'export.",
+        "niveau": "medium",
+        "reponse": "```tsx\nconst exportToCSV = (users: User[], filename: string) => {\n  // Définition des colonnes\n  const headers = ['ID', 'Prénom', 'Nom', 'Email', 'Rôle', 'Bloqué', 'Date inscription'];\n  \n  // Transformation des données\n  const rows = users.map(user => [\n    user.id,\n    user.firstName,\n    user.lastName,\n    user.email,\n    user.role,\n    user.isBlocked ? 'Oui' : 'Non',\n    new Date(user.createdAt).toLocaleDateString('fr-FR')\n  ]);\n  \n  // Construction du contenu CSV\n  const csvContent = [\n    headers.join(';'),\n    ...rows.map(row => row.map(cell => `\"${cell}\"`).join(';'))\n  ].join('\\n');\n  \n  // Ajout du BOM pour UTF-8 (compatibilité accents)\n  const blob = new Blob(['\\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });\n  const url = URL.createObjectURL(blob);\n  const link = document.createElement('a');\n  link.href = url;\n  link.setAttribute('download', filename);\n  document.body.appendChild(link);\n  link.click();\n  document.body.removeChild(link);\n  URL.revokeObjectURL(url);\n};\n\n// Récupération de tous les utilisateurs pour l'export\nconst exportAllFilteredUsers = async () => {\n  // Option 1 : L'API peut avoir un endpoint spécifique /admin/users/export?search=...&role=...\n  // Option 2 : Récupérer toutes les pages en boucle\n  let allUsers: User[] = [];\n  let currentPage = 1;\n  let totalPages = 1;\n  \n  do {\n    const response = await api.get('/admin/users', {\n      params: { page: currentPage, limit: 100, search, role: roleFilter }\n    });\n    allUsers = [...allUsers, ...response.data.users];\n    totalPages = response.data.totalPages;\n    currentPage++;\n  } while (currentPage <= totalPages);\n  \n  exportToCSV(allUsers, `utilisateurs_${new Date().toISOString().slice(0,19)}.csv`);\n};\n```\n\n**Recommandation** : Pour un grand nombre d'utilisateurs, il est préférable que le backend génère directement le CSV et fournisse une URL de téléchargement, évitant ainsi de charger des milliers d'utilisateurs en mémoire côté frontend.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

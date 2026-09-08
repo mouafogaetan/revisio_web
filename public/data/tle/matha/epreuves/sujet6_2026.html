@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+  "matiere": "Maths Tle A",
+  "classe": "Terminale",
+  "sequence": "Séquence 6",
+  "anneeScolaire": "2025-2026",
+  "exercices": [
+    {
+      "titre": "Exercice 1 : Équations, inéquations et systèmes",
+      "points": "5,5 pts",
+      "enonce": "<p>Cet exercice porte sur la résolution d'équations et d'inéquations du second degré ainsi que sur les systèmes d'équations.</p>",
+      "questions": [
+        {
+          "question": "<div class='question-text'>1) Résoudre dans \\(\\mathbb{R}\\) l'équation \\(-x^2 + 4x - 3 = 0\\).</div>",
+          "reponse": "<div><p>On calcule le discriminant : \\(\\Delta = b^2 - 4ac = 4^2 - 4(-1)(-3) = 16 - 12 = 4\\).</p><p>Comme \\(\\Delta > 0\\), l'équation admet deux racines distinctes :</p><p>\\(x_1 = \\frac{-b - \\sqrt{\\Delta}}{2a} = \\frac{-4 - 2}{-2} = 3\\)</p><p>\\(x_2 = \\frac{-b + \\sqrt{\\Delta}}{2a} = \\frac{-4 + 2}{-2} = 1\\).</p><p>L'ensemble solution est \\(\\mathcal{S} = \\{1; 3\\}\\).</p></div>"
+        },
+        {
+          "question": "<div class='question-text'>2) Résoudre dans \\(\\mathbb{R}\\) l'inéquation \\(-x^2 + 4x - 3 \\ge 0\\).</div>",
+          "reponse": "<div><p>On utilise le signe du trinôme. Le coefficient \\(a = -1 < 0\\), donc le trinôme est du signe de \\(a\\) à l'extérieur des racines et du signe contraire entre les racines.</p><p>Racines : \\(x_1 = 1\\) et \\(x_2 = 3\\).</p><p>On a \\(-x^2 + 4x - 3 \\ge 0\\) pour \\(x \\in [1; 3]\\).</p><p>L'ensemble solution est \\(\\mathcal{S} = [1; 3]\\).</p></div>"
+        },
+        {
+          "question": "<div class='question-text'>3) Résoudre dans \\(\\mathbb{R}\\) le système suivant par la méthode du pivot de Gauss :</div><div class='math-block'><div class='math'>$$\\begin{cases} x - 2y + z = 4 \\\\ 2x + y - z = -1 \\\\ -x + 3y - 2z = -5 \\end{cases}$$</div></div>",
+          "reponse": "<div><p>Écrivons le système sous forme matricielle augmentée :</p><div class='math-block'><div class='math'>$$\\begin{pmatrix} 1 & -2 & 1 & | & 4 \\\\ 2 & 1 & -1 & | & -1 \\\\ -1 & 3 & -2 & | & -5 \\end{pmatrix}$$</div></div><p>Opérations de Gauss :</p><p>\\(L_2 \\leftarrow L_2 - 2L_1\\) et \\(L_3 \\leftarrow L_3 + L_1\\) :</p><div class='math-block'><div class='math'>$$\\begin{pmatrix} 1 & -2 & 1 & | & 4 \\\\ 0 & 5 & -3 & | & -9 \\\\ 0 & 1 & -1 & | & -1 \\end{pmatrix}$$</div></div><p>Échangeons \\(L_2\\) et \\(L_3\\) :</p><div class='math-block'><div class='math'>$$\\begin{pmatrix} 1 & -2 & 1 & | & 4 \\\\ 0 & 1 & -1 & | & -1 \\\\ 0 & 5 & -3 & | & -9 \\end{pmatrix}$$</div></div><p>\\(L_3 \\leftarrow L_3 - 5L_2\\) :</p><div class='math-block'><div class='math'>$$\\begin{pmatrix} 1 & -2 & 1 & | & 4 \\\\ 0 & 1 & -1 & | & -1 \\\\ 0 & 0 & 2 & | & -4 \\end{pmatrix}$$</div></div><p>Par remontée, on obtient :</p><p>\\(2z = -4 \\Rightarrow z = -2\\)</p><p>\\(y - z = -1 \\Rightarrow y - (-2) = -1 \\Rightarrow y = -3\\)</p><p>\\(x - 2y + z = 4 \\Rightarrow x - 2(-3) + (-2) = 4 \\Rightarrow x + 6 - 2 = 4 \\Rightarrow x = 0\\)</p><p>L'ensemble solution est \\(\\mathcal{S} = \\{(0; -3; -2)\\}\\).</p></div>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 2 : Dénombrement et Probabilités",
+      "points": "4 pts",
+      "enonce": "<p>Cet exercice est une application des techniques de dénombrement et du calcul de probabilités.</p>",
+      "questions": [
+        {
+          "question": "<div class='question-text'>Dans une classe de Terminale A, il y a 15 garçons et 20 filles. On choisit au hasard un groupe de 3 élèves pour un exposé.</div><div class='question-text'>1) Quel est le nombre total de groupes possibles ?</div>",
+          "reponse": "<div><p>Le nombre total de groupes est le nombre de combinaisons de 3 élèves parmi 35 :</p><div class='math-block'><div class='math'>$$\\binom{35}{3} = \\frac{35 \\times 34 \\times 33}{3 \\times 2 \\times 1} = 6545$$</div></div></div>"
+        },
+        {
+          "question": "<div class='question-text'>2) Quelle est la probabilité que le groupe soit composé d'au moins une fille ?</div>",
+          "reponse": "<div><p>L'événement \\(E\\) : \"le groupe est composé d'au moins une fille\".</p><p>L'événement contraire \\(\\overline{E}\\) : \"le groupe est composé uniquement de garçons\" (3 garçons parmi 15).</p><p>Nombre de cas favorables à \\(\\overline{E}\\) : \\(\\binom{15}{3} = 455\\).</p><p>Donc \\(P(E) = 1 - P(\\overline{E}) = 1 - \\frac{455}{6545} = \\frac{6545 - 455}{6545} = \\frac{6090}{6545} = \\frac{174}{187}\\).</p></div>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 3 : Étude de fonction et Statistiques",
+      "points": "5,5 pts",
+      "enonce": "<p>Cet exercice traite de l'étude d'une fonction et de l'analyse d'une série statistique double.</p>",
+      "questions": [
+        {
+          "question": "<div class='question-text'>On considère la fonction \\(f\\) définie par \\(f(x) = \\frac{2x+1}{x-1}\\).</div><div class='question-text'>1) Déterminer le domaine de définition de \\(f\\).</div>",
+          "reponse": "<div><p>La fonction n'est pas définie lorsque le dénominateur s'annule : \\(x-1 = 0 \\Rightarrow x = 1\\).</p><p>L'ensemble de définition est \\(\\mathcal{D}_f = \\mathbb{R} \\setminus \\{1\\}\\).</p></div>"
+        },
+        {
+          "question": "<div class='question-text'>2) Calculer les limites de \\(f\\) aux bornes de son ensemble de définition.</div>",
+          "reponse": "<div><p>Limites en \\(\\pm\\infty\\) :</p><div class='math-block'><div class='math'>$$\\lim_{x \\to +\\infty} f(x) = \\lim_{x \\to +\\infty} \\frac{2x+1}{x-1} = \\lim_{x \\to +\\infty} \\frac{2x}{x} = 2$$</div></div><p>De même, \\(\\lim_{x \\to -\\infty} f(x) = 2\\). Donc la droite d'équation \\(y=2\\) est asymptote horizontale.</p><p>Limite en \\(x=1\\) :</p><p>\\(\\lim_{x \\to 1^+} (x-1) = 0^+\\) et \\(\\lim_{x \\to 1^+} (2x+1) = 3 > 0\\), donc \\(\\lim_{x \\to 1^+} f(x) = +\\infty\\).</p><p>\\(\\lim_{x \\to 1^-} (x-1) = 0^-\\) et \\(\\lim_{x \\to 1^-} (2x+1) = 3 > 0\\), donc \\(\\lim_{x \\to 1^-} f(x) = -\\infty\\).</p><p>La droite d'équation \\(x=1\\) est asymptote verticale.</p></div>"
+        },
+        {
+          "question": "<div class='question-text'>3) On donne une série statistique double :</div><div class='data-table'><table><thead><tr><th><i>x</i></th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th></tr></thead><tbody><tr><td><i>y</i></td><td>2</td><td>4</td><td>5</td><td>4</td><td>7</td></tr></tbody></table></div><div class='question-text'>Calculer les coordonnées du point moyen \\(G\\) de cette série.</div>",
+          "reponse": "<div><p>Les coordonnées du point moyen \\(G(\\bar{x}, \\bar{y})\\) sont :</p><p>\\(\\bar{x} = \\frac{1+2+3+4+5}{5} = \\frac{15}{5} = 3\\)</p><p>\\(\\bar{y} = \\frac{2+4+5+4+7}{5} = \\frac{22}{5} = 4,4\\)</p><p>Le point moyen est \\(G(3; 4,4)\\).</p></div>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 4 : Logarithme, Exponentielle et Primitives",
+      "points": "5 pts",
+      "enonce": "<p>Cet exercice porte sur les fonctions logarithmes et exponentielles, ainsi que sur le calcul de primitives.</p>",
+      "questions": [
+        {
+          "question": "<div class='question-text'>Résoudre dans \\(\\mathbb{R}\\) l'équation \\(\\ln(2x+1) = \\ln(x+3)\\).</div>",
+          "reponse": "<div><p>Les deux membres de l'équation sont définis pour \\(2x+1 > 0\\) et \\(x+3 > 0\\), soit \\(x > -\\frac{1}{2}\\).</p><p>La fonction \\(\\ln\\) est bijective, donc :</p><p>\\(\\ln(2x+1) = \\ln(x+3) \\Leftrightarrow 2x+1 = x+3 \\Leftrightarrow x = 2\\).</p><p>La valeur \\(x=2\\) appartient bien au domaine de définition. L'ensemble solution est \\(\\mathcal{S} = \\{2\\}\\).</p></div>"
+        },
+        {
+          "question": "<div class='question-text'>Résoudre dans \\(\\mathbb{R}\\) l'inéquation \\(e^{2x} - 3e^x - 4 \\ge 0\\).</div>",
+          "reponse": "<div><p>Posons \\(X = e^x > 0\\). L'inéquation devient : \\(X^2 - 3X - 4 \\ge 0\\).</p><p>Les racines du trinôme \\(X^2 - 3X - 4\\) sont \\(X_1 = -1\\) et \\(X_2 = 4\\).</p><p>Le trinôme est positif à l'extérieur des racines. Comme \\(X > 0\\), on a \\(X \\ge 4\\).</p><p>Donc \\(e^x \\ge 4 \\Leftrightarrow x \\ge \\ln 4\\).</p><p>L'ensemble solution est \\(\\mathcal{S} = [\\ln 4; +\\infty[\\).</p></div>"
+        },
+        {
+          "question": "<div class='question-text'>Déterminer une primitive de la fonction \\(f(x) = \\frac{1}{2x-1}\\) sur l'intervalle \\(]\\frac{1}{2}; +\\infty[\\).</div>",
+          "reponse": "<div><p>Une primitive de \\(\\frac{u'}{u}\\) est \\(\\ln|u|\\).</p><p>Ici, \\(u(x) = 2x-1\\), donc \\(u'(x) = 2\\).</p><p>Ainsi, \\(\\frac{1}{2x-1} = \\frac{1}{2} \\times \\frac{2}{2x-1} = \\frac{1}{2} \\frac{u'}{u}\\).</p><p>Une primitive de \\(f\\) est donc \\(F(x) = \\frac{1}{2} \\ln|2x-1| + C\\).</p><p>Sur l'intervalle \\(]\\frac{1}{2}; +\\infty[\\), \\(2x-1 > 0\\), donc \\(F(x) = \\frac{1}{2} \\ln(2x-1) + C\\).</p></div>"
+        }
+      ]
+    }
+  ]
+};
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,99 @@
+[
+  {
+    "intitule": "Comparaison des mécanismes d'authentification",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous devez choisir une stratégie d'authentification pour une API REST destinée à une application mobile et un site web classique. Comparez les sessions (stateful) et les JWT (stateless) selon les critères suivants : scalabilité, sécurité, facilité d'invalidation, et performance.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Comparez les sessions et les JWT en justifiant votre réponse pour chaque critère.",
+        "niveau": "hard",
+        "reponse": "<ul><li><strong>Scalabilité</strong> : Les JWT sont plus adaptés car aucune session n'est stockée côté serveur ; les sessions nécessitent un stockage partagé (Redis, base de données) en environnement distribué.</li><li><strong>Sécurité</strong> : Les sessions permettent une invalidation immédiate et un contrôle centralisé ; les JWT sont vulnérables tant qu'ils n'ont pas expiré, sauf à mettre en place une liste noire (ce qui les rend stateful).</li><li><strong>Invalidation</strong> : Les sessions peuvent être détruites instantanément côté serveur ; les JWT ne peuvent être révoqués avant expiration sans mécanisme supplémentaire coûteux.</li><li><strong>Performance</strong> : Les JWT réduisent les allers-retours base de données (pas de lookup session), mais sont plus lourds à transmettre et vérifier (signature, décodage).</li></ul>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Mise en place d'une session utilisateur",
+    "niveau": "hard",
+    "type": "competence",
+    "enonce": {
+      "texte": "<p>Vous développez une application de gestion de bibliothèque. Un utilisateur se connecte via <code>POST /login</code> avec <code>{ \"username\": \"alice\", \"password\": \"secret\" }</code>. Après vérification des identifiants, vous devez créer une session et stocker son ID dans un cookie sécurisé.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le code Express avec express-session pour créer la session après authentification réussie. Incluez la configuration de session avec les options de sécurité adaptées à la production.",
+        "niveau": "hard",
+        "reponse": "<pre><code>const session = require('express-session');\napp.use(session({\n  secret: 'unSecretComplexeEtLong',\n  resave: false,\n  saveUninitialized: false,\n  cookie: {\n    secure: true,      // HTTPS uniquement\n    httpOnly: true,    // inaccessible via JavaScript\n    maxAge: 1000 * 60 * 60 * 24, // 24h\n    sameSite: 'lax'\n  }\n}));\n\napp.post('/login', (req, res) => {\n  const { username, password } = req.body;\n  if (username === 'alice' && password === 'secret') {\n    req.session.userId = 42;\n    req.session.username = username;\n    res.json({ message: 'Connecté' });\n  } else {\n    res.status(401).json({ error: 'Identifiants invalides' });\n  }\n});</code></pre>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez le rôle de chaque option de configuration du cookie (secure, httpOnly, sameSite, maxAge).",
+            "niveau": "medium",
+            "reponse": "<ul><li><strong>secure</strong> : le cookie n'est envoyé qu'en HTTPS (évite les fuites sur HTTP).</li><li><strong>httpOnly</strong> : le cookie ne peut pas être lu par JavaScript (protection XSS).</li><li><strong>sameSite='lax'</strong> : le cookie est envoyé pour les requêtes de même site et pour les navigations top-level (protection CSRF).</li><li><strong>maxAge</strong> : durée de vie du cookie (ici 24h).</li></ul>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Lecture et destruction d'une session",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un utilisateur déjà connecté accède à <code>GET /profile</code> pour voir ses informations. Vous devez récupérer les données de session et proposer une route <code>POST /logout</code> pour détruire la session.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémentez les routes /profile et /logout en utilisant express-session. Vérifiez que l'utilisateur est authentifié avant d'accéder au profil, sinon renvoyez une erreur 401.",
+        "niveau": "medium",
+        "reponse": "<pre><code>// Middleware de protection\nconst requireAuth = (req, res, next) => {\n  if (req.session.userId) {\n    next();\n  } else {\n    res.status(401).json({ error: 'Non authentifié' });\n  }\n};\n\napp.get('/profile', requireAuth, (req, res) => {\n  res.json({\n    userId: req.session.userId,\n    username: req.session.username\n  });\n});\n\napp.post('/logout', (req, res) => {\n  req.session.destroy((err) => {\n    if (err) {\n      return res.status(500).json({ error: 'Erreur lors de la déconnexion' });\n    }\n    res.clearCookie('connect.sid'); // nom par défaut du cookie\n    res.json({ message: 'Déconnecté' });\n  });\n});</code></pre>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Choix stratégique entre session et JWT",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous devez concevoir l'authentification pour un tableau de bord interne d'administration (accès restreint, faible nombre d'utilisateurs simultanés, nécessité de pouvoir expulser un utilisateur immédiatement).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Justifiez pourquoi les sessions sont préférables aux JWT dans ce contexte.",
+        "niveau": "easy",
+        "reponse": "Les sessions permettent une invalidation instantanée : il suffit de détruire la session côté serveur pour déconnecter immédiatement un utilisateur. Avec les JWT, même après avoir bloqué l'utilisateur, son token reste valide jusqu'à expiration naturelle (sauf à maintenir une liste noire, ce qui revient à un état serveur). De plus, le faible nombre d'utilisateurs et l'environnement maîtrisé rendent le stockage de session simple et performant.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Configuration avancée des cookies de session",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Votre application Node.js/Express est déployée sur <code>https://api.exemple.com</code> et votre front-end React sur <code>https://app.exemple.com</code>. Vous rencontrez un problème : les cookies de session ne sont pas envoyés par le navigateur lors des requêtes AJAX.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifiez les causes possibles et proposez une configuration corrigée (express-session + client) pour que les cookies soient transmis correctement.",
+        "niveau": "hard",
+        "reponse": "<p><strong>Causes possibles :</strong></p><ul><li>Absence de <code>credentials: 'include'</code> côté client (fetch/axios).</li><li>Cookie <code>sameSite</code> trop strict (ex: 'strict' bloque les requêtes cross-site).</li><li>Le cookie nécessite <code>secure: true</code> mais la connexion est en HTTPS (c'est bon ici).</li><li>Le domaine du cookie ne correspond pas (par défaut, uniquement le domaine exact).</li></ul><p><strong>Configuration corrigée côté serveur :</strong></p><pre><code>app.use(session({\n  secret: '...',\n  resave: false,\n  saveUninitialized: false,\n  cookie: {\n    secure: true,\n    httpOnly: true,\n    sameSite: 'none',   // permet cross-site\n    domain: '.exemple.com' // partagé entre sous-domaines\n  }\n}));\n\n// CORS nécessaire\napp.use(cors({\n  origin: 'https://app.exemple.com',\n  credentials: true\n}));</code></pre><p><strong>Côté client (fetch) :</strong></p><pre><code>fetch('https://api.exemple.com/profile', {\n  credentials: 'include'\n});</code></pre><p><strong>Important :</strong> <code>sameSite='none'</code> exige <code>secure: true</code> (HTTPS).</p>",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

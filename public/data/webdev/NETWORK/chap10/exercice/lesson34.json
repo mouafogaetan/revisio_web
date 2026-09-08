@@ -1,0 +1,141 @@
+[
+  {
+    "intitule": "Analyse du processus d'attribution d'adresse IP par DHCP",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un ordinateur client se connecte à un réseau d'entreprise. Il est configuré en mode \"Obtenir une adresse IP automatiquement\" (DHCP). Les messages DHCP échangés entre le client et le serveur sont les suivants (ordre chronologique) :</p>\n<ol>\n  <li><strong>DHCPDISCOVER</strong> (client → broadcast)</li>\n  <li><strong>DHCPOFFER</strong> (serveur → client, proposition d'IP 192.168.1.100/24)</li>\n  <li><strong>DHCPREQUEST</strong> (client → broadcast, accepte l'offre)</li>\n  <li><strong>DHCPACK</strong> (serveur → client, confirmation)</li>\n</ol>\n<p>Le serveur DHCP attribue également : passerelle = 192.168.1.1, serveur DNS = 8.8.8.8, durée de bail = 86400 secondes (24 heures).</p>",
+      "images": [
+        "diagramme séquence DORA DHCP (Discover, Offer, Request, Acknowledge)",
+        "capture Wireshark paquets DHCP"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer pourquoi le client envoie DHCPDISCOVER en broadcast (adresse MAC FF:FF:FF:FF:FF:FF et IP 255.255.255.255) alors qu'il ne connaît pas encore l'adresse IP du serveur DHCP.",
+        "niveau": "easy",
+        "reponse": "Le client envoie DHCPDISCOVER en broadcast car il ne connaît ni l'adresse IP du serveur DHCP ni sa propre adresse IP. Le broadcast (255.255.255.255 au niveau IP et FF:FF:FF:FF:FF:FF au niveau MAC) permet de joindre tous les équipements du réseau local. Le serveur DHCP, qui écoute sur le port UDP 67, recevra ce message et pourra répondre. C'est le seul moyen pour un client sans IP de contacter un serveur inconnu sur le même réseau.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Calculer la date et l'heure exactes de renouvellement du bail si l'attribution a eu lieu le 15 mars 2025 à 08:00:00. Le client tente de renouveler son bail à 50% puis à 87.5% de la durée totale. Déterminer ces deux échéances.",
+        "niveau": "medium",
+        "reponse": "Durée totale du bail = 86400 secondes = 24 heures.\n\n**Premier renouvellement (T1 = 50%) :**\n50% de 86400 s = 43200 s = 12 heures\nDate = 15/03/2025 08:00:00 + 12h = **15/03/2025 20:00:00**\n\n**Deuxième renouvellement (T2 = 87.5%) :**\n87.5% de 86400 s = 75600 s = 21 heures\nDate = 15/03/2025 08:00:00 + 21h = **16/03/2025 05:00:00**\n\n**Si aucun renouvellement n'aboutit :**\nLe bail expire à 100% = **16/03/2025 08:00:00**. À ce moment, le client cesse d'utiliser l'IP et doit recommencer le processus DORA.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Quel type d'enregistrement DNS doit être créé pour associer le nom 'mail.entreprise.cm' à l'adresse IP 192.168.1.10 ? Décrire la commande nslookup pour vérifier cette résolution.",
+        "niveau": "easy",
+        "reponse": "L'enregistrement à créer est un **enregistrement A** (Address Record).\n\nPour vérifier la résolution avec nslookup :\n\n```\nnslookup mail.entreprise.cm\n```\n\nOu en spécifiant un serveur DNS particulier :\n\n```\nnslookup mail.entreprise.cm 8.8.8.8\n```\n\n**Résultat attendu :**\n```\nNom :   mail.entreprise.cm\nAddress: 192.168.1.10\n```\n\n**Types d'enregistrements associés :**\n- **AAAA** : pour IPv6 (ex: 2001:db8::1)\n- **CNAME** : alias (ex: www → mail)\n- **MX** : serveur de messagerie\n- **PTR** : résolution inverse (IP → nom)",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Configuration d'un serveur DNS et résolution de noms",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous êtes administrateur réseau d'une PME au Cameroun. Vous devez configurer un serveur DNS interne (BIND9 sous Linux) pour le domaine <code>entreprise.cm</code>. Les ressources suivantes sont à déclarer :</p>\n<ul>\n  <li>Serveur web principal : <strong>www.entreprise.cm</strong> → IP 192.168.10.5</li>\n  <li>Serveur web secondaire : <strong>backup.entreprise.cm</strong> → IP 192.168.10.6</li>\n  <li>Serveur mail : <strong>mail.entreprise.cm</strong> → IP 192.168.10.10</li>\n  <li>Un alias : <strong>intranet.entreprise.cm</strong> pointe vers <strong>www.entreprise.cm</strong></li>\n  <li>Serveur DNS autoritaire pour le domaine (NS) : <strong>ns1.entreprise.cm</strong> → IP 192.168.10.2</li>\n</ul>\n<p>Le serveur DNS doit également pouvoir résoudre des noms externes (forwarding vers 8.8.8.8).</p>",
+      "images": [
+        "fichier zone DNS bind9 exemple",
+        "arborescence domaine DNS avec TLD .cm"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédiger le fichier de zone DNS <code>entreprise.cm.zone</code> avec tous les enregistrements nécessaires (SOA, NS, A, CNAME). Inclure un enregistrement MX pour le serveur mail avec priorité 10.",
+        "niveau": "medium",
+        "reponse": "```\n$TTL 86400\n@   IN  SOA ns1.entreprise.cm. admin.entreprise.cm. (\n            2025031501  ; Numéro de série (YYYYMMDDNN)\n            7200        ; Rafraîchissement\n            3600        ; Réessai\n            1209600     ; Expiration\n            86400 )     ; TTL négatif\n\n; Serveurs de noms\n@       IN  NS  ns1.entreprise.cm.\n\n; Enregistrements A\nns1     IN  A   192.168.10.2\nwww     IN  A   192.168.10.5\nbackup  IN  A   192.168.10.6\nmail    IN  A   192.168.10.10\n\n; Alias CNAME\nintranet IN CNAME www\n\n; Enregistrement MX (Mail eXchange)\n@       IN  MX  10 mail.entreprise.cm.\n```\n\n**Explications :**\n- `$TTL 86400` = 24h, temps de vie par défaut des enregistrements\n- `SOA` : Start of Authority, informations administratives\n- `NS` : déclare le serveur DNS autoritaire\n- `A` : résolution nom → IPv4\n- `CNAME` : alias (canonical name)\n- `MX 10` : serveur mail avec priorité 10 (plus le chiffre est petit, plus la priorité est élevée)",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Un employeur tape 'www.entreprise.cm' dans son navigateur mais le site ne s'affiche pas. Il peut pinger 192.168.10.5 avec succès. Décrire la procédure de diagnostic en 3 étapes pour identifier si le problème vient du DNS.",
+        "niveau": "medium",
+        "reponse": "**Étape 1 : Vérification de la résolution DNS locale**\n```\nnslookup www.entreprise.cm\n```\nou\n```\ndig www.entreprise.cm\n```\n\n- Si la commande retourne l'IP 192.168.10.5 → DNS fonctionne, problème ailleurs (serveur web, pare-feu)\n- Si elle retourne 'Server failed' ou 'NXDOMAIN' → problème DNS\n\n**Étape 2 : Vérification du serveur DNS configuré sur le poste client**\n```\n# Windows\nipconfig /all | findstr \"DNS\"\n\n# Linux\ncat /etc/resolv.conf\n```\n- Vérifier que le serveur DNS configuré est bien celui de l'entreprise (ex: 192.168.10.2)\n\n**Étape 3 : Requête directe au serveur DNS autoritaire**\n```\nnslookup www.entreprise.cm 192.168.10.2\n```\n- Si cela fonctionne mais pas la requête standard, le problème est le serveur DNS par défaut du client.\n- Si cela échoue, vérifier le fichier de zone sur le serveur DNS.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquer la différence entre un enregistrement A et un enregistrement CNAME. Pourquoi ne peut-on pas créer un CNAME pointant vers un autre CNAME ?",
+        "niveau": "hard",
+        "reponse": "**Différence entre A et CNAME :**\n\n| Type | Rôle | Exemple |\n|------|------|---------|\n| **A** | Associe directement un nom à une adresse IPv4 | `www IN A 192.168.1.1` |\n| **CNAME** | Crée un alias vers un autre nom canonique | `ftp IN CNAME www` |\n\n**Pourquoi éviter les chaînes de CNAME :**\n- Un CNAME ne peut pas pointer vers un autre CNAME selon la RFC 1034. La raison est que cela pourrait créer des boucles ou une résolution trop longue.\n- Le serveur DNS doit suivre la chaîne, augmentant la charge et la latence.\n- Un nom avec un enregistrement CNAME ne peut avoir aucun autre enregistrement (pas de MX, NS, etc.).\n\n**Exemple incorrect (chaîne) :**\n```\nserveur1 IN CNAME serveur2\nserveur2 IN CNAME serveur3   ← Non conforme\n```\n\n**Bonnes pratiques :**\n- Un CNAME doit pointer directement vers un enregistrement A.\n- Pour une redirection, préférer utiliser directement l'enregistrement A.\n- HTTP redirection (301) au niveau applicatif pour les noms web.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Configuration d'un serveur web Apache et vérification",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous devez configurer un serveur web Apache sur une machine Ubuntu 22.04 LTS pour héberger deux sites :</p>\n<ul>\n  <li><strong>site1.entreprise.cm</strong> (port 80, document root: /var/www/site1)</li>\n  <li><strong>site2.entreprise.cm</strong> (port 80, document root: /var/www/site2)</li>\n</ul>\n<p>Les deux sites utilisent le même serveur (même IP 192.168.1.100). Le serveur doit pouvoir répondre aux requêtes des deux noms de domaine distincts (virtual hosts).</p>",
+      "images": [
+        "configuration Apache virtual hosts",
+        "fichier hosts pour tests locaux"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire le fichier de configuration Apache pour le site1 (site1.entreprise.cm) en utilisant le système de virtual hosting basé sur le nom. Indiquer les commandes pour activer le site et vérifier la configuration.",
+        "niveau": "medium",
+        "reponse": "**Fichier de configuration : /etc/apache2/sites-available/site1.conf**\n\n```apache\n<VirtualHost *:80>\n    ServerName site1.entreprise.cm\n    ServerAlias www.site1.entreprise.cm\n    DocumentRoot /var/www/site1\n    \n    <Directory /var/www/site1>\n        Options Indexes FollowSymLinks\n        AllowOverride All\n        Require all granted\n    </Directory>\n    \n    ErrorLog ${APACHE_LOG_DIR}/site1_error.log\n    CustomLog ${APACHE_LOG_DIR}/site1_access.log combined\n</VirtualHost>\n```\n\n**Commandes pour déployer :**\n```bash\n# Créer le répertoire et une page test\nsudo mkdir -p /var/www/site1\nsudo echo \"<h1>Site 1 - Entreprise</h1>\" | sudo tee /var/www/site1/index.html\n\n# Activer le site\nsudo a2ensite site1.conf\n\n# Désactiver le site par défaut (optionnel)\nsudo a2dissite 000-default.conf\n\n# Vérifier la configuration\nsudo apache2ctl configtest\n\n# Recharger Apache\nsudo systemctl reload apache2\n```\n\n**Pour site2 :** même structure avec `/var/www/site2` et `ServerName site2.entreprise.cm`.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer comment tester localement ces deux sites sur un poste client avant que les enregistrements DNS ne soient créés. Quelle commande utiliser et quel fichier modifier ?",
+        "niveau": "easy",
+        "reponse": "On peut tester localement sans DNS en modifiant le fichier **hosts** de la machine cliente.\n\n**Fichier à modifier :**\n- Windows : `C:\\Windows\\System32\\drivers\\etc\\hosts`\n- Linux/macOS : `/etc/hosts`\n\n**Ajouter les lignes :**\n```\n192.168.1.100   site1.entreprise.cm\n192.168.1.100   site2.entreprise.cm\n```\n\n**Commande pour vérifier la résolution :**\n```bash\nping site1.entreprise.cm\n```\nou\n```bash\nnslookup site1.entreprise.cm\n```\n\n**Tester l'accès web :**\n```bash\ncurl http://site1.entreprise.cm\n```\n\n**⚠️ Attention :**\n- Cette modification est locale et n'affecte que la machine cliente\n- En production, il faudra créer les enregistrements A sur le serveur DNS autoritaire",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Décrire les commandes pour vérifier qu'Apache écoute bien sur le port 80 et quels sont les sites actifs. Utiliser netstat et apache2ctl.",
+        "niveau": "easy",
+        "reponse": "**Vérifier qu'Apache écoute sur le port 80 :**\n```bash\n# Avec netstat\nsudo netstat -tulpn | grep :80\n\n# Avec ss (plus moderne)\nss -tulpn | grep :80\n\n# Avec lsof\nsudo lsof -i :80\n```\n\n**Résultat attendu :**\n```\ntcp6       0      0 :::80                   :::*                    LISTEN      1234/apache2\n```\n\n**Vérifier les sites activés :**\n```bash\n# Lister les sites activés\nls -la /etc/apache2/sites-enabled/\n\n# Ou avec apache2ctl\napache2ctl -S\n```\n\n**Résultat de `apache2ctl -S` :**\n```\nVirtualHost configuration:\n*:80                   site1.entreprise.cm (/etc/apache2/sites-enabled/site1.conf:1)\n*:80                   site2.entreprise.cm (/etc/apache2/sites-enabled/site2.conf:1)\n```\n\n**Statut du service :**\n```bash\nsystemctl status apache2\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Diagnostic et résolution de pannes : DHCP, DNS, Web",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Une petite entreprise rencontre des problèmes réseau. Voici les symptômes observés par les utilisateurs :</p>\n<ul>\n  <li><strong>Problème 1 :</strong> Certains postes n'obtiennent pas d'adresse IP automatiquement (message \"Pas d'accès réseau\") alors que d'autres fonctionnent normalement.</li>\n  <li><strong>Problème 2 :</strong> Les postes qui ont une IP peuvent accéder aux sites web externes (google.com) mais pas au site interne <code>intranet.entreprise.cm</code>.</li>\n  <li><strong>Problème 3 :</strong> L'accès au site interne fonctionne si on tape l'adresse IP 192.168.1.5 directement dans le navigateur.</li>\n</ul>\n<p>L'infrastructure se compose d'un routeur (192.168.1.1, serveur DHCP actif), d'un serveur DNS interne (192.168.1.2) et d'un serveur web (192.168.1.5).</p>",
+      "images": [
+        "schéma réseau entreprise avec routeur, switch, serveurs et postes clients"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Pour le problème 1 (absence d'IP), établir un diagnostic systématique en 4 étapes. Identifier les causes possibles et les solutions associées.",
+        "niveau": "medium",
+        "reponse": "**Diagnostic Problème 1 :**\n\n**Étape 1 : Vérification physique et liaison**\n- Vérifier le câble Ethernet ou la connexion WiFi\n- Vérifier que la carte réseau est active (ipconfig / ifconfig)\n- Vérifier les voyants du switch/routeur\n\n**Étape 2 : Vérification de la configuration client**\n```bash\n# Windows\nipconfig /all | findstr \"DHCP\"\n# Doit indiquer \"DHCP activé... Oui\"\n```\n\n**Étape 3 : Vérification du serveur DHCP**\n```bash\n# Sur le routeur, vérifier que le service DHCP est actif\n# Vérifier le pool d'adresses (ex: 192.168.1.100 à 192.168.1.200)\n# Vérifier qu'il reste des adresses disponibles\n```\n\n**Étape 4 : Capture des échanges DHCP (Wireshark)**\n- Filtrer sur `bootp` ou `udp.port==67`\n- Voir si le client émet un DISCOVER et si le serveur répond OFFER\n\n**Causes possibles :**\n| Cause | Solution |\n|-------|----------|\n| Pool DHCP saturé | Augmenter la plage ou réduire la durée de bail |\n| Pare-feu bloquant UDP 67/68 | Ajouter une règle d'autorisation |\n| Conflit d'adresses MAC | Vérifier si le serveur DHCP blackliste la MAC |\n| Serveur DHCP non répondant | Redémarrer le service DHCP sur le routeur |\n| Câble défectueux | Remplacer le câble ou tester sur un autre port switch |",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Pour les problèmes 2 et 3 (accès au site interne), déterminer la cause probable. Proposer une commande de diagnostic et la correction.",
+        "niveau": "hard",
+        "reponse": "**Analyse :**\n- Le site interne est accessible par IP (192.168.1.5) → le serveur web fonctionne\n- Les sites externes (google.com) sont accessibles → le routeur et le DNS externe fonctionnent\n- Le site interne n'est pas accessible par son nom (`intranet.entreprise.cm`) → **problème de résolution DNS interne**\n\n**Diagnostic :**\n```bash\n# Tester la résolution du nom interne\nnslookup intranet.entreprise.cm 192.168.1.2\n```\n\n**Résultat probable :**\n```\nServer: 192.168.1.2\nAddress: 192.168.1.2#53\n\n** server can't find intranet.entreprise.cm: NXDOMAIN\n```\n\n**Cause :** L'enregistrement A pour `intranet.entreprise.cm` est manquant dans le fichier de zone du serveur DNS interne.\n\n**Correction :**\n1. Connecter au serveur DNS (192.168.1.2)\n2. Ajouter dans le fichier de zone :\n   ```\n   intranet IN A 192.168.1.5\n   ```\n3. Incrémenter le numéro de série (ex: 2025031502)\n4. Recharger la configuration :\n   ```bash\n   sudo rndc reload\n   # ou\n   sudo systemctl restart bind9\n   ```\n5. Vérifier :\n   ```bash\n   nslookup intranet.entreprise.cm 192.168.1.2\n   ```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquer comment vérifier que les clients reçoivent bien l'adresse du serveur DNS interne via DHCP. Quelle commande permet de visualiser cette information ?",
+        "niveau": "easy",
+        "reponse": "**Vérification sur le client :**\n\n**Windows :**\n```cmd\nipconfig /all | findstr \"Serveurs DNS\"\n```\n\n**Linux :**\n```bash\ncat /etc/resolv.conf\n# ou\nnmcli dev show | grep DNS\n```\n\n**Résultat attendu :**\n```\nServeurs DNS . . . . . . . . . . . . . : 192.168.1.2\n```\n\n**Si le serveur DNS n'est pas le bon :**\n- Vérifier la configuration DHCP sur le routeur (option 'DNS Servers')\n- L'option 6 du protocole DHCP spécifie les serveurs DNS\n\n**Commandes pour forcer le renouvellement du bail :**\n```bash\n# Windows\nipconfig /release\nipconfig /renew\n\n# Linux (dhclient)\nsudo dhclient -r\nsudo dhclient\n```\n\n**Vérification avec `nslookup` :**\n```bash\nnslookup google.com\n# La première ligne indique le serveur DNS utilisé\n```",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

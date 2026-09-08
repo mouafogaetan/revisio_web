@@ -1,0 +1,139 @@
+[
+  {
+    "intitule": "Analyse du cycle de vie avec useEffect",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Un élève a écrit le composant suivant qui affiche l'heure actuelle. Analysez le code et répondez aux questions.</p>\n<pre><code>\nfunction Horloge() {\n  const [heure, setHeure] = useState(new Date());\n\n  useEffect(() => {\n    const interval = setInterval(() => {\n      setHeure(new Date());\n    }, 1000);\n  }, []);\n\n  return &lt;div&gt;{heure.toLocaleTimeString()}&lt;/div&gt;\n}\n</code></pre>",
+      "images": [
+        "schéma du cycle de vie d'un composant React avec useEffect",
+        "diagramme montrant le montage, mise à jour et démontage"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer à quel moment l'effet s'exécute et pourquoi le tableau de dépendances est vide.",
+        "niveau": "easy",
+        "reponse": "L'effet s'exécute une seule fois après le premier rendu (montage du composant) car le tableau de dépendances est vide. Cela permet de créer l'intervalle une seule fois et non à chaque rendu.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Que se passerait-il si on supprimait complètement le tableau de dépendances ?",
+            "niveau": "easy",
+            "reponse": "Sans tableau de dépendances, l'effet s'exécuterait après chaque rendu. Cela créerait un nouvel intervalle à chaque tick de l'horloge (toutes les secondes), provoquant une fuite mémoire et des comportements erratiques.",
+            "reponse": "Sans tableau de dépendances, l'effet s'exécuterait après chaque rendu. Un nouvel intervalle serait créé à chaque seconde, ce qui multiplierait les intervalles et saturerait la mémoire."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Identifier un problème potentiel dans ce code et proposer une correction.",
+            "niveau": "medium",
+            "reponse": "Le code ne nettoie pas l'intervalle lors du démontage du composant. Si le composant est supprimé du DOM, l'intervalle continuera de tourner en arrière-plan. Correction : ajouter une fonction de nettoyage : return () => clearInterval(interval);"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Chronomètre avec useEffect",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous devez créer un chronomètre pour une application de productivité destinée aux étudiants camerounais. Le chronomètre doit :</p>\n<ul>\n  <li>Afficher les minutes, secondes et centièmes de seconde</li>\n  <li>Proposer des boutons Démarrer, Pause, Réinitialiser</li>\n  <li>Se mettre à jour toutes les 10 millisecondes</li>\n  <li>Nettoyer correctement l'intervalle lors du démontage</li>\n  <li>Ne pas continuer à tourner en arrière-plan si le composant est démonté</li>\n</ul>",
+      "images": [
+        "maquette d'un chronomètre numérique avec boutons de contrôle",
+        "schéma de gestion d'intervalle avec useEffect et cleanup"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire le composant React complet 'Chronometre' qui implémente toutes ces fonctionnalités.",
+        "niveau": "medium",
+        "reponse": "```jsx\nimport { useState, useEffect } from 'react';\n\nfunction Chronometre() {\n  const [temps, setTemps] = useState(0); // temps en centièmes de seconde\n  const [actif, setActif] = useState(false);\n\n  useEffect(() => {\n    let interval = null;\n    if (actif) {\n      interval = setInterval(() => {\n        setTemps(prev => prev + 1);\n      }, 10); // 10ms = 1 centième\n    } else if (!actif && temps !== 0) {\n      clearInterval(interval);\n    }\n    return () => clearInterval(interval);\n  }, [actif]);\n\n  const demarrer = () => setActif(true);\n  const pause = () => setActif(false);\n  const reset = () => {\n    setActif(false);\n    setTemps(0);\n  };\n\n  const minutes = Math.floor(temps / 6000);\n  const secondes = Math.floor((temps % 6000) / 100);\n  const centiemes = temps % 100;\n\n  return (\n    &lt;div&gt;\n      &lt;div className=\"affichage\"&gt;\n        {String(minutes).padStart(2, '0')}:\n        {String(secondes).padStart(2, '0')}:\n        {String(centiemes).padStart(2, '0')}\n      &lt;/div&gt;\n      &lt;button onClick={demarrer} disabled={actif}&gt;Démarrer&lt;/button&gt;\n      &lt;button onClick={pause} disabled={!actif}&gt;Pause&lt;/button&gt;\n      &lt;button onClick={reset}&gt;Réinitialiser&lt;/button&gt;\n    &lt;/div&gt;\n  );\n}\n\nexport default Chronometre;\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Justifier la présence de la fonction de nettoyage (cleanup) et pourquoi elle est nécessaire même si l'intervalle est créé uniquement quand actif est true.",
+            "niveau": "medium",
+            "reponse": "La fonction de nettoyage est cruciale car si le composant est démonté pendant que le chronomètre tourne (actif = true), l'intervalle continuerait indéfiniment. De plus, à chaque réexécution de l'effet (quand actif change), l'ancien intervalle doit être supprimé avant d'en créer un nouveau pour éviter les doublons."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Que se passe-t-il si on ajoute 'temps' dans le tableau de dépendances ? Expliquer pourquoi ce serait problématique.",
+            "niveau": "hard",
+            "reponse": "Si 'temps' est ajouté aux dépendances, l'effet se réexécuterait à chaque mise à jour de 'temps' (toutes les 10ms). Cela supprimerait et recréerait un intervalle à chaque tick, ce qui est très inefficace et peut causer des problèmes de performance. Les intervalles doivent être créés uniquement quand 'actif' change."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Abonnement à une API avec nettoyage",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous développez un tableau de bord pour une plateforme éducative camerounaise. Ce composant doit écouter en temps réel les nouvelles notifications via une WebSocket. La connexion WebSocket est établie à l'aide de la bibliothèque 'socket.io-client'.</p>\n<p>Contraintes :</p>\n<ul>\n  <li>La connexion doit être établie au montage du composant</li>\n  <li>Le composant doit se réabonner si l'URL change (via une prop serveurUrl)</li>\n  <li>À la réception d'une notification, elle est ajoutée à la liste affichée</li>\n  <li>Le composant doit se déconnecter proprement lors du démontage</li>\n  <li>Gérer un état de chargement pendant la connexion</li>\n  <li>Si la connexion échoue, afficher un message d'erreur</li>\n</ul>",
+      "images": [
+        "schéma d'une connexion WebSocket avec React et nettoyage",
+        "diagramme de séquence montage/mise à jour/démontage avec abonnement"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire le composant 'NotificationBoard' qui gère l'abonnement WebSocket avec useEffect, incluant le nettoyage et la réaction aux changements d'URL.",
+        "niveau": "very hard",
+        "reponse": "```jsx\nimport { useState, useEffect } from 'react';\nimport io from 'socket.io-client';\n\nfunction NotificationBoard({ serveurUrl }) {\n  const [notifications, setNotifications] = useState([]);\n  const [connecte, setConnecte] = useState(false);\n  const [erreur, setErreur] = useState(null);\n\n  useEffect(() => {\n    let socket = null;\n    let estMonte = true;\n\n    const connecter = () => {\n      try {\n        socket = io(serveurUrl, {\n          transports: ['websocket'],\n          reconnectionAttempts: 3\n        });\n\n        socket.on('connect', () => {\n          if (estMonte) {\n            setConnecte(true);\n            setErreur(null);\n          }\n        });\n\n        socket.on('disconnect', () => {\n          if (estMonte) setConnecte(false);\n        });\n\n        socket.on('connect_error', (err) => {\n          if (estMonte) {\n            setErreur(`Erreur de connexion : ${err.message}`);\n            setConnecte(false);\n          }\n        });\n\n        socket.on('nouvelle_notification', (data) => {\n          if (estMonte) {\n            setNotifications(prev => [\n              { id: Date.now(), ...data, timestamp: new Date() },\n              ...prev\n            ]);\n          }\n        });\n\n      } catch (err) {\n        if (estMonte) setErreur(err.message);\n      }\n    };\n\n    connecter();\n\n    // Fonction de nettoyage\n    return () => {\n      estMonte = false;\n      if (socket) {\n        socket.disconnect();\n        socket.close();\n      }\n    };\n  }, [serveurUrl]); // Se réexécute si l'URL change\n\n  if (erreur) return &lt;div className=\"error\"&gt;⚠️ {erreur}&lt;/div&gt;;\n  if (!connecte) return &lt;div&gt;Connexion en cours...&lt;/div&gt;;\n\n  return (\n    &lt;div className=\"notifications\"&gt;\n      &lt;h3&gt;Notifications en temps réel ({notifications.length})&lt;/h3&gt;\n      {notifications.length === 0 && &lt;p&gt;Aucune notification pour l'instant&lt;/p&gt;}\n      &lt;ul&gt;\n        {notifications.map(notif => (\n          &lt;li key={notif.id}&gt;\n            &lt;strong&gt;{notif.timestamp.toLocaleTimeString()}&lt;/strong&gt; : {notif.message}\n          &lt;/li&gt;\n        ))}\n      &lt;/ul&gt;\n    &lt;/div&gt;\n  );\n}\n\nexport default NotificationBoard;\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer le rôle de la variable 'estMonte' dans ce code.",
+            "niveau": "medium",
+            "reponse": "La variable 'estMonte' est un flag qui permet d'éviter les mises à jour d'état après le démontage du composant. Lorsque le composant est démonté (cleanup appelé), 'estMonte' passe à false. Les callbacks WebSocket (connect, disconnect, etc.) vérifient cette variable avant d'appeler setState, empêchant ainsi les erreurs 'Can't perform a React state update on an unmounted component'."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Pourquoi 'serveurUrl' est-il dans le tableau de dépendances ? Que se passerait-il s'il n'y était pas ?",
+            "niveau": "hard",
+            "reponse": "'serveurUrl' est une prop qui peut changer (ex: passage d'un serveur de développement à un serveur de production). En l'ajoutant aux dépendances, l'effet se réexécute lorsque l'URL change, fermant l'ancienne connexion et en ouvrant une nouvelle sur la nouvelle URL. Sans cette dépendance, le composant continuerait d'utiliser l'ancienne URL même si la prop change."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Détection de changements pour sauvegarde automatique",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous créez un éditeur de texte pour une plateforme de rédaction collaborative. L'application doit sauvegarder automatiquement le contenu toutes les 5 secondes uniquement si le contenu a changé. Vous devez également déclencher une sauvegarde immédiate au moment du démontage du composant (ex: l'utilisateur ferme l'onglet).</p>\n<p>Le contenu est géré par un état 'texte'. La fonction 'sauvegarder(texte)' est fournie (elle retourne une Promesse).</p>",
+      "images": [
+        "schéma de sauvegarde automatique avec debounce et useEffect",
+        "diagramme montrant la détection de changement avant sauvegarde"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire le composant 'AutoSaveEditor' qui utilise useEffect pour implémenter la sauvegarde automatique périodique et la sauvegarde au démontage.",
+        "niveau": "very hard",
+        "reponse": "```jsx\nimport { useState, useEffect, useRef } from 'react';\n\nfunction AutoSaveEditor({ documentId, sauvegarder }) {\n  const [texte, setTexte] = useState('');\n  const [dernierSauvegarde, setDernierSauvegarde] = useState(null);\n  const [sauvegardeEnCours, setSauvegardeEnCours] = useState(false);\n  const texteRef = useRef(texte);\n\n  // Garder une référence à jour du texte pour la cleanup\n  useEffect(() => {\n    texteRef.current = texte;\n  }, [texte]);\n\n  // Sauvegarde périodique toutes les 5 secondes si le contenu a changé\n  useEffect(() => {\n    let interval = null;\n    \n    const effectuerSauvegarde = async () => {\n      if (sauvegardeEnCours) return;\n      \n      const texteActuel = texteRef.current;\n      const textePrecedent = dernierSauvegarde;\n      \n      if (texteActuel !== textePrecedent && texteActuel.trim() !== '') {\n        setSauvegardeEnCours(true);\n        try {\n          await sauvegarder({ id: documentId, contenu: texteActuel });\n          setDernierSauvegarde(texteActuel);\n          console.log('Sauvegarde auto effectuée');\n        } catch (err) {\n          console.error('Erreur sauvegarde:', err);\n        } finally {\n          setSauvegardeEnCours(false);\n        }\n      }\n    };\n\n    interval = setInterval(effectuerSauvegarde, 5000);\n\n    return () => clearInterval(interval);\n  }, [documentId, sauvegarder, dernierSauvegarde, sauvegardeEnCours]);\n\n  // Sauvegarde au démontage\n  useEffect(() => {\n    return () => {\n      const texteFinal = texteRef.current;\n      if (texteFinal !== dernierSauvegarde && texteFinal.trim() !== '') {\n        sauvegarder({ id: documentId, contenu: texteFinal }).catch(console.error);\n      }\n    };\n  }, [documentId, sauvegarder, dernierSauvegarde]);\n\n  return (\n    &lt;div&gt;\n      &lt;textarea\n        value={texte}\n        onChange={(e) => setTexte(e.target.value)}\n        rows={20}\n        cols={80}\n        placeholder=\"Écrivez votre contenu ici...\"\n      /&gt;\n      {sauvegardeEnCours && &lt;div className=\"status\"&gt;💾 Sauvegarde en cours...&lt;/div&gt;}\n      {dernierSauvegarde === texte && texte !== '' && (\n        &lt;div className=\"status success\"&gt;✓ Sauvegardé&lt;/div&gt;\n      )}\n    &lt;/div&gt;\n  );\n}\n\nexport default AutoSaveEditor;\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Justifier l'utilisation de 'useRef' pour stocker la valeur actuelle du texte.",
+            "niveau": "hard",
+            "reponse": "useRef permet de stocker une valeur mutable qui persiste entre les rendus sans déclencher de re-rendu. Dans la fonction de nettoyage (démontage), on a besoin de la valeur la plus récente du texte. Si on utilisait directement la variable 'texte', elle serait figée à la valeur du moment de la création de l'effet (closure). useRef permet d'accéder à la valeur actuelle même dans la fonction de nettoyage."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Pourquoi le deuxième useEffect (sauvegarde au démontage) a-t-il un tableau de dépendances avec documentId, sauvegarder et dernierSauvegarde ?",
+            "niveau": "medium",
+            "reponse": "Ces dépendances garantissent que la fonction de nettoyage utilise les versions les plus récentes de documentId, sauvegarder et dernierSauvegarde. Si ces valeurs changent entre le montage et le démontage, la fonction de nettoyage capturera les bonnes valeurs grâce à la mise à jour de l'effet. Sans ces dépendances, la cleanup utiliserait les valeurs initiales uniquement."
+          }
+        ]
+      }
+    ]
+  }
+]

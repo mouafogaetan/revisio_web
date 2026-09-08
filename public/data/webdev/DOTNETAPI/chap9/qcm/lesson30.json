@@ -1,0 +1,122 @@
+[
+  {
+    "questionText": "Quel attribut utilise-t-on en ASP.NET Core pour activer la mise en cache des réponses HTTP côté client ?",
+    "options": [
+      "[Cache(Duration = 60)]",
+      "[ResponseCache(Duration = 60)]",
+      "[HttpCache(Duration = 60)]",
+      "[OutputCache(Duration = 60)]"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium",
+    "explanation": "L'attribut `[ResponseCache]` permet de contrôler la mise en cache côté client (navigateur) et les proxies intermédiaires. On y spécifie la durée en secondes via la propriété `Duration`. `[OutputCache]` existait dans ASP.NET Framework mais a été remplacé."
+  },
+  {
+    "questionText": "Vous souhaitez stocker temporairement en mémoire sur le serveur le résultat d'une requête coûteuse (ex: appel à une API externe). Quel service de cache devez-vous injecter ?",
+    "options": [
+      "IDistributedCache",
+      "IMemoryCache",
+      "IResponseCaching",
+      "ICacheManager"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium",
+    "explanation": "`IMemoryCache` est le service pour la cache en mémoire locale sur le serveur. Il est idéal pour les données temporaires partagées entre les requêtes d'une même instance d'application. `IDistributedCache` sert pour un cache partagé (Redis, SQL Server) en environnement multi-serveurs."
+  },
+  {
+    "questionText": "Quelle est la syntaxe correcte pour enregistrer le service `IMemoryCache` dans le conteneur d'injection de dépendances (Program.cs) ?",
+    "options": [
+      "services.AddMemoryCache();",
+      "services.AddCache();",
+      "services.AddIMemoryCache();",
+      "services.AddScoped&lt;IMemoryCache&gt;();"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "easy",
+    "explanation": "La méthode d'extension `AddMemoryCache()` (située dans `Microsoft.Extensions.DependencyInjection`) enregistre par défaut l'implémentation de `IMemoryCache` en tant que Singleton. Elle configure également les services nécessaires comme `MemoryCache`."
+  },
+  {
+    "questionText": "Soit le code suivant dans un Controller : \n\n```csharp\n[ResponseCache(Duration = 30, Location = ResponseCacheLocation.Client, NoStore = false)]\npublic IActionResult GetProduct()\n{\n    return Ok(new { Id = 1, Name = \"Laptop\" });\n}\n```\n\nQue va-t-il se passer lors de l'appel à cet endpoint ?",
+    "options": [
+      "La réponse ne sera jamais mise en cache, même par le client.",
+      "Le client (navigateur) pourra mettre en cache la réponse pendant 30 secondes mais pas les proxies intermédiaires.",
+      "La réponse sera stockée dans le cache mémoire du serveur pendant 30 secondes.",
+      "Le serveur refusera de répondre car `NoStore = false` est obligatoire avec la cache client."
+    ],
+    "correctAnswer": 1,
+    "difficulty": "hard",
+    "explanation": "`Location = ResponseCacheLocation.Client` indique que seul le navigateur client peut mettre en cache la réponse (et non les proxies comme les CDN). `Duration = 30` définit la durée de validité du cache (via l'en-tête `Cache-Control: max-age=30`). `NoStore = false` signifie que la réponse peut être stockée."
+  },
+  {
+    "questionText": "En utilisant `IMemoryCache`, comment éviter efficacement les 'Cache Stampedes' (plusieurs requêtes simultanées qui régénèrent la même donnée expirée) ?",
+    "options": [
+      "En utilisant `cache.Set()` sans vérification préalable.",
+      "En verrouillant manuellement (`lock`) tout le code d'accès au cache.",
+      "En utilisant `cache.GetOrCreateAsync()` qui gère automatiquement l'accès concurrent.",
+      "En augmentant la durée de vie du cache à 1 heure."
+    ],
+    "correctAnswer": 2,
+    "difficulty": "very hard",
+    "explanation": "`GetOrCreateAsync()` (ou `GetOrCreate`) de `IMemoryCache` utilise un mécanisme de 'coalescing' qui garantit qu'une seule tâche asynchrone génère la valeur en cache même si 100 requêtes arrivent en même temps après l'expiration. Les autres requêtes attendent le résultat de la première. Cela évite la surcharge serveur."
+  },
+  {
+    "questionText": "Quelle méthode permet de supprimer manuellement une entrée du cache mémoire ?",
+    "options": [
+      "cache.Clear()",
+      "cache.Remove(key)",
+      "cache.Delete(key)",
+      "cache.Evict(key)"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "easy",
+    "explanation": "La méthode `Remove(key)` de l'interface `IMemoryCache` permet de supprimer une entrée spécifique du cache. `Clear()` n'existe pas (pour tout vider, il faudrait itérer sur les clés ou recréer le cache)."
+  },
+  {
+    "questionText": "Comment configurer une dépendance de cache : un élément doit être automatiquement supprimé si un autre fichier de configuration (`appsettings.json`) est modifié ?",
+    "options": [
+      "C'est impossible avec IMemoryCache.",
+      "En utilisant `cache.Set(key, value, new MemoryCacheEntryOptions().AddExpirationToken(new CancellationChangeToken(...)))`.",
+      "En utilisant `cache.Set(key, value, TimeSpan.FromMinutes(5))`.",
+      "En utilisant `cache.Set(key, value, new MemoryCacheEntryOptions().SetSize(1))`."
+    ],
+    "correctAnswer": 1,
+    "difficulty": "very hard",
+    "explanation": "`MemoryCacheEntryOptions` permet d'ajouter un `IChangeToken`. Avec `CancellationChangeToken` lié à un `CancellationTokenSource`, on peut révoquer le cache. Le framework utilise cela pour `IOptionsMonitor` : une modification du fichier de configuration déclenche le token et purge les entrées associées."
+  },
+  {
+    "questionText": "Quel en-tête HTTP est contrôlé par l'attribut `[ResponseCache(Duration = 60)]` pour indiquer au navigateur de conserver la réponse pendant 60 secondes ?",
+    "options": [
+      "Expires : Sat, ...",
+      "Cache-Control : public, max-age=60",
+      "Pragma : no-cache",
+      "Last-Modified : ..."
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium",
+    "explanation": "L'attribut `[ResponseCache]` ajoute l'en-tête `Cache-Control: public, max-age=60`. `public` signifie que la réponse peut être mise en cache par n'importe quel intermédiaire. `max-age=60` définit la fraîcheur en secondes. L'en-tête `Expires` est un ancien mécanisme désormais moins utilisé."
+  },
+  {
+    "questionText": "Quelle est la différence principale entre `IMemoryCache` et `IDistributedCache` dans le contexte d'un déploiement sur plusieurs serveurs (load balancer) ?",
+    "options": [
+      "Aucune différence, les deux fonctionnent de manière identique.",
+      "`IMemoryCache` est partagé entre tous les serveurs, `IDistributedCache` ne l'est pas.",
+      "`IMemoryCache` est local à chaque serveur, `IDistributedCache` est partagé (Redis, SQL Server).",
+      "`IDistributedCache` est plus rapide que `IMemoryCache`."
+    ],
+    "correctAnswer": 2,
+    "difficulty": "hard",
+    "explanation": "Avec un load balancer, un utilisateur peut être dirigé vers le serveur A puis vers le serveur B. Si le cache est en mémoire locale (`IMemoryCache`), la donnée n'existe pas sur le serveur B (cache non partagé). `IDistributedCache` (Redis, SQL Server, etc.) fournit un magasin unique accessible par tous les serveurs."
+  },
+  {
+    "questionText": "Quelle option de `MemoryCacheEntryOptions` permet de limiter la taille totale du cache en spécifiant un 'poids' pour chaque entrée ?",
+    "options": [
+      "SetPriority",
+      "SetSlidingExpiration",
+      "SetAbsoluteExpiration",
+      "SetSize"
+    ],
+    "correctAnswer": 3,
+    "difficulty": "medium",
+    "explanation": "`SetSize(value)` permet d'attribuer un poids arbitraire à une entrée (ex: 1 pour un petit objet, 10 pour une grosse collection). Ensuite, lors de la configuration du `MemoryCache`, on définit une `SizeLimit`. Lorsque la limite est atteinte, le cache évince (supprime) les entrées les moins prioritaires (ou les plus anciennes) pour rester sous la limite."
+  }
+]

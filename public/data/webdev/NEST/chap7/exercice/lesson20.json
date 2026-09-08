@@ -1,0 +1,104 @@
+[
+  {
+    "intitule": "Configuration sécurisée d'une application météo",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous développez une API météo avec NestJS. Cette API doit utiliser une clé secrète (<code>API_KEY</code>) et l'URL de base (<code>WEATHER_API_URL</code>) qui varient selon l'environnement (développement, production). En vous basant sur le module <code>@nestjs/config</code>, réalisez les tâches suivantes.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Installer et configurer le module de configuration",
+        "niveau": "medium",
+        "reponse": "1. Exécuter `npm install @nestjs/config`\n2. Dans `app.module.ts`, importer `ConfigModule.forRoot()` dans les imports.\n3. Créer un fichier `.env` à la racine avec :\n   ```\n   API_KEY=ma_super_cle_dev\n   WEATHER_API_URL=https://api.weather.dev/v1\n   ```\n4. Optionnellement, ajouter `isGlobal: true` pour rendre ConfigService disponible partout sans réimporter.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Écrire la commande npm pour installer le package nécessaire, puis montrer l'import du module `ConfigModule` dans le module racine. Expliquer brièvement l'effet de l'option `isGlobal: true`.",
+            "niveau": "easy",
+            "reponse": "`npm install @nestjs/config`\n\n```typescript\nimport { Module } from '@nestjs/common';\nimport { ConfigModule } from '@nestjs/config';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true, // Rend ConfigService accessible partout sans réimporter\n    }),\n  ],\n})\nexport class AppModule {}\n```\nL'option `isGlobal: true` évite d'importer `ConfigModule` dans chaque module qui a besoin des variables d'environnement."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Implémenter un service `WeatherService` qui injecte `ConfigService` et lire les deux variables d'environnement. Ajouter une méthode `getApiUrl()` retournant l'URL complète.",
+            "niveau": "medium",
+            "reponse": "```typescript\nimport { Injectable } from '@nestjs/common';\nimport { ConfigService } from '@nestjs/config';\n\n@Injectable()\nexport class WeatherService {\n  constructor(private configService: ConfigService) {}\n\n  getApiKey(): string {\n    return this.configService.get<string>('API_KEY');\n  }\n\n  getApiUrl(): string {\n    return this.configService.get<string>('WEATHER_API_URL');\n  }\n}\n```"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Tester et adapter la configuration selon l'environnement",
+        "niveau": "hard",
+        "reponse": "Créer plusieurs fichiers .env, utiliser la validation Joi et injecter ConfigService dans les imports asynchrones.",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Créer un fichier `.env.production` avec des valeurs différentes. Décrire comment forcer NestJS à charger ce fichier spécifique en production.",
+            "niveau": "medium",
+            "reponse": "Fichier `.env.production` :\n```\nAPI_KEY=prod_cle_secrete_123\nWEATHER_API_URL=https://api.weather.com/v2\n```\nPour charger le bon fichier, utiliser l'option `envFilePath` dans `ConfigModule.forRoot()` :\n```typescript\nConfigModule.forRoot({\n  envFilePath: process.env.NODE_ENV === 'production' ? '.env.production' : '.env',\n})\n```\nOu plus simplement, NestJS charge `.env` par défaut, et on peut définir `NODE_ENV=production`."
+          },
+          {
+            "numero": "2.b",
+            "texte": "Implémenter une validation avec Joi pour exiger `API_KEY` (non vide) et `WEATHER_API_URL` (format URL valide). Montrer le code à ajouter dans `ConfigModule.forRoot()`.",
+            "niveau": "hard",
+            "reponse": "```typescript\nimport * as Joi from 'joi';\n\nConfigModule.forRoot({\n  validationSchema: Joi.object({\n    API_KEY: Joi.string().required().not.empty(),\n    WEATHER_API_URL: Joi.string().uri().required(),\n  }),\n});\n```"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Refactorisation d'un module TypeORM avec ConfigService",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous avez un projet NestJS qui se connecte à PostgreSQL. Les identifiants de connexion (hôte, port, utilisateur, mot de passe, nom de base) sont actuellement écrits en dur dans le module. Votre mission est de refactoriser ce code pour utiliser <code>@nestjs/config</code> et ainsi centraliser et sécuriser la configuration.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Déplacer les paramètres de connexion vers les variables d'environnement",
+        "niveau": "easy",
+        "reponse": "Créer un fichier `.env` avec les clés DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME. Installer @nestjs/config et importer ConfigModule.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Écrire le contenu d'un fichier `.env` de développement typique pour PostgreSQL, avec un utilisateur 'admin' et une base 'nest_db'.",
+            "niveau": "easy",
+            "reponse": "```\nDB_HOST=localhost\nDB_PORT=5432\nDB_USER=admin\nDB_PASSWORD=secret123\nDB_NAME=nest_db\n```"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Modifier le module de base de données pour utiliser la configuration. On suppose que le module s'appelle `DatabaseModule`. Donner le code complet de ce module après refactorisation.",
+            "niveau": "hard",
+            "reponse": "```typescript\nimport { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\n\n@Module({\n  imports: [\n    TypeOrmModule.forRootAsync({\n      imports: [ConfigModule],\n      inject: [ConfigService],\n      useFactory: (configService: ConfigService) => ({\n        type: 'postgres',\n        host: configService.get('DB_HOST'),\n        port: configService.get('DB_PORT'),\n        username: configService.get('DB_USER'),\n        password: configService.get('DB_PASSWORD'),\n        database: configService.get('DB_NAME'),\n        entities: [__dirname + '/../**/*.entity.{js,ts}'],\n        synchronize: true,  // à désactiver en production\n      }),\n    }),\n  ],\n})\nexport class DatabaseModule {}\n```"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Analyser l'impact de l'utilisation du module de configuration sur la testabilité et la sécurité.",
+        "niveau": "medium",
+        "reponse": "Améliore la sécurité (pas de secrets en clair dans le code source), facilite les tests (changer de fichier .env pour les tests unitaires/e2e), centralise la configuration.",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Expliquer pourquoi il est déconseillé de committer le fichier `.env` sur GitHub et proposer une alternative.",
+            "niveau": "medium",
+            "reponse": "Le fichier `.env` contient souvent des secrets (mots de passe, clés API). Il ne doit pas être versionné. Alternative : créer un fichier `.env.example` avec des valeurs fictives et documenter les variables nécessaires. En production, injecter les variables via l'environnement système ou un gestionnaire de secrets."
+          },
+          {
+            "numero": "2.b",
+            "texte": "Rédiger un test unitaire simple vérifiant que le `ConfigService` retourne bien la valeur de `DB_HOST` définie dans un fichier `.env.test`.",
+            "niveau": "hard",
+            "reponse": "```typescript\nimport { Test, TestingModule } from '@nestjs/testing';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\n\ndescribe('ConfigService', () => {\n  let configService: ConfigService;\n\n  beforeEach(async () => {\n    const module: TestingModule = await Test.createTestingModule({\n      imports: [\n        ConfigModule.forRoot({\n          envFilePath: '.env.test',\n        }),\n      ],\n      providers: [ConfigService],\n    }).compile();\n\n    configService = module.get<ConfigService>(ConfigService);\n  });\n\n  it('should return DB_HOST from .env.test', () => {\n    expect(configService.get('DB_HOST')).toBe('localhost_test');\n  });\n});\n```"
+          }
+        ]
+      }
+    ]
+  }
+]

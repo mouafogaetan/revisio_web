@@ -1,0 +1,170 @@
+[
+  {
+    "intitule": "Préparation du projet pour la production",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous avez développé une API e-commerce pour SawaMart et devez maintenant la préparer pour le déploiement en production. Répondez aux questions suivantes concernant les étapes de préparation.</p>",
+      "images": [
+        "Capture d'écran du terminal montrant l'exécution de la commande npm run build avec succès.",
+        "Structure des dossiers montrant le dossier 'dist' généré après la compilation."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez le rôle de la commande <code>npm run build</code> dans un projet NestJS et ce qu'elle génère.",
+        "niveau": "easy",
+        "reponse": "La commande <code>npm run build</code> compile le code TypeScript du projet en JavaScript. Elle utilise le compilateur TypeScript (tsc) pour transpiler les fichiers .ts en .js. Le résultat est généré dans le dossier <code>dist/</code> (ou <code>build/</code>). Ce dossier contient tout le code JavaScript prêt à être exécuté en production, avec la structure de dossiers préservée.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comparez l'exécution en développement (<code>npm run start:dev</code>) et en production (<code>node dist/main</code>). Quelles sont les différences ?",
+            "niveau": "medium",
+            "reponse": "En développement, <code>npm run start:dev</code> utilise le mode watch avec rechargement à chaud (hot reload). NestJS compile le code à la volée et redémarre le serveur automatiquement lors des modifications. En production, <code>node dist/main</code> exécute directement le code JavaScript compilé sans recompilation ni rechargement. La version de production est plus rapide et consomme moins de ressources, car elle n'inclut pas les outils de développement."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Quelle variable d'environnement doit être définie pour indiquer à l'application qu'elle s'exécute en mode production ? Quelle est son importance ?",
+        "niveau": "easy",
+        "reponse": "La variable d'environnement <code>NODE_ENV=production</code> doit être définie. Elle permet à l'application (et aux bibliothèques) d'adapter leur comportement : désactivation des logs de debug, activation des optimisations, utilisation de configurations spécifiques à la production, et parfois activation de fonctionnalités de sécurité supplémentaires.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Configuration de l'application pour la production",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous devez configurer l'API de SawaMart pour le déploiement sur un serveur de production. L'application utilise plusieurs services externes (base de données PostgreSQL, Redis, Cloudinary) et des clés JWT.</p>",
+      "images": [
+        "Diagramme d'architecture montrant l'application Node.js connectée à PostgreSQL, Redis, et Cloudinary.",
+        "Exemple de fichier .env.production avec des variables d'environnement pour la production."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créez un fichier <code>.env.production</code> avec les variables d'environnement nécessaires pour une application e-commerce en production. Incluez les configurations pour la base de données, JWT, Redis (cache), et Cloudinary.",
+        "niveau": "medium",
+        "reponse": "```env\n# .env.production\nNODE_ENV=production\n\n# Base de données PostgreSQL\nDB_HOST=prod-db.sawamart.com\nDB_PORT=5432\nDB_USERNAME=sawamart_prod_user\nDB_PASSWORD=UberSecureProdPass123!\nDB_DATABASE=sawamart_prod_db\n\n# JWT\nJWT_SECRET=very-long-and-random-secret-key-for-production\nJWT_EXPIRES_IN=1h\nREFRESH_TOKEN_EXPIRES_IN=7d\n\n# Redis (cache)\nREDIS_HOST=prod-redis.sawamart.com\nREDIS_PORT=6379\nREDIS_PASSWORD=RedisProdSecurePass\n\n# Cloudinary\nCLOUDINARY_CLOUD_NAME=sawamart\nCLOUDINARY_API_KEY=123456789012345\nCLOUDINARY_API_SECRET=abcdefghijklmnopqrstuvwxyz\n\n# API\nPORT=3000\nAPI_URL=https://api.sawamart.com\nFRONTEND_URL=https://www.sawamart.com\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez pourquoi il ne faut pas versionner le fichier <code>.env.production</code> dans le dépôt Git. Comment gérer les variables d'environnement en production ?",
+            "niveau": "hard",
+            "reponse": "Le fichier <code>.env.production</code> contient des secrets (mots de passe, clés API) qui ne doivent jamais être exposés dans le code source. Si le dépôt Git est compromis, tous les secrets seraient exposés. En production, les variables d'environnement sont généralement gérées via : 1) les variables d'environnement du système (ex: <code>export</code> sous Linux), 2) les services de gestion de secrets des plateformes de hosting (ex: AWS Secrets Manager, Heroku Config Vars), 3) des fichiers de configuration sécurisés stockés hors du dépôt."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Comment l'application peut-elle charger dynamiquement la bonne configuration selon l'environnement (développement, test, production) ?",
+            "niveau": "hard",
+            "reponse": "On peut utiliser le <code>ConfigModule</code> de NestJS avec différentes stratégies : 1) <code>ConfigModule.forRoot({ envFilePath: '.env.' + process.env.NODE_ENV })</code> pour charger un fichier spécifique, 2) utiliser la variable <code>NODE_ENV</code> pour déterminer l'environnement et charger les variables correspondantes, 3) combiner un fichier <code>.env</code> par défaut avec des surcharges spécifiques. Les variables d'environnement du système (ex: définies avec <code>export</code>) ont priorité sur celles des fichiers."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Mise en place du serveur de production avec PM2",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous êtes responsable du déploiement de l'API SawaMart sur un serveur Ubuntu. Vous devez utiliser PM2 pour gérer le processus Node.js en production. L'application doit redémarrer automatiquement en cas de crash et gérer les logs.</p>",
+      "images": [
+        "Interface PM2 montrant la liste des processus en cours d'exécution avec leurs statuts.",
+        "Schéma de fonctionnement de PM2 avec le cluster mode et le load balancing."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez la commande PM2 pour démarrer l'application en production avec un nom 'sawamart-api'. Expliquez les options utilisées.",
+        "niveau": "medium",
+        "reponse": "La commande est : <code>pm2 start dist/main.js --name sawamart-api --env production</code>. <br/><br/>- <code>start</code> : démarre une nouvelle application<br/>- <code>dist/main.js</code> : le fichier d'entrée compilé<br/>- <code>--name sawamart-api</code> : donne un nom au processus pour faciliter sa gestion<br/>- <code>--env production</code> : définit l'environnement (utilise les variables de production)",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment configurer PM2 pour que l'application redémarre automatiquement en cas de crash et au redémarrage du serveur ?",
+            "niveau": "medium",
+            "reponse": "Pour le redémarrage automatique en cas de crash, PM2 le fait par défaut. Pour le démarrage au redémarrage du serveur, on utilise <code>pm2 startup</code> suivi de <code>pm2 save</code>. La commande <code>pm2 startup</code> génère un script de démarrage système (systemd/init.d) qui lance PM2 au boot. <code>pm2 save</code> enregistre la liste des processus à restaurer. La commande complète : <code>pm2 startup systemd && pm2 save</code>.",
+            "sousQuestions": [
+              {
+                "numero": "1.a.i",
+                "texte": "Décrivez la commande pour visualiser les logs de l'application et pour redémarrer l'application après une mise à jour du code.",
+                "niveau": "easy",
+                "reponse": "Pour visualiser les logs : <code>pm2 logs sawamart-api</code> (ou <code>pm2 logs</code> pour tous les processus).<br/><br/>Pour redémarrer après une mise à jour :<br/>1. <code>npm run build</code> pour recompiler le code<br/>2. <code>pm2 reload sawamart-api</code> pour redémarrer sans interruption (reload) ou <code>pm2 restart sawamart-api</code> pour un redémarrage complet.<br/><br/>Le <code>reload</code> est préférable en production car il effectue un redémarrage progressif (zero-downtime)."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez l'avantage d'utiliser le mode 'cluster' de PM2 pour une API e-commerce. Écrivez la commande pour démarrer l'application en mode cluster.",
+        "niveau": "hard",
+        "reponse": "Le mode 'cluster' de PM2 permet de démarrer plusieurs instances (workers) de l'application, répartissant la charge entre les différents cœurs du processeur. Cela améliore les performances et la disponibilité : si un worker crash, les autres continuent de répondre aux requêtes. La commande est : <code>pm2 start dist/main.js --name sawamart-api -i max --env production</code>. <br/><br/>- <code>-i max</code> : démarre autant d'instances que de cœurs CPU disponibles<br/>- On peut aussi spécifier un nombre fixe avec <code>-i 4</code>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Documentation de l'API avec Swagger",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Pour faciliter la collaboration avec les développeurs frontend, vous devez documenter l'API de SawaMart avec Swagger/OpenAPI. L'API inclut des endpoints d'authentification, de gestion des produits et des commandes.</p>",
+      "images": [
+        "Interface Swagger UI montrant la documentation interactive de l'API avec les différents endpoints.",
+        "Exemple de fichier de configuration Swagger avec les options de documentation."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Configurez Swagger dans une application NestJS pour documenter l'API. Écrivez le code nécessaire dans le fichier <code>main.ts</code> et expliquez chaque partie.",
+        "niveau": "hard",
+        "reponse": "```typescript\n// main.ts\nimport { NestFactory } from '@nestjs/core';\nimport { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';\nimport { AppModule } from './app.module';\n\nasync function bootstrap() {\n  const app = await NestFactory.create(AppModule);\n\n  // Configuration Swagger\n  const config = new DocumentBuilder()\n    .setTitle('SawaMart API')\n    .setDescription('API pour la plateforme e-commerce SawaMart')\n    .setVersion('1.0')\n    .addTag('auth', 'Authentification et gestion des utilisateurs')\n    .addTag('products', 'Gestion des produits')\n    .addTag('orders', 'Gestion des commandes')\n    .addBearerAuth() // Pour l'authentification JWT\n    .build();\n\n  const document = SwaggerModule.createDocument(app, config);\n  SwaggerModule.setup('api-docs', app, document); // Documentation disponible sur /api-docs\n\n  await app.listen(3000);\n}\nbootstrap();\n```<br/><br/>- <code>DocumentBuilder</code> : construction de la configuration Swagger<br/>- <code>setTitle</code>, <code>setDescription</code> : informations sur l'API<br/>- <code>addBearerAuth()</code> : ajout du support JWT pour tester les endpoints sécurisés<br/>- <code>setup('api-docs', app, document)</code> : rend la documentation disponible sur <code>/api-docs</code>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment ajouter des décorateurs Swagger aux contrôleurs et DTO pour enrichir la documentation ? Donnez un exemple pour un endpoint de création de produit.",
+            "niveau": "hard",
+            "reponse": "```typescript\n// product.dto.ts\nimport { ApiProperty } from '@nestjs/swagger';\n\nexport class CreateProductDto {\n  @ApiProperty({ example: 'iPhone 15 Pro', description: 'Nom du produit' })\n  name: string;\n\n  @ApiProperty({ example: 999.99, description: 'Prix du produit' })\n  price: number;\n\n  @ApiProperty({ example: 'uuid-de-la-categorie', description: 'ID de la catégorie' })\n  categoryId: string;\n}\n\n// products.controller.ts\nimport { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';\n\n@ApiTags('products')\n@Controller('products')\nexport class ProductsController {\n  @Post()\n  @ApiBearerAuth()\n  @ApiOperation({ summary: 'Créer un nouveau produit' })\n  @ApiResponse({ status: 201, description: 'Produit créé avec succès' })\n  @ApiResponse({ status: 401, description: 'Non authentifié' })\n  @ApiResponse({ status: 403, description: 'Accès refusé (admin uniquement)' })\n  async create(@Body() createProductDto: CreateProductDto) {\n    // ...\n  }\n}\n```<br/><br/>Les décorateurs permettent à Swagger de générer une documentation détaillée avec les exemples, les codes de retour, et la sécurité requise."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Stratégie de déploiement pour une startup camerounaise",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous êtes consultant pour une startup camerounaise qui lance une plateforme e-commerce. Ils ont un budget limité et doivent déployer leur API NestJS en production. L'API doit être performante, sécurisée et disponible 24h/24. Le trafic est variable avec des pics pendant les heures de pointe et les promotions.</p>",
+      "images": [
+        "Diagramme d'architecture cloud avec Load Balancer, plusieurs instances de l'API, base de données, et CDN.",
+        "Graphique montrant la variation de trafic sur une journée type avec des pics à certaines heures."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Comparez trois options de déploiement pour cette startup : 1) Serveur dédié (OVH), 2) VPS (DigitalOcean), 3) Plateforme cloud (Heroku/AWS). Quels sont les avantages et inconvénients de chaque option dans le contexte camerounais ?",
+        "niveau": "very hard",
+        "reponse": "**1. Serveur dédié (OVH)** <br/>Avantages : Contrôle total, performances dédiées, prix prévisible. <br/>Inconvénients : Coût élevé, maintenance système à gérer (mises à jour, sécurité, sauvegardes), temps de latence potentiel.<br/><br/>**2. VPS (DigitalOcean, OVH)** <br/>Avantages : Bon rapport qualité/prix, contrôle suffisant, facilité de scaling (ressources ajustables). <br/>Inconvénients : Maintenance système requise, configuration manuelle, moins de services gérés.<br/><br/>**3. Plateforme cloud (Heroku, AWS, GCP)** <br/>Avantages : Géré (pas de maintenance système), scaling automatique, intégrations (base de données, CDN), déploiement simplifié (Git push). <br/>Inconvénients : Coût variable (peut devenir cher), dépendance au fournisseur, Latence pour les utilisateurs en Afrique (choisir la région la plus proche).<br/><br/>**Recommandation pour le contexte camerounais** : Commencer avec un VPS (ex: DigitalOcean dans la région Europe ou AWS avec région la plus proche) pour un bon équilibre coût/contrôle. Combiner avec des services CDN (Cloudflare) pour réduire la latence.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposez une architecture de déploiement pour cette startup en utilisant les services d'un VPS et des outils open source. Incluez la base de données, le cache, le load balancing et la gestion des logs.",
+            "niveau": "very hard",
+            "reponse": "**Architecture proposée :**<br/><br/>1. **Serveur VPS unique avec PM2 en cluster mode** : PM2 gère plusieurs instances de l'API Node.js sur les cœurs disponibles.<br/>2. **Base de données PostgreSQL** : Installée sur un serveur distinct ou sur le même serveur en production (avec sauvegardes automatisées).<br/>3. **Redis** : Pour la mise en cache, la gestion des sessions (ou rate limiting).<br/>4. **Nginx comme reverse proxy** : - Terminaison SSL, - Load balancing (round-robin), - Servir les fichiers statiques, - Rate limiting.<br/>5. **Monitoring avec PM2 + Keymetrics** ou **Prometheus + Grafana** pour surveiller les performances.<br/>6. **Logs centralisés** : Utiliser Winston avec transport vers un service comme Logtail ou stocker les logs dans un fichier avec rotation (logrotate).<br/>7. **Sauvegardes automatisées** : - Base de données : pg_dump quotidien vers un stockage externe. - Fichiers uploadés : synchronisation vers un bucket S3/Cloudinary.<br/>8. **Certificat SSL** : Let's Encrypt via Certbot.<br/>9. **Déploiement continu** : Script de déploiement avec Git (hooks) ou GitHub Actions pour automatiser : <code>git pull && npm install && npm run build && pm2 reload</code>."
+          }
+        ]
+      }
+    ]
+  }
+]

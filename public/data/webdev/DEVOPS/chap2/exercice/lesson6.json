@@ -1,0 +1,92 @@
+[
+  {
+    "intitule": "Diagnostic et gestion des processus système",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous êtes administrateur d’un serveur Linux Ubuntu 22.04. Les utilisateurs se plaignent de lenteurs. En utilisant <code>top</code>, vous remarquez un processus <code>apt-get update</code> qui tourne depuis 3 heures et un processus <code>firefox</code> lancé par erreur par un utilisateur. Vous devez :</p><ul><li>Identifier le PID du processus <code>apt-get update</code></li><li>Arrêter immédiatement ce processus</li><li>Relancer le service SSH après l’avoir arrêté temporairement</li><li>Vérifier la mémoire utilisée par le processus <code>systemd</code></li></ul><p>Rédigez les commandes Linux complètes pour chaque action.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Listez les commandes permettant de répondre aux 4 actions demandées.",
+        "niveau": "medium",
+        "reponse": "1. `pgrep apt-get` ou `ps aux | grep apt-get` pour trouver le PID.\n2. `kill -9 [PID]` pour arrêter immédiatement.\n3. `sudo systemctl stop ssh` puis `sudo systemctl start ssh`.\n4. `ps -eo pid,comm,rss | grep systemd` ou `top -p $(pgrep systemd)`.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion des paquets et services sous Debian/Ubuntu",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Un serveur Debian 11 ne dispose pas du paquet <code>nginx</code>. Vous devez :</p><ul><li>Mettre à jour la liste des paquets disponibles</li><li>Installer nginx</li><li>Vérifier que le service nginx est actif après installation</li><li>Supprimer complètement nginx (configuration + données) pour un test de réinstallation propre</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Donnez les commandes apt (ou apt-get) et systemctl correspondantes.",
+        "niveau": "easy",
+        "reponse": "1. `sudo apt update`\n2. `sudo apt install nginx -y`\n3. `sudo systemctl status nginx`\n4. `sudo apt purge nginx -y`",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse de métriques système avec htop",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Sur un serveur de production, vous lancez <code>htop</code> et constatez :</p><ul><li>Charge moyenne (load average) : 8.5, 5.2, 2.1</li><li>Un processus Java consomme 180% CPU (sur 8 cœurs)</li><li>La mémoire swap utilisée est à 70%</li></ul><p>Interprétez ces trois signaux. Proposez une commande pour réduire la priorité CPU du processus Java de 10 points. Quelle commande permettrait de tuer uniquement les processus fils de ce processus Java ?</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédigez l’interprétation et les commandes demandées.",
+        "niveau": "hard",
+        "reponse": "Charge moyenne > nombre de cœurs (8.5 > 8) sur 1 min, système surchargé. 180% CPU sur 8 cœurs = ~22.5% par cœur, acceptable mais élevé. Swap 70% → RAM insuffisante, ralentissement.\nCommande pour nice : `renice -n 10 -p [PID]`\nTuer les processus fils : `pkill -P [PID]`",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Automatisation des mises à jour de sécurité",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Écrivez un script Bash qui :</p><ul><li>Met à jour la liste des paquets</li><li>Installe automatiquement les mises à jour de sécurité seulement (sans les mises à jour normales)</li><li>Redémarre le service <code>cron</code> si une mise à jour de sécurité l’affecte (simulation : on vérifiera si le paquet <code>cron</code> a été mis à jour, dans la pratique on utiliserait <code>needrestart</code>)</li><li>Loggue la date de l’opération dans <code>/var/log/sec-updates.log</code></li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le script complet.",
+        "niveau": "medium",
+        "reponse": "```bash\n#!/bin/bash\nLOG=\"/var/log/sec-updates.log\"\necho \"$(date) - Début mise à jour sécurité\" >> $LOG\nsudo apt update\nsudo apt upgrade -y --only-upgrade -o Dir::Etc::SourceList=/etc/apt/sources.list -o Dir::Etc::SourceParts=/dev/null 2>/dev/null\n# Version simplifiée pour exercice :\nsudo unattended-upgrade --dry-run | grep -q \"cron\" && sudo systemctl restart cron\necho \"$(date) - Fin\" >> $LOG\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Arrêt sélectif de processus par utilisateur",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Un utilisateur <code>john</code> a lancé 15 processus <code>python3</code> qui saturent le serveur. Vous ne voulez pas tuer tous ses processus, seulement ceux nommés <code>python3</code> qui consomment plus de 500 Mo de RAM résidente (RSS). Le serveur ne dispose pas de <code>pgrep</code> avec filtre mémoire. Utilisez <code>ps</code>, <code>awk</code>, et <code>kill</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez la commande complète (une ligne) qui tue ces processus.",
+        "niveau": "very hard",
+        "reponse": "`ps -u john -o pid,rss,comm | awk '$2 > 500000 && $3 == \"python3\" {print $1}' | xargs kill -9`",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

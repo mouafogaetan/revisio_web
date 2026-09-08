@@ -1,0 +1,116 @@
+[
+  {
+    "intitule": "Identifier les composants d'une procédure stockée",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Observez le code SQL ci-dessous. En vous basant sur la syntaxe d'une procédure stockée, répondez aux questions.</p><pre><code>DELIMITER //\nCREATE PROCEDURE AugmenterPrix(IN pourcentage DECIMAL(5,2), OUT statut VARCHAR(50))\nBEGIN\n    UPDATE Produits SET prix = prix * (1 + pourcentage/100);\n    SET statut = 'Mise à jour terminée';\nEND //\nDELIMITER ;</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rappelez le rôle du mot-clé `DELIMITER` dans la création d'une procédure stockée.",
+        "niveau": "easy",
+        "reponse": "Le mot-clé `DELIMITER` change le séparateur de fin d'instruction (par défaut `;`) pour permettre au corps de la procédure (qui contient des `;`) d'être interprété comme un seul bloc. On le remet à `//` ou `$$` puis on le restaure.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Identifiez, dans la procédure `AugmenterPrix`, les paramètres en entrée et en sortie.",
+        "niveau": "easy",
+        "reponse": "Paramètre IN : `pourcentage DECIMAL(5,2)`. Paramètre OUT : `statut VARCHAR(50)`.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquez ce que réalise l'instruction `UPDATE` contenue dans cette procédure.",
+        "niveau": "medium",
+        "reponse": "L'instruction `UPDATE Produits SET prix = prix * (1 + pourcentage/100)` augmente le prix de tous les produits d'un certain pourcentage (valeur passée en paramètre). Si `pourcentage = 10`, le prix est multiplié par 1,10.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Comparer procédure stockée et requête simple",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans une petite entreprise de vente au Cameroun, un gérant doit régulièrement appliquer une remise de 15% sur tous les produits électroniques et archiver cette opération dans une table `historique_actions`. Sans procédure, cela nécessite deux requêtes. Évaluez l'intérêt d'utiliser une procédure stockée.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Justifiez l'utilisation d'une procédure stockée plutôt que de deux requêtes SQL exécutées séparément par l'application.",
+        "niveau": "medium",
+        "reponse": "Une procédure stockée permet de : 1) Réduire les allers-retours réseau (une seule instruction envoyée). 2) Centraliser la logique métier dans la base. 3) Améliorer la sécurité (sans accès direct aux tables). 4) Garantir l'atomicité : la mise à jour et l'insertion dans l'historique sont faites ensemble, évitant les oublis.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposez une procédure stockée nommée `AppliquerRemiseEtLog` qui :<br>- Reçoit une catégorie de produits (ex: 'Électronique') et un taux de remise.<br>- Applique la remise sur les produits de cette catégorie.<br>- Insère une ligne dans `historique_actions` avec la date et l'action.",
+        "niveau": "hard",
+        "reponse": "<pre><code>DELIMITER //\nCREATE PROCEDURE AppliquerRemiseEtLog(\n    IN categorie VARCHAR(50),\n    IN taux DECIMAL(5,2)\n)\nBEGIN\n    UPDATE Produits \n    SET prix = prix * (1 - taux/100)\n    WHERE categorie_produit = categorie;\n    \n    INSERT INTO historique_actions(description, date_action)\n    VALUES(CONCAT('Remise de ', taux, '% appliquée à ', categorie), NOW());\nEND //\nDELIMITER ;</code></pre>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Créer et exécuter une procédure avec paramètres IN et OUT",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Un restaurateur camerounais souhaite automatiser le calcul des commandes. La table `Commandes` contient les colonnes : `id_commande`, `montant_ht`, `tva` (en %).<br>Écrire une procédure stockée `CalculerTTC` qui :</p><ul><li>Reçoit un ID de commande en paramètre IN.</li><li>Calcule le montant TTC = montant_ht × (1 + tva/100).</li><li>Retourne le résultat via un paramètre OUT.</li><li>Retourne également un message de statut (ex: 'Succès' ou 'Commande inexistante').</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédigez le code complet de la procédure `CalculerTTC`.",
+        "niveau": "hard",
+        "reponse": "<pre><code>DELIMITER //\nCREATE PROCEDURE CalculerTTC(\n    IN p_id INT,\n    OUT p_ttc DECIMAL(10,2),\n    OUT p_message VARCHAR(100)\n)\nBEGIN\n    DECLARE v_ht DECIMAL(10,2);\n    DECLARE v_tva DECIMAL(5,2);\n    \n    SELECT montant_ht, tva INTO v_ht, v_tva\n    FROM Commandes WHERE id_commande = p_id;\n    \n    IF v_ht IS NULL THEN\n        SET p_ttc = 0;\n        SET p_message = 'Commande inexistante';\n    ELSE\n        SET p_ttc = v_ht * (1 + v_tva/100);\n        SET p_message = 'Succès';\n    END IF;\nEND //\nDELIMITER ;</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrivez l'instruction SQL permettant d'appeler cette procédure pour la commande n°101 et d'afficher le résultat.",
+        "niveau": "medium",
+        "reponse": "<pre><code>CALL CalculerTTC(101, @ttc, @msg);\nSELECT @ttc AS MontantTTC, @msg AS Statut;</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Argumentez un avantage et un inconvénient de l'utilisation de paramètres `OUT` plutôt qu'un `SELECT` direct dans une procédure.",
+        "niveau": "hard",
+        "reponse": "Avantage : Les paramètres OUT permettent de retourner plusieurs valeurs de types différents (un montant ET un message) sans créer une table temporaire. Inconvénient : La syntaxe d'appel est plus lourde (utilisation de variables utilisateur @) et moins intuitive pour un développeur d'application qu'un simple SELECT.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Déboguer et améliorer une procédure existante",
+    "type": "ressource",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>On vous donne cette procédure censée transférer de l'argent entre deux comptes bancaires. Elle contient des erreurs logiques et syntaxiques.</p><pre><code>CREATE PROCEDURE Transfert(IN from INT, IN to INT, amount DECIMAL)\nBEGIN\n    UPDATE Comptes SET solde = solde - amount WHERE id = from;\n    UPDATE Comptes SET solde = solde + amount WHERE id = to;\nEND</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Corrigez la procédure pour gérer le changement de délimiteur, les noms de paramètres valides, et l'ajout d'un mécanisme d'annulation (`ROLLBACK`) si le solde du compte source est insuffisant.",
+        "niveau": "very hard",
+        "reponse": "<pre><code>DELIMITER //\nCREATE PROCEDURE TransfertSecurise(\n    IN p_compte_source INT,\n    IN p_compte_dest INT,\n    IN p_montant DECIMAL(10,2)\n)\nBEGIN\n    DECLARE solde_source DECIMAL(10,2);\n    DECLARE EXIT HANDLER FOR SQLEXCEPTION\n    BEGIN\n        ROLLBACK;\n        RESIGNAL;\n    END;\n    \n    START TRANSACTION;\n    \n    SELECT solde INTO solde_source FROM Comptes WHERE id = p_compte_source FOR UPDATE;\n    \n    IF solde_source >= p_montant THEN\n        UPDATE Comptes SET solde = solde - p_montant WHERE id = p_compte_source;\n        UPDATE Comptes SET solde = solde + p_montant WHERE id = p_compte_dest;\n        COMMIT;\n    ELSE\n        ROLLBACK;\n        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Solde insuffisant';\n    END IF;\nEND //\nDELIMITER ;</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Déterminez pourquoi le mot-clé `IN` ne peut pas être utilisé comme nom de paramètre en SQL standard.",
+        "niveau": "medium",
+        "reponse": "`IN` est un mot réservé du langage SQL (utilisé pour les paramètres d'entrée, et pour l'opérateur `IN (...)` dans les requêtes). L'utiliser comme identifiant (nom de paramètre) provoque une erreur de syntaxe. Il faut un nom distinct comme `p_id_source`.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

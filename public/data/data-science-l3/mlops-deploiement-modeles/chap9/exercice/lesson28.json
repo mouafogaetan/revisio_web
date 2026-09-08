@@ -1,0 +1,131 @@
+[
+  {
+    "intitule": "Déploiement d'un modèle de classification avec API FastAPI",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous êtes Data Scientist dans une entreprise camerounaise de services financiers. Vous avez entraîné un modèle de <strong>classification de crédit</strong> utilisant <strong>scikit-learn</strong> (RandomForestClassifier) qui prédit si un client est solvable ou non. Le modèle est sauvegardé sous forme de fichier <code>model.pkl</code>.</p><p><strong>Contexte :</strong></p><ul><li>Le modèle prend en entrée un vecteur de 10 caractéristiques numériques.</li><li>La prédiction est une classe (0 = non solvable, 1 = solvable).</li><li>L'API doit être accessible via une route <code>/predict</code> qui accepte des requêtes POST au format JSON.</li></ul><p>Vous devez déployer ce modèle en tant que service web avec <strong>FastAPI</strong>.</p>",
+      "images": [
+        "Diagramme d'architecture simplifié : Client (requête HTTP) -> API FastAPI (avec modèle chargé) -> Prédiction -> Réponse JSON. Une flèche indique le chargement du modèle depuis un fichier .pkl."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Développez un script FastAPI complet pour servir ce modèle. Votre code doit inclure : (a) le chargement du modèle, (b) la définition d'un schéma Pydantic pour les données d'entrée, (c) une route POST <code>/predict</code> pour les prédictions, (d) une route <code>/health</code> pour vérifier l'état du service.",
+        "niveau": "hard",
+        "reponse": "<pre style='background-color: #f5f5f5; padding: 15px; border-radius: 5px; font-family: monospace; font-size: 0.9em;'>from fastapi import FastAPI, HTTPException\nfrom pydantic import BaseModel\nimport pickle\nimport numpy as np\nfrom typing import List\n\n# Chargement du modèle\nMODEL_PATH = \"model.pkl\"\ntry:\n    with open(MODEL_PATH, \"rb\") as f:\n        model = pickle.load(f)\nexcept Exception as e:\n    raise RuntimeError(f\"Erreur lors du chargement du modèle : {e}\")\n\n# Initialisation de l'application FastAPI\napp = FastAPI(title=\"API de Scoring de Crédit\", version=\"1.0\")\n\n# Modèle Pydantic pour la validation des données d'entrée\nclass PredictionInput(BaseModel):\n    features: List[float]  # 10 caractéristiques numériques\n    \n    class Config:\n        schema_extra = {\n            \"example\": {\n                \"features\": [0.5, 1.2, 0.8, 3.1, 0.9, 0.2, 1.5, 0.7, 0.3, 2.1]\n            }\n        }\n\n# Modèle Pydantic pour la réponse\nclass PredictionOutput(BaseModel):\n    prediction: int\n    probability: float\n    class_label: str\n\n# Route de santé (health check)\n@app.get(\"/health\")\ndef health_check():\n    return {\"status\": \"healthy\", \"model_loaded\": model is not None}\n\n# Route de prédiction\n@app.post(\"/predict\", response_model=PredictionOutput)\ndef predict(input_data: PredictionInput):\n    try:\n        # Conversion en tableau numpy pour le modèle\n        features = np.array(input_data.features).reshape(1, -1)\n        \n        # Prédiction\n        prediction = model.predict(features)[0]\n        \n        # Probabilité (si disponible)\n        if hasattr(model, \"predict_proba\"):\n            proba = model.predict_proba(features)[0][1]\n        else:\n            proba = 1.0 if prediction == 1 else 0.0\n        \n        # Mapping des classes\n        label = \"Solvable\" if prediction == 1 else \"Non solvable\"\n        \n        return PredictionOutput(\n            prediction=int(prediction),\n            probability=float(proba),\n            class_label=label\n        )\n    except Exception as e:\n        raise HTTPException(status_code=400, detail=f\"Erreur de prédiction : {str(e)}\")</pre>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez le rôle de Pydantic dans ce script. Pourquoi est-il important de valider les données d'entrée ?",
+            "niveau": "medium",
+            "reponse": "<p><strong>Rôle de Pydantic :</strong> Pydantic est utilisé pour définir des modèles de données qui valident automatiquement les requêtes entrantes. Ici, <code>PredictionInput</code> garantit que les données reçues contiennent une liste de nombres (flottants) appelée <code>features</code>. Si le JSON ne correspond pas à cette structure, FastAPI renvoie automatiquement une erreur 422 (Unprocessable Entity) avec des détails sur l'erreur de validation.<br/><br/><strong>Importance de la validation :</strong><br/>1. <strong>Sécurité</strong> : Évite les injections ou les données malformées.<br/>2. <strong>Fiabilité</strong> : S'assure que le modèle reçoit des données dans le bon format, évitant les erreurs à l'exécution.<br/>3. <strong>Documentation</strong> : Les modèles Pydantic sont utilisés par Swagger (OpenAPI) pour générer une documentation interactive de l'API.<br/>4. <strong>Conformité</strong> : Permet de définir des contraintes supplémentaires (ex: valeurs minimales/maximales) si nécessaire.</p>"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Décrivez comment vous testeriez cette API localement après l'avoir développée. Incluez les commandes et les outils que vous utiliseriez.",
+        "niveau": "medium",
+        "reponse": "<p><strong>Tests locaux :</strong><br/><br/>1. <strong>Démarrer le serveur</strong> :<br/>   - Exécuter le script avec Uvicorn : <code>uvicorn main:app --reload</code> (où <code>main</code> est le nom du fichier Python).<br/>   - L'API sera accessible sur <code>http://localhost:8000</code>.<br/><br/>2. <strong>Tester avec Swagger UI</strong> :<br/>   - Accéder à <code>http://localhost:8000/docs</code> pour la documentation interactive.<br/>   - Utiliser l'interface pour tester la route <code>/predict</code> en envoyant un JSON d'exemple.<br/><br/>3. <strong>Tester avec <code>curl</code></strong> :<br/>   - Envoyer une requête POST :<br/>   <code>curl -X POST http://localhost:8000/predict -H \"Content-Type: application/json\" -d '{\"features\": [0.5, 1.2, 0.8, 3.1, 0.9, 0.2, 1.5, 0.7, 0.3, 2.1]}'</code><br/><br/>4. <strong>Tester avec des tests unitaires (pytest)</strong> :<br/>   - Utiliser <code>TestClient</code> de FastAPI pour écrire des tests automatisés.<br/><br/>5. <strong>Vérifier le health check</strong> :<br/>   - <code>curl http://localhost:8000/health</code></p>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse d'une architecture de déploiement ML",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous êtes consultant MLOps et devez analyser l'architecture suivante pour le déploiement d'un modèle de prédiction des prix de l'immobilier :</p><ul><li><strong>Code</strong> : Repository GitHub avec le code d'entraînement et l'API FastAPI.</li><li><strong>CI/CD</strong> : GitHub Actions qui construit l'image Docker, exécute les tests, et déploie sur Kubernetes.</li><li><strong>Infrastructure</strong> : Cluster Kubernetes avec un LoadBalancer pour exposer l'API.</li><li><strong>Monitoring</strong> : Prometheus collecte les métriques (latence, requêtes) et Grafana les visualise.</li></ul>",
+      "images": [
+        "Schéma d'architecture de déploiement complet : GitHub -> GitHub Actions (CI/CD) -> Registry (Docker Hub) -> Kubernetes (avec pods, service, ingress) -> Utilisateur. Des flèches indiquent les flux de données et de déploiement."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifiez les composants de cette architecture et expliquez le rôle de chacun dans le cycle de vie du modèle.",
+        "niveau": "easy",
+        "reponse": "<p><strong>Composants et rôles :</strong><br/><br/>1. <strong>GitHub</strong> : Héberge le code source (entraînement, API, Dockerfile, manifests Kubernetes).<br/>2. <strong>GitHub Actions</strong> : Pipeline CI/CD qui :<br/>   - Construit l'image Docker.<br/>   - Exécute les tests (unitaires, intégration).<br/>   - Pousse l'image sur Docker Hub.<br/>   - Déploie sur Kubernetes (via <code>kubectl apply</code>).<br/>3. <strong>Docker Hub</strong> : Registre d'images où les images sont stockées et versionnées.<br/>4. <strong>Kubernetes</strong> : Orchestrateur de conteneurs qui :<br/>   - Gère les pods (exécution du conteneur).<br/>   - Expose le service via un LoadBalancer/Ingress.<br/>   - Assure le scaling et la résilience.<br/>5. <strong>Prometheus</strong> : Collecte les métriques (ex: temps de réponse, nombre de requêtes).<br/>6. <strong>Grafana</strong> : Visualise les métriques pour le monitoring.</p>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Évaluez cette architecture. Quels sont ses points forts et ses faiblesses ? Proposez des améliorations.",
+        "niveau": "hard",
+        "reponse": "<p><strong>Points forts :</strong><br/>- <strong>Automatisation</strong> : CI/CD réduit les erreurs manuelles et accélère les déploiements.<br/>- <strong>Scalabilité</strong> : Kubernetes permet de scaler facilement les pods.<br/>- <strong>Résilience</strong> : Kubernetes assure la reprise après panne.<br/>- <strong>Monitoring</strong> : Prometheus + Grafana permettent de suivre l'état du système.<br/><br/><strong>Faiblesses :</strong><br/>1. <strong>Pas de versionnement du modèle</strong> : Le modèle est intégré dans l'image Docker. Un changement de modèle nécessite une reconstruction complète de l'image.<br/>2. <strong>Pas de monitoring spécifique au ML</strong> : Pas de détection de data drift ou de suivi de la performance du modèle.<br/>3. <strong>Pas de rollback automatique</strong> : En cas de problème, un rollback manuel est nécessaire.<br/>4. <strong>Complexité</strong> : L'architecture est complexe à maintenir.<br/><br/><strong>Améliorations :</strong><br/>1. <strong>Utiliser un registre de modèles</strong> (MLflow) pour versionner le modèle séparément du code.<br/>2. <strong>Charger le modèle au démarrage</strong> depuis un stockage (ex: S3) pour éviter de reconstruire l'image.<br/>3. <strong>Ajouter des tests de validation du modèle</strong> dans le pipeline CI/CD.<br/>4. <strong>Mettre en place des métriques de performance</strong> du modèle (précision, F1) et des alertes sur la dérive.<br/>5. <strong>Automatiser le rollback</strong> en cas d'échec du déploiement (ex: stratégie blue/green).</p>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Mise en place d'un pipeline CI/CD pour le déploiement",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous devez mettre en place un pipeline CI/CD pour automatiser le déploiement d'un modèle de <strong>recommandation de produits</strong>. Le projet est hébergé sur <strong>GitHub</strong> et vous utilisez <strong>GitHub Actions</strong>.</p><p><strong>Structure du projet :</strong></p><pre style='background-color: #f5f5f5; padding: 15px; border-radius: 5px; font-family: monospace;'>mon-projet/\n├── app/\n│   ├── main.py          # Code FastAPI\n│   └── model.pkl        # Modèle entraîné\n├── tests/\n│   └── test_api.py      # Tests unitaires\n├── Dockerfile\n├── requirements.txt\n└── docker-compose.yml</pre>",
+      "images": [
+        "Diagramme de pipeline CI/CD : GitHub Actions -> Build image Docker -> Push sur Registry -> Déployer sur Kubernetes. Des étapes de test et de validation sont incluses."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédigez un workflow GitHub Actions complet (fichier YAML) pour : (a) exécuter les tests, (b) construire l'image Docker, (c) pousser l'image sur Docker Hub, (d) déployer sur un serveur (simulé par une commande echo).",
+        "niveau": "hard",
+        "reponse": "<pre style='background-color: #f5f5f5; padding: 15px; border-radius: 5px; font-family: monospace; font-size: 0.9em;'>name: ML Pipeline CI/CD\n\non:\n  push:\n    branches: [ main ]\n  pull_request:\n    branches: [ main ]\n\nenv:\n  DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}\n  DOCKER_IMAGE: ${{ secrets.DOCKER_USERNAME }}/recommendation-api\n\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v3\n      - name: Set up Python\n        uses: actions/setup-python@v4\n        with:\n          python-version: '3.9'\n      - name: Install dependencies\n        run: pip install -r requirements.txt\n      - name: Run tests\n        run: pytest tests/\n\n  build-and-push:\n    needs: test\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v3\n      - name: Set up Docker Buildx\n        uses: docker/setup-buildx-action@v2\n      - name: Login to Docker Hub\n        uses: docker/login-action@v2\n        with:\n          username: ${{ secrets.DOCKER_USERNAME }}\n          password: ${{ secrets.DOCKER_PASSWORD }}\n      - name: Build and push Docker image\n        uses: docker/build-push-action@v4\n        with:\n          context: .\n          push: true\n          tags: ${{ env.DOCKER_IMAGE }}:latest, ${{ env.DOCKER_IMAGE }}:${{ github.sha }}\n\n  deploy:\n    needs: build-and-push\n    runs-on: ubuntu-latest\n    if: github.ref == 'refs/heads/main'\n    steps:\n      - uses: actions/checkout@v3\n      - name: Deploy to server\n        run: |\n          echo \"Déploiement de l'image ${{ env.DOCKER_IMAGE }}:${{ github.sha }}\"\n          echo \"Commande de déploiement : docker pull ${{ env.DOCKER_IMAGE }}:latest\"\n          echo \"Puis : docker run -d -p 80:8000 ${{ env.DOCKER_IMAGE }}:latest\"</pre>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez l'utilité des <code>secrets</code> dans ce workflow. Pourquoi est-il important de les utiliser ?",
+            "niveau": "medium",
+            "reponse": "<p>Les <code>secrets</code> (comme <code>DOCKER_USERNAME</code> et <code>DOCKER_PASSWORD</code>) sont des variables d'environnement chiffrées qui permettent de stocker des informations sensibles (identifiants, clés API) de manière sécurisée dans GitHub. Ils ne sont pas visibles dans les logs des workflows.<br/><br/><strong>Importance :</strong><br/>1. <strong>Sécurité</strong> : Évite d'exposer les identifiants en clair dans le code ou les logs.<br/>2. <strong>Confidentialité</strong> : Seuls les utilisateurs autorisés (ayant accès aux secrets) peuvent les utiliser.<br/>3. <strong>Bonnes pratiques</strong> : Recommandé pour toutes les intégrations avec des services externes (Docker Hub, AWS, etc.).</p>"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Imaginez que le modèle change (un nouveau fichier <code>model_v2.pkl</code> est ajouté). Comment le pipeline CI/CD gère-t-il ce changement ? Proposez des améliorations pour rendre le pipeline plus flexible.",
+        "niveau": "hard",
+        "reponse": "<p><strong>Gestion actuelle :</strong><br/>Le pipeline va déclencher un nouveau workflow, les tests vont s'exécuter, l'image Docker sera reconstruite avec le nouveau modèle (puisque le contexte de build inclut <code>model.pkl</code>). L'image sera poussée avec le tag <code>latest</code> et le SHA du commit.<br/><br/><strong>Limitations :</strong><br/>- Le modèle est intégré à l'image, ce qui nécessite une reconstruction complète.<br/>- Pas de versionnement séparé du modèle.<br/><br/><strong>Améliorations proposées :</strong><br/>1. <strong>Séparer le modèle du code</strong> : Stocker le modèle dans un registre (ex: MLflow, S3) et le télécharger au démarrage du conteneur.<br/>2. <strong>Versionner le modèle</strong> : Utiliser MLflow Model Registry pour suivre les versions du modèle.<br/>3. <strong>Pipeline de retraining</strong> : Ajouter un job pour entraîner le nouveau modèle, le valider, et le déployer.<br/>4. <strong>Stratégie de déploiement</strong> : Utiliser blue/green ou canary pour tester la nouvelle version du modèle avant de la déployer complètement.<br/>5. <strong>Tests de validation du modèle</strong> : Ajouter des tests pour valider la performance du nouveau modèle avant déploiement.</p>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Déploiement d'un modèle avec Docker et Kubernetes",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous devez déployer un modèle de <strong>détection de fraude</strong> en production. Le modèle est développé avec <strong>PyTorch</strong> et exporté au format <strong>TorchScript</strong> (<code>model.pt</code>).</p><p><strong>Exigences :</strong></p><ul><li>Le modèle doit être accessible via une API REST.</li><li>L'API doit être scalable (gérer des pics de trafic).</li><li>Le déploiement doit se faire sur un cluster Kubernetes.</li><li>Le modèle doit être versionné et facilement mise à jour.</li></ul>",
+      "images": [
+        "Schéma d'architecture Kubernetes : LoadBalancer (externe) -> Service (interne) -> Deployment (pods avec le conteneur de l'API). Un volume ou un configMap est utilisé pour monter le modèle. Un système de monitoring (Prometheus) est également présent."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez les étapes pour construire une image Docker pour ce modèle PyTorch. Incluez un Dockerfile adapté.",
+        "niveau": "hard",
+        "reponse": "<p><strong>Dockerfile proposé :</strong></p><pre style='background-color: #f5f5f5; padding: 15px; border-radius: 5px; font-family: monospace;'># Image de base avec PyTorch\nFROM pytorch/pytorch:latest\n\n# Définir le répertoire de travail\nWORKDIR /app\n\n# Copier les dépendances\nCOPY requirements.txt .\nRUN pip install --no-cache-dir -r requirements.txt\n\n# Copier le code de l'API\nCOPY app/ .\n\n# Copier le modèle (ou le télécharger au démarrage)\nCOPY model.pt .\n\n# Exposer le port\nEXPOSE 8000\n\n# Commande de démarrage\nCMD [\"uvicorn\", \"main:app\", \"--host\", \"0.0.0.0\", \"--port\", \"8000\"]</pre><p><strong>Commandes pour la construction :</strong><br/><code>docker build -t fraud-detection-api:latest .</code><br/><code>docker push your-registry/fraud-detection-api:latest</code></p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment géreriez-vous le versionnement du modèle dans cette architecture ? Si une nouvelle version du modèle est disponible, comment la déployeriez-vous sans interruption de service ?",
+            "niveau": "very hard",
+            "reponse": "<p><strong>Versionnement :</strong><br/>- Utiliser <strong>MLflow</strong> ou un registre de modèles pour stocker les différentes versions du modèle.<br/>- Les modèles seraient stockés avec un tag (ex: <code>fraud-model:v1.0</code>, <code>fraud-model:v2.0</code>).<br/><br/><strong>Déploiement sans interruption (Zero Downtime) :</strong><br/>1. <strong>Blue/Green Deployment</strong> :<br/>   - Déployer la nouvelle version (Green) en parallèle de l'ancienne (Blue).<br/>   - Une fois que Green est prêt et testé, basculer le trafic du service vers Green.<br/>   - En cas de problème, basculer immédiatement vers Blue.<br/>2. <strong>Canary Deployment</strong> :<br/>   - Déployer la nouvelle version sur une petite partie du trafic (ex: 5%).<br/>   - Surveiller les métriques (erreurs, latence).<br/>   - Augmenter progressivement le trafic si tout est bon.<br/>3. <strong>Chargement dynamique du modèle</strong> :<br/>   - L'API peut recharger le modèle à chaud (sans redémarrer le pod) en lisant un fichier de configuration ou en surveillant un répertoire.<br/>   - Permet de changer de modèle sans reconstruire l'image.</p>"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Rédigez un manifeste Kubernetes complet (deployment.yaml + service.yaml) pour déployer cette API sur un cluster Kubernetes, avec un replicas de 3 pour la scalabilité.",
+        "niveau": "hard",
+        "reponse": "<p><strong>deployment.yaml :</strong></p><pre style='background-color: #f5f5f5; padding: 15px; border-radius: 5px; font-family: monospace; font-size: 0.9em;'>apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: fraud-detection-api\n  labels:\n    app: fraud-detection\nspec:\n  replicas: 3\n  selector:\n    matchLabels:\n      app: fraud-detection\n  template:\n    metadata:\n      labels:\n        app: fraud-detection\n    spec:\n      containers:\n      - name: api\n        image: your-registry/fraud-detection-api:latest\n        ports:\n        - containerPort: 8000\n        resources:\n          requests:\n            memory: \"512Mi\"\n            cpu: \"250m\"\n          limits:\n            memory: \"1Gi\"\n            cpu: \"500m\"\n        env:\n        - name: MODEL_PATH\n          value: \"/app/model.pt\"\n        livenessProbe:\n          httpGet:\n            path: /health\n            port: 8000\n          initialDelaySeconds: 10\n          periodSeconds: 30\n        readinessProbe:\n          httpGet:\n            path: /health\n            port: 8000\n          initialDelaySeconds: 5\n          periodSeconds: 10</pre><p><strong>service.yaml :</strong></p><pre style='background-color: #f5f5f5; padding: 15px; border-radius: 5px; font-family: monospace; font-size: 0.9em;'>apiVersion: v1\nkind: Service\nmetadata:\n  name: fraud-detection-service\nspec:\n  selector:\n    app: fraud-detection\n  ports:\n  - protocol: TCP\n    port: 80\n    targetPort: 8000\n  type: LoadBalancer</pre>",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

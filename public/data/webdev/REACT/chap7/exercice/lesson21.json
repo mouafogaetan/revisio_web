@@ -1,0 +1,148 @@
+[
+  {
+    "intitule": "Comprendre le Context API pour le thème global",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Dans une application React, on souhaite permettre à l'utilisateur de basculer entre un thème clair (light) et un thème sombre (dark). Ce thème doit être accessible depuis n'importe quel composant sans passer par les props.</p>",
+      "images": ["schéma illustrant le Context API avec Provider au sommet de l'arborescence et consommateurs dans les composants enfants", "interface d'application avec bouton de bascule thème clair/sombre"]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire les trois étapes principales pour mettre en place un thème global avec le Context API en React.",
+        "niveau": "easy",
+        "reponse": "1) Créer le contexte avec createContext() : const ThemeContext = createContext();\n2) Fournir la valeur avec le Provider : <ThemeContext.Provider value={{ theme, toggleTheme }}>...</ThemeContext.Provider>\n3) Consommer le contexte avec useContext : const { theme } = useContext(ThemeContext);",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer pourquoi l'utilisation du Context API est préférable au props drilling pour le thème.",
+        "niveau": "easy",
+        "reponse": "Avec le props drilling, il faudrait passer la valeur du thème à travers chaque composant intermédiaire, même ceux qui n'en ont pas besoin. Cela rend le code moins maintenable et plus difficile à refactoriser. Le Context API permet d'accéder directement à la valeur depuis n'importe quel composant enfant, sans passer par les intermédiaires.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Mise en place d'un contexte d'authentification",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous développez une application de e-commerce pour une boutique camerounaise. Vous devez gérer l'authentification des utilisateurs (connexion, déconnexion, stockage du token JWT). L'état d'authentification doit être accessible depuis toute l'application (barre de navigation, page profil, etc.).</p>",
+      "images": ["formulaire de connexion avec champs email/mot de passe", "interface après connexion affichant le nom de l'utilisateur et bouton déconnexion"]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire la structure du contexte AuthContext avec les états user, token, et les fonctions login et logout.",
+        "niveau": "medium",
+        "reponse": "import { createContext, useContext, useState } from 'react';\n\nconst AuthContext = createContext(null);\n\nexport function AuthProvider({ children }) {\n  const [user, setUser] = useState(null);\n  const [token, setToken] = useState(localStorage.getItem('token'));\n\n  const login = (userData, authToken) => {\n    setUser(userData);\n    setToken(authToken);\n    localStorage.setItem('token', authToken);\n  };\n\n  const logout = () => {\n    setUser(null);\n    setToken(null);\n    localStorage.removeItem('token');\n  };\n\n  return (\n    <AuthContext.Provider value={{ user, token, login, logout }}>\n      {children}\n    </AuthContext.Provider>\n  );\n}\n\nexport function useAuth() {\n  return useContext(AuthContext);\n}",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Justifier l'utilisation de localStorage pour stocker le token en complément du state.",
+            "niveau": "medium",
+            "reponse": "localStorage permet de persister le token après un rechargement de la page. Si on stockait uniquement le token dans le state, l'utilisateur serait déconnecté à chaque refresh. En synchronisant le state avec localStorage au chargement (initialisation) et à chaque modification, on conserve la session même après rechargement."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Écrire un composant NavBar qui utilise useAuth() pour afficher le nom de l'utilisateur ou un lien de connexion.",
+        "niveau": "medium",
+        "reponse": "function NavBar() {\n  const { user, logout } = useAuth();\n\n  return (\n    <nav>\n      {user ? (\n        <>\n          <span>Bonjour {user.name}</span>\n          <button onClick={logout}>Déconnexion</button>\n        </>\n      ) : (\n        <a href=\"/login\">Connexion</a>\n      )}\n    </nav>\n  );\n}",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation : séparer les contextes pour éviter les re-rendus",
+    "type": "ressource",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Dans une application complexe, un seul contexte contenant à la fois le thème et les données utilisateur peut provoquer des re-rendus inutiles. Par exemple, un changement de thème (qui ne concerne que l'apparence) déclencherait un re-rendu de tous les composants consommant ce contexte, y compris ceux qui n'utilisent que les données utilisateur.</p>",
+      "images": ["schéma d'un contexte unique provoquant des re-rendus en cascade", "schéma de contextes séparés (ThemeContext, UserContext, CartContext) pour une optimisation fine"]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer pourquoi un changement dans une propriété d'un contexte unique provoque le re-rendu de tous les composants consommateurs, même ceux qui n'utilisent pas cette propriété.",
+        "niveau": "very hard",
+        "reponse": "React compare l'ancienne valeur du contexte (objet entier) avec la nouvelle. Si l'objet a changé (même une seule propriété modifiée), React considère que tout composant utilisant useContext sur ce contexte doit être re-rendu. C'est une comparaison par référence : si on crée un nouvel objet à chaque rendu (même avec les mêmes propriétés), tous les consommateurs se re-rendent.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposer une solution pour éviter ce problème et optimiser les performances.",
+            "niveau": "very hard",
+            "reponse": "Deux solutions principales :\n1) Séparer les contextes : créer ThemeContext, UserContext, CartContext indépendants. Ainsi, un changement de thème ne re-rend que les composants qui consomment ThemeContext.\n2) Mémoïser la valeur du contexte avec useMemo : const value = useMemo(() => ({ theme, toggleTheme }), [theme]); Cela évite de créer un nouvel objet à chaque rendu si les dépendances n'ont pas changé."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Évaluer l'impact sur les performances d'un contexte unique contenant 5 propriétés (user, cart, notifications, theme, language) lorsqu'une notification arrive.",
+        "niveau": "very hard",
+        "reponse": "L'arrivée d'une notification modifie une propriété du contexte, ce qui entraîne la création d'un nouvel objet. Tous les composants consommant ce contexte se re-rendent, même ceux qui n'affichent que le thème ou la langue. Dans une grande application, cela peut causer des ralentissements perceptibles. La meilleure pratique est de découper ce gros contexte en plusieurs petits contextes spécialisés.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Application pratique : Panier d'achat avec Context",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous construisez un panier d'achat pour une boutique en ligne. Le panier doit être accessible depuis : la barre de navigation (affichage du nombre d'articles), la page produit (ajout au panier), la page panier (liste, modification, suppression).</p>",
+      "images": ["interface de boutique avec icône panier affichant le compteur", "page panier avec liste d'articles, quantités et prix total"]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Définir la structure du contexte CartContext avec les fonctions addItem, removeItem, updateQuantity et getTotalItems.",
+        "niveau": "hard",
+        "reponse": "import { createContext, useContext, useState } from 'react';\n\nconst CartContext = createContext();\n\nexport function CartProvider({ children }) {\n  const [items, setItems] = useState([]);\n\n  const addItem = (product) => {\n    setItems(prevItems => {\n      const existing = prevItems.find(item => item.id === product.id);\n      if (existing) {\n        return prevItems.map(item =>\n          item.id === product.id \n            ? { ...item, quantity: item.quantity + 1 }\n            : item\n        );\n      }\n      return [...prevItems, { ...product, quantity: 1 }];\n    });\n  };\n\n  const removeItem = (productId) => {\n    setItems(prevItems => prevItems.filter(item => item.id !== productId));\n  };\n\n  const updateQuantity = (productId, newQuantity) => {\n    if (newQuantity <= 0) {\n      removeItem(productId);\n      return;\n    }\n    setItems(prevItems =>\n      prevItems.map(item =>\n        item.id === productId ? { ...item, quantity: newQuantity } : item\n      )\n    );\n  };\n\n  const getTotalItems = () => {\n    return items.reduce((total, item) => total + item.quantity, 0);\n  };\n\n  const getTotalPrice = () => {\n    return items.reduce((total, item) => total + (item.price * item.quantity), 0);\n  };\n\n  return (\n    <CartContext.Provider value={{ items, addItem, removeItem, updateQuantity, getTotalItems, getTotalPrice }}>\n      {children}\n    </CartContext.Provider>\n  );\n}\n\nexport function useCart() {\n  return useContext(CartContext);\n}",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Écrire le composant CartIcon (affiché dans la navbar) qui utilise useCart() pour afficher le nombre d'articles.",
+            "niveau": "hard",
+            "reponse": "function CartIcon() {\n  const { getTotalItems } = useCart();\n  const itemCount = getTotalItems();\n  \n  return (\n    <div className=\"cart-icon\">\n      🛒\n      {itemCount > 0 && <span className=\"badge\">{itemCount}</span>}\n    </div>\n  );\n}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Performance contextuelle avec useMemo et useCallback",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous avez un contexte UserPreferences qui gère les préférences d'un utilisateur connecté (thème, langue, notifications). Le contexte est consommé par une vingtaine de composants, dont certains sont coûteux en rendu.</p>",
+      "images": ["schéma d'un contexte avec useMemo pour stabiliser la valeur", "courbe de performance montrant la réduction des re-rendus après optimisation"]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer pourquoi le code suivant peut causer des problèmes de performance : <code><UserPreferencesContext.Provider value={{ theme, setTheme, language, setLanguage }}></code>",
+        "niveau": "very hard",
+        "reponse": "À chaque rendu du provider, un nouvel objet littéral est créé pour la valeur du contexte. Même si theme, setTheme, language, setLanguage n'ont pas changé, l'objet est nouveau, donc différent en référence. Cela force tous les composants consommateurs à se re-rendre, même si les données sont identiques.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Corriger ce code en utilisant useMemo pour optimiser la valeur du contexte.",
+            "niveau": "very hard",
+            "reponse": "import { useMemo } from 'react';\n\n// Dans le composant provider\nconst value = useMemo(() => ({\n  theme,\n  setTheme,\n  language,\n  setLanguage\n}), [theme, language]);\n\nreturn (\n  <UserPreferencesContext.Provider value={value}>\n    {children}\n  </UserPreferencesContext.Provider>\n);\n\n// Note : setTheme et setLanguage sont stables (fournis par useState), donc pas besoin de les mettre dans les dépendances."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer une stratégie pour optimiser davantage les performances quand certaines propriétés du contexte changent très fréquemment (ex: position de la souris, état d'une animation).",
+        "niveau": "very hard",
+        "reponse": "Pour les valeurs qui changent très souvent, il ne faut PAS les mettre dans le même contexte que les valeurs stables. On crée un contexte séparé (ex: MousePositionContext) qui sera consommé uniquement par les composants qui ont besoin de cette position. Les autres composants qui n'utilisent que le thème ou la langue ne subiront pas ces re-rendus fréquents. C'est le principe de séparation des contextes par fréquence de changement.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

@@ -1,0 +1,70 @@
+[
+  {
+    "intitule": "Analyser la transformation et l'exclusion de propriétés dans un DTO",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Voici un DTO utilisateur utilisant `class-transformer` dans NestJS :</p>\n<pre><code>\nimport { Exclude, Transform } from 'class-transformer';\n\nexport class UserResponseDto {\n  id: number;\n  email: string;\n\n  @Exclude()\n  password: string;\n\n  @Transform(({ value }) => value.toUpperCase())\n  name: string;\n\n  @Transform(({ value }) => new Date(value).toISOString().split('T')[0])\n  createdAt: Date;\n}\n</code></pre>\n<p>L'objet original contient : `{ id: 1, email: 'alice@mail.com', password: 'secret', name: 'Alice', createdAt: '2025-01-15T10:30:00.000Z' }`.</p>",
+      "images": [
+        "Schéma montrant le passage d'un objet brut (entité) à un objet transformé (DTO) avec suppression du mot de passe et transformation de la date"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer quel sera le résultat de la sérialisation de cet objet avec `class-transformer` (plainToInstance puis instanceToPlain).",
+        "niveau": "easy",
+        "reponse": "La propriété `password` sera exclue (absente). `name` deviendra 'ALICE' (transformé en majuscules). `createdAt` deviendra '2025-01-15' (uniquement la date sans heure). Les champs `id` et `email` restent inchangés. Résultat : `{ id: 1, email: 'alice@mail.com', name: 'ALICE', createdAt: '2025-01-15' }`.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Décrire l'effet de `@Exclude()` au niveau de la classe (ex: `@Exclude({ toPlainOnly: true })`). Quelle différence avec un `@Exclude()` simple ?",
+        "niveau": "medium",
+        "reponse": "`@Exclude()` simple exclut la propriété à la fois lors de la transformation vers l'objet brut (`toPlainOnly`) ET lors du peuplement de l'instance (`toClassOnly`). Avec `{ toPlainOnly: true }`, la propriété est conservée dans l'instance (utile pour les traitements internes) mais masquée lors de la réponse JSON. Avec `{ toClassOnly: true }`, elle n'est pas chargée depuis la source mais peut être présente dans la réponse.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposer une transformation pour que le champ `email` soit automatiquement converti en minuscules (normalisation) avant sérialisation.",
+        "niveau": "hard",
+        "reponse": "Ajouter `@Transform(({ value }) => value.toLowerCase())` sur la propriété `email`. Cela garantit que l'email est toujours en minuscules dans la réponse API, quelle que soit la casse fournie par la base de données ou l'utilisateur. Exemple : 'Alice@Mail.com' devient 'alice@mail.com'.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Implémenter la sérialisation sécurisée d'une API avec class-transformer",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous développez une API NestJS pour une application e-commerce. Une entité `Product` contient : `id`, `name`, `price`, `stock`, `internalNote` (champ admin), `createdAt`. Vous devez exposer deux endpoints :<br>- `GET /products` : public, ne doit pas retourner `stock` ni `internalNote`.<br>- `GET /admin/products` : réservé aux admins, doit retourner tous les champs sauf `internalNote` (qui reste secret même pour les admins ? non, pour les admins on peut l'afficher).<br>Vous devez utiliser `class-transformer` avec des stratégies (groups) pour gérer cela.</p>",
+      "images": [
+        "Diagramme illustrant deux sérialisations différentes d'un même produit selon le rôle : public (sans stock ni note) et admin (avec stock mais sans note interne)"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevoir le DTO `ProductResponseDto` avec les décorateurs `@Expose()`, `@Exclude()` et `@Groups()` pour supporter les groupes 'public' et 'admin'.",
+        "niveau": "hard",
+        "reponse": "```typescript\nimport { Expose, Exclude, Transform } from 'class-transformer';\n\nexport class ProductResponseDto {\n  @Expose({ groups: ['public', 'admin'] })\n  id: number;\n\n  @Expose({ groups: ['public', 'admin'] })\n  name: string;\n\n  @Expose({ groups: ['public'] })\n  price: number;\n\n  @Expose({ groups: ['admin'] })\n  stock: number;\n\n  @Expose({ groups: ['admin'] })\n  internalNote: string;\n\n  @Expose({ groups: ['public', 'admin'] })\n  @Transform(({ value }) => value.toISOString().split('T')[0])\n  createdAt: Date;\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 1,
+        "texte": "Justifier pourquoi le champ `price` est exposé dans le groupe 'public' alors que `stock` ne l'est pas. Quelle est la logique métier ?",
+        "niveau": "medium",
+        "reponse": "Le prix est une information nécessaire pour l'affichage public (catalogue). Le stock est sensible : révéler un stock faible peut décourager l'achat ou être exploité par des concurrents. Les admins doivent voir le stock pour gérer l'inventaire. C'est une règle métier courante dans l'e-commerce.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrire l'intercepteur ou la méthode de sérialisation dans le contrôleur pour appliquer le groupe 'public' ou 'admin' selon le rôle de l'utilisateur.",
+        "niveau": "very hard",
+        "reponse": "Dans le contrôleur :\n```typescript\nimport { ClassSerializerInterceptor, UseInterceptors } from '@nestjs/common';\n\n@Get('products')\n@UseInterceptors(ClassSerializerInterceptor)\nfindAllPublic() {\n  const products = this.productsService.findAll();\n  return products.map(p => plainToClass(ProductResponseDto, p, { groups: ['public'] }));\n}\n\n@Get('admin/products')\n@UseInterceptors(ClassSerializerInterceptor)\n@Roles('admin')\nfindAllAdmin() {\n  const products = this.productsService.findAll();\n  return products.map(p => plainToClass(ProductResponseDto, p, { groups: ['admin'] }));\n}\n```\nOu utiliser `serialize` dans le service avec `instanceToPlain( dto, { groups: ['admin'] } )`.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

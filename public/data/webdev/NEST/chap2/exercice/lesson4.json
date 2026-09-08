@@ -1,0 +1,70 @@
+[
+  {
+    "intitule": "Analyser un contrôleur NestJS et identifier les décorateurs",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Voici un extrait d’un contrôleur NestJS pour la gestion de produits :</p>\n<pre><code>\n@Controller('products')\nexport class ProductsController {\n  constructor(private productsService: ProductsService) {}\n\n  @Get()\n  findAll(@Query('category') category?: string) {\n    return this.productsService.findAll(category);\n  }\n\n  @Get(':id')\n  findOne(@Param('id') id: string) {\n    return this.productsService.findOne(+id);\n  }\n\n  @Post()\n  create(@Body() createProductDto: CreateProductDto) {\n    return this.productsService.create(createProductDto);\n  }\n\n  @Patch(':id')\n  update(@Param('id') id: string, @Body() updateProductDto: UpdateProductDto) {\n    return this.productsService.update(+id, updateProductDto);\n  }\n\n  @Delete(':id')\n  remove(@Param('id') id: string) {\n    return this.productsService.remove(+id);\n  }\n}\n</code></pre>",
+      "images": [
+        "Schéma illustrant le mapping entre requête HTTP (GET /products?category=electro) et les décorateurs @Query, @Param, @Body"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer quelle requête HTTP déclenche la méthode `findAll` et comment le paramètre `category` est transmis.",
+        "niveau": "easy",
+        "reponse": "La méthode findAll est déclenchée par une requête GET sur `/products`. Le paramètre `category` est transmis via la query string (ex: `/products?category=electro`) et est extrait grâce au décorateur `@Query('category')`. Si aucun paramètre n'est fourni, `category` sera `undefined`.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Décrire la différence entre `@Get(':id')` avec `@Param('id')` et `@Get()` avec `@Query()`. Donner un exemple d'URL pour chaque cas.",
+        "niveau": "medium",
+        "reponse": "`@Get(':id')` capture un paramètre de route (path variable). Exemple : `GET /products/42` → id = '42'. `@Get()` avec `@Query()` capture un paramètre dans la query string. Exemple : `GET /products?category=electro` → category = 'electro'. Le premier identifie une ressource spécifique, le second filtre une collection.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposer une amélioration pour que la méthode `findOne` accepte aussi un paramètre `fields` optionnel (ex: `?fields=id,name`) pour ne retourner que certaines propriétés du produit.",
+        "niveau": "hard",
+        "reponse": "On peut ajouter un deuxième paramètre avec `@Query('fields') fields?: string`. Ensuite, dans le service, on parse la chaîne (split par virgule) et on construit un objet de sélection. Exemple : `findOne(@Param('id') id: string, @Query('fields') fields?: string)`. L'URL deviendrait `GET /products/42?fields=id,name,price`.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Implémenter un contrôleur d'authentification avec les décorateurs NestJS",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous devez développer un module d’authentification simple avec les endpoints suivants :<br>- `POST /auth/login` : reçoit `{ email, password }` dans le corps, retourne un token JWT.<br>- `POST /auth/register` : reçoit `{ email, password, name }`, crée un utilisateur.<br>- `GET /auth/profile/:id` : retourne les informations d’un utilisateur (sans le mot de passe).<br>- `PUT /auth/profile/:id` : met à jour le nom ou l’email d’un utilisateur.<br>- `DELETE /auth/profile/:id` : supprime un utilisateur (admin uniquement, mais on ignorera cette contrainte ici).</p>",
+      "images": [
+        "Diagramme des routes RESTful pour /auth avec les verbes HTTP et les paramètres"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire la structure du contrôleur `AuthController` avec les décorateurs appropriés (`@Post`, `@Get`, `@Put`, `@Delete`, `@Body`, `@Param`). Déclarer les méthodes mais sans implémenter la logique métier (juste les signatures).",
+        "niveau": "medium",
+        "reponse": "```typescript\n@Controller('auth')\nexport class AuthController {\n  @Post('login')\n  login(@Body() credentials: LoginDto) {}\n\n  @Post('register')\n  register(@Body() createUserDto: CreateUserDto) {}\n\n  @Get('profile/:id')\n  getProfile(@Param('id') id: string) {}\n\n  @Put('profile/:id')\n  updateProfile(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {}\n\n  @Delete('profile/:id')\n  deleteProfile(@Param('id') id: string) {}\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Justifier pourquoi `@Req()` et `@Res()` sont déconseillés dans ce contexte, et comment les éviter.",
+        "niveau": "medium",
+        "reponse": "L'utilisation de `@Req()` et `@Res()` rend le code moins testable et plus lié à Express, ce qui va à l'encontre de l'abstraction de NestJS. On les évite en utilisant les décorateurs spécifiques (`@Body`, `@Param`, `@Query`, `@Headers`) qui extraient uniquement les données nécessaires. NestJS peut ainsi utiliser indifféremment Express ou Fastify comme adaptateur. Dans ce cas, tous les besoins sont couverts sans `@Res()`.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Concevoir l'URL et la méthode HTTP pour récupérer le profil de l'utilisateur ayant l'ID 5, tout en ne renvoyant que les champs `name` et `email` (sans l'ID). Proposer l'utilisation de `@Query()` pour filtrer les champs.",
+        "niveau": "hard",
+        "reponse": "URL : `GET /auth/profile/5?fields=name,email`. Dans le contrôleur : `getProfile(@Param('id') id: string, @Query('fields') fields?: string)`. Le service peut ensuite parser `fields` (split par virgule) pour ne sélectionner que ces propriétés dans la réponse. Cela évite de créer plusieurs endpoints pour différents niveaux de détail.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

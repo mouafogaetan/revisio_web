@@ -1,0 +1,122 @@
+[
+  {
+    "questionText": "En environnement multi-utilisateur, une transaction est définie comme une unité de travail qui doit être traitée de manière atomique. Laquelle de ces propriétés ACID garantit que les modifications d’une transaction sont définitivement enregistrées, même en cas de panne système immédiatement après son exécution ?",
+    "options": [
+      "Atomicité",
+      "Cohérence",
+      "Isolation",
+      "Durabilité"
+    ],
+    "correctAnswer": 3,
+    "difficulty": "easy",
+    "explanation": "La propriété **Durabilité** garantit qu’une fois qu’une transaction est validée (COMMIT), ses modifications persistent définitivement, même en cas de panne électrique, de crash du système ou de redémarrage de la base de données. Cela est généralement assuré par des journaux de transactions (write-ahead logging) ou des sauvegardes sur disque."
+  },
+  {
+    "questionText": "Un élève exécute deux transactions simultanément sur la même base. La première transaction lit une ligne que la seconde transaction est en train de modifier (mais n’a pas encore validé). Si la première transaction voit la donnée non validée, quel problème de concurrence se produit ?",
+    "options": [
+      "Non-repeatable read",
+      "Dirty read (lecture sale)",
+      "Phantom read",
+      "Lost update"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "easy",
+    "explanation": "Une **dirty read** (lecture sale) se produit quand une transaction lit des données écrites par une autre transaction qui n’est pas encore validée (COMMIT). Si la seconde transaction effectue un ROLLBACK, la première a utilisé des données qui n’ont jamais officiellement existé, ce qui peut violer l’intégrité."
+  },
+  {
+    "questionText": "Parmi les niveaux d’isolation SQL définis par le standard, lequel empêche à la fois les lectures sales (dirty reads), les lectures non répétables (non-repeatable reads) ET les lectures fantômes (phantom reads) ?",
+    "options": [
+      "READ UNCOMMITTED",
+      "READ COMMITTED",
+      "REPEATABLE READ",
+      "SERIALIZABLE"
+    ],
+    "correctAnswer": 3,
+    "difficulty": "medium",
+    "explanation": "Le niveau **SERIALIZABLE** est le plus restrictif. Il garantit que les transactions s’exécutent comme si elles étaient sérialisées les unes après les autres. Cela élimine complètement les dirty reads, non-repeatable reads et phantom reads (généralement par verrouillage de plages ou MVCC très strict)."
+  },
+  {
+    "questionText": "Dans un système de gestion de bases de données (SGBD) avec le niveau d’isolation par défaut `READ COMMITTED` (PostgreSQL ou SQL Server), lequel des trois phénomènes suivants peut encore se produire entre deux requêtes successives d’une même transaction ?",
+    "options": [
+      "Dirty read",
+      "Non-repeatable read",
+      "Phantom read",
+      "Aucun des trois"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium",
+    "explanation": "Avec `READ COMMITTED`, les lectures sales (dirty reads) sont impossibles car on ne lit que les données validées. Cependant, si on relit la même ligne dans la même transaction, une autre transaction peut avoir modifié et validé cette ligne entre-temps → **non-repeatable read** (lecture non répétable). Les lectures fantômes sont aussi possibles dans certains SGBD en READ COMMITTED."
+  },
+  {
+    "questionText": "Voici un extrait de deux transactions s’exécutant en parallèle :<br>&lt;pre&gt;<code>T1 : BEGIN; UPDATE livres SET prix = prix * 1.10 WHERE id=5;<br>T2 : BEGIN; UPDATE livres SET prix = prix * 0.90 WHERE id=5;<br>T1 : COMMIT;<br>T2 : COMMIT;</code>&lt;/pre&gt;Sans mécanisme de verrouillage adapté, quel problème classique se produit si les deux mises à jour se basent sur la valeur initiale du prix ?",
+    "options": [
+      "Dirty write",
+      "Perte de mise à jour (lost update)",
+      "Deadlock",
+      "Lecture non répétable"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium",
+    "explanation": "La **perte de mise à jour** (lost update) se produit quand deux transactions lisent la même donnée, calculent une nouvelle valeur chacune, puis écrivent leur résultat. La dernière écriture écrase la précédente sans tenir compte de sa modification. Ici, on perd l’effet de la première mise à jour."
+  },
+  {
+    "questionText": "Une requête `SELECT * FROM commandes WHERE montant &gt; 1000 FOR UPDATE;` a été exécutée dans une transaction. Quel est l’effet de la clause `FOR UPDATE` sur les lignes retournées ?",
+    "options": [
+      "Elle empêche toute lecture ultérieure de ces lignes par d’autres transactions.",
+      "Elle prend un verrou exclusif pour empêcher d’autres transactions de modifier ces lignes jusqu’à la fin de la transaction courante.",
+      "Elle permet uniquement l’insertion de nouvelles lignes dans la table.",
+      "Elle libère immédiatement tous les verrous pris sur la table."
+    ],
+    "correctAnswer": 1,
+    "difficulty": "hard",
+    "explanation": "`SELECT ... FOR UPDATE` place un **verrou exclusif** sur les lignes retournées. D’autres transactions peuvent toujours lire ces lignes (sauf si elles utilisent aussi FOR UPDATE ou des verrous en écriture), mais toute tentative d’UPDATE, DELETE ou SELECT FOR UPDATE bloquera jusqu’à ce que la transaction courante se termine (COMMIT ou ROLLBACK). Cela permet d’éviter les pertes de mise à jour dans les scénarios de lecture-modification-écriture."
+  },
+  {
+    "questionText": "Deux transactions sont bloquées indéfiniment car chacune attend un verrou que l’autre détient. T1 verrouille la ligne A et demande un verrou sur la ligne B ; T2 verrouille la ligne B et demande un verrou sur la ligne A. Ce scénario est appelé :",
+    "options": [
+      "Étreinte fatale (deadlock)",
+      "Famine (starvation)",
+      "Verrou partagé (shared lock)",
+      "Lecture fantôme (phantom read)"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "easy",
+    "explanation": "C’est la définition classique d’un **deadlock** (interblocage). Le SGBD détecte généralement cette situation et choisit une transaction victime pour annuler ses opérations (ROLLBACK) et libérer les verrous, permettant à l’autre transaction de continuer."
+  },
+  {
+    "questionText": "Dans une base avec le niveau d’isolation `REPEATABLE READ` (sous MySQL/InnoDB), quelle affirmation est correcte concernant les lectures fantômes ?",
+    "options": [
+      "Les lectures fantômes ne peuvent jamais arriver, quel que soit le SGBD.",
+      "Elles sont totalement impossibles car InnoDB utilise le next-key locking pour empêcher l’insertion de nouvelles lignes dans la plage lue.",
+      "Elles se produisent systématiquement même avec REPEATABLE READ.",
+      "REPEATABLE READ ne concerne que les colonnes, pas les lignes."
+    ],
+    "correctAnswer": 1,
+    "difficulty": "hard",
+    "explanation": "Sous MySQL / InnoDB, `REPEATABLE READ` implémente le **next-key locking** (verrouillage d’index + gaps). Cela empêche d’autres transactions d’insérer de nouvelles lignes dans la plage couverte par une première lecture. Ainsi, les lectures fantômes (phantom reads) sont évitées, contrairement au standard SQL où REPEATABLE READ autorise les fantômes."
+  },
+  {
+    "questionText": "Le principe ACID de « Cohérence » signifie que :",
+    "options": [
+      "Toutes les transactions s’exécutent en même temps sans se gêner.",
+      "Une transaction doit soit réussir complètement, soit ne rien faire du tout.",
+      "Toute transaction amène la base d’un état valide à un autre état valide, respectant les contraintes définies (clés étrangères, types, triggers, etc.).",
+      "Les données persistent après validation."
+    ],
+    "correctAnswer": 2,
+    "difficulty": "easy",
+    "explanation": "La **Cohérence** garantit qu’une transaction ne viole aucune règle d’intégrité définie dans la base (clés primaires, uniques, foreign keys, CHECK, triggers). Si une transaction essaie de laisser la base dans un état invalide, elle est annulée (ROLLBACK)."
+  },
+  {
+    "questionText": "Vous avez deux transactions :<br>T1 : `BEGIN; UPDATE compte SET solde = solde - 100 WHERE id = 1;`<br>T2 : `BEGIN; SELECT solde FROM compte WHERE id = 1;`<br>Sous le niveau `READ UNCOMMITTED`, que va voir T2 dans la colonne solde ?",
+    "options": [
+      "La valeur initiale avant T1",
+      "Rien, la transaction T2 est bloquée",
+      "La valeur mise à jour par T1 même si T1 n’est pas validée",
+      "Une erreur de deadlock"
+    ],
+    "correctAnswer": 2,
+    "difficulty": "medium",
+    "explanation": "`READ UNCOMMITTED` est le niveau le plus bas. Il autorise les **dirty reads** : une transaction peut lire les modifications non validées d’autres transactions. Donc T2 lira `solde - 100` avant même que T1 ne valide."
+  }
+]

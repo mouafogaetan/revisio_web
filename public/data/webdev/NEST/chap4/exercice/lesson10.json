@@ -1,0 +1,172 @@
+[
+  {
+    "intitule": "Installation et configuration de TypeORM avec NestJS",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous devez configurer une base de données PostgreSQL pour votre API NestJS. Répondez aux questions suivantes concernant l'installation et la configuration de TypeORM.</p>",
+      "images": [
+        "Logo de NestJS avec le logo PostgreSQL à côté"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Listez les packages npm nécessaires pour utiliser TypeORM avec PostgreSQL dans un projet NestJS.",
+        "niveau": "easy",
+        "reponse": "Les packages sont :\n- `@nestjs/typeorm` (module d'intégration NestJS)\n- `typeorm` (ORM lui-même)\n- `pg` (pilote PostgreSQL pour Node.js)",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Donnez la commande d'installation complète pour ces packages.",
+        "niveau": "easy",
+        "reponse": "`npm install @nestjs/typeorm typeorm pg`\n\nOu avec yarn : `yarn add @nestjs/typeorm typeorm pg`",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquez pourquoi on installe `pg` séparément alors que TypeORM pourrait gérer PostgreSQL nativement.",
+        "niveau": "medium",
+        "reponse": "TypeORM n'inclut pas les drivers de bases de données par défaut pour réduire la taille du bundle. `pg` est le driver officiel pour PostgreSQL. Il en va de même pour `mysql2` (MySQL), `sqlite3` (SQLite), etc. Cela permet aux développeurs de n'installer que les drivers dont ils ont besoin.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Configuration de TypeOrmModule.forRoot() - Analyse",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Voici un extrait de configuration TypeORM dans un module NestJS. Analysez-le et répondez aux questions.</p>\n<pre><code>\n// app.module.ts\nimport { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { User } from './users/user.entity';\n\n@Module({\n  imports: [\n    TypeOrmModule.forRoot({\n      type: 'postgres',\n      host: 'localhost',\n      port: 5432,\n      username: 'postgres',\n      password: 'secret',\n      database: 'ecommerce_db',\n      entities: [User],\n      synchronize: true,\n    }),\n  ],\n})\nexport class AppModule {}\n</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifiez deux problèmes de sécurité dans cette configuration et proposez des corrections.",
+        "niveau": "medium",
+        "reponse": "**Problèmes identifiés :**\n1. **Mots de passe en clair** : Le mot de passe 'secret' est écrit en dur dans le code. Correction : Utiliser des variables d'environnement (`password: process.env.DB_PASSWORD`).\n2. **synchronize: true en production** : Cette option peut effacer des données existantes. Correction : Désactiver `synchronize` en production (`synchronize: process.env.NODE_ENV !== 'production'`) ou utiliser les migrations.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "À quoi sert l'option `synchronize: true` ? Quel est son risque principal ?",
+            "niveau": "easy",
+            "reponse": "`synchronize: true` fait que TypeORM synchronise automatiquement les entités avec le schéma de la base de données (crée/modifie les tables à chaque démarrage). Le risque principal est la perte de données en production : si une colonne est supprimée d'une entité, TypeORM la supprimera de la base, effaçant les données existantes."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Proposez une version améliorée de cette configuration utilisant les variables d'environnement et une configuration asynchrone.",
+        "niveau": "hard",
+        "reponse": "```typescript\n// app.module.ts\nimport { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot(),\n    TypeOrmModule.forRootAsync({\n      imports: [ConfigModule],\n      inject: [ConfigService],\n      useFactory: (configService: ConfigService) => ({\n        type: 'postgres',\n        host: configService.get('DB_HOST', 'localhost'),\n        port: configService.get('DB_PORT', 5432),\n        username: configService.get('DB_USERNAME'),\n        password: configService.get('DB_PASSWORD'),\n        database: configService.get('DB_DATABASE'),\n        entities: [__dirname + '/**/*.entity{.ts,.js}'],\n        synchronize: configService.get('NODE_ENV') !== 'production',\n        logging: configService.get('NODE_ENV') === 'development',\n      }),\n    }),\n  ],\n})\nexport class AppModule {}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Variables d'environnement pour la base de données",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous développez une API e-commerce avec NestJS. Vous devez configurer la connexion à PostgreSQL en utilisant des variables d'environnement pour la production (Render/Railway) et le développement local.</p>",
+      "images": [
+        "Fichier .env avec des variables de configuration de base de données"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créez un fichier `.env` modèle contenant toutes les variables nécessaires à la connexion PostgreSQL (host, port, username, password, database). Ajoutez également une variable pour l'environnement (NODE_ENV).",
+        "niveau": "easy",
+        "reponse": "```env\n# .env\nNODE_ENV=development\n\n# Base de données PostgreSQL\nDB_HOST=localhost\nDB_PORT=5432\nDB_USERNAME=postgres\nDB_PASSWORD=mon_mot_de_passe\nDB_DATABASE=ecommerce_db\n\n# Optionnel : URL de connexion complète (alternative)\nDATABASE_URL=postgresql://postgres:mon_mot_de_passe@localhost:5432/ecommerce_db\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez comment sécuriser le fichier `.env` et éviter qu'il ne soit commité sur GitHub.",
+        "niveau": "medium",
+        "reponse": "1. Ajouter `.env` au fichier `.gitignore` pour exclure les secrets du versionnement.\n2. Créer un fichier `.env.example` avec des valeurs factices (ou vides) qui sert de modèle.\n3. En production, définir les variables d'environnement directement dans la plateforme d'hébergement (Render, Railway, Heroku) plutôt que d'utiliser un fichier `.env`.\n4. Ne jamais hardcoder les mots de passe dans le code source.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Comment configurer `@nestjs/config` pour valider que toutes les variables requises sont présentes au démarrage ?",
+        "niveau": "hard",
+        "reponse": "```typescript\n// app.module.ts\nimport { Module } from '@nestjs/common';\nimport { ConfigModule } from '@nestjs/config';\nimport * as Joi from 'joi';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      validationSchema: Joi.object({\n        NODE_ENV: Joi.string().valid('development', 'production', 'test').default('development'),\n        DB_HOST: Joi.string().required(),\n        DB_PORT: Joi.number().default(5432),\n        DB_USERNAME: Joi.string().required(),\n        DB_PASSWORD: Joi.string().required(),\n        DB_DATABASE: Joi.string().required(),\n      }),\n      validationOptions: {\n        abortEarly: true, // S'arrête à la première erreur\n      },\n    }),\n  ],\n})\nexport class AppModule {}\n```\nCela lance une erreur explicite si une variable requise est manquante au démarrage de l'application.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Configuration multi-environnements (développement, test, production)",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Votre API NestJS doit fonctionner dans trois environnements : développement (base locale), test (base en mémoire SQLite), production (PostgreSQL sur Railway).</p>",
+      "images": [
+        "Schéma montrant trois environnements pointant vers trois bases différentes"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez une configuration de TypeORM qui utilise dynamiquement SQLite pour les tests et PostgreSQL pour le développement/production en fonction de NODE_ENV.",
+        "niveau": "very hard",
+        "reponse": "```typescript\n// app.module.ts\nimport { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      envFilePath: [`.env.${process.env.NODE_ENV}`, '.env'],\n    }),\n    TypeOrmModule.forRootAsync({\n      imports: [ConfigModule],\n      inject: [ConfigService],\n      useFactory: (configService: ConfigService) => {\n        const nodeEnv = configService.get('NODE_ENV', 'development');\n        \n        // Configuration pour les tests (SQLite en mémoire)\n        if (nodeEnv === 'test') {\n          return {\n            type: 'sqlite',\n            database: ':memory:',\n            entities: [__dirname + '/**/*.entity{.ts,.js}'],\n            synchronize: true,\n            dropSchema: true,\n          };\n        }\n        \n        // Configuration pour développement et production (PostgreSQL)\n        return {\n          type: 'postgres',\n          host: configService.get('DB_HOST'),\n          port: configService.get('DB_PORT', 5432),\n          username: configService.get('DB_USERNAME'),\n          password: configService.get('DB_PASSWORD'),\n          database: configService.get('DB_DATABASE'),\n          entities: [__dirname + '/**/*.entity{.ts,.js}'],\n          synchronize: nodeEnv === 'development', // True seulement en dev\n          migrations: [__dirname + '/migrations/**/*{.ts,.js}'],\n          migrationsRun: nodeEnv === 'production',\n          logging: nodeEnv === 'development',\n          ssl: nodeEnv === 'production' ? { rejectUnauthorized: false } : false,\n        };\n      },\n    }),\n  ],\n})\nexport class AppModule {}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quel avantage offre l'utilisation de SQLite en mémoire pour les tests ?",
+            "niveau": "medium",
+            "reponse": "Les avantages sont :\n1. **Isolation** : Chaque test s'exécute sur une base propre sans interférence.\n2. **Vitesse** : Les opérations en mémoire sont très rapides.\n3. **Simplicité** : Pas besoin d'installer/configurer PostgreSQL pour les tests.\n4. **Nettoyage automatique** : La base disparaît à la fin des tests.\n5. **Reproductibilité** : Les tests sont indépendants de l'environnement de développement."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Diagnostic d'erreurs de connexion PostgreSQL",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un développeur tente de lancer son application NestJS mais rencontre l'erreur suivante :</p>\n<pre><code>\nError: ER_ACCESS_DENIED_ERROR: Access denied for user 'admin'@'localhost' (using password: YES)\n</code></pre>\n<p>L'application utilise PostgreSQL avec TypeORM.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Diagnostiquez la cause probable de cette erreur et proposez trois vérifications à effectuer.",
+        "niveau": "medium",
+        "reponse": "**Cause probable :** L'utilisateur PostgreSQL n'existe pas ou le mot de passe est incorrect.\n\n**Trois vérifications :**\n1. Vérifier que l'utilisateur 'admin' existe dans PostgreSQL : `\\du` dans psql.\n2. Vérifier le mot de passe dans le fichier `.env` ou la configuration.\n3. Vérifier les privilèges de l'utilisateur sur la base spécifiée : `GRANT ALL PRIVILEGES ON DATABASE ecommerce_db TO admin;`",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment vérifier que PostgreSQL est bien en cours d'exécution sur le port 5432 ?",
+            "niveau": "easy",
+            "reponse": "**Sur Linux/Mac :** `sudo systemctl status postgresql` ou `pg_isready`\n**Sur Windows :** Vérifier dans les Services (services.msc)\n**Général :** `netstat -an | grep 5432` ou `lsof -i :5432`\n**Avec Docker :** `docker ps` pour voir si le conteneur PostgreSQL tourne."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Configuration avancée - Connection pool et logging",
+    "type": "compétence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Votre API e-commerce rencontre des goulots d'étranglement lors des pics de trafic. Vous décidez d'optimiser la connexion PostgreSQL en configurant un pool de connexions et en activant les logs pour le monitoring.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez une configuration TypeORM qui inclut : pool de connexions (max 20 connexions, idle timeout 30s), logging des requêtes lentes (> 100ms), et retry automatique en cas d'échec de connexion.",
+        "niveau": "very hard",
+        "reponse": "```typescript\n// TypeOrmModule.forRootAsync avec configuration avancée\nTypeOrmModule.forRootAsync({\n  imports: [ConfigModule],\n  inject: [ConfigService],\n  useFactory: (configService: ConfigService) => ({\n    type: 'postgres',\n    host: configService.get('DB_HOST'),\n    port: configService.get('DB_PORT', 5432),\n    username: configService.get('DB_USERNAME'),\n    password: configService.get('DB_PASSWORD'),\n    database: configService.get('DB_DATABASE'),\n    entities: [__dirname + '/**/*.entity{.ts,.js}'],\n    \n    // Pool de connexions\n    extra: {\n      max: 20,                    // Maximum 20 connexions simultanées\n      idleTimeoutMillis: 30000,   // 30 secondes avant fermeture d'une connexion inactive\n      connectionTimeoutMillis: 5000, // Timeout de connexion\n    },\n    \n    // Logging avancé\n    logging: ['query', 'error', 'warn'],\n    logger: 'advanced-console',\n    maxQueryExecutionTime: 100,   // Log les requêtes > 100ms\n    \n    // Retry automatique\n    retryAttempts: 5,\n    retryDelay: 3000,             // 3 secondes entre les tentatives\n    \n    // Keep connection alive\n    keepConnectionAlive: true,\n  }),\n});\n```",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

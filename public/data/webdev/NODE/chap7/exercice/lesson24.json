@@ -1,0 +1,118 @@
+[
+  {
+    "intitule": "Configuration d'un upload d'image avec Multer",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous d\u00E9veloppez une API REST avec Express.js qui permet aux utilisateurs de t\u00E9l\u00E9charger leur photo de profil. Vous devez configurer <strong>Multer</strong> pour r\u00E9pondre aux exigences suivantes :</p>\n<ul>\n  <li>Les fichiers doivent \u00EAtre stock\u00E9s dans le dossier <code>uploads/avatars/</code></li>\n  <li>Le nom du fichier doit \u00EAtre format\u00E9 ainsi : <code>avatar_[timestamp]_[nom_original]</code></li>\n  <li>Seules les extensions <code>.jpg</code>, <code>.jpeg</code> et <code>.png</code> sont autoris\u00E9es</li>\n  <li>La taille maximale du fichier est de 2 Mo</li>\n</ul>\n<p>Rappel : $timestamp = Date.now()$</p>",
+      "images": [
+        "Arborescence d'un projet Node.js avec un dossier uploads/avatars",
+        "Sch\u00E9ma du pipeline Multer (destination, filename, fileFilter)"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer comment configurer le stockage (diskStorage) pour r\u00E9pondre aux exigences de destination et de nommage.",
+        "niveau": "medium",
+        "reponse": "Il faut utiliser `multer.diskStorage()` avec deux fonctions : `destination` qui d\u00E9finit le chemin `'uploads/avatars/'` et `filename` qui construit le nom avec `avatar_${Date.now()}_${file.originalname}`.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "\u00C9crire le code de configuration de la destination et du filename.",
+            "niveau": "medium",
+            "reponse": "```javascript\nconst storage = multer.diskStorage({\n  destination: (req, file, cb) => {\n    cb(null, 'uploads/avatars/');\n  },\n  filename: (req, file, cb) => {\n    const uniqueSuffix = Date.now();\n    cb(null, `avatar_${uniqueSuffix}_${file.originalname}`);\n  }\n});\n```"
+          },
+          {
+            "numero": "1.b",
+            "texte": "D\u00E9crire la configuration du fileFilter et des limites pour respecter les contraintes d'extension et de taille.",
+            "niveau": "medium",
+            "reponse": "```javascript\nconst fileFilter = (req, file, cb) => {\n  const allowedTypes = /jpeg|jpg|png/;\n  const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());\n  const mimetype = allowedTypes.test(file.mimetype);\n  if (mimetype && extname) return cb(null, true);\n  cb(new Error('Seuls les fichiers JPEG, JPG et PNG sont autoris\u00E9s'));\n};\n\nconst upload = multer({\n  storage: storage,\n  limits: { fileSize: 2 * 1024 * 1024 },\n  fileFilter: fileFilter\n});\n```"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Justifier pourquoi il est n\u00E9cessaire de v\u00E9rifier \u00E0 la fois l'extension et le mimetype dans le fileFilter.",
+        "niveau": "hard",
+        "reponse": "La v\u00E9rification double (extension + mimetype) est une bonne pratique de s\u00E9curit\u00E9. Un attaquant peut renommer un fichier malveillant (ex: `virus.php`) en `photo.jpg` (extension trompeuse). La v\u00E9rification du mimetype v\u00E9rifie le vrai type MIME du fichier du c\u00F4t\u00E9 du navigateur, bien qu'elle puisse aussi \u00EAtre falsifi\u00E9e. Id\u00E9alement, on combine avec une analyse plus pouss\u00E9e (ex: `file-type`).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "API d'upload de CV pour une plateforme de recrutement",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous travaillez sur une plateforme de recrutement en ligne au Cameroun. Les candidats doivent pouvoir t\u00E9l\u00E9charger leur CV (format PDF uniquement) via un endpoint <code>POST /api/cv/upload</code>. Le fichier est envoy\u00E9 avec le nom de champ <code>cv_file</code>. Apr\u00E8s upload, l'API doit :</p>\n<ol>\n  <li>V\u00E9rifier que l'utilisateur est authentifi\u00E9 (JWT dans le header <code>Authorization</code>)</li>\n  <li>Renommer le fichier en <code>CV_[id_utilisateur]_[timestamp].pdf</code></li>\n  <li>Stockage local dans <code>uploads/cvs/</code></li>\n  <li>Enregistrer le chemin du fichier en base de donn\u00E9es (collection Candidat)</li>\n  <li>G\u00E9rer l'erreur si un fichier identique est d\u00E9j\u00E0 pr\u00E9sent</li>\n</ol>",
+      "images": [
+        "Diagramme de s\u00E9quence d'un upload avec authentification JWT et Multer",
+        "Exemple de structure d'une collection MongoDB pour les CV"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analyser les risques de s\u00E9curit\u00E9 sp\u00E9cifiques \u00E0 l'upload de fichiers PDF et proposer des mesures pr\u00E9ventives dans Multer.",
+        "niveau": "very hard",
+        "reponse": "Risques : ex\u00E9cution de code malveillant (PDF avec JS), d\u00E9ni de service (fichier volumineux), path traversal (`../../../`). Mesures : limits (fileSize=5Mo), fileFilter strict (mimetype 'application/pdf'), validation du nom (sanitize), scan antivirus apr\u00E8s upload, stockage dans un dossier non accessible publiquement, g\u00E9n\u00E9ration d'un nouveau nom s\u00E9curis\u00E9 (UUID).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer comment impl\u00E9menter le middleware d'authentification JWT avant Multer.",
+            "niveau": "medium",
+            "reponse": "```javascript\nconst authenticate = (req, res, next) => {\n  const token = req.headers.authorization?.split(' ')[1];\n  if (!token) return res.status(401).json({ error: 'Token manquant' });\n  try {\n    const decoded = jwt.verify(token, process.env.JWT_SECRET);\n    req.userId = decoded.id;\n    next();\n  } catch (err) {\n    res.status(403).json({ error: 'Token invalide' });\n  }\n};\n\napp.post('/api/cv/upload', authenticate, upload.single('cv_file'), controller.uploadCV);\n```"
+          },
+          {
+            "numero": "1.b",
+            "texte": "D\u00E9crire la logique de gestion d'erreur si le fichier existe d\u00E9j\u00E0 (sans \u00E9craser).",
+            "niveau": "hard",
+            "reponse": "```javascript\nconst fs = require('fs').promises;\nconst path = require('path');\n\nconst generateUniqueFilename = async (userId, basePath) => {\n  let timestamp = Date.now();\n  let filename = `CV_${userId}_${timestamp}.pdf`;\n  let fullPath = path.join(basePath, filename);\n  try {\n    await fs.access(fullPath);\n    // Le fichier existe, on r\u00E9essaye avec un nouveau timestamp\n    return generateUniqueFilename(userId, basePath);\n  } catch {\n    return filename;\n  }\n};\n```(Ou utiliser `multer.diskStorage` avec une fonction filename qui v\u00E9rifie l'existence et ajoute un suffixe)"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Concevoir la structure de la route et du contr\u00F4leur complet pour cette fonctionnalit\u00E9 (code Express + Multer).",
+        "niveau": "hard",
+        "reponse": "```javascript\n// Configuration Multer\nconst storage = multer.diskStorage({\n  destination: (req, file, cb) => cb(null, 'uploads/cvs/'),\n  filename: (req, file, cb) => {\n    const timestamp = Date.now();\n    cb(null, `CV_${req.userId}_${timestamp}.pdf`);\n  }\n});\n\nconst fileFilter = (req, file, cb) => {\n  if (file.mimetype === 'application/pdf') cb(null, true);\n  else cb(new Error('Seul le format PDF est accept\u00E9'), false);\n};\n\nconst upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 }, fileFilter });\n\n// Contr\u00F4leur\nconst uploadCV = async (req, res) => {\n  if (!req.file) return res.status(400).json({ error: 'Aucun fichier upload\u00E9' });\n  await Candidat.findByIdAndUpdate(req.userId, { cvPath: req.file.path });\n  res.status(200).json({ message: 'CV upload\u00E9 avec succ\u00E8s', path: req.file.path });\n};\n\n// Route\napp.post('/api/cv/upload', authenticate, upload.single('cv_file'), uploadCV);\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Migration vers le cloud : upload sur AWS S3",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Votre application a beaucoup de succ\u00E8s et le stockage local devient insuffisant. Vous d\u00E9cidez de migrer les uploads vers <strong>AWS S3</strong>.</p>\n<p>Questions :</p>",
+      "images": [
+        "Architecture avec Multer, AWS S3 et CloudFront",
+        "Exemple de configuration IAM pour S3"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Comparer les avantages et inconv\u00E9nients du stockage local vs stockage cloud (S3) pour une application de production au Cameroun.",
+        "niveau": "hard",
+        "reponse": "**Avantages S3** : scalabilit\u00E9 illimit\u00E9e, haute disponibilit\u00E9, CDN int\u00E9gr\u00E9 (CloudFront), s\u00E9curit\u00E9 avanc\u00E9e, pas de gestion de disque. **Inconv\u00E9nients** : co\u00FBt (requ\u00EAtes + stockage), latence (serveurs souvent en Europe/US), d\u00E9pendance Internet, configuration IAM complexe. **Local** : contr\u00F4le total, pas de co\u00FBt variable, mais maintenance, risque de perte, backup manuel, non scalables.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer comment adapter la configuration Multer pour uploader directement vers S3 (biblioth\u00E8que `multer-s3`).",
+            "niveau": "very hard",
+            "reponse": "```javascript\nconst multerS3 = require('multer-s3');\nconst { S3Client } = require('@aws-sdk/client-s3');\n\nconst s3 = new S3Client({\n  region: process.env.AWS_REGION,\n  credentials: {\n    accessKeyId: process.env.AWS_ACCESS_KEY_ID,\n    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY\n  }\n});\n\nconst upload = multer({\n  storage: multerS3({\n    s3: s3,\n    bucket: 'mon-bucket-cv',\n    acl: 'private',\n    key: (req, file, cb) => {\n      cb(null, `cvs/CV_${req.userId}_${Date.now()}.pdf`);\n    }\n  }),\n  fileFilter: (...),\n  limits: { fileSize: 5 * 1024 * 1024 }\n});\n```"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Proposer une strat\u00E9gie pour g\u00E9rer les \u00E9checs d'upload vers S3 (timeout, erreur r\u00E9seau) c\u00F4t\u00E9 client.",
+            "niveau": "hard",
+            "reponse": "Strat\u00E9gies : 1) R\u00E9essai automatique avec backoff exponentiel (ex: 3 tentatives). 2) Upload en plusieurs parties (multipart upload) pour les gros fichiers. 3) G\u00E9n\u00E9ration d'une URL pr\u00E9sign\u00E9e c\u00F4t\u00E9 serveur et upload direct client -> S3 (d\u00E9charge le serveur). 4) Mettre en place une file d'attente (Bull/Redis) pour r\u00E9essayer plus tard. 5) Feedback utilisateur avec barre de progression et option de r\u00E9essai manuel."
+          }
+        ]
+      }
+    ]
+  }
+]

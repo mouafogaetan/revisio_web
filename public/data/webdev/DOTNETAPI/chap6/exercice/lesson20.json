@@ -1,0 +1,88 @@
+[
+  {
+    "intitule": "Identifier et corriger une erreur d’autorisation",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un développeur a créé une API de gestion de bibliothèque. Il souhaite que&nbsp;:<br> - <code>GET /api/livres</code> soit accessible à tout utilisateur authentifié (peu importe son rôle)<br> - <code>POST /api/livres</code> soit réservé aux utilisateurs ayant le rôle <strong>Bibliothécaire</strong><br> - <code>DELETE /api/livres/{id}</code> soit réservé aux utilisateurs ayant le rôle <strong>Admin</strong><br><br>Voici son code actuel dans le contrôleur :</p><pre>[HttpGet]\n[Authorize]\npublic IActionResult GetLivres() { ... }\n\n[HttpPost]\n[Authorize(Roles = \"Bibliothecaire\")]\npublic IActionResult PostLivre(LivreDto livre) { ... }\n\n[HttpDelete(\"{id}\")]\n[Authorize(Roles = \"Admin\")]\npublic IActionResult DeleteLivre(int id) { ... }</pre><p>Un utilisateur avec le rôle <strong>Bibliothécaire</strong> essaie de supprimer un livre. <br><strong>Question :</strong> Que va-t-il se passer et pourquoi ? Corrigez le code si nécessaire.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez le comportement du code actuel pour un utilisateur « Bibliothécaire » tentant de supprimer un livre.",
+        "niveau": "medium",
+        "reponse": "L'utilisateur recevra une r\u00e9ponse 403 (Forbidden) ou 401 (Unauthorized) car l'action DeleteLivre exige le r\u00f4le « Admin », que le Biblioth\u00e9caire ne poss\u00e8de pas. Le code est correct du point de vue s\u00e9curit\u00e9, car seule une personne avec le r\u00f4le Admin peut supprimer.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Créer une politique d’autorisation basée sur l’âge minimum",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous devez protéger un endpoint <code>GET /api/evenements/adulte</code> qui ne doit être accessible qu’aux utilisateurs âgés d’<strong>au moins 18 ans</strong>.<br> L’âge de l’utilisateur est stocké dans un claim <code>DateOfBirth</code> (format ISO).</p><p>Consignes :</p><ul><li>Créez une politique personnalisée nommée <code>AdultOnly</code> dans <code>Program.cs</code>.</li><li>Appliquez cette politique sur l’endpoint.</li><li>Rédigez le code du <code>AuthorizationHandler</code> correspondant.</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le code complet de configuration de la politique AdultOnly et du gestionnaire personnalisé.",
+        "niveau": "hard",
+        "reponse": "// Dans Program.cs :\nbuilder.Services.AddAuthorization(options =>\n{\n    options.AddPolicy(\"AdultOnly\", policy =>\n        policy.Requirements.Add(new MinimumAgeRequirement(18)));\n});\nbuilder.Services.AddSingleton<IAuthorizationHandler, MinimumAgeHandler>();\n\n// Requirements\npublic class MinimumAgeRequirement : IAuthorizationRequirement\n{\n    public int MinimumAge { get; }\n    public MinimumAgeRequirement(int minimumAge) => MinimumAge = minimumAge;\n}\n\n// Handler\npublic class MinimumAgeHandler : AuthorizationHandler<MinimumAgeRequirement>\n{\n    protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, MinimumAgeRequirement requirement)\n    {\n        var dateOfBirthClaim = context.User.FindFirst(\"DateOfBirth\")?.Value;\n        if (dateOfBirthClaim != null && DateTime.TryParse(dateOfBirthClaim, out var dob))\n        {\n            var age = DateTime.Today.Year - dob.Year;\n            if (dob.Date > DateTime.Today.AddYears(-age)) age--;\n            if (age >= requirement.MinimumAge)\n                context.Succeed(requirement);\n        }\n        return Task.CompletedTask;\n    }\n}\n\n// Sur le contrôleur :\n[Authorize(Policy = \"AdultOnly\")]\n[HttpGet(\"adulte\")]\npublic IActionResult GetEvenementAdulte() { ... }",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi utilise-t-on AddSingleton pour le handler ?",
+            "niveau": "medium",
+            "reponse": "Parce que le gestionnaire d'autorisation n'a pas d'\u00e9tat interne sp\u00e9cifique \u00e0 une requ\u00eate et peut \u00eatre r\u00e9utilis\u00e9 pour toutes les requ\u00eates (dur\u00e9e de vie Singleton)."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Debugger un accès refusé avec plusieurs rôles",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Un endpoint <code>PUT /api/rapports/{id}</code> doit être accessible aux utilisateurs ayant <strong>soit</strong> le rôle <code>Rédacteur</code> <strong>soit</strong> le rôle <code>Superviseur</code>. Le développeur a écrit :</p><pre>[Authorize(Roles = \"R\u00e9dacteur, Superviseur\")]</pre><p>Un utilisateur qui possède uniquement le rôle <code>Rédacteur</code> arrive sur cet endpoint mais reçoit un <code>403</code>.</p><p><strong>Analysez</strong> la situation : l’erreur est-elle dans la logique ou dans la syntaxe ? Proposez une correction et expliquez le comportement attendu.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez pourquoi l’utilisateur Rédacteur est rejeté et corrigez la ligne d’attribut.",
+        "niveau": "very hard",
+        "reponse": "Le code [Authorize(Roles = \"R\u00e9dacteur, Superviseur\")] est correct syntaxiquement : la virgule signifie une condition OR. L'erreur vient probablement d'un d\u00e9tail d'encodage (accents) ou de la fa\u00e7on dont le claim de r\u00f4le est nomm\u00e9 (ex: \"Redacteur\" sans accent). En production, on v\u00e9rifierait le nom exact du r\u00f4le dans le token. Correction : s'assurer de l'orthographe exacte, ou utiliser des constantes. Pas besoin de modifier la logique.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quelle autre alternative plus souple pourrait-on utiliser pour remplacer cette ligne si la liste des rôles autorisés devait évoluer souvent ?",
+            "niveau": "medium",
+            "reponse": "Cr\u00e9er une politique personnalis\u00e9e avec AuthorizationPolicyBuilder et .RequireAssertion(context => context.User.IsInRole(\"R\u00e9dacteur\") || context.User.IsInRole(\"Superviseur\")) ou lire les r\u00f4les depuis une configuration."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Appliquer [Authorize] et gérer le cycle de vie des tokens",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Répondez par Vrai ou Faux aux affirmations suivantes en justifiant brièvement.</p><ol><li>L’attribut <code>[Authorize]</code> sans paramètre autorise tous les utilisateurs, même non authentifiés.</li><li>On peut combiner <code>[AllowAnonymous]</code> et <code>[Authorize]</code> sur la même action, <code>[AllowAnonymous]</code> l’emporte.</li><li>Si un contrôleur a <code>[Authorize]</code> et une action a <code>[Authorize(Roles = \"Admin\")]</code>, l’action n’hérite pas du contrôleur.</li></ol>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Choisissez Vrai/Faux pour chaque affirmation et justifiez.",
+        "niveau": "easy",
+        "reponse": "1. Faux : [Authorize] exige un utilisateur authentifi\u00e9, sinon renvoie 401.<br>2. Vrai : [AllowAnonymous] annule l'effet de [Authorize] sur la m\u00eame m\u00e9thode.<br>3. Faux : L'action h\u00e9rite de [Authorize] du contr\u00f4leur et ajoute la contrainte Admin (les deux sont AND).",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

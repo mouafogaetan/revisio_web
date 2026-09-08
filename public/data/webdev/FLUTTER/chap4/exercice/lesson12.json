@@ -1,0 +1,110 @@
+[
+  {
+    "intitule": "Compteur interactif : application des bases de setState()",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous créez une application Flutter simple contenant un compteur et un bouton. L'objectif est d'implémenter la logique du compteur en utilisant <code>setState()</code>. L'interface se compose :</p><ul><li>D'un texte affichant la valeur actuelle du compteur (initialisée à 0).</li><li>D'un bouton <strong>Incrémenter</strong> qui augmente le compteur de 1 à chaque clic.</li><li>D'un bouton <strong>Réinitialiser</strong> qui remet le compteur à 0.</li></ul><p>Structure de départ : <code>class MonCompteur extends StatefulWidget</code> et <code>_MonCompteurState</code>.</p>",
+      "images": [
+        "Interface mobile avec un texte affichant un nombre, deux boutons Incrémenter et Réinitialiser"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédigez le code complet de l'état du widget (_MonCompteurState) incluant : la variable d’état, la méthode build, et les fonctions d’incrémentation et de réinitialisation utilisant setState().",
+        "niveau": "easy",
+        "reponse": "```dart\nclass _MonCompteurState extends State<MonCompteur> {\n  int _compteur = 0;\n\n  void _incrementer() {\n    setState(() {\n      _compteur++;\n    });\n  }\n\n  void _reinitialiser() {\n    setState(() {\n      _compteur = 0;\n    });\n  }\n\n  @override\n  Widget build(BuildContext context) {\n    return Column(\n      children: [\n        Text('$_compteur', style: TextStyle(fontSize: 50)),\n        ElevatedButton(\n          onPressed: _incrementer,\n          child: Text('Incrémenter'),\n        ),\n        ElevatedButton(\n          onPressed: _reinitialiser,\n          child: Text('Réinitialiser'),\n        ),\n      ],\n    );\n  }\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez pourquoi l’utilisation de setState() est nécessaire dans cet exemple pour mettre à jour l’affichage.",
+        "niveau": "easy",
+        "reponse": "setState() notifie le framework Flutter que l'état interne de l'objet State a changé. Cela déclenche un rebuild du widget (appel de la méthode build) pour refléter les nouvelles valeurs à l'écran. Sans setState(), la variable changerait mais l'interface ne serait pas rafraîchie.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse des limites de setState() dans une application plus large",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un élève a développé une application de gestion de tâches avec plusieurs écrans : un écran ListeTâches affiche toutes les tâches, et un écran AjoutTâche permet d’en ajouter de nouvelles. Pour partager la liste des tâches entre les écrans, il utilise <code>setState()</code> uniquement dans l’écran ListeTâches et passe la liste par constructeur lors de la navigation. Après avoir ajouté une tâche, l’écran ListeTâches ne se met pas à jour automatiquement.</p>",
+      "images": [
+        "Schéma de navigation entre deux écrans Flutter : ListeTâches et AjoutTâche, avec flèche de retour"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifiez et expliquez la cause du problème de non mise à jour de l’écran ListeTâches après l’ajout d’une tâche.",
+        "niveau": "medium",
+        "reponse": "Le problème vient du fait que setState() est local à l’écran ListeTâches. Lorsqu’on revient de l’écran AjoutTâche, la liste des tâches a été modifiée dans un autre widget, mais l’état du widget ListeTâches n’est pas automatiquement reconstruit. setState() n’est pas adapté pour partager un état entre plusieurs écrans car chaque widget gère son propre état indépendamment.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposez une solution alternative plus adaptée pour gérer l’état partagé entre ces deux écrans, en justifiant votre choix par rapport aux limites de setState().",
+        "niveau": "medium",
+        "reponse": "Une solution adaptée est d'utiliser un gestionnaire d'état comme Provider ou Riverpod. Avec Provider, on place la liste des tâches dans un ChangeNotifier, et on écoute les changements avec Consumer. Lorsqu'une tâche est ajoutée dans l'écran AjoutTâche, on appelle notifyListeners(), ce qui reconstruit automatiquement tous les widgets qui écoutent cette donnée, y compris ListeTâches, sans avoir à passer manuellement la liste par constructeur. Cela résout le problème de propagation de l'état entre écrans.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Problème de performance avec setState() : propagation indésirable",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Voici une partie d’une application :</p><pre><code>class ParentWidget extends StatefulWidget {\n  @override\n  _ParentWidgetState createState() => _ParentWidgetState();\n}\n\nclass _ParentWidgetState extends State<ParentWidget> {\n  int _compteur = 0;\n  String _texteStatique = \"Texte qui ne change jamais\";\n\n  void incrementer() {\n    setState(() {\n      _compteur++;\n    });\n  }\n\n  @override\n  Widget build(BuildContext context) {\n    return Column(\n      children: [\n        EnfantStatique(texte: _texteStatique),\n        EnfantCompteur(compteur: _compteur, onIncrement: incrementer),\n      ],\n    );\n  }\n}</code></pre><p>Le widget <code>EnfantStatique</code> ne dépend pas de <code>_compteur</code> mais il est reconstruit à chaque fois que l’utilisateur incrémente le compteur.</p>",
+      "images": [
+        "Arbre de widgets : ParentWidget contenant EnfantStatique et EnfantCompteur"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Justifiez pourquoi le widget EnfantStatique est reconstruit alors que ses données (_texteStatique) n’ont pas changé.",
+        "niveau": "hard",
+        "reponse": "Lorsque setState() est appelé dans _ParentWidgetState, Flutter reconstruit tout le sous-arbre de widgets de ce State, c'est-à-dire qu'il exécute intégralement la méthode build() du parent. Puisque la construction d'EnfantStatique a lieu dans ce build(), ce widget est recréé à chaque fois, même si les propriétés qui lui sont passées sont inchangées. C'est une des limites de setState() : il ne fait pas de comparaison fine des sous-arbres.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Modifiez le code en utilisant un concept de Flutter qui évite la reconstruction inutile d’EnfantStatique tout en conservant setState() pour le compteur. Écrivez le code modifié et expliquez votre solution.",
+        "niveau": "hard",
+        "reponse": "```dart\n// Solution : extraire EnfantStatique dans un StatelessWidget pur\nclass EnfantStatique extends StatelessWidget {\n  final String texte;\n  const EnfantStatique({Key? key, required this.texte}) : super(key: key);\n\n  @override\n  Widget build(BuildContext context) {\n    return Text(texte);\n  }\n}\n\n// Et dans ParentWidget : utiliser const si possible\n// const EnfantStatique(texte: _texteStatique) // mais _texteStatique n'est pas constant\n// Autre solution : utiliser un widget avec const constructeur quand les données sont constantes\n```\nExplication : En transformant EnfantStatique en StatelessWidget et en utilisant le mot-clé `const` sur son constructeur lorsque les arguments sont constants, Flutter peut réutiliser l'instance précédente du widget au lieu d'en recréer une nouvelle. Si ce n'est pas possible (comme ici avec _texteStatique qui n'est pas final), la meilleure pratique avec setState() est de découper l'arbre en petits widgets pour limiter la portée du rebuild : placer le compteur dans son propre StatefulWidget pour que setState() ne rafraîchisse que cette partie.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Implémentation d’un minuteur interactif avec gestion d’état simple",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous devez développer un minuteur décomptant de 60 secondes. Fonctionnalités attendues :</p><ul><li>Un affichage du temps restant (format mm:ss).</li><li>Un bouton <strong>Démarrer</strong> qui lance le décompte (une seconde par seconde).</li><li>Un bouton <strong>Pause</strong> qui interrompt le décompte.</li><li>Un bouton <strong>Réinitialiser</strong> qui remet le temps à 60 secondes et arrête le décompte.</li><li>Utilisez uniquement <code>setState()</code> et un <code>Timer.periodic</code>.</li><li>Gérez les cas où l’utilisateur clique plusieurs fois sur Démarrer (éviter les timers multiples).</li></ul>",
+      "images": [
+        "Interface de minuteur avec temps central (01:00) et trois boutons : Démarrer, Pause, Réinitialiser"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédigez le code complet du State (StatefulWidget) respectant toutes les contraintes, avec une gestion robuste des erreurs (arrêt du timer à 0, double démarrage). Commentez les parties critiques.",
+        "niveau": "very hard",
+        "reponse": "```dart\nclass _MinuteurState extends State<Minuteur> {\n  int _secondesRestantes = 60;\n  Timer? _timer;\n\n  void _demarrer() {\n    // Éviter de créer un deuxième timer si un tourne déjà\n    if (_timer != null && _timer!.isActive) return;\n    // Éviter de démarrer si déjà à 0\n    if (_secondesRestantes <= 0) return;\n\n    _timer = Timer.periodic(Duration(seconds: 1), (timer) {\n      setState(() {\n        if (_secondesRestantes > 0) {\n          _secondesRestantes--;\n        }\n        // Arrêter le timer quand on arrive à 0\n        if (_secondesRestantes == 0) {\n          _timer?.cancel();\n          _timer = null;\n        }\n      });\n    });\n  }\n\n  void _pause() {\n    _timer?.cancel();\n    _timer = null;\n  }\n\n  void _reinitialiser() {\n    _pause(); // arrêter le timer s'il tourne\n    setState(() {\n      _secondesRestantes = 60;\n    });\n  }\n\n  String _formaterTemps() {\n    int minutes = _secondesRestantes ~/ 60;\n    int secondes = _secondesRestantes % 60;\n    return '${minutes.toString().padLeft(2, '0')}:${secondes.toString().padLeft(2, '0')}';\n  }\n\n  @override\n  void dispose() {\n    _timer?.cancel(); // nettoyage important pour éviter les fuites mémoire\n    super.dispose();\n  }\n\n  @override\n  Widget build(BuildContext context) {\n    return Column(\n      children: [\n        Text(_formaterTemps(), style: TextStyle(fontSize: 60)),\n        Row(\n          mainAxisAlignment: MainAxisAlignment.center,\n          children: [\n            ElevatedButton(onPressed: _demarrer, child: Text('Démarrer')),\n            ElevatedButton(onPressed: _pause, child: Text('Pause')),\n            ElevatedButton(onPressed: _reinitialiser, child: Text('Réinitialiser')),\n          ],\n        )\n      ],\n    );\n  }\n}\n```\nCommentaires : \n- Utilisation de `Timer? _timer` pour garder une référence et pouvoir annuler.\n- Vérification `_timer?.isActive` pour éviter les doubles démarrages.\n- Méthode `dispose` indispensable pour annuler le timer quand le widget est retiré de l'arbre.\n- `setState` est appelé chaque seconde pour mettre à jour l'affichage.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Identifiez une limite potentielle de cette approche avec setState() dans un contexte plus complexe (ex: plusieurs minuteurs, navigation vers un autre écran) et proposez une amélioration architecturale.",
+        "niveau": "very hard",
+        "reponse": "Limite : setState() est lié au cycle de vie du widget. Si l'utilisateur navigue vers un autre écran et que le timer continue, lorsque l'utilisateur revient, l'état est toujours correct car le widget n'a pas été détruit (sauf si l'écran a été popped). Mais si le système d'Android tue l'activité en arrière-plan, le timer s'arrête. Pour une app robuste, il faudrait persister l'état (SharedPreferences, SQLite) et gérer la reprise.\n\nAmélioration : Déplacer la logique du minuteur dans un ChangeNotifier (Provider). Ainsi, le timer continue de tourner même si l'écran n'est pas actif (via un service ou un isolate). setState() devient alors uniquement dans les widgets qui écoutent le notifier via Consumer, et la gestion de l'état est découplée de l'UI.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

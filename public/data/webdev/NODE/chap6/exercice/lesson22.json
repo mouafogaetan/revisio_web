@@ -1,0 +1,105 @@
+[
+  {
+    "intitule": "Renforcer la sécurité d'une API REST avec Helmet, CORS et rate limiting",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous développez une API publique de gestion de rendez-vous médicaux avec Node.js et Express. L'API sera consommée par une application React hébergée sur <code>https://rdv-frontend.com</code>. Vous devez sécuriser l'API contre les attaques courantes :</p><ul><li>Les en-têtes HTTP vulnérables (via <strong>Helmet</strong>)</li><li>Les requêtes non autorisées provenant d'autres origines (via <strong>CORS</strong>)</li><li>Les attaques par déni de service (via <strong>rate limiting</strong>)</li></ul><p>Implémentez ces trois mesures et répondez aux questions suivantes.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez pourquoi l'ajout de Helmet avant toute définition de route est critique. Quelle est la différence entre l'ordre des middlewares pour Helmet et pour express.json() ?",
+        "niveau": "medium",
+        "reponse": "Helmet doit être placé le plus tôt possible (généralement après les middlewares de logging basiques) car il agit sur les en-têtes de toutes les réponses, y compris les erreurs précoces. express.json() peut être placé après Helmet car il traite le corps des requêtes, non les en-têtes. L'ordre important : Helmet vient avant le routage mais après d'éventuels middlewares de logging global.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrivez la configuration CORS qui autorise uniquement l'origine https://rdv-frontend.com, accepte les méthodes GET, POST, PUT, DELETE, et permet l'envoi de cookies (credentials). Justifiez chaque option.",
+        "niveau": "hard",
+        "reponse": "```javascript\nconst cors = require('cors');\napp.use(cors({\n  origin: 'https://rdv-frontend.com',\n  methods: ['GET', 'POST', 'PUT', 'DELETE'],\n  credentials: true\n}));\n```\nJustification : origin restreint l'accès à une seule origine ; methods liste les verbes HTTP autorisés ; credentials:true permet l'envoi de cookies/sessions (nécessaire si l'API utilise l'authentification par session).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Vous souhaitez limiter à 100 requêtes par 15 minutes pour toute IP sur la route POST /api/rendez-vous. Créez un middleware de rate limiting avec express-rate-limit. Expliquez ce qui se passe quand la limite est dépassée.",
+        "niveau": "medium",
+        "reponse": "```javascript\nconst rateLimit = require('express-rate-limit');\nconst limiter = rateLimit({\n  windowMs: 15 * 60 * 1000, // 15 minutes\n  max: 100,\n  message: 'Trop de requêtes créées depuis cette IP, veuillez réessayer après 15 minutes.',\n  standardHeaders: true, // Renvoie les en-têtes RateLimit-*\n  legacyHeaders: false,\n});\napp.use('/api/rendez-vous', limiter);\n```\nQuand la limite est dépassée, express-rate-limit renvoie automatiquement un statut HTTP 429 (Too Many Requests) et le message configuré. L'IP est bloquée jusqu'à la fin de la fenêtre.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 4,
+        "texte": "Comparez les approches stateful (session avec express-session) et stateless (JWT) dans le contexte d'une API sécurisée avec CORS credentials: true. Laquelle nécessite un stockage côté serveur ? Laquelle est recommandée pour une architecture horizontale avec plusieurs serveurs ?",
+        "niveau": "hard",
+        "reponse": "Les sessions (stateful) nécessitent un stockage côté serveur (mémoire, Redis, etc.). Elles sont moins adaptées aux multiples serveurs sans magasin partagé. Le JWT (stateless) ne nécessite aucun stockage serveur : le token contient lui-même les informations. Pour une architecture horizontale, JWT est généralement recommandé car tout serveur peut valider le token indépendamment. Cependant JWT nécessite une gestion de révocation (liste noire).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Identifier et corriger les failles de sécurité d'une API existante",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Voici un extrait de code d'une API Express incomplète :</p><pre><code>const express = require('express');\nconst app = express();\n\napp.use(express.json());\n\napp.get('/api/public', (req, res) => {\n  res.json({ message: 'Accès public' });\n});\n\napp.post('/api/login', (req, res) => {\n  // ... authentification\n});\n\napp.listen(3000);\n</code></pre><p>Cette API est actuellement vulnérable car :</p><ul><li>Absence de Helmet (en-têtes HTTP non sécurisés)</li><li>Aucune restriction CORS (accepte toutes les origines)</li><li>Pas de rate limiting</li></ul><p>Répondez aux questions ci-dessous.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Citez deux en-têtes HTTP ajoutés par Helmet qui protègent contre les attaques courantes. Décrivez brièvement le rôle de chacun.",
+        "niveau": "easy",
+        "reponse": "1) X-Content-Type-Options: nosniff – empêche le navigateur d'interpréter un fichier comme un type MIME différent de celui déclaré. 2) X-Frame-Options: DENY – empêche l'inclusion de la page dans une iframe, protégeant contre le clickjacking. (D'autres réponses acceptables : X-XSS-Protection, Strict-Transport-Security, etc.)",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "L'API accepte actuellement toutes les origines (*). Pour une API publique consommée uniquement par une application mobile, quelle configuration CORS serait la plus adaptée ? Justifiez.",
+        "niveau": "medium",
+        "reponse": "Pour une API consommée uniquement par une application mobile (pas de navigateur), le CORS n'est pas nécessaire car les applications mobiles ne sont pas soumises à la politique same-origin. On peut donc ne pas utiliser de middleware CORS du tout, ou le configurer avec origin: false. Si on souhaite restreindre, on peut autoriser uniquement l'origine null ou désactiver CORS. L'important : ne pas laisser origin: '*' si on veut une sécurité maximale.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposez une configuration de rate limiting pour limiter les tentatives de connexion sur POST /api/login à 5 requêtes par minute par IP. Écrivez le code correspondant.",
+        "niveau": "medium",
+        "reponse": "```javascript\nconst rateLimit = require('express-rate-limit');\nconst loginLimiter = rateLimit({\n  windowMs: 60 * 1000,\n  max: 5,\n  message: 'Trop de tentatives de connexion, veuillez réessayer dans une minute.',\n  skipSuccessfulRequests: false, // compter aussi les succès\n});\napp.post('/api/login', loginLimiter, (req, res) => { ... });\n```\nOn applique spécifiquement ce limiter à la route de login, plus restrictive que le reste de l'API.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Audit de sécurité et implémentation des bonnes pratiques sur une API existante",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous êtes consultant en sécurité. On vous fournit une API Node.js/Express déjà en production, sans Helmet, sans CORS, et sans rate limiting. Cette API sert des données sensibles et a subi une attaque DDoS partielle la semaine dernière. L'équipe veut également ajouter l'authentification par JWT stockée dans un cookie httpOnly. Répondez aux questions détaillées.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Listez et expliquez trois problèmes de sécurité immédiats en l'absence de Helmet. Pour chaque problème, dites quel en-tête Helmet résout le problème.",
+        "niveau": "hard",
+        "reponse": "1) Absence de X-Frame-Options → risque de clickjacking (Helmet ajoute X-Frame-Options: SAMEORIGIN par défaut). 2) Absence de X-Content-Type-Options → risque de MIME sniffing (Helmet ajoute X-Content-Type-Options: nosniff). 3) Absence de X-XSS-Protection → risque moindre sur navigateurs anciens (Helmet ajoute X-XSS-Protection: 1; mode=block). 4) Absence de Strict-Transport-Security → risque de downgrade HTTP (Helmet ajoute HSTS). 5) Absence de Referrer-Policy → fuite d'URL sensibles.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Pour l'authentification par JWT stocké dans un cookie httpOnly, doit-on activer credentials: true dans CORS ? Pourquoi ? Quels risques si on active credentials: true avec une origine générique '*' ?",
+        "niveau": "very hard",
+        "reponse": "Oui, il faut activer credentials: true pour que le navigateur envoie automatiquement le cookie httpOnly. Cependant, credentials: true interdit l'utilisation de origin: '*'. Il faut spécifier une origine précise. Le risque : si on autorise credentials: true avec une origine générique (ou mal configurée), n'importe quel site pourrait faire des requêtes authentifiées vers l'API (CSRF-like via CORS). De plus, avec credentials: true, le serveur doit explicitement lister les origines autorisées, et le préflight OPTIONS devient obligatoire pour les requêtes non-simple.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposez une stratégie de rate limiting différenciée : a) pour les routes GET publiques, b) pour les routes POST d'écriture, c) pour la route de connexion. Expliquez le choix des fenêtres et des maximums.",
+        "niveau": "hard",
+        "reponse": "Stratégie : \n- GET publiques : 200 requêtes / minute (limite large pour ne pas pénaliser les utilisateurs légitimes).\n- POST d'écriture (création, modification) : 30 requêtes / minute par IP ou par utilisateur authentifié (plus restrictif).\n- Route de connexion (/login) : 5 requêtes / minute (pour prévenir les attaques par force brute).\nOn peut utiliser un limiter global moins restrictif (ex: 500 req/min) pour les routes non couvertes. Il est préférable d'utiliser un stockage partagé (Redis) en environnement cluster.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

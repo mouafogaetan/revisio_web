@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+  "matiere": "Info 1ère A",
+  "classe": "Première",
+  "sequence": "Séquence 6 : Cloud Computing et Virtualisation (UA 11)",
+  "anneeScolaire": "2025-2026",
+  "exercices": [
+    {
+      "titre": "Exercice 1 : Définitions et concepts fondamentaux (4 pts)",
+      "points": "4 pts",
+      "enonce": "<div style='font-size: 1em; line-height: 1.6; color: #333;'>Le Cloud Computing, ou informatique en nuage, est devenu un pilier du monde numérique moderne. Cet exercice vise à vérifier votre compréhension des concepts fondamentaux.</div>",
+      "questions": [
+        {
+          "question": "<div style='font-size: 1em; line-height: 1.6; color: #333;'><strong>1. (1 pt)</strong> Donnez une définition claire et concise du <strong>Cloud Computing</strong>.</div>",
+          "reponse": "<div style='font-size: 1em; line-height: 1.6; color: #333;'>Le Cloud Computing est un modèle qui permet un accès réseau à la demande à un ensemble de ressources informatiques configurables et partagées (serveurs, stockage, applications, etc.), qui peuvent être rapidement provisionnées et libérées avec un effort de gestion minimal [citation:1][citation:4][citation:5].</div>"
+        },
+        {
+          "question": "<div style='font-size: 1em; line-height: 1.6; color: #333;'><strong>2. (1 pt)</strong> Qu'est-ce que le <strong>stockage en ligne</strong> et en quoi est-il un service clé du Cloud ?</div>",
+          "reponse": "<div style='font-size: 1em; line-height: 1.6; color: #333;'>Le stockage en ligne est un service Cloud qui permet de sauvegarder des données sur des serveurs distants accessibles via Internet. Il est clé car il offre une accessibilité universelle, une sauvegarde automatique et un partage facilité des fichiers [citation:1].</div>"
+        },
+        {
+          "question": "<div style='font-size: 1em; line-height: 1.6; color: #333;'><strong>3. (2 pts)</strong> Énumérez deux avantages majeurs et deux inconvénients de l'utilisation du Cloud pour une entreprise.</div>",
+          "reponse": "<div style='font-size: 1em; line-height: 1.6; color: #333;'><ul style='margin-left: 0; padding-left: 20px;'><li><strong>Avantages :</strong> <ul><li><strong>Accessibilité et flexibilité :</strong> Les données et applications sont accessibles de n'importe où et depuis n'importe quel appareil connecté à Internet [citation:4].</li><li><strong>Réduction des coûts :</strong> Le modèle 'paiement à l'usage' permet d'éviter les investissements initiaux en matériel et de ne payer que pour les ressources consommées [citation:1][citation:4].</li></ul></li><li><strong>Inconvénients :</strong> <ul><li><strong>Dépendance à Internet :</strong> Une connexion réseau stable est indispensable pour accéder aux données [citation:1].</li><li><strong>Sécurité et confidentialité :</strong> La confiance dans un tiers pour héberger des données sensibles implique des risques de sécurité et de conformité [citation:1][citation:9].</li></ul></li></ul></div>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 2 : Services et modèles de déploiement (5 pts)",
+      "points": "5 pts",
+      "enonce": "<div style='font-size: 1em; line-height: 1.6; color: #333;'>Les fournisseurs de Cloud proposent différents niveaux de services et de modèles de déploiement pour s'adapter aux besoins des utilisateurs.</div>",
+      "questions": [
+        {
+          "question": "<div style='font-size: 1em; line-height: 1.6; color: #333;'><strong>1. (3 pts)</strong> Présentez les trois principaux modèles de service du Cloud (<strong>IaaS</strong>, <strong>PaaS</strong>, <strong>SaaS</strong>). Pour chacun, donnez une définition et un exemple d'utilisation.</div>",
+          "reponse": "<div style='font-size: 1em; line-height: 1.6; color: #333;'><ul style='margin-left: 0; padding-left: 20px;'><li><strong>IaaS (Infrastructure as a Service) :</strong> Fournit une infrastructure informatique virtualisée (serveurs, stockage, réseaux). L'utilisateur a un contrôle complet sur cette infrastructure. <em>Exemple :</em> Louer une machine virtuelle pour héberger un site web [citation:1][citation:5].</li><li><strong>PaaS (Platform as a Service) :</strong> Fournit une plateforme pour développer, tester et déployer des applications. L'utilisateur ne gère pas l'infrastructure sous-jacente. <em>Exemple :</em> Utiliser un environnement de développement intégré pour créer une application mobile sans se soucier des serveurs [citation:1][citation:5].</li><li><strong>SaaS (Software as a Service) :</strong> Fournit des applications logicielles complètes, prêtes à l'emploi, accessibles via un navigateur. <em>Exemple :</em> Utiliser Google Drive ou Microsoft 365 pour la bureautique [citation:1][citation:4].</li></ul></div>"
+        },
+        {
+          "question": "<div style='font-size: 1em; line-height: 1.6; color: #333;'><strong>2. (2 pts)</strong> Décrivez les modèles de déploiement <strong>Cloud Public</strong> et <strong>Cloud Privé</strong>. Quelles sont les principales différences entre eux ?</div>",
+          "reponse": "<div style='font-size: 1em; line-height: 1.6; color: #333;'><ul style='margin-left: 0; padding-left: 20px;'><li><strong>Cloud Public :</strong> Les ressources sont mises à disposition du grand public par un fournisseur tiers. L'infrastructure est partagée entre plusieurs clients [citation:4][citation:9].</li><li><strong>Cloud Privé :</strong> L'infrastructure est dédiée à une seule organisation. Elle offre plus de contrôle et de sécurité, mais est plus coûteuse [citation:4][citation:9].</li><li><strong>Différence principale :</strong> Le cloud public est accessible par tout le monde, tandis que le cloud privé est réservé à une seule entité. Le public offre une meilleure évolutivité et des coûts réduits, alors que le privé offre plus de sécurité et de personnalisation [citation:4][citation:9].</li></ul></div>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 3 : La virtualisation, pilier du Cloud (6 pts)",
+      "points": "6 pts",
+      "enonce": "<div style='font-size: 1em; line-height: 1.6; color: #333;'>La virtualisation est une technologie fondamentale qui rend le Cloud Computing possible. Elle permet d'optimiser l'utilisation du matériel.</div>",
+      "questions": [
+        {
+          "question": "<div style='font-size: 1em; line-height: 1.6; color: #333;'><strong>1. (1 pt)</strong> Quelle est la <strong>définition</strong> de la virtualisation en informatique ?</div>",
+          "reponse": "<div style='font-size: 1em; line-height: 1.6; color: #333;'>La virtualisation est une technique qui permet de créer une version virtuelle d'une ressource physique, comme un serveur, un système d'exploitation ou un périphérique de stockage, afin de la partager et de l'utiliser de manière plus efficace [citation:4].</div>"
+        },
+        {
+          "question": "<div style='font-size: 1em; line-height: 1.6; color: #333;'><strong>2. (2 pts)</strong> Qu'est-ce qu'un <strong>hyperviseur</strong> ? Quel est son rôle dans un environnement virtualisé ?</div>",
+          "reponse": "<div style='font-size: 1em; line-height: 1.6; color: #333;'>Un hyperviseur est un logiciel qui permet de créer et de gérer des machines virtuelles. Son rôle est de gérer les ressources physiques (CPU, mémoire) et de les allouer aux différentes machines virtuelles, assurant leur isolation et leur exécution [citation:1][citation:4].</div>"
+        },
+        {
+          "question": "<div style='font-size: 1em; line-height: 1.6; color: #333;'><strong>3. (3 pts)</strong> Une entreprise possède plusieurs serveurs physiques sous-utilisés. Expliquez comment la <strong>virtualisation</strong> peut lui permettre de <strong>réduire ses coûts</strong> et d'<strong>optimiser ses ressources</strong>.</div>",
+          "reponse": "<div style='font-size: 1em; line-height: 1.6; color: #333;'>La virtualisation permet de consolider plusieurs serveurs physiques sous-utilisés en un nombre réduit de serveurs physiques hébergeant plusieurs machines virtuelles. Cela permet de <strong>réduire les coûts</strong> en diminuant le nombre de machines à acheter, à entretenir et à alimenter en électricité. De plus, les ressources matérielles sont mieux <strong>optimisées</strong> car elles sont allouées dynamiquement entre les machines virtuelles en fonction des besoins, évitant ainsi le gaspillage [citation:1][citation:4].</div>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 4 : Étude de cas - Migration vers le Cloud (5 pts)",
+      "points": "5 pts",
+      "enonce": "<div style='font-size: 1em; line-height: 1.6; color: #333;'>L'entreprise camerounaise <strong>\"TechCorp\"</strong>, spécialisée dans le développement de logiciels, souhaite migrer ses services vers le Cloud pour améliorer sa flexibilité et sa disponibilité.</div>",
+      "questions": [
+        {
+          "question": "<div style='font-size: 1em; line-height: 1.6; color: #333;'><strong>1. (2 pts)</strong> Quelles sont les <strong>étapes essentielles</strong> que TechCorp devrait suivre pour mener à bien cette migration ?</div>",
+          "reponse": "<div style='font-size: 1em; line-height: 1.6; color: #333;'><ul style='margin-left: 0; padding-left: 20px;'><li><strong>Évaluation des besoins :</strong> Identifier les applications et données à migrer en fonction de leur criticité [citation:4][citation:5].</li><li><strong>Choix du modèle et du fournisseur :</strong> Sélectionner le modèle Cloud adapté (public, privé ou hybride) et un fournisseur de confiance [citation:4].</li><li><strong>Planification de la migration :</strong> Établir un calendrier et les procédures pour minimiser les interruptions de service [citation:4].</li><li><strong>Migration et tests :</strong> Déplacer les données et applications progressivement, puis effectuer des tests approfondis [citation:4][citation:5].</li><li><strong>Formation et sécurisation :</strong> Former le personnel aux nouveaux outils et mettre en place des mesures de sécurité robustes [citation:4][citation:5].</li></ul></div>"
+        },
+        {
+          "question": "<div style='font-size: 1em; line-height: 1.6; color: #333;'><strong>2. (3 pts)</strong> TechCorp souhaite principalement un service qui lui permette de se concentrer sur le développement de ses applications sans gérer les serveurs. Etant donné que l'entreprise souhaite un <strong>contrôle total</strong> sur ses bases de données pour des raisons de sécurité. <br>Quel modèle de service Cloud serait le plus adapté : <strong>IaaS, PaaS ou SaaS</strong> ? Justifiez votre réponse.</div>",
+          "reponse": "<div style='font-size: 1em; line-height: 1.6; color: #333;'>Le modèle le plus adapté est <strong>IaaS (Infrastructure as a Service)</strong>. <br><br>La demande de <strong>contrôle total</strong> sur les bases de données correspond aux capacités offertes par l'IaaS, qui fournit l'infrastructure (serveurs, stockage) que l'entreprise peut configurer et gérer entièrement [citation:1][citation:5]. Bien que le PaaS permette de se concentrer sur le développement, il offre moins de contrôle sur l'infrastructure et la couche de base de données [citation:5]. Le SaaS ne conviendrait pas car il s'agit d'applications prêtes à l'emploi, sans possibilité de développement ou de contrôle approfondi de l'infrastructure [citation:1].</div>"
+        }
+      ]
+    }
+  ]
+};
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

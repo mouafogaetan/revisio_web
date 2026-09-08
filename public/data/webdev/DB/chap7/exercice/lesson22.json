@@ -1,0 +1,116 @@
+[
+  {
+    "intitule": "Identifier les propriétés ACID d'une transaction",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Une plateforme de e-commerce utilise une base de données. Lorsqu’un client achète un produit, deux opérations doivent être réalisées : <strong>déduire le stock</strong> et <strong>enregistrer la commande</strong>. L’ensemble des deux opérations forme une transaction.</p><p>Répondez aux questions suivantes en vous basant sur les propriétés ACID vues en cours ($\\text{Atomicité, Cohérence, Isolation, Durabilité}$).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez quelle propriété ACID garantit que si l’insertion de la commande échoue, la diminution du stock ne sera pas appliquée non plus.",
+        "niveau": "easy",
+        "reponse": "La propriété d'Atomicité garantit que la transaction est exécutée entièrement ou pas du tout (tout-ou-rien).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Identifiez la propriété ACID qui empêche un autre client de voir le stock temporairement incorrect avant la fin de la transaction.",
+        "niveau": "easy",
+        "reponse": "La propriété d'Isolation garantit que les transactions concurrentes n'interfèrent pas entre elles.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Justifiez pourquoi la propriété de Durabilité est essentielle après l’exécution du COMMIT.",
+        "niveau": "medium",
+        "reponse": "La Durabilité garantit qu'une fois la transaction validée (COMMIT), les modifications persistent même en cas de panne système ou de redémarrage de la base de données.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse de scénarios de rupture de transaction",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un guichet automatique bancaire permet de transférer $50\\,000$ FCFA du compte A vers le compte B. Voici les étapes de la transaction :</p><ol><li>Lire le solde du compte A (solde initial = $100\\,000$ FCFA).</li><li>Vérifier que le solde A est suffisant.</li><li>Débiter le compte A : $A = A - 50\\,000$.</li><li>Créditer le compte B : $B = B + 50\\,000$.</li><li>Valider les modifications.</li></ol>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Imaginez qu’une panne électrique survient immédiatement après l’étape 3 (débit de A), avant l’étape 4 (crédit de B). Sans mécanisme de transaction, quel problème se produit ? Proposez une solution utilisant BEGIN / COMMIT / ROLLBACK.",
+        "niveau": "medium",
+        "reponse": "Le compte A perdrait 50 000 FCFA sans que B ne les reçoive : incohérence des fonds. Avec une transaction, on exécute BEGIN avant l'étape 1, puis si panne après étape 3, le ROLLBACK automatique annule le débit, restaurant A à son état initial.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Un autre client consulte son solde pendant que le transfert est en cours mais non encore validé (COMMIT non exécuté). Expliquez quel problème d’isolation pourrait se produire et comment la propriété d’Isolation le résout.",
+        "niveau": "hard",
+        "reponse": "Le problème est une lecture sale (dirty read) : l’autre client verrait le solde A déjà diminué alors que la transaction pourrait encore être annulée (ROLLBACK). L’Isolation, avec un niveau READ COMMITTED par exemple, empêche de lire des données non validées.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Mise en œuvre d’une transaction avec gestion d’erreur",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous gérez une petite librairie. La table <code>livres</code> contient (<code>id_livre, titre, quantite_stock</code>) et la table <code>ventes</code> contient (<code>id_vente, id_livre, quantite_vendue, date_vente</code>). Un client achète 3 exemplaires d’un livre dont l’<code>id_livre = 10</code> et le stock actuel est de 5.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédigez un bloc SQL transactionnel qui : <br/>- Vérifie que la quantité demandée (3) est ≤ stock.<br/>- Si c’est le cas, insère la vente et met à jour le stock (diminution).<br/>- Sinon, annule la transaction. Utilisez <code>BEGIN TRANSACTION</code>, <code>COMMIT</code>, <code>ROLLBACK</code>.",
+        "niveau": "hard",
+        "reponse": "```sql\nBEGIN TRANSACTION;\n\nIF (SELECT quantite_stock FROM livres WHERE id_livre = 10) >= 3 THEN\n    INSERT INTO ventes (id_livre, quantite_vendue, date_vente)\n    VALUES (10, 3, CURRENT_DATE);\n    \n    UPDATE livres \n    SET quantite_stock = quantite_stock - 3\n    WHERE id_livre = 10;\n    \n    COMMIT;\nELSE\n    ROLLBACK;\nEND IF;\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez comment l’atomicité est respectée dans votre script si une panne survient après l’INSERT mais avant l’UPDATE.",
+            "niveau": "medium",
+            "reponse": "Si une panne survient après l’INSERT mais avant l’UPDATE, la transaction n’étant pas encore validée (COMMIT), le ROLLBACK automatique au redémarrage annulera l’INSERT, garantissant qu’aucune vente orpheline ne persiste."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Comparaison des comportements avec ou sans transaction",
+    "type": "ressource",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>On considère deux scénarios de réservation de billets d’avion :</p><ul><li><strong>Scénario A (sans transaction explicite)</strong> : deux requêtes séparées : <code>UPDATE sièges SET disponible = false WHERE id_siege = 25;</code> puis <code>INSERT INTO réservations VALUES (…);</code></li><li><strong>Scénario B (avec transaction)</strong> : <code>BEGIN;</code> puis les deux mêmes requêtes, puis <code>COMMIT;</code></li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Discutez les conséquences possibles dans le scénario A si la base de données tombe en panne juste après la mise à jour du siège.",
+        "niveau": "hard",
+        "reponse": "Le siège 25 sera marqué indisponible sans qu’aucune réservation ne soit enregistrée. Le client a perdu son siège mais la compagnie ne peut pas prouver qu’il a payé. Incohérence métier.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Comparez le comportement du scénario B en termes de persistance (durabilité) après un COMMIT réussi. Que se passe-t-il si la panne survient après le COMMIT ?",
+        "niveau": "very hard",
+        "reponse": "Une fois le COMMIT exécuté, la durabilité garantit que les deux modifications (UPDATE et INSERT) sont définitivement enregistrées sur le disque. Si une panne survient juste après le COMMIT, les données restent persistantes au redémarrage. Si la panne survient avant le COMMIT, rien n’est appliqué.",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Proposez un niveau d’isolation qui empêcherait un autre utilisateur de réserver le même siège pendant que la transaction B est en cours.",
+            "niveau": "hard",
+            "reponse": "Le niveau SERIALIZABLE empêcherait les lectures et écritures concurrentes sur le même siège, évitant tout conflit de réservation."
+          }
+        ]
+      }
+    ]
+  }
+]

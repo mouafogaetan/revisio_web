@@ -1,0 +1,162 @@
+[
+  {
+    "intitule": "Les décorateurs de tâches planifiées - @Cron, @Interval, @Timeout",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>NestJS fournit le package <code>@nestjs/schedule</code> pour exécuter du code à des moments précis ou après des délais.</p>\n<p>Répondez aux questions suivantes concernant les décorateurs de planification.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer la différence fondamentale entre <code>@Cron()</code>, <code>@Interval()</code> et <code>@Timeout()</code>.",
+        "niveau": "easy",
+        "reponse": "<code>@Cron()</code> exécute une méthode à des moments définis par une expression cron (ex: '0 8 * * *' pour 8h chaque jour). <code>@Interval()</code> exécute une méthode de manière répétitive à intervalles réguliers en millisecondes. <code>@Timeout()</code> exécute une méthode une seule fois après un délai spécifié en millisecondes.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Décoder l'expression cron suivante : <code>'30 9 * * 1-5'</code> et expliquer à quel moment la tâche s'exécutera.",
+        "niveau": "easy",
+        "reponse": "L'expression signifie : à la 30ème minute de la 9ème heure (09:30), tous les jours du lundi au vendredi (1-5). La tâche s'exécute donc du lundi au vendredi à 9h30 du matin.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Analyser un scénario où <code>@Timeout()</code> serait préféré à <code>setTimeout()</code> natif dans une application NestJS.",
+        "niveau": "medium",
+        "reponse": "<code>@Timeout()</code> est préféré car : (1) Il est géré par le conteneur NestJS et s'intègre au cycle de vie (arrêt automatique si l'application s'arrête), (2) Il bénéficie de l'injection de dépendances dans la méthode, (3) Il est plus facile à tester car on peut mocker le scheduler, (4) Le code est plus déclaratif et lisible. <code>setTimeout()</code> natif ne bénéficie pas de ces avantages.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Mise en place d'une tâche de nettoyage quotidienne",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous gérez une application e-commerce avec NestJS. Chaque nuit à 2h00 du matin, vous devez supprimer les paniers d'achat abandonnés (ceux qui n'ont pas été modifiés depuis plus de 7 jours).</p>\n<p>Créez un service <code>CartCleanupService</code> avec une méthode <code>cleanupAbandonedCarts()</code> qui sera exécutée automatiquement selon cette planification.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire le code complet du service avec le décorateur <code>@Cron()</code> approprié (tous les jours à 2h00).",
+        "niveau": "medium",
+        "reponse": "<pre><code>// cart-cleanup.service.ts\nimport { Injectable, Logger } from '@nestjs/common';\nimport { Cron, CronExpression } from '@nestjs/schedule';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Cart } from './cart.entity';\n\n@Injectable()\nexport class CartCleanupService {\n  private readonly logger = new Logger(CartCleanupService.name);\n\n  constructor(\n    @InjectRepository(Cart)\n    private cartRepository: Repository&lt;Cart&gt;,\n  ) {}\n\n  @Cron('0 2 * * *') // ou CronExpression.EVERY_DAY_AT_2AM\n  async cleanupAbandonedCarts() {\n    this.logger.log('Début du nettoyage des paniers abandonnés');\n    const sevenDaysAgo = new Date();\n    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);\n\n    const result = await this.cartRepository\n      .createQueryBuilder()\n      .delete()\n      .where('updatedAt &lt; :date', { date: sevenDaysAgo })\n      .andWhere('status = :status', { status: 'abandoned' })\n      .execute();\n\n    this.logger.log(`${result.affected} paniers supprimés`);\n  }\n}</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Modifier le code pour que la tâche ne s'exécute que si l'application est en production (pas en développement).",
+        "niveau": "medium",
+        "reponse": "<pre><code>import { Injectable, Logger } from '@nestjs/common';\nimport { Cron } from '@nestjs/schedule';\nimport { ConfigService } from '@nestjs/config';\n\n@Injectable()\nexport class CartCleanupService {\n  constructor(private configService: ConfigService) {}\n\n  @Cron('0 2 * * *')\n  async cleanupAbandonedCarts() {\n    const env = this.configService.get('NODE_ENV');\n    if (env !== 'production') {\n      this.logger.log('Nettoyage désactivé en mode développement');\n      return;\n    }\n    // Logique de nettoyage...\n  }\n}</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Justifier le choix de <code>@Cron()</code> plutôt que <code>@Interval()</code> pour cette tâche de nettoyage quotidienne.",
+        "niveau": "easy",
+        "reponse": "<code>@Cron()</code> est plus approprié car la tâche doit s'exécuter à une heure précise (2h00) et non à intervalles réguliers depuis le démarrage. Avec <code>@Interval(86400000)</code> (24h), la tâche s'exécuterait 24h après le démarrage du serveur, pas nécessairement à 2h00. De plus, <code>@Cron()</code> permet d'éviter les exécutions pendant les heures de forte affluence.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Configuration dynamique des tâches planifiées",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Dans une application multi-tenant (plusieurs clients), chaque client souhaite recevoir un rapport par email à des moments différents (configurable via base de données).</p>\n<p>Vous devez créer un système de tâches planifiées dynamiques qui peuvent être ajoutées, modifiées ou supprimées sans redémarrer l'application.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer les limites de <code>@Cron()</code> statique pour ce besoin et proposer une alternative utilisant <code>SchedulerRegistry</code>.",
+        "niveau": "hard",
+        "reponse": "Les décorateurs statiques <code>@Cron()</code> sont définis à la compilation et ne peuvent pas être modifiés dynamiquement. <code>SchedulerRegistry</code> permet d'ajouter, de supprimer et de mettre à jour des tâches programmatiquement. On peut créer une méthode qui lit la configuration depuis la base de données et enregistre/modifie les tâches via <code>this.schedulerRegistry.addCronJob()</code> et <code>deleteCronJob()</code>.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrire un service <code>DynamicReportService</code> qui permet d'ajouter une tâche cron pour un client donné et de la supprimer.",
+        "niveau": "very hard",
+        "reponse": "<pre><code>import { Injectable, Logger } from '@nestjs/common';\nimport { SchedulerRegistry } from '@nestjs/schedule';\nimport { CronJob } from 'cron';\n\n@Injectable()\nexport class DynamicReportService {\n  private readonly logger = new Logger(DynamicReportService.name);\n\n  constructor(private schedulerRegistry: SchedulerRegistry) {}\n\n  addReportJob(clientId: string, cronExpression: string, email: string) {\n    const jobName = `report_${clientId}`;\n    \n    // Supprimer l'ancien job s'il existe\n    if (this.schedulerRegistry.doesExist('cron', jobName)) {\n      this.schedulerRegistry.deleteCronJob(jobName);\n    }\n\n    const job = new CronJob(cronExpression, async () => {\n      this.logger.log(`Envoi du rapport à ${email}`);\n      // Logique d'envoi d'email\n    });\n\n    this.schedulerRegistry.addCronJob(jobName, job);\n    job.start();\n    this.logger.log(`Job ${jobName} ajouté avec cron: ${cronExpression}`);\n  }\n\n  removeReportJob(clientId: string) {\n    const jobName = `report_${clientId}`;\n    if (this.schedulerRegistry.doesExist('cron', jobName)) {\n      this.schedulerRegistry.deleteCronJob(jobName);\n      this.logger.log(`Job ${jobName} supprimé`);\n    }\n  }\n\n  getAllJobs(): string[] {\n    return this.schedulerRegistry.getCronJobs().keys();\n  }\n}</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Discuter des précautions à prendre lors de l'utilisation de jobs dynamiques en environnement de production (persistance, redémarrage, concurrence).",
+        "niveau": "hard",
+        "reponse": "Précautions : (1) Persistance des configurations en base de données pour reconstruire les jobs après redémarrage. (2) Implémenter <code>OnApplicationBootstrap</code> pour recharger les jobs au démarrage. (3) Gérer la concurrence : éviter qu'un même job s'exécute plusieurs fois simultanément (utiliser un lock ou un flag). (4) Limiter le nombre de jobs pour éviter la surcharge mémoire. (5) Journaliser les actions pour auditer les modifications. (6) Ajouter un mécanisme de fallback si le scheduler échoue.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Intervalle pour une tâche de surveillance",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous devez surveiller la santé d'une API externe toutes les 30 secondes. Utilisez le décorateur <code>@Interval()</code>.</p>\n<p>La tâche doit vérifier si l'API répond (status 200) et journaliser le résultat. En cas d'échec, elle doit déclencher une alerte (simulée).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire le code du service <code>HealthCheckService</code> avec une méthode exécutée toutes les 30 secondes.",
+        "niveau": "medium",
+        "reponse": "<pre><code>import { Injectable, Logger } from '@nestjs/common';\nimport { Interval } from '@nestjs/schedule';\nimport { HttpService } from '@nestjs/axios';\nimport { firstValueFrom } from 'rxjs';\n\n@Injectable()\nexport class HealthCheckService {\n  private readonly logger = new Logger(HealthCheckService.name);\n  private consecutiveFailures = 0;\n\n  constructor(private httpService: HttpService) {}\n\n  @Interval(30000) // 30 secondes\n  async checkExternalApiHealth() {\n    try {\n      const response = await firstValueFrom(\n        this.httpService.get('https://api.externe.com/health'),\n      );\n      \n      if (response.status === 200) {\n        this.logger.log('API externe : OK');\n        this.consecutiveFailures = 0;\n      } else {\n        this.handleFailure();\n      }\n    } catch (error) {\n      this.handleFailure();\n    }\n  }\n\n  private handleFailure() {\n    this.consecutiveFailures++;\n    this.logger.warn(`Échec #${this.consecutiveFailures}`);\n    \n    if (this.consecutiveFailures >= 3) {\n      this.logger.error('ALERTE : API externe injoignable !');\n      // Déclencher alerte (email, Slack, etc.)\n    }\n  }\n}</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer comment modifier l'intervalle dynamiquement en fonction de l'état de santé (passer à 60s si OK, 10s si échec).",
+        "niveau": "hard",
+        "reponse": "Pour modifier dynamiquement l'intervalle, il faut utiliser <code>SchedulerRegistry</code> plutôt que le décorateur statique. On crée un job avec <code>setInterval</code> personnalisé que l'on peut arrêter et recréer avec une nouvelle durée. Exemple : <code>this.schedulerRegistry.addInterval('health', setInterval(callback, newInterval));</code> et <code>this.schedulerRegistry.deleteInterval('health')</code> pour le remplacer.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Comparer les avantages et inconvénients de <code>@Interval()</code> par rapport à un <code>setInterval()</code> classique dans ce contexte.",
+        "niveau": "medium",
+        "reponse": "Avantages de <code>@Interval()</code> : intégration avec le cycle de vie NestJS (arrêt propre), injection de dépendances, lisibilité déclarative, possibilité de gestion centralisée via <code>SchedulerRegistry</code>. Inconvénients : moins flexible pour des changements dynamiques d'intervalle (nécessite de passer par <code>SchedulerRegistry</code>). <code>setInterval()</code> classique est plus simple pour des cas très simples mais ne bénéficie pas de la gestion NestJS.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion des conflits et bonne santé des jobs",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Dans une application NestJS déployée sur plusieurs instances (scaling horizontal), les tâches planifiées (<code>@Cron</code>, <code>@Interval</code>) s'exécutent sur CHAQUE instance, ce qui peut causer des doublons.</p>\n<p>Par exemple, un email de rapport envoyé 5 fois au lieu d'une si l'application tourne sur 5 serveurs.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposer au moins trois stratégies pour éviter l'exécution multiple d'une tâche cron en environnement multi-instances.",
+        "niveau": "hard",
+        "reponse": "1) Utiliser un verrou distribué (Redis + Redlock) : chaque instance tente d'acquérir un lock avant d'exécuter la tâche. 2) Désactiver les jobs sur toutes les instances sauf une (mode leader) via une variable d'environnement. 3) Externaliser la planification dans un service dédié (ex: AWS CloudWatch Events, BullMQ avec un processeur unique). 4) Utiliser une base de données pour enregistrer la dernière exécution et sauter si une autre instance l'a déjà faite (avec transaction).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Implémenter une solution simple avec Redis pour qu'une seule instance exécute le job de nettoyage quotidien.",
+        "niveau": "very hard",
+        "reponse": "<pre><code>import { Injectable, Logger } from '@nestjs/common';\nimport { Cron } from '@nestjs/schedule';\nimport { InjectRedis, Redis } from '@nestjs/redis';\n\n@Injectable()\nexport class DistributedCleanupService {\n  private readonly logger = new Logger(DistributedCleanupService.name);\n  private readonly LOCK_KEY = 'cleanup_lock';\n  private readonly LOCK_TTL = 3600; // 1 heure\n\n  constructor(@InjectRedis() private redis: Redis) {}\n\n  @Cron('0 2 * * *')\n  async cleanup() {\n    const lock = await this.redis.setnx(this.LOCK_KEY, Date.now().toString());\n    \n    if (lock === 1) {\n      await this.redis.expire(this.LOCK_KEY, this.LOCK_TTL);\n      this.logger.log('Acquisition du lock - exécution du nettoyage');\n      \n      try {\n        // Logique de nettoyage\n        await this.performCleanup();\n      } finally {\n        await this.redis.del(this.LOCK_KEY);\n      }\n    } else {\n      this.logger.log('Lock déjà acquis par une autre instance - skip');\n    }\n  }\n\n  private async performCleanup() {\n    // Nettoyage réel\n  }\n}</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Analyser les risques d'une solution basée uniquement sur une variable d'environnement <code>IS_LEADER=true</code> et critiquer son utilisation.",
+        "niveau": "hard",
+        "reponse": "Risques : (1) Si l'instance leader tombe en panne, aucune instance ne prend le relais (single point of failure). (2) Nécessite un redéploiement pour changer le leader en cas d'indisponibilité. (3) Ne gère pas les redémarrages automatiques. Avantages : (1) Simple à implémenter, (2) Pas de dépendance externe (Redis). Solution plus robuste : utiliser un mécanisme d'élection de leader dynamique avec ZooKeeper, etcd ou Redis avec TTL et renouvellement périodique.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

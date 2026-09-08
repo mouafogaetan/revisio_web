@@ -1,0 +1,187 @@
+[
+  {
+    "intitule": "Découverte du modèle colonne de Cassandra",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Cassandra est une base de données NoSQL orientée colonnes. Elle utilise des concepts spécifiques.</p><p><strong>Consigne :</strong> Associez chaque terme à sa définition.</p><ul><li><strong>Keyspace</strong></li><li><strong>Table</strong></li><li><strong>Partition Key</strong></li><li><strong>Clustering Column</strong></li><li><strong>Replication Factor</strong></li></ul><p><strong>Définitions :</strong></p><ul><li>A. Détermine l'ordre des lignes à l'intérieur d'une partition.</li><li>B. Nombre de copies d'une donnée sur les nœuds.</li><li>C. Équivalent d'une base de données.</li><li>D. Détermine sur quel nœud la ligne sera stockée.</li><li>E. Ensemble de lignes et colonnes.</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Associer chaque terme Cassandra à sa définition correcte.",
+        "niveau": "easy",
+        "reponse": "<ul><li><strong>Keyspace</strong> → C (Équivalent d'une base de données).</li><li><strong>Table</strong> → E (Ensemble de lignes et colonnes).</li><li><strong>Partition Key</strong> → D (Détermine sur quel nœud la ligne sera stockée).</li><li><strong>Clustering Column</strong> → A (Détermine l'ordre des lignes à l'intérieur d'une partition).</li><li><strong>Replication Factor</strong> → B (Nombre de copies d'une donnée sur les nœuds).</li></ul>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Création de tables et requêtes CQL",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>On souhaite créer une table <strong>commandes</strong> dans Cassandra pour une entreprise camerounaise. Les données à stocker sont :</p><ul><li>id_commande (UUID)</li><li>client (TEXT)</li><li>ville (TEXT)</li><li>montant (DECIMAL)</li><li>date (DATE)</li><li>statut (TEXT : 'en_attente', 'expediée', 'livrée')</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire la requête CQL pour créer un keyspace et une table adaptée. La clé primaire doit permettre de filtrer les commandes par ville.",
+        "niveau": "medium",
+        "reponse": "<pre style='background-color:#f4f4f4;padding:10px;border-radius:5px;font-family:monospace;font-size:13px;'>CREATE KEYSPACE IF NOT EXISTS app_commandes\nWITH replication = {'class': 'SimpleStrategy', 'replication_factor': 3};\n\nUSE app_commandes;\n\nCREATE TABLE commandes (\n    id_commande UUID,\n    client TEXT,\n    ville TEXT,\n    montant DECIMAL,\n    date DATE,\n    statut TEXT,\n    PRIMARY KEY (ville, date, id_commande)\n);</pre><p><strong>Explication :</strong> La partition key est 'ville' pour regrouper les commandes par ville. Les clustering columns 'date' et 'id_commande' permettent de trier par date puis par ID.</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Écrire une requête pour insérer une commande dans cette table.",
+            "niveau": "medium",
+            "reponse": "<pre style='background-color:#f4f4f4;padding:10px;border-radius:5px;font-family:monospace;font-size:13px;'>INSERT INTO commandes (id_commande, client, ville, montant, date, statut)\nVALUES (uuid(), 'Jean Dupont', 'Douala', 150000, '2025-08-10', 'en_attente');</pre>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Écrire une requête pour récupérer toutes les commandes de Douala.",
+            "niveau": "easy",
+            "reponse": "<pre style='background-color:#f4f4f4;padding:10px;border-radius:5px;font-family:monospace;font-size:13px;'>SELECT * FROM commandes WHERE ville = 'Douala';</pre>"
+          },
+          {
+            "numero": "1.c",
+            "texte": "Écrire une requête pour récupérer les commandes de Douala entre deux dates.",
+            "niveau": "hard",
+            "reponse": "<pre style='background-color:#f4f4f4;padding:10px;border-radius:5px;font-family:monospace;font-size:13px;'>SELECT * FROM commandes \nWHERE ville = 'Douala' \nAND date >= '2025-08-01' \nAND date <= '2025-08-31';</pre><p><strong>Note :</strong> Cette requête est valide car 'date' est une colonne de clustering.</p>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Comprendre la partition et le clustering",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>On a créé la table suivante dans Cassandra :</p><pre style='background-color:#f4f4f4;padding:10px;border-radius:5px;font-family:monospace;font-size:13px;'>CREATE TABLE utilisateurs (\n    pays TEXT,\n    region TEXT,\n    ville TEXT,\n    nom TEXT,\n    age INT,\n    PRIMARY KEY ((pays, region), ville, nom)\n);</pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier : (a) La partition key, (b) Les clustering columns.",
+        "niveau": "medium",
+        "reponse": "<ul><li><strong>Partition Key :</strong> (pays, region) - composée de deux colonnes.</li><li><strong>Clustering Columns :</strong> ville, nom - dans cet ordre.</li></ul><p><strong>Explication :</strong> Tous les utilisateurs d'un même (pays, région) sont stockés sur le même nœud et sont triés par ville puis par nom.</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quelle requête permet de récupérer les utilisateurs de la région 'Littoral' au Cameroun ?",
+            "niveau": "medium",
+            "reponse": "<pre style='background-color:#f4f4f4;padding:10px;border-radius:5px;font-family:monospace;font-size:13px;'>SELECT * FROM utilisateurs WHERE pays = 'Cameroun' AND region = 'Littoral';</pre><p>Cette requête est valide car elle filtre sur toute la partition key.</p>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Cette requête est-elle valide ? Pourquoi ? <pre style='background-color:#f4f4f4;padding:10px;border-radius:5px;font-family:monospace;font-size:13px;'>SELECT * FROM utilisateurs WHERE ville = 'Douala';</pre>",
+            "niveau": "hard",
+            "reponse": "<p>❌ <strong>Non, cette requête n'est pas valide.</strong></p><p>On ne peut pas filtrer sur une clustering column sans spécifier la partition key. La partition key (pays, region) est obligatoire dans la clause WHERE. Cassandra ne peut pas exécuter cette requête car elle devrait scanner toutes les partitions.</p>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Modélisation pour une application Mobile Money (Contexte Cameroun)",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Une startup camerounaise développe une application de Mobile Money qui doit gérer des millions de transactions par jour. Les exigences sont :</p><ul><li>Enregistrer chaque transaction avec : id_transaction, expediteur, destinataire, montant, date, statut.</li><li>Rechercher les transactions d'un utilisateur (expéditeur ou destinataire).</li><li>Rechercher les transactions par date.</li><li>Rechercher les transactions par statut (ex: 'en_attente').</li><li>Haute disponibilité et scalabilité.</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevoir la modélisation Cassandra pour cette application. Justifier le choix de la partition key et des clustering columns.",
+        "niveau": "very hard",
+        "reponse": "<p><strong>Modélisation proposée :</strong></p><pre style='background-color:#f4f4f4;padding:10px;border-radius:5px;font-family:monospace;font-size:13px;'>CREATE TABLE transactions_par_utilisateur (\n    utilisateur_id TEXT,\n    date DATE,\n    id_transaction UUID,\n    type TEXT,  -- 'emission' ou 'reception'\n    montant DECIMAL,\n    statut TEXT,\n    autre_participant TEXT,\n    PRIMARY KEY (utilisateur_id, date, id_transaction)\n);\n\nCREATE TABLE transactions_par_statut (\n    statut TEXT,\n    date DATE,\n    id_transaction UUID,\n    expediteur TEXT,\n    destinataire TEXT,\n    montant DECIMAL,\n    PRIMARY KEY (statut, date, id_transaction)\n);</pre><p><strong>Explication :</strong></p><ul><li><strong>Table 1 :</strong> Partition par utilisateur pour récupérer toutes ses transactions. Tri par date puis ID.</li><li><strong>Table 2 :</strong> Partition par statut pour récupérer les transactions en attente. Tri par date.</li></ul><p><strong>⚠️ Denormalisation :</strong> On duplique les données car on ne peut pas faire de jointures. C'est une pratique courante dans Cassandra.</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Écrire la requête pour récupérer les 10 dernières transactions d'un utilisateur donné.",
+            "niveau": "hard",
+            "reponse": "<pre style='background-color:#f4f4f4;padding:10px;border-radius:5px;font-family:monospace;font-size:13px;'>SELECT * FROM transactions_par_utilisateur \nWHERE utilisateur_id = 'user123' \nORDER BY date DESC \nLIMIT 10;</pre>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Écrire la requête pour récupérer toutes les transactions en attente.",
+            "niveau": "medium",
+            "reponse": "<pre style='background-color:#f4f4f4;padding:10px;border-radius:5px;font-family:monospace;font-size:13px;'>SELECT * FROM transactions_par_statut \nWHERE statut = 'en_attente';\n// Ou avec date pour les dernières\nSELECT * FROM transactions_par_statut \nWHERE statut = 'en_attente' \nAND date >= '2025-08-01';</pre>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse d'une requête CQL invalide",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>On considère la table suivante dans Cassandra :</p><pre style='background-color:#f4f4f4;padding:10px;border-radius:5px;font-family:monospace;font-size:13px;'>CREATE TABLE produits (\n    categorie TEXT,\n    sous_categorie TEXT,\n    nom_produit TEXT,\n    prix DECIMAL,\n    stock INT,\n    PRIMARY KEY (categorie, sous_categorie, nom_produit)\n);</pre><p><strong>Consigne :</strong> Pour chaque requête, indiquez si elle est valide ou non. Si elle est invalide, expliquez pourquoi.</p><ul><li>A. <code>SELECT * FROM produits WHERE categorie = 'Électronique';</code></li><li>B. <code>SELECT * FROM produits WHERE categorie = 'Électronique' AND sous_categorie = 'Téléphones';</code></li><li>C. <code>SELECT * FROM produits WHERE sous_categorie = 'Téléphones';</code></li><li>D. <code>SELECT * FROM produits WHERE categorie = 'Électronique' AND prix > 50000;</code></li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Indiquer pour chaque requête si elle est valide ou non. Justifier.",
+        "niveau": "hard",
+        "reponse": "<ul><li><strong>A.</strong> ✅ Valide - Filtre sur la partition key (categorie).</li><li><strong>B.</strong> ✅ Valide - Filtre sur la partition key complète (categorie, sous_categorie).</li><li><strong>C.</strong> ❌ Invalide - Filtre sur une clustering column (sous_categorie) sans la partition key.</li><li><strong>D.</strong> ❌ Invalide - Filtre sur une colonne non primaire (prix) sans partition key.</li></ul><p><strong>Règle :</strong> Toute requête SELECT doit inclure la partition key complète.</p>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Modélisation pour un système de logs (Contexte Cameroun)",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Une entreprise camerounaise souhaite collecter et analyser les logs de ses applications web. Les logs ont la structure suivante :</p><ul><li>timestamp (date/heure de l'événement)</li><li>application (nom de l'application)</li><li>niveau (INFO, WARN, ERROR)</li><li>message (texte du log)</li><li>utilisateur (optionnel)</li></ul><p>Les requêtes les plus fréquentes sont :</p><ul><li>Récupérer les logs d'une application sur une période donnée.</li><li>Récupérer les logs ERROR d'une application.</li><li>Récupérer les logs par niveau sur une période.</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposer une modélisation Cassandra pour ces logs. Créer les tables et écrire les requêtes correspondantes.",
+        "niveau": "very hard",
+        "reponse": "<p><strong>Modélisation proposée :</strong></p><pre style='background-color:#f4f4f4;padding:10px;border-radius:5px;font-family:monospace;font-size:13px;'>-- Table 1 : Logs par application et date\nCREATE TABLE logs_par_application (\n    application TEXT,\n    date DATE,\n    heure TIME,\n    niveau TEXT,\n    message TEXT,\n    utilisateur TEXT,\n    PRIMARY KEY (application, date, heure, niveau)\n);\n\n-- Table 2 : Logs par niveau et date\nCREATE TABLE logs_par_niveau (\n    niveau TEXT,\n    date DATE,\n    application TEXT,\n    heure TIME,\n    message TEXT,\n    PRIMARY KEY (niveau, date, application, heure)\n);\n\n-- Requêtes\n-- 1. Logs d'une application sur une période\nSELECT * FROM logs_par_application \nWHERE application = 'AppMobile' \nAND date >= '2025-08-01' \nAND date <= '2025-08-10';\n\n-- 2. Logs ERROR d'une application\nSELECT * FROM logs_par_application \nWHERE application = 'AppMobile' \nAND niveau = 'ERROR';\n\n-- 3. Logs ERROR sur une période\nSELECT * FROM logs_par_niveau \nWHERE niveau = 'ERROR' \nAND date >= '2025-08-01' \nAND date <= '2025-08-10';</pre>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quel est l'inconvénient de cette modélisation avec deux tables ?",
+            "niveau": "hard",
+            "reponse": "<p><strong>Inconvénient :</strong> La duplication des données. Chaque log est stocké deux fois (dans chaque table), ce qui augmente l'espace de stockage et le temps d'écriture.</p><p><strong>Avantage :</strong> Les requêtes sont très rapides car elles filtrent directement sur la partition key. C'est le compromis classique de Cassandra : on denormalise pour la performance.</p>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Création d'un keyspace et configuration de la réplication",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>On souhaite créer un keyspace pour une application de e-commerce avec 3 datacenters.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire la requête CQL pour créer un keyspace 'ecommerce' avec une stratégie de réplication 'NetworkTopologyStrategy' et un facteur de réplication de 3 pour chaque datacenter.",
+        "niveau": "hard",
+        "reponse": "<pre style='background-color:#f4f4f4;padding:10px;border-radius:5px;font-family:monospace;font-size:13px;'>CREATE KEYSPACE ecommerce\nWITH replication = {\n    'class': 'NetworkTopologyStrategy',\n    'datacenter1': 3,\n    'datacenter2': 3,\n    'datacenter3': 3\n};</pre><p><strong>Explication :</strong></p><ul><li><strong>NetworkTopologyStrategy :</strong> Utilisée pour les déploiements multi-datacenters.</li><li><strong>datacenter1: 3</strong> signifie que chaque donnée est répliquée 3 fois dans chaque datacenter.</li></ul>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quelle est la différence entre SimpleStrategy et NetworkTopologyStrategy ?",
+            "niveau": "hard",
+            "reponse": "<ul><li><strong>SimpleStrategy :</strong> Pour un seul datacenter. Ne considère pas la topologie du réseau.</li><li><strong>NetworkTopologyStrategy :</strong> Pour plusieurs datacenters. Permet de configurer le facteur de réplication par datacenter et d'optimiser les lectures/écritures.</li></ul>"
+          }
+        ]
+      }
+    ]
+  }
+]

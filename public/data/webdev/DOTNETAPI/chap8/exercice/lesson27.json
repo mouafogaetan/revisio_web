@@ -1,0 +1,94 @@
+[
+  {
+    "intitule": "Analyser l’utilité des logs dans une API .NET",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Dans une API ASP.NET Core, l’interface <code>ILogger&lt;T&gt;</code> est utilisée pour tracer le comportement de l’application.<br> Expliquez, à l’aide d’un exemple concret, pourquoi il est important d’ajouter des logs dans un contrôleur d’API.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier deux bénéfices de l’utilisation des logs dans une API en production.",
+        "niveau": "easy",
+        "reponse": "1. Débuguer plus facilement en production sans arrêter l’application. 2. Suivre la séquence des requêtes pour détecter des comportements anormaux ou des attaques.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Configurer les niveaux de log dans appsettings.json",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un fichier <code>appsettings.Development.json</code> contient :</p>\n<pre>{\n  \"Logging\": {\n    \"LogLevel\": {\n      \"Default\": \"Information\",\n      \"Microsoft\": \"Warning\",\n      \"MyAPI.Controllers\": \"Debug\"\n    }\n  }\n}</pre>\n<p>Un autre fichier <code>appsettings.Production.json</code> a les mêmes clés mais avec <code>\"Default\": \"Error\"</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Comparer le comportement des logs en développement vs production pour le namespace <code>MyAPI.Controllers</code>.",
+        "niveau": "medium",
+        "reponse": "En développement : les logs de niveau Debug, Information, Warning, Error sont affichés. En production : seul le niveau Error (et plus grave) est affiché car Default est à Error et il n’y a pas de règle spécifique pour MyAPI.Controllers.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposer une modification dans appsettings.Production.json pour que les contrôleurs MyAPI loggent aussi les Warn en production.",
+            "niveau": "medium",
+            "reponse": "Ajouter explicitement : \"MyAPI.Controllers\": \"Warning\" dans la section LogLevel du fichier Production, ce qui surcharge la valeur par défaut \"Error\"."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Ajouter des logs stratégiques dans un service métier",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous avez un service <code>ProductService</code> avec une méthode <code>GetProductById(int id)</code>. Celle-ci peut lever <code>NotFoundException</code> ou <code>DatabaseException</code>.<br> Rédigez l’implémentation complète de cette méthode en y intégrant :</p>\n<ul>\n<li>Un log <strong>Information</strong> avant d’accéder à la base de données</li>\n<li>Un log <strong>Warning</strong> si le produit n’est pas trouvé</li>\n<li>Un log <strong>Error</strong> en cas d’exception technique (base de données)</li>\n</ul>\n<p>Le constructeur du service reçoit un <code>ILogger&lt;ProductService&gt;</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire le code C# de la méthode <code>GetProductById</code> selon les contraintes ci-dessus.",
+        "niveau": "hard",
+        "reponse": "public async Task<Product> GetProductById(int id)\n{\n    _logger.LogInformation(\"Tentative de récupération du produit {ProductId}\", id);\n    try\n    {\n        var product = await _context.Products.FindAsync(id);\n        if (product == null)\n        {\n            _logger.LogWarning(\"Produit {ProductId} non trouvé\", id);\n            throw new NotFoundException($\"Produit {id} introuvable\");\n        }\n        return product;\n    }\n    catch (SqlException ex)\n    {\n        _logger.LogError(ex, \"Erreur base de données lors de la recherche du produit {ProductId}\", id);\n        throw new DatabaseException(\"Erreur technique\", ex);\n    }\n}",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Diagnostiquer un incident à partir de logs",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Voici un extrait de logs d’une API e-commerce :</p>\n<pre>\n2025-06-12 10:15:32.234 INFO  PaymentController - Début paiement CommandeId=8910\n2025-06-12 10:15:33.101 DEBUG PaymentService - Appel API externe vers https://bank.example.com/charge\n2025-06-12 10:15:35.987 WARN  PaymentService - Timeout après 2800ms (seuil=2000ms)\n2025-06-12 10:15:36.002 ERROR PaymentController - Erreur lors du paiement CommandeId=8910, exception: TaskCanceledException\n2025-06-12 10:15:36.015 INFO  PaymentController - Renvoi d’un 500 au client\n</pre>\n<p>En vous basant uniquement sur ces logs, répondez aux questions.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer la séquence d’événements qui a conduit à l’échec du paiement.",
+        "niveau": "hard",
+        "reponse": "Le contrôleur reçoit une requête, appelle le service, qui appelle une banque externe. L’appel externe dépasse le seuil de timeout (2s) après 2,8s, ce qui annule l’opération (TaskCanceledException). Le contrôleur attrape l’erreur et renvoie une erreur 500.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposer deux améliorations à implémenter dans le code ou la configuration pour éviter ce problème à l’avenir.",
+            "niveau": "very hard",
+            "reponse": "1. Augmenter le timeout du HttpClient dédié à la banque (ex: 5 secondes). 2. Implémenter un mécanisme de retry avec Polly (circuit breaker) pour les appels externes instables."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Quel niveau de log aurait dû être utilisé pour l’échec du paiement ? Justifier.",
+            "niveau": "medium",
+            "reponse": "Error, car l’utilisateur n’a pas pu payer et l’API a renvoyé une erreur 5xx, ce qui représente une dégradation majeure du service."
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -1,0 +1,137 @@
+[
+  {
+    "intitule": "Mise en place d'un pipeline CI/CD pour un modèle de prédiction de churn",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous êtes le responsable MLOps d'une entreprise de télécommunications. Votre équipe a développé un modèle de <strong>prédiction de churn</strong> (prédire quels clients vont quitter l'entreprise) qui doit être déployé en production.</p><p><strong>Contexte :</strong></p><ul><li>Le modèle est entraîné chaque semaine avec les nouvelles données clients.</li><li>Les performances du modèle doivent être validées avant tout déploiement.</li><li>L'équipe souhaite automatiser l'entraînement, les tests et le déploiement du modèle.</li><li>Le modèle est actuellement développé avec scikit-learn.</li><li>L'infrastructure cible est sur AWS (serveur EC2 pour le serving).</li></ul>",
+      "images": [
+        "Schéma d'un pipeline CI/CD pour le ML montrant les étapes : Code source (GitHub) -> Build (GitHub Actions) -> Tests (linting, tests unitaires, tests de données) -> Entraînement du modèle (sur des données préparées) -> Validation du modèle (métriques, tests de performance) -> Registre de modèles (MLflow) -> Déploiement (sur EC2 avec Docker) -> Monitoring continu."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez le principe du CI/CD appliqué au Machine Learning. En quoi diffère-t-il du CI/CD classique ?",
+        "niveau": "easy",
+        "reponse": "<p>Le CI/CD (Continuous Integration / Continuous Deployment) appliqué au ML étend le CI/CD classique en ajoutant des étapes spécifiques au cycle de vie des modèles. Les différences principales sont :<br/><strong>CI (Intégration Continue) :</strong> En plus du code, on intègre et teste les données, les pipelines de données, et les modèles. On valide la qualité des données, la performance du modèle et l'absence de régressions.<br/><strong>CD (Déploiement Continu) :</strong> On automatise non seulement le déploiement de l'application, mais aussi le déploiement du modèle et du pipeline de prédiction. On gère le versionnement du modèle, les stratégies de déploiement (blue/green, canary) et la gestion des versions multiples.</p>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Identifiez les étapes clés d'un pipeline CI/CD pour ce projet de prédiction de churn. Justifiez l'importance de chaque étape.",
+        "niveau": "medium",
+        "reponse": "<p>Les étapes clés sont :<br/><strong>1. Intégration continue (CI) :</strong><br/>- <strong>Tests du code</strong> : Vérifier la qualité du code (linting, tests unitaires).<br/>- <strong>Tests des données</strong> : Valider la qualité des données (valeurs manquantes, distributions, schéma).<br/>- <strong>Entraînement du modèle</strong> : Exécuter l'entraînement sur un jeu de données de validation.<br/>- <strong>Tests du modèle</strong> : Évaluer les performances (précision, rappel, F1-score) et s'assurer qu'elles sont supérieures au seuil défini. Tester l'absence de biais.<br/><strong>2. Déploiement continu (CD) :</strong><br/>- <strong>Versionnement du modèle</strong> : Enregistrer le modèle dans un registre (ex: MLflow) avec ses métriques et paramètres.<br/>- <strong>Construction de l'image Docker</strong> : Créer une image avec le modèle et le code de serving.<br/>- <strong>Déploiement</strong> : Déployer l'image sur l'environnement de test, puis en production (avec stratégie de déploiement).<br/>- <strong>Monitoring</strong> : Surveiller les métriques de performance du modèle en production et détecter les dérives.</p>",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Proposez un flux de travail (workflow) CI/CD pour ce projet. Décrivez les étapes et les outils que vous utiliseriez (GitHub Actions, MLflow, etc.) pour automatiser le processus.",
+            "niveau": "hard",
+            "reponse": "<p><strong>Workflow avec GitHub Actions et MLflow :</strong></p><ol><li><strong>Déclenchement</strong> : Le workflow est déclenché par un push sur la branche principale (main) ou un schedule (ex: toutes les semaines).</li><li><strong>Job 1 : CI (Intégration Continue)</strong><br/>   - Checkout du code.<br/>   - Configuration de l'environnement Python.<br/>   - Installation des dépendances.<br/>   - Exécution des tests unitaires (pytest) et linting (flake8).<br/>   - Validation des données d'entrée avec des tests (ex: présence des colonnes attendues, bornes des valeurs).</li><li><strong>Job 2 : Entraînement et Validation du Modèle</strong><br/>   - Chargement des données depuis S3 (ou autre stockage).<br/>   - Entraînement du modèle avec les données de train.<br/>   - Évaluation sur le jeu de test et calcul des métriques (F1-score, précision, rappel).<br/>   - Si le score dépasse le seuil (ex: F1 > 0.85), poursuivre.</li><li><strong>Job 3 : Enregistrement et Versionnement</strong><br/>   - Enregistrement du modèle dans MLflow Tracking avec les métriques, paramètres et un artifact (le fichier du modèle).<br/>   - Promotion du modèle en staging dans le registre de modèles (MLflow Model Registry).</li><li><strong>Job 4 : Déploiement (CD)</strong><br/>   - Construction d'une image Docker contenant le modèle et le code de l'API (FastAPI).<br/>   - Push de l'image sur AWS ECR.<br/>   - Déploiement sur l'environnement de staging (sur EC2 avec Docker).<br/>   - Exécution de tests d'intégration sur l'API déployée.</li><li><strong>Job 5 : Promotion en Production (manuel ou automatique)</strong><br/>   - Après validation sur staging, promotion du modèle en production.<br/>   - Déploiement sur l'environnement de production (avec blue/green deployment).<br/>   - Mise à jour du service de monitoring (Prometheus, Grafana).</li></ol>",
+            "niveau": "hard"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Comparaison des outils CI/CD pour le ML",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Votre équipe souhaite choisir un outil pour mettre en place un pipeline CI/CD pour ses projets de Machine Learning. Vous devez comparer les options disponibles et faire une recommandation.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Distinguez les trois outils de CI/CD suivants : <strong>GitHub Actions</strong>, <strong>GitLab CI</strong> et <strong>Jenkins</strong>. Citez leurs principales caractéristiques et cas d'usage.",
+        "niveau": "medium",
+        "reponse": "<p><strong>GitHub Actions</strong> :<br/>- Intégré nativement à GitHub.<br/>- Pipeline défini dans des fichiers YAML (workflows).<br/>- Idéal pour les projets hébergés sur GitHub.<br/>- Offre un grand nombre d'actions pré-construites.<br/><br/><strong>GitLab CI</strong> :<br/>- Intégré à GitLab, tout-en-un (code, CI/CD, registry).<br/>- Pipeline défini dans le fichier .gitlab-ci.yml.<br/>- Très intégré et couvre tout le cycle de vie du développement.<br/><br/><strong>Jenkins</strong> :<br/>- Outil open-source mature et très flexible.<br/>- Configurable via code (Jenkinsfile) ou interface graphique.<br/>- Fonctionne avec n'importe quel dépôt Git.<br/>- Nécessite une maintenance et une configuration plus importantes.</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Évaluez ces trois outils pour un projet de ML. Quels critères prendriez-vous en compte pour faire un choix ? (Intégration, coût, simplicité, scalabilité, extensibilité)",
+            "niveau": "hard",
+            "reponse": "<p><strong>Critères de choix :</strong><br/><strong>Intégration</strong> : GitHub Actions et GitLab CI sont intégrés à leurs plateformes respectives, ce qui simplifie la gestion. Jenkins peut s'interfacer avec tout, mais nécessite plus de configuration.<br/><strong>Coût</strong> : GitHub Actions et GitLab CI ont des offres gratuites avec des limites (minutes de build). Jenkins est gratuit, mais coûte en infrastructure (serveurs à gérer).<br/><strong>Simplicité</strong> : GitHub Actions et GitLab CI sont plus faciles à prendre en main. Jenkins a une courbe d'apprentissage plus raide.<br/><strong>Scalabilité</strong> : Les trois peuvent scaler, mais Jenkins nécessite plus d'infrastructure pour le scaling des agents.<br/><strong>Extensibilité</strong> : Jenkins est le plus extensible avec un grand nombre de plugins. GitHub Actions et GitLab CI sont extensibles mais plus contraints.<br/><strong>Cas d'usage ML spécifique</strong> : La nécessité de ressources GPU pour l'entraînement peut influencer le choix. GitHub Actions offre des runners avec GPU (limités). Jenkins permet de configurer des agents dédiés avec GPU.</p>"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Pour un projet de ML qui nécessite des ressources GPU pour l'entraînement et des déploiements sur Kubernetes, lequel de ces trois outils serait le plus adapté ? Justifiez.",
+        "niveau": "hard",
+        "reponse": "<p><strong>Recommandation : Jenkins</strong> (si l'équipe a les compétences pour le maintenir) ou <strong>GitHub Actions</strong> (avec des self-hosted runners).<br/><strong>Justification :</strong><br/>- <strong>Ressources GPU</strong> : Jenkins permet de configurer des agents avec des GPU de manière très flexible. GitHub Actions propose des runners hébergés avec GPU, mais ils sont limités. GitLab CI a également des options mais moins flexibles. Une solution avec des runners auto-hébergés (self-hosted) pour GitHub Actions ou GitLab CI peut aussi être envisagée, mais Jenkins est plus mature pour ce type de besoin.<br/>- <strong>Déploiement sur Kubernetes</strong> : Jenkins a des plugins et une intégration mature avec Kubernetes (via kubectl, Helm). GitHub Actions et GitLab CI ont des intégrations natives mais moins matures. Les trois peuvent déployer sur Kubernetes, mais Jenkins offre plus d'options de personnalisation.<br/><strong>Conclusion</strong> : Si l'équipe a des ressources pour maintenir Jenkins, c'est un excellent choix. Si on préfère une solution avec moins de maintenance, GitHub Actions avec des self-hosted runners est une bonne alternative.</p>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse d'un workflow CI/CD pour un modèle de scoring",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous recevez le fichier de configuration suivant pour un pipeline CI/CD (GitHub Actions) destiné à un modèle de scoring de crédit :</p><pre style='background-color: #f5f5f5; padding: 15px; border-radius: 5px; font-family: monospace;'>name: ML Pipeline\n\non:\n  push:\n    branches: [ main ]\n  pull_request:\n    branches: [ main ]\n\njobs:\n  build-and-test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v3\n      - name: Set up Python\n        uses: actions/setup-python@v4\n        with:\n          python-version: '3.9'\n      - name: Install dependencies\n        run: |\n          pip install -r requirements.txt\n          pip install flake8 pytest\n      - name: Lint with flake8\n        run: flake8 . --count --max-complexity=10\n      - name: Test with pytest\n        run: pytest tests/\n      - name: Train model\n        run: python train.py\n      - name: Validate model\n        run: python validate.py --threshold 0.80\n  deploy:\n    needs: build-and-test\n    runs-on: ubuntu-latest\n    if: github.ref == 'refs/heads/main'\n    steps:\n      - uses: actions/checkout@v3\n      - name: Deploy to AWS\n        run: echo \"Déploiement sur AWS EC2\"\n        # Ici, on aurait des commandes pour construire l'image Docker, la pousser sur ECR, et déployer sur EC2</pre>",
+      "images": [
+        "Représentation visuelle du pipeline ci-dessus avec les étapes : Checkout -> Setup Python -> Install dependencies -> Lint -> Test -> Train model -> Validate model -> Deploy (si validé). Les étapes de validation et de déploiement sont mises en évidence."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez le fonctionnement de ce workflow GitHub Actions. Identifiez les étapes, les conditions de déclenchement et les conditions d'exécution du job de déploiement.",
+        "niveau": "medium",
+        "reponse": "<p><strong>Fonctionnement :</strong><br/>Ce workflow est déclenché lors d'un push ou d'une pull request sur la branche main. Il comporte deux jobs :<br/><strong>Job 'build-and-test' :</strong><br/>- Checkout du code.<br/>- Setup Python 3.9.<br/>- Installation des dépendances (requirements.txt) et des outils de test (flake8, pytest).<br/>- Linting (vérification de la qualité du code avec flake8).<br/>- Exécution des tests unitaires (pytest).<br/>- Entraînement du modèle (train.py).<br/>- Validation du modèle avec un seuil de performance (validate.py --threshold 0.80).<br/><strong>Job 'deploy' :</strong><br/>- Dépend du job 'build-and-test' (ne s'exécute que si ce dernier réussit).<br/>- Ne s'exécute que sur la branche 'main' (condition if: github.ref == 'refs/heads/main').<br/>- Simule le déploiement sur AWS EC2.</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Évaluez ce pipeline. Quelles sont ses forces et ses faiblesses ? Proposez des améliorations pour le rendre plus robuste pour un projet MLOps.",
+            "niveau": "hard",
+            "reponse": "<p><strong>Forces :</strong><br/>- Automatisation de base (linting, tests, entraînement).<br/>- Validation du modèle avant déploiement.<br/>- Déploiement conditionné sur la branche main.<br/><br/><strong>Faiblesses :</strong><br/>- Pas de gestion des données (versionnement, validation des données).<br/>- Pas de versionnement du modèle (MLflow).<br/>- Pas de stratégie de déploiement (ex: blue/green, canary).<br/>- Pas de monitoring intégré.<br/>- Pas de gestion des ressources spécifiques (ex: GPU pour l'entraînement).<br/><br/><strong>Améliorations :</strong><br/>1. Ajouter des <strong>tests de données</strong> pour valider la qualité et la distribution des données.<br/>2. Ajouter le <strong>versionnement</strong> du modèle avec MLflow (Tracking et Model Registry).<br/>3. Mettre en place un <strong>job de construction d'image Docker</strong> pour le modèle et l'API.<br/>4. Utiliser une <strong>stratégie de déploiement</strong> (ex: déployer d'abord sur un environnement de test, puis en production avec blue/green).<br/>5. Ajouter un job de <strong>monitoring</strong> après le déploiement pour vérifier que le modèle fonctionne correctement.<br/>6. Configurer le déploiement avec <strong>GitHub Actions + ECR + ECS</strong> pour gérer les conteneurs.</p>"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Imaginez que la validation du modèle échoue (score < 0.80). Quelles seraient les conséquences sur le pipeline ? Que devrait faire l'équipe dans ce cas ?",
+        "niveau": "easy",
+        "reponse": "<p>Si la validation du modèle échoue, le job 'build-and-test' se termine avec une erreur et le job 'deploy' (qui dépend de lui) ne sera pas exécuté. Le pipeline échoue. L'équipe doit alors :<br/>1. Consulter les logs pour identifier la cause de la mauvaise performance (ex: baisse de qualité des données, problème de modèle).<br/>2. Corriger le problème (ex: améliorer le modèle, ajouter des features, nettoyer les données).<br/>3. Pousser une nouvelle version du code ou des données pour relancer le pipeline.<br/>4. S'assurer que le nouveau modèle atteint le seuil avant de le déployer.</p>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Comparaison des stratégies de déploiement pour un modèle ML",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous gérez le déploiement d'un modèle de recommandation de produits pour une plateforme de e-commerce. Le modèle est mis à jour chaque semaine avec de nouvelles données.</p><p>L'ancienne version du modèle a un taux de conversion de 5.2%. La nouvelle version a un taux de conversion de 5.8% sur les données de test.</p>",
+      "images": [
+        "Graphique comparant les performances (taux de conversion) de deux versions de modèle : V1 (5.2%) et V2 (5.8%). Les barres d'erreur ou les intervalles de confiance sont représentés pour chaque version."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Distinguez les stratégies de déploiement suivantes : <strong>Big Bang</strong>, <strong>Blue/Green</strong>, <strong>Canary</strong>, et <strong>Shadow</strong> (ou A/B Testing).",
+        "niveau": "medium",
+        "reponse": "<p><strong>Big Bang</strong> (ou Replace) : Remplacer entièrement l'ancienne version par la nouvelle. Risqué car une défaillance impacte tout le trafic.<br/><strong>Blue/Green</strong> : Garder deux environnements (Blue = production, Green = nouvelle version). Basculer le trafic de Blue vers Green en un seul point. Permet un rollback rapide.<br/><strong>Canary</strong> : Déployer la nouvelle version sur une petite partie du trafic (ex: 5%), surveiller, puis augmenter progressivement.<br/><strong>Shadow</strong> (ou A/B Testing) : Exécuter la nouvelle version en parallèle de l'ancienne, sans servir les résultats aux utilisateurs. Utilisé pour tester en conditions réelles sans risque.</p>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Pour ce modèle de recommandation, quelle stratégie de déploiement recommandez-vous ? Justifiez votre choix en tenant compte des risques, des avantages et du contexte.",
+        "niveau": "hard",
+        "reponse": "<p><strong>Recommandation : Stratégie Canary</strong><br/><strong>Justification :</strong><br/>- Le modèle a un gain de performance (5.2% -> 5.8%) mais ce gain peut ne pas se confirmer en production (à cause des différences de distribution des données).<br/>- Le canary permet de tester la nouvelle version sur un petit pourcentage du trafic, de mesurer le taux de conversion réel, et de détecter d'éventuels effets négatifs (ex: baisse de la satisfaction client).<br/>- Si tout est bon, on augmente progressivement le trafic vers la nouvelle version.<br/>- En cas de problème, le rollback est immédiat et ne concerne qu'une fraction du trafic.<br/>- Cette stratégie est moins risquée qu'un Big Bang ou même un Blue/Green (qui bascule tout d'un coup).<br/><strong>Alternative :</strong> Utiliser un A/B Testing pour valider statistiquement la supériorité de la nouvelle version avant de la déployer complètement.</p>",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Évaluez les risques potentiels de l'utilisation de la stratégie Canary pour ce modèle. Comment les atténuer ?",
+            "niveau": "very hard",
+            "reponse": "<p><strong>Risques potentiels :</strong><br/>1. <strong>Dégradation de l'expérience client</strong> : Si la nouvelle version est moins performante pour certains segments, les utilisateurs exposés (5%) subiront une moins bonne expérience.<br/>2. <strong>Biais de sélection</strong> : Si le trafic canary n'est pas représentatif de l'ensemble des utilisateurs, les métriques peuvent être trompeuses.<br/>3. <strong>Effet sur les métriques globales</strong> : Une légère baisse sur 5% du trafic peut être masquée par les 95% restants.<br/><br/><strong>Atténuation :</strong><br/>1. <strong>Segmenter les utilisateurs</strong> : Distribuer le trafic canary sur différents segments (ex: géographique, type d'utilisateur) pour avoir une vue plus large.<br/>2. <strong>Surveiller des métriques opérationnelles</strong> (latence, erreurs) et métier (taux de conversion, panier moyen).<br/>3. <strong>Mettre en place des alertes</strong> pour détecter rapidement les dégradations.<br/>4. <strong>Réaliser des tests A/B</strong> rigoureux avec un groupe de contrôle pour valider la significativité statistique.</p>"
+          }
+        ]
+      }
+    ]
+  }
+]

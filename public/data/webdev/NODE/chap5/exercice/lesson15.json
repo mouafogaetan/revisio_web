@@ -1,0 +1,146 @@
+[
+  {
+    "intitule": "Installation et vérification de MongoDB",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous devez préparer votre environnement de travail pour un projet Node.js utilisant MongoDB comme base de données. Décrivez les étapes d'installation de MongoDB (version communautaire) sur un système Ubuntu 22.04, puis montrez comment vérifier que le service fonctionne correctement. Utilisez des commandes terminal dans votre réponse.</p>",
+      "images": [
+        "Capture d'écran de la commande sudo systemctl status mongodb affichant active (running)",
+        "Logo MongoDB avec la phrase 'community edition'"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Listez les commandes pour importer la clé GPG officielle de MongoDB, ajouter le dépôt, installer mongodb-org, démarrer le service et l'activer au démarrage.",
+        "niveau": "easy",
+        "reponse": "```bash\nwget -qO - https://www.mongodb.org/static/pgp/server-6.0.asc | sudo apt-key add -\necho \"deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/6.0 multiverse\" | sudo tee /etc/apt/sources.list.d/mongodb-org-6.0.list\nsudo apt-get update\nsudo apt-get install -y mongodb-org\nsudo systemctl start mongod\nsudo systemctl enable mongod\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Quelle commande utilisez-vous pour vous connecter au shell MongoDB et exécuter une requête de test (par exemple afficher les bases de données existantes) ?",
+        "niveau": "easy",
+        "reponse": "`mongosh` puis `show dbs`",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Schéma et validation avec Mongoose",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans le cadre d'une application de gestion d'étudiants, vous devez définir un modèle Mongoose pour la collection `students`. Chaque étudiant possède : un nom (string, requis), un âge (number, entre 15 et 100), une filière (string parmi 'informatique', 'maths', 'physique'), et une date d'inscription (Date, par défaut la date courante). Écrivez le code du schéma, du modèle, puis un exemple d'insertion d'un document valide et un exemple de document qui échouerait à la validation.</p>",
+      "images": [
+        "Diagramme d’un document MongoDB avec les champs name, age, major, enrolledAt"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le code Mongoose complet pour définir le schéma et le modèle Student.",
+        "niveau": "medium",
+        "reponse": "```javascript\nconst mongoose = require('mongoose');\n\nconst studentSchema = new mongoose.Schema({\n  name: { type: String, required: true },\n  age: { type: Number, min: 15, max: 100, required: true },\n  major: { type: String, enum: ['informatique', 'maths', 'physique'], required: true },\n  enrolledAt: { type: Date, default: Date.now }\n});\n\nconst Student = mongoose.model('Student', studentSchema);\nmodule.exports = Student;\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Donnez un exemple d'insertion valide.",
+            "niveau": "medium",
+            "reponse": "```javascript\nconst newStudent = new Student({\n  name: \"Alice Ndongo\",\n  age: 21,\n  major: \"informatique\"\n});\nawait newStudent.save();\n```"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Donnez un exemple de document qui échouerait à la validation (expliquez pourquoi).",
+            "niveau": "medium",
+            "reponse": "```javascript\nconst invalidStudent = new Student({\n  name: \"Bob\",\n  age: 12,      // inférieur à 15 → validation error\n  major: \"sport\" // valeur non autorisée par enum\n});\n```\nMongoose renverra une erreur de validation `ValidatorError` pour `age` et `major`."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Opérations CRUD sur une collection Mongo",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Une bibliothèque utilise une collection `books` avec le schéma Mongoose suivant : `title` (string), `author` (string), `year` (number), `available` (boolean). Vous devez implémenter quatre fonctions asynchrones :</p>\n<ul>\n  <li>createBook : ajouter un livre</li>\n  <li>findBooksByAuthor : rechercher par auteur et renvoyer les titres</li>\n  <li>updateAvailability : modifier la disponibilité d’un livre par son titre</li>\n  <li>deleteOldBooks : supprimer les livres de plus de 50 ans (année courante - year > 50)</li>\n</ul>\n<p>Écrivez chaque fonction avec `async/await` et gérez les erreurs avec `try/catch`.</p>",
+      "images": [
+        "Icône de bibliothèque avec des livres et une base de données"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez la fonction `createBook` qui prend un objet `bookData` et sauvegarde en base.",
+        "niveau": "medium",
+        "reponse": "```javascript\nasync function createBook(bookData) {\n  try {\n    const book = new Book(bookData);\n    await book.save();\n    return book;\n  } catch (error) {\n    console.error('Erreur creation livre:', error.message);\n    throw error;\n  }\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrivez la fonction `findBooksByAuthor` qui retourne uniquement les titres (sans les autres champs).",
+        "niveau": "medium",
+        "reponse": "```javascript\nasync function findBooksByAuthor(authorName) {\n  try {\n    const books = await Book.find({ author: authorName }).select('title');\n    return books.map(book => book.title);\n  } catch (error) {\n    console.error(error);\n    return [];\n  }\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Écrivez la fonction `updateAvailability` qui modifie le champ `available` d’un livre dont le titre correspond exactement. Retournez le document modifié.",
+        "niveau": "hard",
+        "reponse": "```javascript\nasync function updateAvailability(title, newStatus) {\n  try {\n    const updatedBook = await Book.findOneAndUpdate(\n      { title: title },\n      { available: newStatus },\n      { new: true } // retourne le document après mise à jour\n    );\n    if (!updatedBook) throw new Error('Livre introuvable');\n    return updatedBook;\n  } catch (error) {\n    console.error(error);\n    return null;\n  }\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 4,
+        "texte": "Écrivez `deleteOldBooks` en utilisant une condition sur `year`. Calculez l’année courante dynamiquement.",
+        "niveau": "hard",
+        "reponse": "```javascript\nasync function deleteOldBooks() {\n  const currentYear = new Date().getFullYear();\n  const thresholdYear = currentYear - 50;\n  try {\n    const result = await Book.deleteMany({ year: { $lt: thresholdYear } });\n    console.log(`${result.deletedCount} livres supprimés`);\n    return result.deletedCount;\n  } catch (error) {\n    console.error(error);\n    return 0;\n  }\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Projet: Carnet de commandes MongoDB",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous gérez une petite librairie en ligne. La base de données MongoDB contient une collection `orders` avec la structure suivante :</p>\n<pre>{\n  \"orderId\": \"ORD123\",\n  \"customer\": \"Jean Mbarga\",\n  \"total\": 150.75,\n  \"status\": \"pending\",   // pending, paid, shipped, delivered\n  \"items\": [\n    { \"title\": \"Node.js Avancé\", \"quantity\": 2, \"price\": 30 },\n    { \"title\": \"Mongoose Guide\", \"quantity\": 1, \"price\": 45.5 }\n  ]\n}</pre>\n<p>Rédigez le schéma Mongoose correspondant (avec sous-document items) puis écrivez une fonction qui :</p>\n<ol>\n  <li>Calcule le montant total d’une commande à partir des items (prix × quantité) et met à jour le champ `total`.</li>\n  <li>Trouve toutes les commandes d’un client donné avec un statut différent de 'delivered'.</li>\n  <li>Ajoute un nouvel item à une commande existante, puis met à jour automatiquement le total (en réutilisant la fonction précédente).</li>\n</ol>",
+      "images": [
+        "Schéma relationnel entre la collection orders et items embarqués",
+        "Exemple de donnée JSON d'une commande"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Définissez le schéma Mongoose complet pour Order, y compris le sous-document items (sans créer de collection séparée).",
+        "niveau": "hard",
+        "reponse": "```javascript\nconst orderSchema = new mongoose.Schema({\n  orderId: { type: String, required: true, unique: true },\n  customer: { type: String, required: true },\n  total: { type: Number, default: 0 },\n  status: {\n    type: String,\n    enum: ['pending', 'paid', 'shipped', 'delivered'],\n    default: 'pending'\n  },\n  items: [{\n    title: String,\n    quantity: Number,\n    price: Number\n  }]\n});\n\n// méthode d'instance pour recalculer le total\norderSchema.methods.recalculateTotal = function() {\n  const sum = this.items.reduce((acc, item) => acc + (item.quantity * item.price), 0);\n  this.total = sum;\n  return this.save();\n};\n\nconst Order = mongoose.model('Order', orderSchema);\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Implémentez une fonction `updateOrderTotal(orderId)` qui récupère la commande, recalcule son total à partir des items et sauvegarde le nouveau total.",
+        "niveau": "hard",
+        "reponse": "```javascript\nasync function updateOrderTotal(orderId) {\n  const order = await Order.findOne({ orderId });\n  if (!order) throw new Error('Commande introuvable');\n  await order.recalculateTotal();\n  return order.total;\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Trouvez toutes les commandes d’un client (customer = 'Jean Mbarga') dont le statut n’est pas 'delivered'. Utilisez `$ne`.",
+        "niveau": "medium",
+        "reponse": "```javascript\nconst customerOrders = await Order.find({\n  customer: 'Jean Mbarga',\n  status: { $ne: 'delivered' }\n});\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 4,
+        "texte": "Écrivez `addItemToOrder(orderId, newItem)` qui ajoute l’item puis appelle `recalculateTotal` (ou `updateOrderTotal`) et retourne la commande mise à jour.",
+        "niveau": "very hard",
+        "reponse": "```javascript\nasync function addItemToOrder(orderId, newItem) {\n  const order = await Order.findOne({ orderId });\n  if (!order) throw new Error('Commande introuvable');\n  \n  order.items.push(newItem);\n  await order.recalculateTotal(); // méthode d'instance qui met à jour total + save\n  return order;\n}\n```\nOu bien avec `findOneAndUpdate` (mais le recalcul est plus complexe sans aggregation) : on préfère la méthode plus lisible avec instance.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

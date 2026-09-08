@@ -1,0 +1,162 @@
+[
+  {
+    "intitule": "Images responsives et lazy loading - Optimisation du catalogue e-commerce",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans une application e-commerce, le catalogue affiche de nombreuses images de produits. Vous devez améliorer les performances en utilisant des images responsives (<code>srcset</code>) et le lazy loading.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rappelez la syntaxe HTML de l'attribut <code>srcset</code> et expliquez à quoi il sert.",
+        "niveau": "easy",
+        "reponse": "L'attribut `srcset` permet de fournir plusieurs versions d'une image avec différentes largeurs. Le navigateur choisit la plus adaptée à la résolution de l'écran. Syntaxe : `srcset=\"image-320w.jpg 320w, image-640w.jpg 640w, image-1280w.jpg 1280w\"`. Cela évite de charger des images trop grandes sur mobile.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Dans un composant React <code>ProductCard</code>, ajoutez l'attribut <code>loading=\"lazy\"</code> sur l'image. Expliquez son comportement.",
+        "niveau": "easy",
+        "reponse": "`<img src={product.image} alt={product.name} loading=\"lazy\" />`. L'attribut `loading=\"lazy\"` diffère le chargement de l'image jusqu'à ce qu'elle soit sur le point d'entrer dans la zone visible (viewport). Cela réduit le temps de chargement initial et économise la bande passante.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposez une amélioration avec <code>srcset</code> en utilisant un CDN (Cloudinary) qui génère automatiquement les différentes tailles. Écrivez le JSX correspondant.",
+        "niveau": "medium",
+        "reponse": "```jsx\nconst baseUrl = 'https://res.cloudinary.com/.../image/upload';\n<img\n  src={`${baseUrl}/w_640/${product.image}`}\n  srcSet={`\n    ${baseUrl}/w_320/${product.image} 320w,\n    ${baseUrl}/w_640/${product.image} 640w,\n    ${baseUrl}/w_1024/${product.image} 1024w\n  `}\n  sizes=\"(max-width: 640px) 320px, (max-width: 1024px) 640px, 1024px\"\n  loading=\"lazy\"\n  alt={product.name}\n/>\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Mise en place d'un CDN pour les assets d'un e-commerce React",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Votre application e-commerce rencontre des temps de chargement élevés à cause des images volumineuses. Vous décidez d'utiliser un CDN comme Cloudinary ou Imgix pour optimiser la livraison des images.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez les avantages d'un CDN pour les images dans une application React. Citez au moins trois bénéfices.",
+        "niveau": "medium",
+        "reponse": "1. **Latence réduite** : les images sont servies depuis des serveurs géographiquement proches de l'utilisateur.<br/>2. **Mise en cache** : meilleure gestion du cache HTTP et réduction des requêtes au serveur d'origine.<br/>3. **Transformation à la volée** : redimensionnement, recadrage, compression et format WebP/AVIF automatiques.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Créez une fonction utilitaire <code>getOptimizedImageUrl</code> qui prend une URL d'image Cloudinary et retourne une URL optimisée avec largeur personnalisée et format WebP.",
+        "niveau": "hard",
+        "reponse": "```js\nfunction getOptimizedImageUrl(url, width, quality = 80) {\n  // Supposons que url est de la forme https://res.cloudinary.com/.../upload/v123456/product.jpg\n  const parts = url.split('/upload/');\n  const transformations = `w_${width},q_${quality},f_auto`;\n  return `${parts[0]}/upload/${transformations}/${parts[1]}`;\n}\n// Exemple : getOptimizedImageUrl(product.image, 640) -> .../upload/w_640,q_80,f_auto/product.jpg\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposez une stratégie pour générer dynamiquement les attributs <code>srcset</code> et <code>sizes</code> en fonction d'un tableau de breakpoints prédéfini.",
+        "niveau": "hard",
+        "reponse": "```js\nconst breakpoints = [320, 640, 1024, 1440];\nconst srcSet = breakpoints\n  .map(bp => `${getOptimizedImageUrl(imageUrl, bp)} ${bp}w`)\n  .join(', ');\nconst sizes = `(max-width: 640px) 320px, (max-width: 1024px) 640px, 1024px`;\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Lazy loading des images avec Intersection Observer",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Bien que <code>loading=\"lazy\"</code> soit supporté nativement, vous souhaitez implémenter une solution personnalisée avec Intersection Observer pour des cas spécifiques (ex: déclencher des animations ou charger des images uniquement après un certain seuil).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créez un hook personnalisé <code>useLazyLoad</code> qui utilise Intersection Observer pour détecter quand un élément entre dans le viewport, puis déclenche le chargement de l'image.",
+        "niveau": "very hard",
+        "reponse": "```js\nimport { useEffect, useRef, useState } from 'react';\n\nfunction useLazyLoad(options = { threshold: 0.1 }) {\n  const ref = useRef(null);\n  const [isVisible, setIsVisible] = useState(false);\n  useEffect(() => {\n    const observer = new IntersectionObserver(([entry]) => {\n      if (entry.isIntersecting) {\n        setIsVisible(true);\n        observer.disconnect();\n      }\n    }, options);\n    if (ref.current) observer.observe(ref.current);\n    return () => observer.disconnect();\n  }, [ref, options]);\n  return [ref, isVisible];\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Implémentez un composant <code>LazyImage</code> qui utilise ce hook pour charger l'image uniquement lorsque celle-ci est visible. Affichez un placeholder (skeleton) pendant le chargement.",
+        "niveau": "hard",
+        "reponse": "```jsx\nfunction LazyImage({ src, alt, className, placeholderSrc }) {\n  const [ref, isVisible] = useLazyLoad();\n  const [loaded, setLoaded] = useState(false);\n  return (\n    <div ref={ref} className={className}>\n      {!loaded && <img src={placeholderSrc} alt=\"Chargement...\" className=\"blur-sm\" />}\n      {isVisible && (\n        <img\n          src={src}\n          alt={alt}\n          onLoad={() => setLoaded(true)}\n          className={loaded ? 'opacity-100' : 'opacity-0'}\n        />\n      )}\n    </div>\n  );\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Comparez cette approche avec l'attribut natif <code>loading=\"lazy\"</code> : quels sont les avantages et inconvénients de votre solution personnalisée ?",
+        "niveau": "hard",
+        "reponse": "**Avantages** : contrôle précis (seuil, marge), possibilité d'ajouter des animations au moment du chargement, support de cas complexes (chargement conditionnel). **Inconvénients** : plus de code à maintenir, risque de problèmes de performances si mal implémenté, nécessite un polyfill pour les vieux navigateurs. L'attribut natif est plus simple et délègue l'optimisation au navigateur.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation des images : conversion WebP et fallback",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Le format WebP offre une meilleure compression que JPEG/PNG. Vous devez servir des images WebP aux navigateurs qui les supportent, avec un fallback pour les autres.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez comment utiliser l'élément HTML <code>&lt;picture&gt;</code> pour fournir une image WebP et une image de secours.",
+        "niveau": "easy",
+        "reponse": "```html\n<picture>\n  <source srcSet=\"image.webp\" type=\"image/webp\" />\n  <img src=\"image.jpg\" alt=\"Description\" />\n</picture>\n```\nLe navigateur choisit le premier `source` dont le type MIME est supporté. Si WebP n'est pas supporté, il affiche l'image fallback dans `<img>`.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrivez un composant React <code>OptimizedPicture</code> qui prend une URL d'image et génère automatiquement les sources WebP et originale.",
+        "niveau": "medium",
+        "reponse": "```jsx\nfunction OptimizedPicture({ src, alt, className, webpSrc }) {\n  // webpSrc = src remplacé par l'extension .webp\n  return (\n    <picture className={className}>\n      <source srcSet={webpSrc} type=\"image/webp\" />\n      <img src={src} alt={alt} loading=\"lazy\" />\n    </picture>\n  );\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposez une fonction qui, à partir d'une URL d'image Cloudinary, génère l'URL WebP (via paramètre <code>f_auto</code>) et l'URL de fallback.",
+        "niveau": "medium",
+        "reponse": "Cloudinary permet d'utiliser `f_auto` pour servir automatiquement le meilleur format (WebP, AVIF). L'URL unique `.../upload/f_auto/image.jpg` suffit ; aucun fallback manuel n'est nécessaire. Sinon, pour un CDN classique : `webpSrc = src.replace(/\\.(jpg|png)$/i, '.webp')`.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Mesure de l'impact des images optimisées sur les Core Web Vitals",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Après avoir optimisé les images de votre site e-commerce, vous devez mesurer l'amélioration des performances avec Lighthouse et les Core Web Vitals (LCP, CLS).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Définissez ce qu'est le LCP (Largest Contentful Paint) et comment l'utilisation d'images optimisées affecte cette métrique.",
+        "niveau": "easy",
+        "reponse": "LCP mesure le temps de chargement de l'élément visuel le plus grand dans la fenêtre (souvent une image hero). L'optimisation des images (taille réduite, format moderne, lazy loading différé, CDN) réduit le temps de chargement, améliorant ainsi le LCP.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez le CLS (Cumulative Layout Shift) et comment les attributs <code>width</code> et <code>height</code> sur les images peuvent aider à le réduire.",
+        "niveau": "medium",
+        "reponse": "CLS mesure les déplacements inattendus de contenu. Sans dimensions explicites, le navigateur ne réserve pas d'espace pour l'image avant son chargement, ce qui cause des sauts. Ajouter `width` et `height` (ou `aspect-ratio` en CSS) permet de réserver l'espace, évitant ainsi les shifts.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposez une procédure pour auditer les images d'une page produit avec Lighthouse avant et après optimisation. Quels sont les critères à vérifier ?",
+        "niveau": "hard",
+        "reponse": "1. Ouvrir les DevTools > Lighthouse > Générer un rapport (catégorie Performance).<br/>2. Noter les scores LCP, CLS, la taille totale des images et les diagnostics \"Serve images in next-gen formats\".<br/>3. Appliquer les optimisations : format WebP/AVIF, srcset, loading lazy, dimensions explicites.<br/>4. Relancer Lighthouse et comparer les scores. On doit voir une amélioration du LCP et une réduction de la taille des images.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

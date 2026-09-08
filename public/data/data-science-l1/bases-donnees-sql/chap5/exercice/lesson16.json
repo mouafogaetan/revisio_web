@@ -1,0 +1,154 @@
+[
+  {
+    "intitule": "Comprendre les Procédures Stockées",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Une procédure stockée est un ensemble d'instructions SQL précompilées et stockées dans la base de données. Elle permet de regrouper des opérations complexes et de les réutiliser.</p><p><strong>Questions :</strong></p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Définir ce qu'est une procédure stockée et citer deux de ses avantages.",
+        "niveau": "easy",
+        "reponse": "Une <strong>procédure stockée</strong> est un programme enregistré dans le SGBD qui contient une ou plusieurs instructions SQL. Elle peut accepter des paramètres en entrée et retourner des résultats.<br><br><strong>Avantages :</strong><br>1. <strong>Performance</strong> : Le code est précompilé et optimisé, ce qui réduit le temps d'exécution.<br>2. <strong>Réutilisabilité</strong> : Une procédure peut être appelée par plusieurs applications ou utilisateurs.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer la différence entre une procédure stockée et une fonction SQL classique.",
+        "niveau": "medium",
+        "reponse": "Une <strong>procédure stockée</strong> peut retourner plusieurs résultats (plusieurs jeux d'enregistrements), peut avoir des effets de bord (modifier des données), et peut être appelée avec des paramètres IN, OUT, INOUT.<br><br>Une <strong>fonction SQL</strong> retourne une seule valeur scalaire, ne modifie pas les données (elle est en lecture seule), et peut être utilisée directement dans les requêtes SQL (SELECT, WHERE, etc.).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Création d'une Procédure Stockée Simple",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>On considère une base de données de gestion de bibliothèque avec les tables suivantes :</p><ul><li><strong>LIVRES</strong> (id_livre, titre, auteur, annee, disponible BOOLEAN)</li><li><strong>MEMBRES</strong> (id_membre, nom, prenom, email, telephone)</li><li><strong>EMPRUNTS</strong> (id_emprunt, id_livre, id_membre, date_emprunt, date_retour_prevue, date_retour_effective)</li></ul><p><strong>Consignes :</strong></p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créer une procédure stockée nommée <code>EmprunterLivre</code> qui permet à un membre d'emprunter un livre. La procédure doit :<br><ul><li>Vérifier que le livre est disponible.</li><li>Mettre à jour le statut du livre (disponible = FALSE).</li><li>Insérer un enregistrement dans la table EMPRUNTS avec la date d'emprunt et la date de retour prévue (15 jours après l'emprunt).</li><li>Retourner un message de confirmation ou d'erreur.</li></ul>",
+        "niveau": "hard",
+        "reponse": "<p><strong>Procédure stockée (MySQL) :</strong></p><div style='background-color: #f0f4f8; padding: 12px; border-radius: 8px; margin: 10px 0; color: #0f172a;'><pre style='font-family: monospace; margin: 0; white-space: pre-wrap;'>CREATE PROCEDURE EmprunterLivre(\n    IN p_id_membre INT,\n    IN p_id_livre INT,\n    OUT p_message VARCHAR(100)\n)\nBEGIN\n    DECLARE v_disponible BOOLEAN;\n    \n    -- Vérifier la disponibilité du livre\n    SELECT disponible INTO v_disponible\n    FROM LIVRES\n    WHERE id_livre = p_id_livre;\n    \n    IF v_disponible = TRUE THEN\n        -- Mettre à jour le statut du livre\n        UPDATE LIVRES\n        SET disponible = FALSE\n        WHERE id_livre = p_id_livre;\n        \n        -- Insérer l'emprunt\n        INSERT INTO EMPRUNTS (id_livre, id_membre, date_emprunt, date_retour_prevue)\n        VALUES (p_id_livre, p_id_membre, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 15 DAY));\n        \n        SET p_message = 'Emprunt effectué avec succès.';\n    ELSE\n        SET p_message = 'Le livre n\\'est pas disponible.';\n    END IF;\nEND</pre></div>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Appeler cette procédure pour emprunter le livre d'ID 5 par le membre d'ID 10.",
+            "niveau": "medium",
+            "reponse": "<p><strong>Appel de la procédure :</strong></p><div style='background-color: #f0f4f8; padding: 12px; border-radius: 8px; margin: 10px 0; color: #0f172a;'><pre style='font-family: monospace; margin: 0;'>CALL EmprunterLivre(10, 5, @message);\nSELECT @message AS 'Résultat';</pre></div>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Comprendre les Transactions et le Principe ACID",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Une <strong>transaction</strong> est une unité logique de travail qui regroupe une ou plusieurs opérations SQL. Elle respecte les propriétés <strong>ACID</strong>.</p><p><strong>Questions :</strong></p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Citer et expliquer les quatre propriétés du principe ACID.",
+        "niveau": "easy",
+        "reponse": "<ul><li><strong>Atomicité (A)</strong> : La transaction est exécutée en totalité ou pas du tout. Si une opération échoue, toutes les modifications sont annulées (ROLLBACK).</li><li><strong>Cohérence (C)</strong> : La transaction maintient la base de données dans un état cohérent, en respectant toutes les contraintes d'intégrité.</li><li><strong>Isolation (I)</strong> : Les transactions concurrentes ne doivent pas interférer les unes avec les autres. Chaque transaction s'exécute comme si elle était seule.</li><li><strong>Durabilité (D)</strong> : Une fois la transaction validée (COMMIT), les modifications sont définitivement enregistrées et persistent même en cas de panne.</li></ul>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer l'utilité des commandes BEGIN TRANSACTION, COMMIT et ROLLBACK.",
+        "niveau": "easy",
+        "reponse": "<ul><li><strong>BEGIN TRANSACTION</strong> : Démarre une nouvelle transaction. Toutes les opérations suivantes font partie de la transaction.</li><li><strong>COMMIT</strong> : Valide la transaction. Toutes les modifications sont enregistrées définitivement dans la base de données.</li><li><strong>ROLLBACK</strong> : Annule la transaction. Toutes les modifications effectuées depuis le BEGIN sont annulées, et la base de données revient à son état précédent.</li></ul>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Utilisation des Transactions dans un Contexte Bancaire",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>On considère une base de données bancaire avec une table <strong>COMPTES</strong> :</p><ul><li><strong>COMPTES</strong> (id_compte, nom, solde DECIMAL(10,2))</li></ul><p>On souhaite effectuer un <strong>virement</strong> entre deux comptes. L'opération doit être <strong>atomique</strong> : si une partie échoue, tout doit être annulé.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire un bloc de transactions qui réalise un virement de 5000 FCFA du compte A (id=1) vers le compte B (id=2). La transaction doit :<br><ul><li>Vérifier que le compte A dispose d'un solde suffisant.</li><li>Débiter le compte A.</li><li>Créditer le compte B.</li><li>Valider ou annuler la transaction selon le résultat.</li></ul>",
+        "niveau": "hard",
+        "reponse": "<p><strong>Bloc de transactions (MySQL) :</strong></p><div style='background-color: #f0f4f8; padding: 12px; border-radius: 8px; margin: 10px 0; color: #0f172a;'><pre style='font-family: monospace; margin: 0; white-space: pre-wrap;'>START TRANSACTION;\n\n-- Vérifier le solde du compte A\nSELECT solde INTO @solde_A FROM COMPTES WHERE id_compte = 1;\n\nIF @solde_A >= 5000 THEN\n    -- Débiter le compte A\n    UPDATE COMPTES SET solde = solde - 5000 WHERE id_compte = 1;\n    \n    -- Créditer le compte B\n    UPDATE COMPTES SET solde = solde + 5000 WHERE id_compte = 2;\n    \n    -- Valider la transaction\n    COMMIT;\n    SELECT 'Virement effectué avec succès.' AS Message;\nELSE\n    -- Annuler la transaction\n    ROLLBACK;\n    SELECT 'Solde insuffisant. Virement annulé.' AS Message;\nEND IF;</pre></div>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Que se passerait-il si l'opération de crédit du compte B échoue après que le compte A a été débité ?",
+            "niveau": "medium",
+            "reponse": "Si l'opération de crédit échoue, le ROLLBACK annulera toutes les modifications, y compris le débit du compte A. La base de données reviendra à son état initial. Grâce à l'atomicité, aucune modification partielle ne sera enregistrée.",
+            "sousQuestions": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Procédures Stockées avec Paramètres",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>On souhaite créer une procédure stockée pour gérer les <strong>commandes</strong> dans un système de vente en ligne. Tables :</p><ul><li><strong>PRODUITS</strong> (id_produit, nom, prix, stock)</li><li><strong>COMMANDES</strong> (id_commande, id_client, date_commande, total)</li><li><strong>LIGNES_COMMANDE</strong> (id_commande, id_produit, quantite, prix_unitaire)</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créer une procédure stockée <code>PasserCommande</code> qui :<br><ul><li>Prend en paramètres l'ID du client et une liste de produits (id_produit, quantite).</li><li>Vérifie que le stock est suffisant pour chaque produit.</li><li>Insère une nouvelle commande.</li><li>Insère les lignes de commande.</li><li>Met à jour le stock des produits.</li><li>Retourne l'ID de la commande créée.</li></ul>",
+        "niveau": "very hard",
+        "reponse": "<p><strong>Procédure stockée avec transaction (MySQL) :</strong></p><div style='background-color: #f0f4f8; padding: 12px; border-radius: 8px; margin: 10px 0; color: #0f172a;'><pre style='font-family: monospace; margin: 0; white-space: pre-wrap;'>CREATE PROCEDURE PasserCommande(\n    IN p_id_client INT,\n    OUT p_id_commande INT\n)\nBEGIN\n    DECLARE v_total DECIMAL(10,2) DEFAULT 0;\n    DECLARE v_stock_disponible INT;\n    DECLARE EXIT HANDLER FOR SQLEXCEPTION\n    BEGIN\n        ROLLBACK;\n        RESIGNAL;\n    END;\n    \n    START TRANSACTION;\n    \n    -- Vérifier le stock pour chaque produit\n    -- (On suppose que les données sont passées via une table temporaire)\n    \n    -- Créer la commande\n    INSERT INTO COMMANDES (id_client, date_commande, total)\n    VALUES (p_id_client, CURDATE(), 0);\n    \n    SET p_id_commande = LAST_INSERT_ID();\n    \n    -- Insérer les lignes et mettre à jour le stock\n    -- (Boucle sur les produits)\n    \n    -- Mettre à jour le total de la commande\n    UPDATE COMMANDES\n    SET total = v_total\n    WHERE id_commande = p_id_commande;\n    \n    COMMIT;\nEND</pre></div>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi est-il important d'utiliser une transaction dans cette procédure ?",
+            "niveau": "medium",
+            "reponse": "Une transaction garantit l'<strong>atomicité</strong> de l'opération. Si une erreur survient (ex: stock insuffisant, panne système), le ROLLBACK annule toutes les modifications, évitant ainsi des incohérences comme une commande partiellement enregistrée ou un stock incorrect.",
+            "sousQuestions": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Questions Théoriques sur les Procédures Stockées et Transactions",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Répondez aux questions suivantes basées sur vos connaissances de la leçon.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Quel est l'avantage principal d'utiliser une procédure stockée par rapport à l'exécution de requêtes SQL directement depuis une application ?",
+        "niveau": "medium",
+        "reponse": "Les procédures stockées permettent :<br><ul><li>De réduire le trafic réseau (une seule appel au lieu de plusieurs requêtes).</li><li>D'améliorer la sécurité (les utilisateurs n'ont pas besoin de permissions directes sur les tables).</li><li>De centraliser la logique métier dans la base de données.</li><li>D'améliorer les performances grâce à la précompilation et à l'optimisation.</li></ul>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Dans quel cas utiliserait-on un ROLLBACK plutôt qu'un COMMIT ?",
+        "niveau": "easy",
+        "reponse": "On utilise <strong>ROLLBACK</strong> lorsqu'une erreur est détectée pendant la transaction ou qu'une condition n'est pas satisfaite. Par exemple, si un solde est insuffisant, si une contrainte d'intégrité est violée, ou si une panne système survient. Le ROLLBACK annule toutes les modifications effectuées depuis le début de la transaction.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

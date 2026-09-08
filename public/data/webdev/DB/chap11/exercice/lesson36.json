@@ -1,0 +1,117 @@
+[
+  {
+    "intitule": "Optimisation par indexation",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous avez une table <code>Commandes</code> dans une base de données e-commerce contenant 500 000 lignes. Les requêtes de recherche par <code>date_commande</code> sont très lentes. Un <code>EXPLAIN</code> montre un <code>seq scan</code> (parcours séquentiel).</p><p><strong>Question :</strong> Justifiez pourquoi un index sur <code>date_commande</code> accélérerait ces requêtes et précisez le type d'index le plus adapté (B-Tree, Hash, etc.) en justifiant.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer le rôle d'un index dans l'accélération des requêtes et justifier le choix du type d'index pour une colonne de date.",
+        "niveau": "medium",
+        "reponse": "Un index agit comme un sommaire : il permet d'accéder directement aux lignes sans parcourir toute la table (évite le seq scan). Pour une colonne de date, un index B-Tree est idéal car il permet des recherches par plage (ex : BETWEEN '2025-01-01' AND '2025-01-31') et des tris efficaces. Un index Hash ne convient que pour des égalités strictes (=).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse de plan d'exécution",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Soit la requête SQL suivante sur une table <code>Produits</code> :<br><code>SELECT nom, prix FROM Produits WHERE categorie = 'Électronique' ORDER BY prix DESC;</code><br>L'analyse avec <code>EXPLAIN</code> donne : <code>Sort  (cost=... rows=15000)</code> puis <code>Seq Scan on produits  (filter: categorie = 'Électronique')</code>.</p><p><strong>Question :</strong> Interprétez ce plan d'exécution. Proposez une optimisation (un index) et expliquez ce que deviendrait le nouveau plan.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analyser le plan d'exécution fourni, puis concevoir un index composite pour optimiser à la fois le filtrage et le tri.",
+        "niveau": "hard",
+        "reponse": "Le plan montre un parcours séquentiel (Seq Scan) suivi d'un tri explicite (Sort), coûteux sur 15 000 lignes. L'optimisation : créer un index composite (categorie, prix DESC). Ainsi, le SGBD peut faire un Index Scan (au lieu de Seq Scan) et récupérer les lignes directement dans l'ordre trié, éliminant l'étape de tri.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Projet bibliothèque : indexation et vue",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans le cadre du projet de base de données pour une bibliothèque (lesson34-36), vous avez les tables :<br><code>Livres(id_livre, titre, auteur, annee, statut)</code><br><code>Emprunts(id_emprunt, id_livre, date_emprunt, date_retour)</code>.<br><br>Les bibliothécaires se plaignent de la lenteur de la requête : <em>\"Lister les livres actuellement empruntés (statut='emprunté') avec leur titre et la date d'emprunt\"</em>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créer un index pertinent pour accélérer cette requête. Justifier le choix de la ou des colonnes indexées.",
+        "niveau": "medium",
+        "reponse": "Index sur Livres(statut) car le filtre WHERE porte sur cette colonne. Pour aller plus loin, un index composite (statut, id_livre) permettrait de couvrir la requête si on joint avec Emprunts.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposer une vue SQL qui simplifie l'accès à ces données pour les non-informaticiens.",
+            "niveau": "medium",
+            "reponse": "CREATE VIEW LivresEmpruntes AS SELECT L.titre, L.auteur, E.date_emprunt FROM Livres L JOIN Emprunts E ON L.id_livre = E.id_livre WHERE L.statut = 'emprunté' AND E.date_retour IS NULL;"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Décision d'optimisation en contexte réel",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous êtes consultant en bases de données. Une PME de vente en ligne a une base PostgreSQL qui ralentit chaque fin de mois lors des rapports de ventes. Le développeur a créé 12 index individuels sur toutes les colonnes fréquemment utilisées dans les <code>WHERE</code>. Les <code>INSERT</code> et <code>UPDATE</code> sont devenus très lents.</p><p><strong>Problème :</strong> Diagnostiquer ce contre-effet. Proposer une stratégie d'optimisation plus équilibrée.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer pourquoi trop d'index nuit aux écritures et proposer une méthode pour choisir les index réellement utiles.",
+        "niveau": "very hard",
+        "reponse": "Chaque index doit être mis à jour lors des INSERT/UPDATE/DELETE, ce qui ralentit les écritures. Diagnostic : utiliser pg_stat_user_indexes pour détecter les index jamais ou très rarement utilisés. Stratégie : supprimer les index inutilisés, créer des index composites plutôt que multiples index simples, et utiliser UNIQUE quand c'est pertinent.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Évaluation des performances avec EXPLAIN",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Un étudiant exécute <code>EXPLAIN SELECT * FROM etudiants WHERE age > 18;</code> et obtient : <code>Seq Scan on etudiants (rows=2000)</code>.</p><p><strong>Question :</strong> Que signifie \"Seq Scan\" ? L'absence d'index est-elle problématique ici si la table contient 2000 lignes ?</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Définir le terme 'Seq Scan' et juger si un index est nécessaire sur une table de 2000 lignes.",
+        "niveau": "easy",
+        "reponse": "Seq Scan signifie que la base de données parcourt chaque ligne de la table séquentiellement. Pour 2000 lignes, un seq scan reste généralement acceptable. On commence à optimiser avec un index pour des tables de plusieurs centaines de milliers de lignes ou pour des requêtes très fréquentes.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Projet final : présentation technique",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous avez finalisé la conception de la base de données du projet de bibliothèque. Vous devez présenter votre travail à un comité comprenant des managers non techniques.</p><p><strong>Consigne :</strong> Préparez les 3 points clés que vous allez présenter pour montrer que votre base est performante et bien construite (référence aux index, vues et procédures).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Lister 3 preuves d'optimisation et de bonne conception que vous montreriez au comité (sans jargon technique excessif).",
+        "niveau": "very hard",
+        "reponse": "1) Temps de réponse : démonstration d'une requête lente avant/après ajout d'index (ex: recherche par date d'emprunt). 2) Simplicité d'usage : présentation des vues qui masquent la complexité des jointures. 3) Automatisation : une procédure stockée qui calcule les retards de retour sans action manuelle.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

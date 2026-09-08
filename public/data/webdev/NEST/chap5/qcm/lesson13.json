@@ -1,0 +1,146 @@
+[
+  {
+    "questionText": "Quelle est la commande correcte pour installer les packages nécessaires à l'authentification JWT dans NestJS ?",
+    "options": [
+      "npm install @nestjs/jwt @nestjs/passport passport passport-jwt",
+      "npm install @nestjs/jwt passport passport-local @nestjs/passport",
+      "npm install jsonwebtoken @nestjs/passport passport-jwt",
+      "npm install @nestjs/jwt @nestjs/passport passport-jwt bcrypt"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "easy",
+    "explanation": "Les packages essentiels sont : `@nestjs/jwt` (utilitaire JWT pour NestJS), `@nestjs/passport` (intégration Passport), `passport` (framework d'authentification) et `passport-jwt` (stratégie JWT). `passport-local` serait pour l'authentification par email/mot de passe sans JWT. `bcrypt` est utile pour hasher les mots de passe mais n'est pas un prérequis direct pour JWT."
+  },
+  {
+    "questionText": "Comment génère-t-on un token JWT dans un service NestJS après avoir injecté JwtService ?",
+    "options": [
+      "this.jwtService.createToken(payload)",
+      "this.jwtService.sign(payload)",
+      "this.jwtService.encode(payload)",
+      "this.jwtService.generate(payload)"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "easy",
+    "explanation": "`JwtService` de `@nestjs/jwt` expose la méthode `sign(payload)` pour générer un token JWT. Exemple : `return this.jwtService.sign({ sub: user.id, email: user.email })`. Les autres méthodes n'existent pas dans l'API standard de `@nestjs/jwt`. On peut également passer des options comme `{ expiresIn: '1d' }`."
+  },
+  {
+    "questionText": "Quel est le rôle de `@nestjs/passport` dans l'authentification JWT avec NestJS ?",
+    "options": [
+      "Générer automatiquement les tokens JWT",
+      "Intégrer Passport.js dans NestJS en fournissant des décorateurs et guards comme AuthGuard()",
+      "Hasher les mots de passe avant stockage",
+      "Créer des routes d'authentification préconfigurées"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium",
+    "explanation": "`@nestjs/passport` est le module d'intégration qui permet d'utiliser Passport.js (framework d'authentification) dans NestJS. Il fournit notamment le guard `AuthGuard()` et le décorateur `@UseGuards(AuthGuard('jwt'))`. La génération des tokens est gérée par `@nestjs/jwt`, le hachage par `bcrypt`, et les routes doivent être créées manuellement."
+  },
+  {
+    "questionText": "Complétez la configuration du module JWT dans AuthModule pour utiliser une variable d'environnement comme secret :\n```typescript\nJwtModule.register({\n  secret: $\\text{......}$,\n  signOptions: { expiresIn: '1d' },\n}),\n```",
+    "options": [
+      "process.env.JWT_SECRET",
+      "ConfigService.get('JWT_SECRET')",
+      "this.configService.get('JWT_SECRET')",
+      "import { jwtConstants } from './constants'"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium",
+    "explanation": "Pour utiliser `ConfigService` dans `JwtModule.register()`, il faut une configuration asynchrone : `JwtModule.registerAsync({ imports: [ConfigModule], useFactory: (config: ConfigService) =&gt; ({ secret: config.get('JWT_SECRET'), signOptions: { expiresIn: '1d' } }), inject: [ConfigService] })`. Les autres options sont incorrectes car `process.env` n'est pas injectable et `jwtConstants` ne permet pas de variables d'environnement dynamiques."
+  },
+  {
+    "questionText": "Que contient typiquement le payload d'un token JWT généré par NestJS pour un utilisateur authentifié ?",
+    "options": [
+      "Le mot de passe hashé de l'utilisateur",
+      "Un identifiant unique (sub) et des claims (email, roles)",
+      "Le token de rafraîchissement (refresh token)",
+      "La session complète de l'utilisateur en base64"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "easy",
+    "explanation": "Le payload JWT contient généralement des 'claims' : `sub` (subject, souvent l'ID utilisateur), `email`, `roles`, et éventuellement `iat` (issued at), `exp` (expiration). Il ne doit **jamais** contenir de données sensibles comme le mot de passe. Le refresh token est séparé. Le token JWT est auto-suffisant et ne nécessite pas de session côté serveur."
+  },
+  {
+    "questionText": "Quelle méthode de la stratégie JWT (JwtStrategy) est appelée automatiquement par Passport pour valider un token ?",
+    "options": [
+      "validate()",
+      "authenticate()",
+      "verify()",
+      "checkToken()"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "medium",
+    "explanation": "Dans `JwtStrategy`, la méthode `validate(payload: any)` est automatiquement appelée après que Passport a vérifié la signature du token. Elle reçoit le payload décodé et doit retourner l'utilisateur (ou `null`). NestJS attache alors automatiquement le résultat à `Request.user`. Exemple : `validate(payload) { return { userId: payload.sub, email: payload.email } }`."
+  },
+  {
+    "questionText": "Comment protéger une route avec un guard JWT dans NestJS ?",
+    "options": [
+      "@UseGuards(JwtAuthGuard)",
+      "@UseGuards(AuthGuard('jwt'))",
+      "@JwtAuth()",
+      "@Authenticated()"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium",
+    "explanation": "On utilise `@UseGuards(AuthGuard('jwt'))` où 'jwt' est le nom de la stratégie Passport configurée dans `JwtStrategy`. On peut aussi créer une classe `JwtAuthGuard extends AuthGuard('jwt')` puis utiliser `@UseGuards(JwtAuthGuard)`. Les autres décorateurs ne sont pas standard dans NestJS."
+  },
+  {
+    "questionText": "Quelle est l'utilité du décorateur `@Public()` souvent créé dans les applications NestJS sécurisées ?",
+    "options": [
+      "Indiquer qu'une route est accessible sans authentification (override AuthGuard global)",
+      "Marquer les données comme publiques dans la documentation Swagger",
+      "Exclure un contrôleur de la validation des DTO",
+      "Définir une route accessible uniquement en HTTP GET"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "hard",
+    "explanation": "Lorsqu'un `AuthGuard` global est appliqué (via `app.useGlobalGuards()`), toutes les routes deviennent protégées par défaut. On crée alors un décorateur `@Public()` (via `SetMetadata`) qui permet de marquer certaines routes comme publiques. Le guard global vérifie la présence de cette metadata et si elle est présente, il autorise l'accès sans token."
+  },
+  {
+    "questionText": "Quelle est la différence entre un token JWT et un refresh token ?",
+    "options": [
+      "Le JWT expire vite (15 min), le refresh token a une durée de vie plus longue et permet d'obtenir un nouveau JWT",
+      "Le JWT est stocké en base, le refresh token est stateless",
+      "Le refresh token est signé différemment",
+      "Il n'y a pas de différence, ce sont deux noms pour la même chose"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "hard",
+    "explanation": "Le JWT (access token) a une durée de vie courte (15-60 min) pour limiter les risques. Le refresh token a une durée de vie plus longue (7 jours, 1 mois) et est stocké côté serveur (ou en base). Il permet d'obtenir un nouveau JWT sans demander à nouveau les identifiants. C'est la base des sessions sans état (stateless) avec rotation de tokens."
+  },
+  {
+    "questionText": "Comment valider qu'un token JWT n'a pas expiré dans un guard personnalisé NestJS ?",
+    "options": [
+      "Vérifier manuellement la propriété exp du payload décodé",
+      "Passport le fait automatiquement et rejette les tokens expirés",
+      "Utiliser jwtService.verify() qui lève une erreur si expiré",
+      "Toutes les réponses sont correctes"
+    ],
+    "correctAnswer": 3,
+    "difficulty": "hard",
+    "explanation": "Passport vérifie automatiquement l'expiration via la stratégie JWT (basée sur `jsonwebtoken.verify()`). Si le token est expiré, une erreur `TokenExpiredError` est levée et `AuthGuard` rejette la requête. On peut aussi appeler manuellement `jwtService.verify()` qui lève une exception si expiré. Enfin, on peut décoder le payload (sans vérifier la signature) et comparer `Date.now()` avec `payload.exp * 1000`, mais ce n'est pas sécurisé car la signature n'est pas vérifiée."
+  },
+  {
+    "questionText": "Quel est l'intérêt d'utiliser `@nestjs/jwt` plutôt que `jsonwebtoken` directement ?",
+    "options": [
+      "Aucun, c'est juste un wrapper",
+      "Il offre une meilleure intégration avec le conteneur IoC de NestJS (injection de dépendances, configuration asynchrone)",
+      "Il est plus rapide que jsonwebtoken",
+      "Il supporte uniquement les algorithmes asymétriques"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium",
+    "explanation": "`@nestjs/jwt` fournit un service injectable (`JwtService`) qui s'intègre parfaitement dans l'écosystème NestJS : configuration asynchrone avec `ConfigService`, utilisation facile dans les providers, décoration avec `@Injectable()`, etc. `jsonwebtoken` est une bibliothèque bas-niveau qu'il faudrait wrapper manuellement pour l'injection."
+  },
+  {
+    "questionText": "Comment récupérer l'utilisateur actuellement authentifié dans un contrôleur NestJS après validation du token JWT ?",
+    "options": [
+      "@CurrentUser() user: User",
+      "@GetUser() user: User",
+      "@Req() request: Request, puis request.user",
+      "@JwtPayload() payload: any"
+    ],
+    "correctAnswer": 2,
+    "difficulty": "medium",
+    "explanation": "Passport attache automatiquement l'utilisateur retourné par `validate()` à l'objet `Request`. On peut donc l'injecter via `@Req() request` et accéder à `request.user`. Pour plus de commodité, on crée souvent un décorateur personnalisé `@CurrentUser()`. Par défaut, NestJS ne fournit pas de décorateur `@CurrentUser()` intégré, mais on peut en créer un facilement."
+  }
+]

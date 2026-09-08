@@ -1,0 +1,93 @@
+[
+  {
+    "intitule": "Exploitation des relations Many-to-Many dans une API .NET",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous développez une API de gestion de cours en ligne. Un élève peut s’inscrire à plusieurs cours, et un cours peut avoir plusieurs élèves. Vous devez modéliser cette relation Many-to-Many avec <strong>Entity Framework Core</strong>.</p><p>La classe <code>Eleve</code> contient déjà <code>EleveId</code>, <code>Nom</code>, <code>Email</code>. La classe <code>Cours</code> contient <code>CoursId</code>, <code>Titre</code>, <code>Description</code>.</p><p>Implémentez la relation Many-to-Many en respectant les bonnes pratiques de l’approche <strong>Code First</strong>.</p>",
+      "images": [
+        "Diagramme UML simplifié d'une association many-to-many entre Eleve et Cours sans table de jointure explicite",
+        "Extrait de code de DbContext avec configuration Fluent API pour une relation many-to-many"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Justifier la nécessité de créer une table de jointure pour la relation Many-to-Many dans une base de données relationnelle.",
+        "niveau": "medium",
+        "reponse": "Une table de jointure est nécessaire car une base de données relationnelle ne peut pas représenter directement une relation many-to-many entre deux tables sans une table intermédiaire qui contient les clés étrangères des deux entités, chaque enregistrement de cette table associant une occurrence d’une entité à une occurrence de l’autre.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Décrire les deux approches possibles pour implémenter cette relation dans EF Core : avec classe de jointure explicite ou sans classe de jointure implicite.",
+        "niveau": "hard",
+        "reponse": "Approche implicite : EF Core crée automatiquement une table de jointure cachée (à partir de .NET 5) sans classe d’entité, on utilise directement une collection de navigation comme `ICollection<Cours> Cours` dans Eleve et `ICollection<Eleve> Eleves` dans Cours. Approche explicite : on crée une classe entité représentant la table de jointure (ex: `Inscription`) avec des propriétés pour les clés étrangères et éventuellement des colonnes supplémentaires (date d’inscription, note), puis on configure les relations dans DbContext.",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Donner un cas où l’approche explicite est préférable.",
+            "niveau": "hard",
+            "reponse": "Lorsqu’il faut stocker des informations supplémentaires sur la relation (par exemple, la date d’inscription, le score obtenu, un rôle spécifique dans le cours)."
+          }
+        ]
+      },
+      {
+        "numero": 3,
+        "texte": "Écrire les classes C# minimales pour modéliser la relation many-to-many avec une classe de jointure explicite nommée `Inscription`.",
+        "niveau": "hard",
+        "reponse": "```csharp\npublic class Eleve\n{\n    public int EleveId { get; set; }\n    public string Nom { get; set; }\n    public string Email { get; set; }\n    public ICollection<Inscription> Inscriptions { get; set; }\n}\n\npublic class Cours\n{\n    public int CoursId { get; set; }\n    public string Titre { get; set; }\n    public string Description { get; set; }\n    public ICollection<Inscription> Inscriptions { get; set; }\n}\n\npublic class Inscription\n{\n    public int EleveId { get; set; }\n    public Eleve Eleve { get; set; }\n    public int CoursId { get; set; }\n    public Cours Cours { get; set; }\n    public DateTime DateInscription { get; set; }\n    public decimal? NoteObtenue { get; set; }\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 4,
+        "texte": "Déterminer, à l’aide de la Fluent API dans `DbContext`, la configuration des clés étrangères pour la relation `Inscription`.",
+        "niveau": "hard",
+        "reponse": "```csharp\nprotected override void OnModelCreating(ModelBuilder modelBuilder)\n{\n    modelBuilder.Entity<Inscription>()\n        .HasKey(i => new { i.EleveId, i.CoursId });\n\n    modelBuilder.Entity<Inscription>()\n        .HasOne(i => i.Eleve)\n        .WithMany(e => e.Inscriptions)\n        .HasForeignKey(i => i.EleveId);\n\n    modelBuilder.Entity<Inscription>()\n        .HasOne(i => i.Cours)\n        .WithMany(c => c.Inscriptions)\n        .HasForeignKey(i => i.CoursId);\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Contrôle sur les stratégies de chargement (Eager, Lazy, Explicit)",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans un contrôleur ASP.NET Core, on dispose d’un <code>DbContext</code> injecté. Le modèle contient un <code>Blog</code> avec une collection de <code>Article</code>, chaque <code>Article</code> ayant un auteur (<code>Utilisateur</code>).</p><p>Répondez aux questions en vous basant sur les trois méthodes de chargement des données associées en EF Core : <strong>Eager loading</strong> (<code>Include()</code>), <strong>Lazy loading</strong> (via proxies), <strong>Explicit loading</strong> (<code>Load()</code> ou <code>Query()</code>).</p>",
+      "images": [
+        "Schéma comparatif Eager, Lazy et Explicit loading dans EF Core",
+        "Capture d’écran de code montrant l’utilisation de .Include() et .ThenInclude()"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer, en une phrase, le principe du Lazy loading.",
+        "niveau": "easy",
+        "reponse": "Le Lazy loading charge automatiquement une propriété de navigation la première fois qu’elle est accédée, à condition que le contexte ne soit pas encore libéré et que la configuration des proxies ait été activée.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Citer un avantage et un inconvénient du Eager loading.",
+        "niveau": "medium",
+        "reponse": "Avantage : réduction du nombre de requêtes SQL en un seule requête avec JOIN, donc meilleure performance quand on sait qu’on a besoin des données liées. Inconvénient : peut charger des données inutiles si l’on n’utilise pas toutes les relations incluses, ce qui alourdit la requête et la mémoire.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Rédiger le code C# (LINQ) permettant de récupérer tous les blogs avec leurs articles et pour chaque article, l’utilisateur auteur, en utilisant l’Eager loading.",
+        "niveau": "hard",
+        "reponse": "```csharp\nvar blogs = context.Blogs\n    .Include(b => b.Articles)\n        .ThenInclude(a => a.Auteur)\n    .ToList();\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 4,
+        "texte": "Comparer Explicit loading et Lazy loading en termes de contrôle sur les requêtes.",
+        "niveau": "hard",
+        "reponse": "Avec Lazy loading, le développeur n’a aucun contrôle sur le moment exact de l’exécution des requêtes ; elles surviennent dès l’accès à une propriété. Avec Explicit loading, le développeur déclenche manuellement le chargement (via `context.Entry(blog).Collection(b => b.Articles).Load()`), ce qui permet d’optimiser et d’éviter le problème du N+1 tout en gardant un contrôle fin sur la requête de chargement (filtrage, projection).",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

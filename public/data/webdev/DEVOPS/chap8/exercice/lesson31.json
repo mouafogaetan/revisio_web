@@ -1,0 +1,162 @@
+[
+  {
+    "intitule": "Diagnostic d'une panne via les logs centralisés",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Une application web e-commerce plante régulièrement entre 2h et 3h du matin. Les logs sont centralisés avec Filebeat, Logstash et Elasticsearch. En tant qu’admin DevOps, expliquez comment vous utiliseriez cette stack pour :</p><ul><li>Identifier l’origine du problème</li><li>Corréler les erreurs avec les horaires</li><li>Mettre en place une alerte proactive</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez une démarche en 3 étapes pour diagnostiquer la panne à l’aide de la stack ELK.",
+        "niveau": "medium",
+        "reponse": "1. Recherche dans Kibana avec filtre temporel (2h-3h) et terme 'ERROR' ou 'Exception'. 2. Agrégation par service/hôte pour voir quel composant génère le plus d’erreurs. 3. Création d’un tableau de bord avec graphique temporel des erreurs pour confirmer le pic nocturne.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Quel type d’alerte (métrique ou log) mettriez-vous en place dans Kibana pour être prévenu avant que les utilisateurs ne subissent le crash ?",
+        "niveau": "medium",
+        "reponse": "Alerte sur log : règle de détection 'count d'erreurs > 10 par minute' entre 1h et 4h, avec action email ou webhook.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Configuration de Filebeat pour envoyer des logs d’application",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous devez configurer Filebeat sur un serveur Ubuntu pour envoyer les logs d’une application Java situés dans <code>/var/log/monapp/application.log</code> vers Logstash tournant sur <code>192.168.1.100:5044</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez la section <code>filebeat.inputs</code> du fichier <code>filebeat.yml</code> correspondante.",
+        "niveau": "medium",
+        "reponse": "```yaml\nfilebeat.inputs:\n- type: log\n  enabled: true\n  paths:\n    - /var/log/monapp/application.log\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrivez la section <code>output.logstash</code> pour que Filebeat envoie les logs à Logstash.",
+        "niveau": "easy",
+        "reponse": "```yaml\noutput.logstash:\n  hosts: [\"192.168.1.100:5044\"]\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Quelle commande exécutez-vous pour vérifier que Filebeat lit correctement le fichier (sans envoyer à Logstash) ?",
+        "niveau": "medium",
+        "reponse": "`sudo filebeat test config` (valide la configuration) puis `sudo filebeat -e -d \"publish\"` pour voir en temps réel les événements générés sans les envoyer.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Création d’un pipeline Logstash pour parser des logs Nginx",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous recevez des logs Nginx au format :</p><pre>192.168.1.10 - - [17/May/2025:14:25:12 +0000] \"GET /index.html HTTP/1.1\" 200 615</pre><p>Vous devez créer un pipeline Logstash qui :</p><ol><li>Reçoit les logs sur le port 5044 via Beats</li><li>Parse la ligne pour extraire IP, date, méthode, chemin, status, taille</li><li>Convertit le statut HTTP en entier</li><li>Supprime le champ `message` brut</li><li>Envoie vers Elasticsearch</li></ol>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le bloc `input` du pipeline Logstash.",
+        "niveau": "easy",
+        "reponse": "```ruby\ninput {\n  beats {\n    port => 5044\n  }\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrivez le filtre `grok` pour parser la ligne de log donnée en exemple.",
+        "niveau": "hard",
+        "reponse": "```ruby\nfilter {\n  grok {\n    match => { \"message\" => \"%{IP:client_ip} - - \\[%{HTTPDATE:timestamp}\\] \\\"%{WORD:method} %{URIPATH:path} HTTP/%{NUMBER:httpversion}\\\" %{NUMBER:response_code} %{NUMBER:bytes_sent}\" }\n  }\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Complétez le pipeline pour convertir `response_code` en entier et supprimer le champ `message`.",
+        "niveau": "medium",
+        "reponse": "```ruby\nmutate {\n  convert => { \"response_code\" => \"integer\" }\n  remove_field => [\"message\"]\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 4,
+        "texte": "Donnez le bloc `output` pour envoyer vers Elasticsearch sur localhost:9200.",
+        "niveau": "easy",
+        "reponse": "```ruby\noutput {\n  elasticsearch {\n    hosts => [\"localhost:9200\"]\n    index => \"nginx-logs-%{+YYYY.MM.dd}\"\n  }\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Question de cours : architecture ELK et rôle de Logstash",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Répondez aux questions suivantes sur l’architecture ELK.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Que signifient les lettres E, L et K dans ELK ?",
+        "niveau": "easy",
+        "reponse": "E = Elasticsearch, L = Logstash, K = Kibana.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Citez deux raisons d’utiliser Logstash entre Filebeat et Elasticsearch plutôt qu’un envoi direct.",
+        "niveau": "medium",
+        "reponse": "1. Transformation et parsing avancés des logs (grok, mutate). 2. Filtrage et enrichissement (ajout de champs, géolocalisation).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Quel est le rôle de Kibana dans la stack ?",
+        "niveau": "easy",
+        "reponse": "Kibana est l’interface de visualisation et d’exploration des données stockées dans Elasticsearch (tableaux de bord, recherche, graphiques).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation des performances de Logstash",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Votre pipeline Logstash traite 50 000 logs/seconde mais accuse une latence croissante. Les logs proviennent de 3 sources différentes (Nginx, application Java, base de données). Vous avez un seul nœud Logstash avec 8 cœurs et 16 Go de RAM.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez une modification de la configuration (fichier pipelines.yml) pour traiter chaque type de log avec son propre pipeline isolé.",
+        "niveau": "hard",
+        "reponse": "```yaml\n- pipeline.id: nginx-log\n  pipeline.workers: 4\n  pipeline.batch.size: 2000\n  path.config: \"/etc/logstash/conf.d/nginx.conf\"\n- pipeline.id: java-log\n  pipeline.workers: 2\n  path.config: \"/etc/logstash/conf.d/java.conf\"\n- pipeline.id: db-log\n  pipeline.workers: 2\n  path.config: \"/etc/logstash/conf.d/db.conf\"\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Quels paramètres ajusteriez-vous dans `logstash.yml` pour améliorer le traitement parallèle ? Justifiez.",
+        "niveau": "very hard",
+        "reponse": "`pipeline.workers: 8` (un par cœur) et `pipeline.batch.size: 2000` (augmenter la taille du lot pour réduire le nombre d’allers-retours Elasticsearch). Attention à la mémoire disponible.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Si la latence persiste, quelle alternative à Logstash pourriez-vous proposer pour la phase de parsing ?",
+        "niveau": "hard",
+        "reponse": "Remplacer Logstash par des alternatives plus légères comme Fluentd ou Vector, ou utiliser des transformateurs directement dans Filebeat (processors) pour décharger Logstash.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

@@ -1,0 +1,113 @@
+[
+  {
+    "intitule": "Gestion des favoris avec localStorage et synchronisation backend",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous développez une application e-commerce React avec Zustand pour la gestion d'état. Vous devez implémenter la fonctionnalité \"Liste de souhaits\" (favoris) qui permet à un utilisateur de :</p><ul><li>Ajouter/supprimer des produits dans ses favoris</li><li>Persister les favoris dans <code>localStorage</code> pour les utilisateurs non connectés</li><li>Synchroniser les favoris avec le backend après connexion</li><li>Afficher une notification (toast) lors des modifications</li></ul><p>Le store Zustand actuel (<code>useWishlistStore</code>) contient déjà la structure de base.</p>",
+      "images": [
+        "schéma de synchronisation des favoris entre localStorage et backend après connexion utilisateur",
+        "interface utilisateur avec icône cœur pour ajouter aux favoris"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevez et écrivez le code du store Zustand <code>useWishlistStore</code> avec les fonctionnalités suivantes : <code>items</code> (tableau des IDs produits), <code>addToWishlist</code>, <code>removeFromWishlist</code>, <code>isFavorite</code> (vérifie si un produit est dans les favoris), et persistance dans <code>localStorage</code>.",
+        "niveau": "hard",
+        "reponse": "```javascript\n// stores/wishlistStore.js\nimport { create } from 'zustand';\nimport { persist } from 'zustand/middleware';\n\nexport const useWishlistStore = create(\n  persist(\n    (set, get) => ({\n      items: [], // tableau d'IDs de produits\n      \n      addToWishlist: (productId) => set((state) => ({\n        items: state.items.includes(productId) \n          ? state.items \n          : [...state.items, productId]\n      })),\n      \n      removeFromWishlist: (productId) => set((state) => ({\n        items: state.items.filter(id => id !== productId)\n      })),\n      \n      toggleWishlist: (productId) => {\n        const isFav = get().isFavorite(productId);\n        if (isFav) {\n          get().removeFromWishlist(productId);\n        } else {\n          get().addToWishlist(productId);\n        }\n      },\n      \n      isFavorite: (productId) => get().items.includes(productId),\n      \n      clearWishlist: () => set({ items: [] }),\n      \n      // Synchronisation avec le backend\n      syncWithBackend: async (userId, token) => {\n        const localItems = get().items;\n        try {\n          // Récupérer les favoris distants\n          const remoteWishlist = await wishlistApi.getWishlist(userId, token);\n          // Fusionner (union des deux ensembles)\n          const merged = [...new Set([...localItems, ...remoteWishlist])];\n          set({ items: merged });\n          // Envoyer la fusion au backend\n          await wishlistApi.syncWishlist(userId, merged, token);\n          return merged;\n        } catch (error) {\n          console.error('Erreur synchronisation favoris:', error);\n        }\n      }\n    }),\n    {\n      name: 'wishlist-storage', // clé dans localStorage\n      partialize: (state) => ({ items: state.items })\n    }\n  )\n);\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez comment fonctionne le middleware <code>persist</code> de Zustand et pourquoi l'option <code>partialize</code> est utile dans ce contexte.",
+            "niveau": "medium",
+            "reponse": "Le middleware `persist` sauvegarde automatiquement l'état du store dans `localStorage` à chaque modification, et restaure cet état au chargement de l'application. L'option `partialize` permet de spécifier quelles parties de l'état doivent être persistées. Dans notre cas, on veut persister uniquement `items` (les IDs des favoris) et pas d'autres propriétés (comme les fonctions ou métadonnées). Cela évite de stocker des données inutiles ou non sérialisables (comme les fonctions) dans `localStorage`."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Proposez une amélioration pour éviter les doublons lors de l'ajout d'un produit aux favoris.",
+            "niveau": "easy",
+            "reponse": "L'implémentation ci-dessus utilise déjà une vérification `state.items.includes(productId)` avant d'ajouter. Une alternative plus concise est d'utiliser un `Set` JavaScript : `items: [...new Set([...state.items, productId])]`. Le `Set` garantit automatiquement l'unicité des éléments. Cependant, comme le store doit être sérialisable pour `localStorage`, on conserve un tableau tout en s'assurant de l'unicité."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Analysez le code suivant qui implémente la comparaison de produits (maximum 4 produits). Identifiez les bugs potentiels et proposez des corrections.",
+        "niveau": "hard",
+        "reponse": "```javascript\n// Code à analyser\nconst useCompareStore = create((set, get) => ({\n  compareItems: [],\n  addToCompare: (product) => {\n    if (get().compareItems.length < 4) {\n      set({ compareItems: [...get().compareItems, product] });\n    }\n  },\n  removeFromCompare: (productId) => {\n    set({ compareItems: get().compareItems.filter(p => p.id !== productId) });\n  },\n  clearCompare: () => set({ compareItems: [] })\n}));\n```\n\n**Bugs identifiés :**\n1. **Absence de vérification des doublons** : On peut ajouter plusieurs fois le même produit (comparer un produit avec lui-même).\n2. **Pas de persistance** : Les produits comparés sont perdus après rafraîchissement.\n3. **État non réactif pour la limite** : Si on atteint 4 produits, on ne peut plus en ajouter, mais aucun message n'informe l'utilisateur.\n\n**Corrections proposées :**\n```javascript\nimport { create } from 'zustand';\nimport { persist } from 'zustand/middleware';\n\nconst useCompareStore = create(\n  persist(\n    (set, get) => ({\n      compareItems: [],\n      maxItems: 4,\n      \n      addToCompare: (product) => {\n        const { compareItems, maxItems } = get();\n        // Vérifier si déjà présent\n        const alreadyExists = compareItems.some(p => p.id === product.id);\n        if (alreadyExists) {\n          return { error: 'Produit déjà dans la comparaison' };\n        }\n        if (compareItems.length >= maxItems) {\n          return { error: `Maximum ${maxItems} produits à comparer` };\n        }\n        set({ compareItems: [...compareItems, product] });\n        return { success: true };\n      },\n      \n      removeFromCompare: (productId) => {\n        set({ compareItems: get().compareItems.filter(p => p.id !== productId) });\n      },\n      \n      clearCompare: () => set({ compareItems: [] }),\n      \n      isInCompare: (productId) => get().compareItems.some(p => p.id === productId),\n      \n      canAddMore: () => get().compareItems.length < get().maxItems\n    }),\n    { name: 'compare-storage' }\n  )\n);\n```",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Justifiez pourquoi le nombre maximum de produits comparables est limité à 4 (selon le programme). Quelle est l'impact UX de cette limite ?",
+            "niveau": "easy",
+            "reponse": "La limite de 4 produits comparables est souvent choisie pour des raisons d'ergonomie et de performance :\n- **Lisibilité** : Au-delà de 4 produits, les tableaux comparatifs deviennent difficiles à lire sur un écran standard.\n- **Largeur d'affichage** : Un tableau comparatif avec 5 colonnes ou plus nécessite un défilement horizontal excessif.\n- **Performance** : Moins de données à charger et à afficher.\n- **Décision utilisateur** : Comparer trop de produits peut rendre la décision d'achat plus difficile (paradoxe du choix).\n\n**Impact UX** : L'utilisateur doit faire un choix délibéré sur les produits à comparer. Le système doit l'informer clairement lorsqu'il atteint la limite et lui proposer de retirer un produit avant d'en ajouter un nouveau."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Implémentation des notifications toast pour les actions utilisateur",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans une application e-commerce, les notifications (toasts) améliorent l'expérience utilisateur en confirmant visuellement les actions (ajout au panier, ajout aux favoris, suppression). Vous devez implémenter un système de notifications qui affiche des messages de succès, d'erreur ou d'information.</p><p>La bibliothèque recommandée est <code>sonner</code> (ou <code>react-hot-toast</code>).</p>",
+      "images": [
+        "exemple de notification toast qui apparaît en bas à droite après ajout au panier",
+        "icônes de notification : succès (vert), erreur (rouge), info (bleu)"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez les étapes d'installation et de configuration de la bibliothèque <code>sonner</code> dans une application React avec Vite. Où doit être placé le composant <code>Toaster</code> ?",
+        "niveau": "easy",
+        "reponse": "**Installation :**\n```bash\nnpm install sonner\n```\n\n**Configuration :**\nDans le fichier `main.jsx` ou `App.jsx`, importer les styles et ajouter le composant `Toaster` :\n```jsx\nimport { Toaster } from 'sonner';\nimport './index.css';\n\nfunction App() {\n  return (\n    <>\n      <Toaster position=\"bottom-right\" richColors />\n      <RouterProvider router={router} />\n    </>\n  );\n}\n```\n\n**Placement** : Le composant `Toaster` doit être placé une seule fois, généralement dans le composant racine de l'application (App.jsx), en dehors du routeur pour qu'il soit accessible depuis toutes les pages. Il peut être positionné en haut à droite, en bas à droite (recommandé), ou à d'autres endroits via la prop `position`.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrivez les fonctions d'utilisation des toasts dans les actions du store Zustand pour notifier l'utilisateur lors des opérations suivantes : ajout au panier, ajout aux favoris, suppression d'un produit du panier, erreur de connexion réseau.",
+        "niveau": "medium",
+        "reponse": "```javascript\n// stores/cartStore.js (extrait)\nimport { toast } from 'sonner';\n\nexport const useCartStore = create((set, get) => ({\n  items: [],\n  \n  addToCart: (product) => {\n    set((state) => {\n      const existing = state.items.find(item => item.id === product.id);\n      let newItems;\n      let message;\n      \n      if (existing) {\n        newItems = state.items.map(item =>\n          item.id === product.id \n            ? { ...item, quantity: item.quantity + 1 } \n            : item\n        );\n        message = `${product.name} : quantité augmentée (${existing.quantity + 1})`;\n      } else {\n        newItems = [...state.items, { ...product, quantity: 1 }];\n        message = `${product.name} ajouté au panier 🛒`;\n      }\n      \n      // Notification toast\n      toast.success(message, {\n        duration: 2000,\n        icon: '🛍️',\n        action: {\n          label: 'Voir panier',\n          onClick: () => window.location.href = '/cart'\n        }\n      });\n      \n      return { items: newItems };\n    });\n  },\n  \n  removeFromCart: (productId, productName) => {\n    set((state) => {\n      const newItems = state.items.filter(item => item.id !== productId);\n      toast.info(`${productName} retiré du panier`, { duration: 1500 });\n      return { items: newItems };\n    });\n  }\n}));\n\n// stores/wishlistStore.js (extrait)\nimport { toast } from 'sonner';\n\nexport const useWishlistStore = create((set, get) => ({\n  addToWishlist: (productId, productName) => {\n    set((state) => {\n      const alreadyExists = state.items.includes(productId);\n      if (alreadyExists) {\n        toast.warning(`${productName} déjà dans vos favoris ❤️`);\n        return state;\n      }\n      toast.success(`${productName} ajouté aux favoris`, { icon: '❤️' });\n      return { items: [...state.items, productId] };\n    });\n  }\n}));\n\n// Gestion des erreurs réseau\nconst handleApiError = (error, context) => {\n  if (error.message === 'Network Error') {\n    toast.error(`⚠️ Problème de connexion : ${context}`, {\n      duration: 4000,\n      action: {\n        label: 'Réessayer',\n        onClick: () => window.location.reload()\n      }\n    });\n  } else {\n    toast.error(`Erreur : ${error.response?.data?.message || error.message}`);\n  }\n};\n```",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Comparez les avantages de <code>sonner</code> par rapport à <code>react-hot-toast</code> ou <code>react-toastify</code> pour une application e-commerce.",
+            "niveau": "medium",
+            "reponse": "| Critère | sonner | react-hot-toast | react-toastify |\n|---------|--------|-----------------|----------------|\n| **Taille** | Très petite (~4kB) | Petite (~5kB) | Plus grosse (~12kB) |\n| **API** | Simple et intuitive | Simple | Plus complète |\n| **Personnalisation** | Bonne (CSS-Tailwind friendly) | Bonne | Excellente |\n| **Actions dans toasts** | Oui (boutons) | Non | Oui |\n| **Promises** | Oui (toast.promise) | Oui | Oui |\n| **Dark mode** | Automatique | Manuel | Manuel |\n| **Bundle size** | Léger | Léger | Plus lourd |\n\n**Recommandation pour e-commerce** : `sonner` est particulièrement adapté car léger, compatible avec TailwindCSS (utilisé dans le programme), et offre les fonctionnalités essentielles (actions, promises). `react-hot-toast` est une bonne alternative. `react-toastify` est plus complet mais plus lourd."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Étude de cas : Panier abandonné et notification",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Un client ajoute des produits à son panier mais quitte le site sans finaliser son achat. Vous souhaitez implémenter un système de notification pour réduire l'abandon de panier. Le système doit :</p><ol><li>Détecter qu'un utilisateur a quitté la page alors que son panier n'est pas vide</li><li>Afficher une notification au retour sur le site (ex: \"Vous avez 3 produits dans votre panier\")</li><li>Envoyer un email de rappel après 2 heures d'absence (via backend)</li></ol><p>La persistance du panier est déjà assurée par Zustand + localStorage.</p>",
+      "images": [
+        "diagramme séquentiel du flux de notification de panier abandonné",
+        "exemple de notification toast 'Panier en attente' au retour sur le site"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevez un mécanisme de détection de \"panier abandonné\" côté frontend. Proposez une stratégie pour notifier l'utilisateur au chargement de la page si son panier est non vide et date du dernier ajout est antérieure à une certaine durée.",
+        "niveau": "very hard",
+        "reponse": "**Stratégie de détection :**\n\n```javascript\n// stores/cartStore.js augmenté\nimport { create } from 'zustand';\nimport { persist } from 'zustand/middleware';\n\nexport const useCartStore = create(\n  persist(\n    (set, get) => ({\n      items: [],\n      lastActivity: null, // timestamp du dernier ajout/modification\n      notificationShown: false,\n      \n      updateLastActivity: () => set({ lastActivity: Date.now() }),\n      \n      addToCart: (product) => {\n        // ... logique d'ajout\n        get().updateLastActivity();\n      },\n      \n      checkAbandonedCart: () => {\n        const { items, lastActivity, notificationShown } = get();\n        if (items.length === 0) return false;\n        if (notificationShown) return false;\n        \n        const TWO_HOURS = 2 * 60 * 60 * 1000;\n        const now = Date.now();\n        const isAbandoned = lastActivity && (now - lastActivity) > TWO_HOURS;\n        \n        if (isAbandoned) {\n          set({ notificationShown: true });\n          return true;\n        }\n        return false;\n      },\n      \n      resetNotification: () => set({ notificationShown: false })\n    }),\n    { name: 'cart-storage' }\n  )\n);\n\n// Dans App.jsx (ou Layout principal)\nimport { useEffect } from 'react';\nimport { toast } from 'sonner';\nimport { useCartStore } from './stores/cartStore';\n\nfunction App() {\n  const { items, checkAbandonedCart, resetNotification } = useCartStore();\n  const itemCount = items.reduce((sum, i) => sum + i.quantity, 0);\n  \n  useEffect(() => {\n    const isAbandoned = checkAbandonedCart();\n    if (isAbandoned && itemCount > 0) {\n      toast.info(`🛒 Vous avez ${itemCount} article(s) dans votre panier !`, {\n        duration: 8000,\n        position: 'top-center',\n        action: {\n          label: 'Voir mon panier',\n          onClick: () => window.location.href = '/cart'\n        }\n      });\n    }\n  }, []);\n  \n  // Détection de la fermeture de l'onglet\n  useEffect(() => {\n    const handleBeforeUnload = (e) => {\n      if (itemCount > 0) {\n        // Stocker dans sessionStorage pour détecter abandon\n        sessionStorage.setItem('abandonedCart', JSON.stringify({\n          items: items,\n          timestamp: Date.now()\n        }));\n      }\n    };\n    window.addEventListener('beforeunload', handleBeforeUnload);\n    return () => window.removeEventListener('beforeunload', handleBeforeUnload);\n  }, [items]);\n  \n  return <RouterProvider router={router} />;\n}\n```\n\n**Notification au retour :**\n```javascript\n// À l'initialisation, vérifier sessionStorage\nconst abandonedData = sessionStorage.getItem('abandonedCart');\nif (abandonedData) {\n  const { timestamp } = JSON.parse(abandonedData);\n  const minutesAgo = Math.floor((Date.now() - timestamp) / 60000);\n  if (minutesAgo < 30) {\n    toast.warning(`Vous avez quitté avec un panier non finalisé il y a ${minutesAgo} minutes`, {\n      action: { label: 'Continuer mes achats', onClick: () => navigate('/cart') }\n    });\n  }\n  sessionStorage.removeItem('abandonedCart');\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez comment communiquer avec le backend pour déclencher l'envoi d'un email de rappel après 2 heures. Quelles données doivent être envoyées ?",
+            "niveau": "hard",
+            "reponse": "**Approche :** Au lieu d'attendre 2 heures côté frontend (qui peut être fermé), on envoie une requête au backend lors de l'événement `beforeunload` ou à intervalles réguliers.\n\n```javascript\n// Service API\nexport const cartApi = {\n  reportAbandonedCart: async (userId, cartItems, timestamp) => {\n    return axios.post('/api/cart/abandoned', {\n      userId,\n      cartItems,\n      abandonedAt: timestamp,\n      userEmail: user?.email\n    });\n  }\n};\n\n// Dans le composant\nconst handleBeforeUnload = async () => {\n  if (itemCount > 0 && isAuthenticated) {\n    await cartApi.reportAbandonedCart(userId, items, Date.now());\n  }\n};\n```\n\n**Côté backend (Node.js/NestJS) :**\n- Stocker l'événement d'abandon dans une table `AbandonedCart`\n- Un cron job s'exécute toutes les heures pour vérifier les abandons de plus de 2 heures\n- Envoi d'email via Nodemailer si l'utilisateur n'a pas finalisé sa commande\n- Limiter à un email par panier abandonné (éviter spam)\n\n**Données à envoyer :**\n- `userId` : identifiant utilisateur\n- `cartItems` : liste des produits (id, nom, quantité, prix)\n- `abandonedAt` : timestamp de l'abandon\n- `cartTotal` : montant total du panier\n- `userEmail` : email pour l'envoi\n- `sessionId` : identifiant unique de session\n\n**Email type :**\nObjet : \"Votre panier vous attend sur [Site]\"\nContenu : Récapitulatif des produits, lien direct vers le panier, code promo éventuel."
+          }
+        ]
+      }
+    ]
+  }
+]

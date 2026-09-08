@@ -1,0 +1,176 @@
+[
+  {
+    "intitule": "Identification des composants d'Airflow",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Associez chaque concept Apache Airflow à sa définition.</p><ul><li><strong>Concept A :</strong> DAG</li><li><strong>Concept B :</strong> Task</li><li><strong>Concept C :</strong> Operator</li><li><strong>Concept D :</strong> Scheduler</li><li><strong>Concept E :</strong> Web UI</li></ul><p><strong>Définitions :</strong></p><p>1. Interface graphique pour surveiller et gérer les workflows.</p><p>2. Unité de travail individuelle dans un pipeline Airflow.</p><p>3. Composant qui déclenche l'exécution des tâches selon le planning.</p><p>4. Template définissant le type d'action à réaliser (ex: PythonOperator, BashOperator).</p><p>5. Graphe orienté acyclique représentant un workflow de tâches avec leurs dépendances.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Associez chaque concept à sa définition et expliquez son rôle dans Airflow.",
+        "niveau": "easy",
+        "reponse": "<p><strong>A - 5 : DAG</strong> - Graphe orienté acyclique qui définit l'ordre et les dépendances entre les tâches.</p><p><strong>B - 2 : Task</strong> - Unité de travail atomique exécutée par Airflow.</p><p><strong>C - 4 : Operator</strong> - Classe qui définit le type d'opération à réaliser (exécuter un script Python, une requête SQL, etc.).</p><p><strong>D - 3 : Scheduler</strong> - Composant qui déclenche l'exécution des DAGs selon le planning défini.</p><p><strong>E - 1 : Web UI</strong> - Interface web pour visualiser, surveiller et interagir avec les workflows.</p>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Conception d'un DAG Airflow simple",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous devez créer un pipeline de données avec Apache Airflow pour une entreprise de e-commerce au Cameroun. Le pipeline doit :</p><ul><li>Télécharger un fichier CSV de ventes depuis une API chaque jour à 8h.</li><li>Nettoyer les données (supprimer les doublons, valeurs manquantes).</li><li>Charger les données nettoyées dans une base de données PostgreSQL.</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le code Python d'un DAG Airflow pour ce pipeline. Définissez les tâches, les dépendances et le planning.",
+        "niveau": "medium",
+        "reponse": "<p><strong>Code du DAG Airflow :</strong></p><pre style='background: #f1f5f9; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.85em;'>from airflow import DAG\nfrom airflow.operators.python import PythonOperator\nfrom airflow.operators.postgres_operator import PostgresOperator\nfrom datetime import datetime, timedelta\nimport pandas as pd\nimport requests\n\ndef download_data(**context):\n    url = \"https://api.ventes.com/csv\"\n    response = requests.get(url)\n    with open('/tmp/ventes.csv', 'wb') as f:\n        f.write(response.content)\n\ndef clean_data(**context):\n    df = pd.read_csv('/tmp/ventes.csv')\n    df = df.drop_duplicates()\n    df = df.dropna()\n    df.to_csv('/tmp/ventes_clean.csv', index=False)\n\ndefault_args = {\n    'owner': 'data_engineer',\n    'depends_on_past': False,\n    'start_date': datetime(2025, 1, 1),\n    'retries': 3,\n    'retry_delay': timedelta(minutes=5),\n}\n\ndag = DAG(\n    'pipeline_ventes',\n    default_args=default_args,\n    description='Pipeline quotidien des ventes',\n    schedule_interval='0 8 * * *',  # Tous les jours à 8h\n    catchup=False,\n)\n\ndownload_task = PythonOperator(\n    task_id='download_data',\n    python_callable=download_data,\n    dag=dag,\n)\n\nclean_task = PythonOperator(\n    task_id='clean_data',\n    python_callable=clean_data,\n    dag=dag,\n)\n\nload_task = PostgresOperator(\n    task_id='load_to_postgres',\n    postgres_conn_id='postgres_default',\n    sql=\"\"\"\n        COPY ventes FROM '/tmp/ventes_clean.csv'\n        DELIMITER ',' CSV HEADER;\n    \"\"\",\n    dag=dag,\n)\n\ndownload_task >> clean_task >> load_task</pre>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez le rôle des paramètres <code>default_args</code> et <code>schedule_interval</code> dans ce DAG.",
+            "niveau": "medium",
+            "reponse": "<p><strong><code>default_args</code> :</strong> Dictionnaire contenant les arguments par défaut applicables à toutes les tâches du DAG. Ici, on définit l'<code>owner</code>, le <code>start_date</code>, le nombre de <code>retries</code> et le délai entre les retries.</p><p><strong><code>schedule_interval</code> :</strong> Définit la fréquence d'exécution du DAG. Ici, <code>'0 8 * * *'</code> signifie que le DAG s'exécute tous les jours à 8h (cron expression).</p>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion des erreurs et des retries dans Airflow",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous avez un DAG Airflow avec 4 tâches : <strong>extract → transform → validate → load</strong>.</p><ul><li>La tâche <strong>extract</strong> appelle une API externe qui peut parfois échouer (timeout).</li><li>La tâche <strong>transform</strong> effectue un traitement lourd qui peut dépasser le timeout par défaut.</li><li>La tâche <strong>validate</strong> doit être relancée automatiquement en cas d'échec (max 3 retries).</li><li>La tâche <strong>load</strong> ne doit s'exécuter que si toutes les tâches précédentes ont réussi.</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Configurez les paramètres de chaque tâche dans le DAG (retries, retry_delay, timeout, execution_timeout) en justifiant chaque choix.",
+        "niveau": "hard",
+        "reponse": "<p><strong>Configuration proposée :</strong></p><pre style='background: #f1f5f9; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.85em;'>from airflow.operators.python import PythonOperator\nfrom airflow.operators.dummy import DummyOperator\nfrom datetime import timedelta\n\n# Tâche extract avec retries pour l'API externe\nextract_task = PythonOperator(\n    task_id='extract',\n    python_callable=extract_data,\n    retries=5,\n    retry_delay=timedelta(minutes=2),\n    execution_timeout=timedelta(seconds=30),\n    dag=dag,\n)\n\n# Tâche transform avec timeout plus long\ntransform_task = PythonOperator(\n    task_id='transform',\n    python_callable=transform_data,\n    execution_timeout=timedelta(minutes=10),\n    dag=dag,\n)\n\n# Tâche validate avec retries\nvalidate_task = PythonOperator(\n    task_id='validate',\n    python_callable=validate_data,\n    retries=3,\n    retry_delay=timedelta(minutes=5),\n    dag=dag,\n)\n\n# Tâche load sans configuration particulière\nload_task = PythonOperator(\n    task_id='load',\n    python_callable=load_data,\n    dag=dag,\n)\n\nextract_task >> transform_task >> validate_task >> load_task</pre><p><strong>Justifications :</strong></p><ul><li><strong>extract (5 retries, délai 2min, timeout 30s) :</strong> L'API peut être instable, on augmente les retries pour plus de résilience. Le timeout court évite d'attendre trop longtemps.</li><li><strong>transform (timeout 10min) :</strong> Le traitement est lourd, on augmente le timeout par défaut (qui est de 5 minutes dans Airflow).</li><li><strong>validate (3 retries, délai 5min) :</strong> La validation peut échouer pour des raisons de données temporaires, 3 retries suffisent.</li><li><strong>load :</strong> Pas de configuration particulière car elle dépend du succès des tâches précédentes.</li></ul>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Que se passe-t-il si la tâche <strong>validate</strong> échoue après 3 retries ? Comment Airflow gère-t-il cette situation ?",
+            "niveau": "hard",
+            "reponse": "<p>Si la tâche <strong>validate</strong> échoue après 3 retries, Airflow considère la tâche comme <strong>en échec (failed)</strong>.</p><p><strong>Comportement d'Airflow :</strong></p><ul><li>Les tâches dépendantes (<strong>load</strong>) <strong>ne sont pas exécutées</strong> car la condition de succès n'est pas remplie.</li><li>Le DAG est marqué comme <strong>en échec partiel</strong>.</li><li>L'état de la tâche est visible dans l'interface Web UI (rouge pour échec).</li><li>On peut configurer des <strong>callbacks</strong> (on_failure_callback) pour notifier les équipes (email, Slack) en cas d'échec.</li><li>Si on a défini <code>trigger_rule='all_done'</code>, la tâche suivante pourrait s'exécuter même en cas d'échec, mais par défaut c'est <code>'all_success'</code>.</li></ul>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse d'un DAG et optimisation",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Voici un DAG Airflow existant pour un pipeline de données. Analysez-le et identifiez les problèmes potentiels.</p><pre style='background: #f1f5f9; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.8em;'>from airflow import DAG\nfrom airflow.operators.python import PythonOperator\nfrom airflow.operators.dummy import DummyOperator\nfrom datetime import datetime, timedelta\n\ndefault_args = {\n    'owner': 'data_team',\n    'start_date': datetime(2025, 1, 1),\n    'retries': 0,\n}\n\ndag = DAG(\n    'data_pipeline',\n    default_args=default_args,\n    schedule_interval='@daily',\n    catchup=True,\n)\n\ntask_a = PythonOperator(task_id='task_a', python_callable=task_a_func, dag=dag)\ntask_b = PythonOperator(task_id='task_b', python_callable=task_b_func, dag=dag)\ntask_c = PythonOperator(task_id='task_c', python_callable=task_c_func, dag=dag)\ntask_d = PythonOperator(task_id='task_d', python_callable=task_d_func, dag=dag)\ntask_e = PythonOperator(task_id='task_e', python_callable=task_e_func, dag=dag)\ntask_f = PythonOperator(task_id='task_f', python_callable=task_f_func, dag=dag)\n\ntask_a >> task_b >> task_c\ntask_a >> task_d >> task_e\n[task_c, task_e] >> task_f</pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifiez au moins 3 problèmes ou axes d'amélioration dans ce DAG. Proposez des corrections pour chacun.",
+        "niveau": "very hard",
+        "reponse": "<p><strong>Problème 1 : Absence de retries</strong></p><ul><li><em>Problème :</em> <code>retries: 0</code> → Aucune tentative en cas d'échec.</li><li><em>Correction :</em> Définir <code>retries: 3</code> et <code>retry_delay: timedelta(minutes=5)</code>.</li></ul><p><strong>Problème 2 : catchup=True peut être dangereux</strong></p><ul><li><em>Problème :</em> <code>catchup=True</code> va exécuter tous les DAGs manqués depuis la date de début, ce qui peut surcharger le système.</li><li><em>Correction :</em> Mettre <code>catchup=False</code> pour n'exécuter que la dernière exécution.</li></ul><p><strong>Problème 3 : Tasks sans nom descriptif</strong></p><ul><li><em>Problème :</em> <code>task_a</code>, <code>task_b</code>, etc. ne sont pas explicites.</li><li><em>Correction :</em> Utiliser des noms descriptifs comme <code>extract_data</code>, <code>transform_data</code>, <code>validate_data</code>.</li></ul><p><strong>Problème 4 : Pas de gestion des dépendances explicite</strong></p><ul><li><em>Problème :</em> L'ordre des tâches est défini mais pas de <code>trigger_rule</code> explicite.</li><li><em>Correction :</em> Ajouter <code>trigger_rule='all_success'</code> sur <code>task_f</code> pour s'assurer qu'elle ne s'exécute que si toutes les dépendances réussissent.</li></ul>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Que fait le paramètre <code>catchup=True</code> dans Airflow ? Dans quels cas faut-il l'utiliser ?",
+            "niveau": "hard",
+            "reponse": "<p><strong><code>catchup=True</code> :</strong> Airflow va exécuter toutes les exécutions manquées du DAG depuis le <code>start_date</code> jusqu'à la date actuelle.</p><p><strong>Exemple :</strong> Si le DAG a un <code>schedule_interval='@daily'</code> et a été désactivé pendant 5 jours, avec <code>catchup=True</code>, Airflow exécutera les 5 jours manqués.</p><p><strong>Cas d'utilisation :</strong></p><ul><li><strong>Quand l'utiliser :</strong> Pour des backfills (recharger des données historiques).</li><li><strong>Quand éviter :</strong> En production pour éviter une surcharge de travail. Utiliser <code>catchup=False</code> pour ne traiter que la dernière exécution.</li></ul>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Utilisation des dépendances conditionnelles avec Trigger Rules",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous avez un DAG de traitement de données avec 5 tâches :</p><ul><li><strong>extract</strong> : Extrait les données de 3 sources différentes (API1, API2, BDD).</li><li><strong>transform</strong> : Transforme les données (dépend de extract).</li><li><strong>quality_check</strong> : Vérifie la qualité des données (dépend de transform).</li><li><strong>load</strong> : Charge les données (dépend de quality_check).</li><li><strong>notify</strong> : Envoie une notification en cas d'échec.</li></ul><p>On souhaite que :</p><ul><li><strong>transform</strong> s'exécute si au moins une source a réussi.</li><li><strong>load</strong> s'exécute uniquement si <strong>quality_check</strong> réussit.</li><li><strong>notify</strong> s'exécute si <strong>quality_check</strong> échoue.</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Configurez les <code>trigger_rule</code> appropriées pour chaque tâche afin de réaliser ce comportement.",
+        "niveau": "hard",
+        "reponse": "<p><strong>Configuration des trigger_rule :</strong></p><pre style='background: #f1f5f9; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.85em;'>from airflow.operators.python import PythonOperator\nfrom airflow.utils.trigger_rule import TriggerRule\n\n# Tâches d'extraction\nextract_api1 = PythonOperator(task_id='extract_api1', python_callable=extract_api1_func, dag=dag)\nextract_api2 = PythonOperator(task_id='extract_api2', python_callable=extract_api2_func, dag=dag)\nextract_bdd = PythonOperator(task_id='extract_bdd', python_callable=extract_bdd_func, dag=dag)\n\n# transform s'exécute si au moins une source a réussi (trigger_rule='one_success')\ntransform = PythonOperator(\n    task_id='transform',\n    python_callable=transform_func,\n    trigger_rule=TriggerRule.ONE_SUCCESS,\n    dag=dag\n)\n\n# quality_check s'exécute si transform réussit (trigger_rule par défaut = 'all_success')\nquality_check = PythonOperator(\n    task_id='quality_check',\n    python_callable=quality_check_func,\n    dag=dag\n)\n\n# load s'exécute uniquement si quality_check réussit (trigger_rule par défaut)\nload = PythonOperator(\n    task_id='load',\n    python_callable=load_func,\n    dag=dag\n)\n\n# notify s'exécute si quality_check échoue (trigger_rule='one_failed')\nnotify = PythonOperator(\n    task_id='notify',\n    python_callable=notify_func,\n    trigger_rule=TriggerRule.ONE_FAILED,\n    dag=dag\n)\n\n# Définition des dépendances\n[extract_api1, extract_api2, extract_bdd] >> transform >> quality_check\nquality_check >> load\nquality_check >> notify</pre><p><strong>Explications :</strong></p><ul><li><code>transform</code> utilise <code>ONE_SUCCESS</code> car elle doit s'exécuter si au moins une source a réussi.</li><li><code>load</code> utilise la règle par défaut <code>ALL_SUCCESS</code>, elle ne s'exécute que si <code>quality_check</code> réussit.</li><li><code>notify</code> utilise <code>ONE_FAILED</code> pour s'exécuter si <code>quality_check</code> échoue.</li></ul>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez le comportement des différentes <code>trigger_rule</code> dans Airflow : <code>all_success</code>, <code>one_success</code>, <code>all_failed</code>, <code>one_failed</code>, <code>done</code>.",
+            "niveau": "hard",
+            "reponse": "<p><strong>Trigger Rules dans Airflow :</strong></p><ul><li><strong><code>all_success</code> (défaut) :</strong> Toutes les tâches parent ont réussi → exécution.</li><li><strong><code>one_success</code> :</strong> Au moins une tâche parent a réussi → exécution. Utile pour des sources redondantes.</li><li><strong><code>all_failed</code> :</strong> Toutes les tâches parent ont échoué → exécution. Utile pour des notifications de crise.</li><li><strong><code>one_failed</code> :</strong> Au moins une tâche parent a échoué → exécution. Utile pour des alertes.</li><li><strong><code>done</code> :</strong> Indépendant du résultat (réussite ou échec) → toujours exécuté.</li><li><strong><code>none_failed</code> :</strong> Toutes les tâches parent ont réussi ou ont été ignorées (skipped).</li><li><strong><code>none_failed_or_skipped</code> :</strong> Aucune tâche parent n'est en échec.</li></ul><p>Ces règles permettent de gérer des workflows complexes avec des branches conditionnelles.</p>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Conception d'un DAG complexe avec sous-DAGs",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous devez concevoir un pipeline de données pour une entreprise de télécommunications qui collecte des données de 5 régions du Cameroun (Douala, Yaoundé, Bafoussam, Garoua, Maroua).</p><p>Pour chaque région, le pipeline doit :</p><ul><li>Extraire les données d'appels depuis une base de données locale.</li><li>Transformer les données (anonymisation, agrégation).</li><li>Charger les données agrégées dans un Data Warehouse central.</li></ul><p>Les 5 régions peuvent être traitées en parallèle.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevez un DAG Airflow pour ce pipeline. Utilisez des sous-DAGs ou des concepts de parallélisation (ex: TaskGroup, Dynamic DAGs) pour organiser le travail par région.",
+        "niveau": "very hard",
+        "reponse": "<p><strong>Solution avec TaskGroup (Airflow 2.0+) :</strong></p><pre style='background: #f1f5f9; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.75em;'>from airflow import DAG\nfrom airflow.operators.python import PythonOperator\nfrom airflow.operators.dummy import DummyOperator\nfrom airflow.utils.task_group import TaskGroup\nfrom datetime import datetime, timedelta\n\ndefault_args = {\n    'owner': 'data_engineer',\n    'start_date': datetime(2025, 1, 1),\n    'retries': 2,\n    'retry_delay': timedelta(minutes=5),\n}\n\nregions = ['Douala', 'Yaounde', 'Bafoussam', 'Garoua', 'Maroua']\n\ndef extract_region(region, **context):\n    # Extraction des données pour la région\n    pass\n\ndef transform_region(region, **context):\n    # Transformation des données\n    pass\n\ndef load_region(region, **context):\n    # Chargement vers le Data Warehouse\n    pass\n\nwith DAG(\n    'telecom_pipeline',\n    default_args=default_args,\n    schedule_interval='@hourly',\n    catchup=False,\n    description='Pipeline de données télécom par région',\n) as dag:\n\n    start = DummyOperator(task_id='start')\n    end = DummyOperator(task_id='end')\n\n    for region in regions:\n        with TaskGroup(group_id=f'region_{region}') as region_group:\n            extract = PythonOperator(\n                task_id='extract',\n                python_callable=extract_region,\n                op_kwargs={'region': region},\n            )\n            transform = PythonOperator(\n                task_id='transform',\n                python_callable=transform_region,\n                op_kwargs={'region': region},\n            )\n            load = PythonOperator(\n                task_id='load',\n                python_callable=load_region,\n                op_kwargs={'region': region},\n            )\n            extract >> transform >> load\n\n        start >> region_group >> end</pre><p><strong>Explications :</strong></p><ul><li>Utilisation de <strong>TaskGroup</strong> pour organiser les tâches par région.</li><li>Les 5 groupes régionaux s'exécutent en parallèle (grâce au DAG qui les définit comme des branches indépendantes).</li><li>Les tâches <code>extract</code>, <code>transform</code>, <code>load</code> sont définies dynamiquement pour chaque région.</li><li>Les <code>op_kwargs</code> permettent de passer le nom de la région à chaque fonction.</li></ul>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quels sont les avantages et les inconvénients de cette approche par rapport à un sous-DAG (SubDAG) ?",
+            "niveau": "very hard",
+            "reponse": "<p><strong>Avantages de TaskGroup vs SubDAG :</strong></p><ul><li><strong>Performance :</strong> TaskGroup est plus léger car il n'ajoute pas de DAG supplémentaire dans la base de données de Airflow.</li><li><strong>Visibilité :</strong> TaskGroup offre une meilleure visualisation dans l'UI (les tâches sont regroupées visuellement).</li><li><strong>Simplicité :</strong> Le code est plus simple et moins répétitif.</li></ul><p><strong>Inconvénients :</strong></p><ul><li><strong>Flexibilité :</strong> SubDAG permet plus de contrôle (ex: paramètres différents par région).</li><li><strong>Réutilisation :</strong> SubDAG peut être réutilisé dans plusieurs DAGs.</li><li><strong>Versions :</strong> TaskGroup est disponible seulement à partir d'Airflow 2.0.</li></ul>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Quiz sur les concepts Airflow",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Répondez aux questions suivantes en choisissant la ou les bonnes réponses.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Qu'est-ce qu'un DAG dans Apache Airflow ?",
+        "niveau": "easy",
+        "reponse": "<p>Un <strong>DAG (Directed Acyclic Graph)</strong> est une représentation graphique orientée et acyclique de l'ensemble des tâches d'un workflow et de leurs dépendances. Les tâches sont les nœuds du graphe, et les flèches représentent les relations de dépendance. Le terme <strong>acyclique</strong> signifie qu'il n'y a pas de cycles : une tâche ne peut pas dépendre d'elle-même.</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quelle est la différence entre un DAG et un workflow traditionnel ?",
+            "niveau": "medium",
+            "reponse": "<p>Un <strong>DAG</strong> dans Airflow est un concept spécifique qui offre :</p><ul><li><strong>Visualisation graphique</strong> des dépendances.</li><li><strong>Exécution</strong> basée sur un planning (schedule).</li><li><strong>Gestion des erreurs</strong> (retries, alertes).</li><li><strong>Extensibilité</strong> avec des opérateurs variés.</li></ul><p>Un workflow traditionnel est généralement un script linéaire sans visualisation ni gestion intégrée des dépendances.</p>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Quels sont les composants principaux d'Airflow ?",
+            "niveau": "medium",
+            "reponse": "<p><strong>Composants principaux d'Airflow :</strong></p><ul><li><strong>Scheduler :</strong> Planifie et déclenche l'exécution des DAGs.</li><li><strong>Web Server :</strong> Interface Web pour visualiser et gérer les DAGs.</li><li><strong>Executor :</strong> Exécute les tâches (LocalExecutor, CeleryExecutor, KubernetesExecutor).</li><li><strong>Metadata Database :</strong> Base de données qui stocke l'état des DAGs et des tâches.</li><li><strong>Worker :</strong> (pour CeleryExecutor) Processus qui exécute les tâches.</li></ul>"
+          }
+        ]
+      }
+    ]
+  }
+]

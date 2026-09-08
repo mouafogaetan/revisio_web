@@ -1,0 +1,163 @@
+[
+  {
+    "intitule": "Exercice 1 : Comprendre les Verrous",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Le verrouillage (locking) est un mécanisme fondamental pour gérer la concurrence dans les bases de données. Il existe différents types de verrous :</p><ul><li><strong>Row-level</strong> (verrou au niveau de la ligne)</li><li><strong>Table-level</strong> (verrou au niveau de la table)</li><li><strong>Shared Lock</strong> (verrou partagé)</li><li><strong>Exclusive Lock</strong> (verrou exclusif)</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Associer chaque type de verrou à son utilisation correcte.",
+        "niveau": "easy",
+        "reponse": "<strong>Shared Lock (verrou partagé) :</strong> Permet la lecture mais pas l'écriture. Plusieurs transactions peuvent détenir simultanément des verrous partagés sur la même ressource. Utilisé pour les opérations de lecture (SELECT).<br/><br/><strong>Exclusive Lock (verrou exclusif) :</strong> Permet à la fois la lecture et l'écriture. Un seul verrou exclusif peut être détenu à la fois sur une ressource. Utilisé pour les opérations d'écriture (INSERT, UPDATE, DELETE).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer la différence entre un verrou au niveau de la ligne et un verrou au niveau de la table.",
+            "niveau": "medium",
+            "reponse": "<strong>Verrou row-level :</strong> Un verrou est placé sur une ligne spécifique. Il permet une meilleure concurrence car plusieurs transactions peuvent accéder à différentes lignes de la même table simultanément. Plus fin mais plus coûteux en mémoire.<br/><br/><strong>Verrou table-level :</strong> Un verrou est placé sur toute la table. Il est moins coûteux en mémoire mais réduit la concurrence car une seule transaction peut accéder à la table à la fois. Utilisé pour les opérations de masse (ALTER TABLE, TRUNCATE)."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Quel type de verrou une transaction acquiert-elle lors d'une opération UPDATE ?",
+        "niveau": "easy",
+        "reponse": "Une opération UPDATE acquiert un <strong>verrou exclusif</strong> (exclusive lock) sur les lignes concernées. Ce verrou bloque à la fois les lectures (sauf en READ UNCOMMITTED) et les écritures des autres transactions sur ces lignes. Le verrou est maintenu jusqu'à la fin de la transaction (COMMIT ou ROLLBACK)."
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 2 : MVCC - Multi-Version Concurrency Control",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Le <strong>MVCC</strong> (Multi-Version Concurrency Control) est une technique utilisée par de nombreux SGBD (PostgreSQL, MySQL InnoDB, Oracle) pour gérer la concurrence sans bloquer les lectures.</p><p>Contrairement au verrouillage classique, MVCC conserve plusieurs <strong>versions</strong> des données pour permettre aux transactions de lire une version <strong>cohérente</strong> des données à un instant donné.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer comment le MVCC permet d'éviter les dirty reads sans utiliser de verrous de lecture.",
+        "niveau": "medium",
+        "reponse": "Le MVCC évite les dirty reads en présentant à chaque transaction une <strong>snapshot</strong> (instantané) des données au moment du début de la transaction. Les modifications effectuées par d'autres transactions, même si elles sont validées, ne sont pas visibles si elles ont été effectuées après le début de la transaction (selon le niveau d'isolation). Chaque transaction voit sa propre version cohérente des données, ce qui élimine le besoin de verrous de lecture.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quel est l'avantage principal du MVCC par rapport au verrouillage traditionnel ?",
+            "niveau": "medium",
+            "reponse": "L'avantage principal du MVCC est qu'il permet aux <strong>lectures de ne pas bloquer les écritures</strong> et vice-versa. Dans un système à verrouillage traditionnel, une lecture peut bloquer une écriture (et inversement). Avec MVCC, une transaction peut lire les données pendant qu'une autre les modifie, car chaque transaction voit sa propre version des données. Cela améliore considérablement la concurrence et les performances dans les environnements avec de nombreuses lectures."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Dans PostgreSQL, quel mécanisme permet à une transaction de voir une version cohérente des données ?",
+        "niveau": "medium",
+        "reponse": "PostgreSQL utilise le <strong>système de visibilité des tuples</strong> avec des champs spéciaux dans chaque ligne : <code>xmin</code> (ID de la transaction qui a créé la ligne) et <code>xmax</code> (ID de la transaction qui a supprimé ou mis à jour la ligne). Chaque transaction a un ID unique. Lorsqu'une transaction lit une ligne, elle vérifie si cette ligne est visible selon son propre ID de transaction et l'état (COMMIT/ROLLBACK) des autres transactions. Cela permet de déterminer quelle version de la ligne est visible pour cette transaction."
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 3 : Deadlocks dans un Système de Réservation",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Une compagnie aérienne utilise une base de données avec la table <code>vols</code> :</p><ul><li><code>id_vol</code> (INT, clé primaire)</li><li><code>places_disponibles</code> (INT)</li><li><code>prix</code> (DECIMAL)</li><li><code>date_vol</code> (DATE)</li></ul><p>Deux clients réservent simultanément des billets :</p><ul><li><strong>T1 :</strong> Réserve 1 place sur le vol A, puis 2 places sur le vol B</li><li><strong>T2 :</strong> Réserve 2 places sur le vol B, puis 1 place sur le vol A</li></ul><p>Le système utilise un verrouillage row-level avec des verrous exclusifs.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire le scénario qui conduit à un deadlock entre T1 et T2.",
+        "niveau": "hard",
+        "reponse": "Le deadlock se produit comme suit :<br/><br/>1. T1 acquiert un verrou exclusif sur la ligne du vol A (pour réserver 1 place).<br/>2. T2 acquiert un verrou exclusif sur la ligne du vol B (pour réserver 2 places).<br/>3. T1 tente d'acquérir un verrou exclusif sur le vol B, mais il est déjà verrouillé par T2. T1 attend.<br/>4. T2 tente d'acquérir un verrou exclusif sur le vol A, mais il est déjà verrouillé par T1. T2 attend.<br/><br/>T1 attend T2, et T2 attend T1. C'est un <strong>deadlock</strong> (interblocage).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposer deux solutions pour prévenir ce deadlock.",
+            "niveau": "hard",
+            "reponse": "<strong>Solution 1 : Ordre d'acquisition fixe</strong><br/>Toujours acquérir les verrous dans un ordre prédéfini (par exemple, par id_vol croissant). T1 et T2 devraient d'abord verrouiller le vol avec le plus petit id, puis le plus grand. Cela empêche le cycle d'attente.<br/><br/><strong>Solution 2 : Timeout + Rollback</strong><br/>Définir un timeout pour l'acquisition de verrous. Si une transaction attend trop longtemps (ex: 5 secondes), elle annule (ROLLBACK) et réessaie plus tard. Cela permet de rompre le deadlock.<br/><br/><strong>Solution 3 : Détection automatique</strong><br/>Le SGBD détecte automatiquement le deadlock (via le graphe d'attente) et annule l'une des transactions (celle qui a le moindre coût). C'est le comportement standard de la plupart des SGBD."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Avec un niveau d'isolation SERIALIZABLE, ce deadlock est-il plus ou moins probable ? Expliquer.",
+            "niveau": "hard",
+            "reponse": "Avec SERIALIZABLE, le deadlock est <strong>plus probable</strong> car ce niveau utilise des verrous plus stricts :<br/>- Verrous de plage (range locks) en plus des verrous de ligne<br/>- Les verrous sont maintenus plus longtemps<br/>- Le nombre de verrous acquis est plus important<br/><br/>Ces verrous supplémentaires augmentent les risques de contention et de cycles d'attente, rendant les deadlocks plus fréquents."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Comment le SGBD détecte-t-il un deadlock ?",
+        "niveau": "hard",
+        "reponse": "Le SGBD détecte les deadlocks en utilisant un <strong>graphe d'attente</strong> (wait-for graph) :<br/><br/>1. Chaque transaction est un nœud du graphe.<br/>2. Une arête de T1 vers T2 signifie que T1 attend un verrou que T2 détient.<br/>3. Le SGBD vérifie périodiquement si le graphe contient un <strong>cycle</strong>.<br/>4. Si un cycle est détecté, il y a un deadlock.<br/>5. Le SGBD choisit une <strong>victime</strong> (généralement la transaction la plus récente ou celle avec le moindre coût) et l'annule (ROLLBACK) pour casser le cycle.<br/><br/>La transaction victime reçoit une erreur et doit réessayer."
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 4 : Application Pratique - Gestion de Stock en Magasin",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Un système de gestion de stock pour une grande surface utilise une table <code>stock</code> :</p><ul><li><code>id_produit</code> (INT, clé primaire)</li><li><code>nom</code> (VARCHAR)</li><li><code>quantite</code> (INT)</li><li><code>seuil_alerte</code> (INT)</li></ul><p>Plusieurs caissiers enregistrent des ventes en même temps. Chaque vente réduit la quantité en stock.</p><p>Le système utilise <strong>MVCC</strong> avec <strong>READ COMMITTED</strong> comme niveau d'isolation par défaut.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Deux caissiers tentent simultanément de vendre le même produit. Le stock initial est de 10 unités. Le caissier A vend 3 unités, le caissier B vend 2 unités. Expliquer comment MVCC gère cette situation et quel sera le stock final.",
+        "niveau": "hard",
+        "reponse": "Avec MVCC en READ COMMITTED :<br/><br/>1. Les deux transactions lisent le stock initial = 10 (chacune voit la version COMMIT).<br/>2. Le caissier A met à jour le stock : 10 - 3 = 7. La transaction A acquiert un verrou exclusif sur la ligne.<br/>3. Le caissier B tente de mettre à jour le stock : il lit la version actuelle (7, car la transaction A est COMMIT). La transaction B calcule 7 - 2 = 5.<br/>4. Le stock final est <strong>5</strong>.<br/><br/>Cependant, il y a un <strong>risque de perte de mise à jour</strong> (lost update) si les deux transactions lisent avant que l'autre n'ait COMMIT. Pour éviter cela, il faut utiliser <strong>SELECT ... FOR UPDATE</strong> pour verrouiller explicitement la ligne avant la lecture.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quel mécanisme pourrait-on utiliser pour éviter la perte de mise à jour dans ce scénario ?",
+            "niveau": "hard",
+            "reponse": "Pour éviter la perte de mise à jour, on peut utiliser :<br/><br/><strong>1. Verrouillage explicite :</strong> <code>SELECT quantite FROM stock WHERE id_produit = X FOR UPDATE;</code><br/>Cela verrouille la ligne pour la durée de la transaction, empêchant les autres transactions de la modifier.<br/><br/><strong>2. Mise à jour conditionnelle :</strong> <code>UPDATE stock SET quantite = quantite - @vente WHERE id_produit = X AND quantite >= @vente;</code><br/>Cette approche vérifie que la quantité est suffisante et utilise la valeur actuelle de la colonne.<br/><br/><strong>3. Niveau d'isolation SERIALIZABLE :</strong> Empêcherait la perte de mise à jour mais au prix de performances réduites.<br/><br/>La solution recommandée est <strong>SELECT ... FOR UPDATE</strong> car elle combine performance et protection."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Quel est l'avantage du MVCC par rapport à un système de verrouillage pur dans ce contexte de gestion de stock ?",
+        "niveau": "medium",
+        "reponse": "Les avantages du MVCC dans ce contexte sont :<br/><br/>1. <strong>Pas de blocage des lectures :</strong> Les caissiers peuvent consulter le stock en lecture pendant que d'autres le modifient.<br/><br/>2. <strong>Meilleure concurrence :</strong> Plusieurs caissiers peuvent travailler simultanément sans se bloquer mutuellement.<br/><br/>3. <strong>Pas de verrous de lecture :</strong> Les opérations de lecture (SELECT) n'acquièrent pas de verrous, ce qui réduit les risques de deadlocks.<br/><br/>4. <strong>Performance :</strong> Les lectures sont plus rapides car elles ne nécessitent pas de gestion de verrous.<br/><br/>Le MVCC est particulièrement adapté aux environnements avec beaucoup de lectures et des écritures modérées."
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 5 : Comparaison Verrouillage vs MVCC",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Deux approches principales permettent de gérer la concurrence dans les bases de données :</p><ul><li><strong>Verrouillage (Locking) :</strong> Utilise des verrous pour protéger les données</li><li><strong>MVCC (Multi-Version Concurrency Control) :</strong> Utilise des versions multiples des données</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Comparer les deux approches selon les critères suivants : performance, risque de deadlock, cohérence des lectures.",
+        "niveau": "medium",
+        "reponse": "<table style='width: 100%; border-collapse: collapse; font-size: 0.9em;'><thead style='background-color: #2c3e50; color: white;'><tr><th style='padding: 8px; border: 1px solid #ddd;'>Critère</th><th style='padding: 8px; border: 1px solid #ddd;'>Verrouillage</th><th style='padding: 8px; border: 1px solid #ddd;'>MVCC</th></tr></thead><tbody><tr><td style='padding: 8px; border: 1px solid #ddd;'><strong>Performance</strong></td><td style='padding: 8px; border: 1px solid #ddd;'>Moins performant en concurrence élevée</td><td style='padding: 8px; border: 1px solid #ddd;'>Très performant (lectures sans verrous)</td></tr><tr><td style='padding: 8px; border: 1px solid #ddd;'><strong>Risque de deadlock</strong></td><td style='padding: 8px; border: 1px solid #ddd;'>Élevé</td><td style='padding: 8px; border: 1px solid #ddd;'>Faible (peu de verrous)</td></tr><tr><td style='padding: 8px; border: 1px solid #ddd;'><strong>Cohérence des lectures</strong></td><td style='padding: 8px; border: 1px solid #ddd;'>Dépend du niveau d'isolation</td><td style='padding: 8px; border: 1px solid #ddd;'>Dépend du niveau d'isolation</td></tr><tr><td style='padding: 8px; border: 1px solid #ddd;'><strong>Overhead</strong></td><td style='padding: 8px; border: 1px solid #ddd;'>Gestion des verrous coûteuse</td><td style='padding: 8px; border: 1px solid #ddd;'>Maintenance des versions coûteuse</td></tr></tbody></table>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quel approche est utilisée par PostgreSQL et quel est son niveau d'isolation par défaut ?",
+            "niveau": "medium",
+            "reponse": "PostgreSQL utilise <strong>MVCC</strong> avec un niveau d'isolation par défaut de <strong>READ COMMITTED</strong>. Cela signifie que :<br/>- Les lectures n'acquièrent pas de verrous<br/>- Les écritures acquièrent des verrous exclusifs<br/>- Une transaction ne voit que les données COMMIT avant le début de sa requête (pas de dirty reads)<br/>- Les non-repeatable reads sont possibles (une même donnée peut changer entre deux requêtes dans la même transaction)"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Quel est le principal inconvénient du MVCC en termes de ressources système ?",
+        "niveau": "medium",
+        "reponse": "Le principal inconvénient du MVCC est qu'il consomme <strong>plus d'espace disque</strong> car :<br/>1. Plusieurs versions d'une même ligne sont conservées<br/>2. Les anciennes versions peuvent s'accumuler (surtout avec les mises à jour fréquentes)<br/>3. Le <strong>VACUUM</strong> (dans PostgreSQL) ou des processus similaires sont nécessaires pour nettoyer les anciennes versions qui ne sont plus utilisées.<br/><br/>C'est le prix à payer pour obtenir de meilleures performances en concurrence."
+      }
+    ]
+  }
+]

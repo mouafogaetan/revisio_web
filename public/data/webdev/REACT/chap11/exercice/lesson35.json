@@ -1,0 +1,206 @@
+[
+  {
+    "intitule": "Architecture d'une application React avec Router et Context",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous devez structurer une application React comprenant : une page d'accueil publique, une page de profil utilisateur (protégée), une page de connexion, et un thème sombre/clair accessible partout.</p>",
+      "images": [
+        "Schéma d'architecture React : BrowserRouter contenant AuthProvider et ThemeProvider, avec Routes pour les pages publiques et privées"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire la hiérarchie des composants (arborescence) en plaçant correctement BrowserRouter, les Providers (AuthContext, ThemeContext), et les Routes.",
+        "niveau": "easy",
+        "reponse": "La structure typique : <BrowserRouter> englobe toute l'application. À l'intérieur, on place les Providers (ex: AuthProvider, ThemeProvider) car ils ont besoin d'être accessibles partout. Ensuite, on définit les Routes avec <Routes> et <Route>. Les routes protégées peuvent être enveloppées dans un composant PrivateRoute qui vérifie l'authentification via useContext.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer pourquoi les Providers doivent être placés à l'intérieur du BrowserRouter et non à l'extérieur.",
+        "niveau": "medium",
+        "reponse": "Les hooks comme useNavigate, useLocation, useParams ne fonctionnent que si le composant est un descendant de BrowserRouter. Si un Provider utilise useNavigate (ex: redirection après login), il doit être à l'intérieur de BrowserRouter. La pratique courante est de placer BrowserRouter au plus haut niveau (index.js) et d'y imbriquer tous les Providers.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Implémentation d'une route protégée avec Context",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Une application de e-commerce a besoin d'une page <code>/dashboard</code> accessible uniquement aux utilisateurs connectés. Vous disposez d'un <code>AuthContext</code> qui fournit <code>user</code> (objet utilisateur ou null) et <code>loading</code> (boolean).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire le composant <code>ProtectedRoute</code> qui redirige vers <code>/login</code> si l'utilisateur n'est pas authentifié, et affiche un indicateur de chargement tant que <code>loading</code> est true.",
+        "niveau": "medium",
+        "reponse": "<pre><code>\nimport { Navigate } from 'react-router-dom';\nimport { useAuth } from '../contexts/AuthContext';\n\nfunction ProtectedRoute({ children }) {\n  const { user, loading } = useAuth();\n\n  if (loading) {\n    return &lt;div&gt;Chargement...&lt;/div&gt;;\n  }\n\n  if (!user) {\n    return &lt;Navigate to=\"/login\" replace /&gt;;\n  }\n\n  return children;\n}\n\n// Utilisation dans App.jsx\n&lt;Route path=\"/dashboard\" element={\n  &lt;ProtectedRoute&gt;\n    &lt;Dashboard /&gt;\n  &lt;/ProtectedRoute&gt;\n} /&gt;\n</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Justifier l'utilisation de l'attribut <code>replace</code> dans <code>Navigate</code> plutôt qu'une simple redirection.",
+        "niveau": "medium",
+        "reponse": "L'attribut <code>replace</code> remplace l'entrée courante dans l'historique au lieu d'en ajouter une nouvelle. Cela évite que l'utilisateur, après s'être connecté et avoir été redirigé vers /dashboard, puisse cliquer sur 'Retour' et retomber sur la page de login. L'expérience utilisateur est meilleure.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Consommation d'API REST avec React Query",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un composant <code>ProductList</code> doit afficher une liste de produits depuis l'API <code>/api/products</code>. Vous utilisez React Query (@tanstack/react-query). L'API renvoie un tableau d'objets <code>{ id, name, price }</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire le code du composant utilisant <code>useQuery</code> pour récupérer les produits, avec gestion des états de chargement et d'erreur.",
+        "niveau": "medium",
+        "reponse": "<pre><code>\nimport { useQuery } from '@tanstack/react-query';\n\nconst fetchProducts = async () => {\n  const res = await fetch('/api/products');\n  if (!res.ok) throw new Error('Erreur réseau');\n  return res.json();\n};\n\nfunction ProductList() {\n  const { data: products, isLoading, error } = useQuery({\n    queryKey: ['products'],\n    queryFn: fetchProducts\n  });\n\n  if (isLoading) return &lt;p&gt;Chargement...&lt;/p&gt;;\n  if (error) return &lt;p&gt;Erreur : {error.message}&lt;/p&gt;;\n\n  return (\n    &lt;ul&gt;\n      {products.map(p => &lt;li key={p.id}&gt;{p.name} - {p.price}€&lt;/li&gt;)}\n    &lt;/ul&gt;\n  );\n}\n</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer l'avantage du <code>queryKey</code> et comment React Query utilise le caching.",
+        "niveau": "medium",
+        "reponse": "Le <code>queryKey</code> identifie de manière unique une requête. React Query utilise cette clé pour mettre en cache les données. Si le même queryKey est utilisé ailleurs, les données seront partagées sans nouvelle requête. Le cache est automatiquement invalidé après un certain temps (staleTime) et peut être revalidé manuellement via <code>queryClient.invalidateQueries()</code>. Cela réduit les appels réseau et améliore les performances.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Mutation avec React Query (création d'un produit)",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Dans la même application e-commerce, vous ajoutez un formulaire pour créer un nouveau produit (nom, prix). Après la création, vous devez rafraîchir la liste des produits et rediriger l'utilisateur vers la page du produit créé.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire le composant <code>CreateProduct</code> utilisant <code>useMutation</code> et les hooks de navigation.",
+        "niveau": "hard",
+        "reponse": "<pre><code>\nimport { useMutation, useQueryClient } from '@tanstack/react-query';\nimport { useNavigate } from 'react-router-dom';\n\nfunction CreateProduct() {\n  const queryClient = useQueryClient();\n  const navigate = useNavigate();\n\n  const mutation = useMutation({\n    mutationFn: (newProduct) =>\n      fetch('/api/products', {\n        method: 'POST',\n        headers: { 'Content-Type': 'application/json' },\n        body: JSON.stringify(newProduct)\n      }).then(res => res.json()),\n    onSuccess: (data) => {\n      queryClient.invalidateQueries(['products']);\n      navigate(`/products/${data.id}`);\n    }\n  });\n\n  const handleSubmit = (e) => {\n    e.preventDefault();\n    const formData = new FormData(e.target);\n    mutation.mutate({\n      name: formData.get('name'),\n      price: parseFloat(formData.get('price'))\n    });\n  };\n\n  return (\n    &lt;form onSubmit={handleSubmit}&gt;\n      &lt;input name=\"name\" placeholder=\"Nom\" required /&gt;\n      &lt;input name=\"price\" type=\"number\" placeholder=\"Prix\" required /&gt;\n      &lt;button type=\"submit\" disabled={mutation.isPending&gt;\n        {mutation.isPending ? 'Création...' : 'Créer'}\n      &lt;/button&gt;\n    &lt;/form&gt;\n  );\n}\n</code></pre>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer le rôle de <code>queryClient.invalidateQueries(['products'])</code>.",
+            "niveau": "medium",
+            "reponse": "Cette méthode marque la requête 'products' comme périmée (stale). React Query va automatiquement la re-exécuter en arrière-plan lors du prochain affichage du composant ProductList, garantissant que la liste affiche le nouveau produit ajouté sans avoir à recharger manuellement la page.",
+            "sousQuestions": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Déploiement sur Vercel : préparation et configuration",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous avez une application React (Vite) avec des variables d'environnement côté client (ex: <code>VITE_API_URL</code>) et un proxy pour l'API en développement.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Lister les étapes nécessaires pour déployer l'application sur Vercel (connexion GitHub, configuration des variables d'environnement, commandes de build).",
+        "niveau": "medium",
+        "reponse": "1. Pousser le code sur un dépôt GitHub. 2. Créer un compte sur Vercel et importer le dépôt. 3. Vercel détecte automatiquement Vite/React. 4. Configurer les variables d'environnement dans le dashboard Vercel (préfixées par VITE_ pour Vite). 5. Lancer le déploiement. 6. Configurer un domaine personnalisé si nécessaire. 7. Activer les déploiements automatiques sur chaque push sur la branche main.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer comment gérer le routage côté client (React Router) sur Vercel pour éviter les erreurs 404 lors du rechargement d'une page autre que l'index.",
+        "niveau": "hard",
+        "reponse": "Vercel nécessite un fichier <code>vercel.json</code> à la racine pour rediriger toutes les requêtes vers index.html :\n<pre><code>{\n  \"rewrites\": [{ \"source\": \"/(.*)\", \"destination\": \"/\" }]\n}</code></pre>\nSinon, une route comme /dashboard n'existe pas sur le serveur et renvoie 404. Avec cette configuration, le serveur sert toujours index.html et React Router prend le relais.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Déploiement sur Netlify avec fonctions serverless",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Votre application React nécessite une API backend simple (ex: envoi d'email de contact). Vous souhaitez utiliser les fonctions serverless (Netlify Functions) plutôt qu'un serveur dédié.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire la structure de dossiers pour une fonction Netlify et le code d'une fonction <code>send-email.js</code> qui répond aux requêtes POST.",
+        "niveau": "hard",
+        "reponse": "Structure : <code>netlify/functions/send-email.js</code>. Code :\n<pre><code>\nexports.handler = async (event) => {\n  if (event.httpMethod !== 'POST') {\n    return { statusCode: 405, body: 'Method Not Allowed' };\n  }\n  const { email, message } = JSON.parse(event.body);\n  // Logique d'envoi d'email (ex: avec nodemailer)\n  return {\n    statusCode: 200,\n    body: JSON.stringify({ success: true })\n  };\n};\n</code></pre>\nLe frontend appelle <code>/.netlify/functions/send-email</code>.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment tester cette fonction en local avant déploiement ?",
+            "niveau": "medium",
+            "reponse": "Installer Netlify CLI (<code>npm install -g netlify-cli</code>), puis exécuter <code>netlify dev</code> à la racine du projet. Netlify émule l'environnement de production et les fonctions serverless, permettant de les appeler localement via <code>http://localhost:8888/.netlify/functions/send-email</code>.",
+            "sousQuestions": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Projet complet : déploiement d'une application avec API externe",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous avez développé une application météo React qui utilise l'API OpenWeatherMap. L'API nécessite une clé API que vous ne voulez pas exposer côté client. Vous décidez de créer une fonction serverless (Vercel ou Netlify) qui agit comme proxy.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer pourquoi il est dangereux d'inclure la clé API directement dans le code frontend. Proposer une architecture utilisant une fonction serverless.",
+        "niveau": "hard",
+        "reponse": "Une clé API exposée dans le code frontend peut être récupérée par n'importe quel utilisateur via les outils de développement (Network tab, sources). Un attaquant pourrait l'utiliser à son compte, générant des coûts ou dépassant les quotas. Architecture sécurisée : le frontend appelle <code>/api/weather?city=Douala</code>, la fonction serverless ajoute la clé API secrète (stockée dans les variables d'environnement) et appelle l'API OpenWeatherMap, puis renvoie la réponse au frontend. La clé n'est jamais exposée.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Rédiger le code de la fonction serverless (ex: Vercel) qui reçoit la ville en paramètre, appelle l'API météo avec la clé secrète, et renvoie les données.",
+        "niveau": "very hard",
+        "reponse": "<pre><code>\n// api/weather.js (Vercel)\nexport default async function handler(req, res) {\n  const { city } = req.query;\n  if (!city) {\n    return res.status(400).json({ error: 'City required' });\n  }\n  const apiKey = process.env.OPENWEATHER_API_KEY;\n  const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`;\n  try {\n    const response = await fetch(url);\n    const data = await response.json();\n    res.status(200).json(data);\n  } catch (error) {\n    res.status(500).json({ error: 'API error' });\n  }\n}\n</code></pre>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation des performances avant déploiement",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Votre application React est prête pour la production, mais les temps de chargement initiaux sont élevés (bundle volumineux). Vous devez appliquer des optimisations.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Citer trois techniques d'optimisation applicables avant déploiement sur Vercel/Netlify.",
+        "niveau": "medium",
+        "reponse": "1. Code splitting avec <code>React.lazy()</code> et <code>Suspense</code> pour charger les pages à la demande. 2. Optimisation des images : utiliser des formats modernes (WebP) et lazy loading. 3. Tree shaking : s'assurer que les imports sont nommés et que les dépendances inutilisées sont supprimées. 4. Compression Gzip/Brotli (Vercel/Netlify l'activent par défaut). 5. Minification du CSS et JS (fait par Vite par défaut).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer comment Vercel gère automatiquement la mise en cache des assets statiques (fichiers avec hash).",
+        "niveau": "medium",
+        "reponse": "Vite génère des noms de fichiers avec un hash basé sur le contenu (ex: main.a3f5d9.js). Vercel ajoute automatiquement des en-têtes HTTP de cache longue durée (Cache-Control: max-age=31536000) pour ces fichiers, car toute modification du contenu change le nom du fichier. Les navigateurs conservent ces fichiers en cache indéfiniment, accélérant les visites suivantes. Le fichier index.html est quant à lui configuré pour ne pas être mis en cache (ou avec un cache court) afin de toujours récupérer les dernières références.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

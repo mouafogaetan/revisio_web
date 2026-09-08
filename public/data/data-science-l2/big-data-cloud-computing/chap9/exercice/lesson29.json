@@ -1,0 +1,117 @@
+[
+  {
+    "intitule": "Design d'un Pipeline de Données sur AWS pour une Entreprise de Vente en Ligne",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous êtes Data Engineer dans une entreprise de vente en ligne (e-commerce) qui souhaite moderniser son architecture de données sur AWS. L'entreprise génère quotidiennement des données provenant de :</p><ul><li>Logs d'activité des utilisateurs (JSON) envoyés via Amazon Kinesis</li><li>Base de données transactionnelle PostgreSQL contenant les commandes, les clients et les produits</li><li>Fichiers CSV de catalogues produits fournis par les fournisseurs</li></ul><p>L'objectif est de construire un pipeline de données qui :</p><ul><li>Ingère et stocke toutes les données brutes dans un Data Lake (S3)</li><li>Transforme et nettoie les données avec AWS Glue</li><li>Permet des analyses rapides via Amazon Athena ou Redshift</li><li>Rend les données accessibles aux équipes Data Science pour l'entraînement de modèles</li></ul><p><b>Questions :</b></p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez comment vous structureriez les dossiers dans S3 pour ce pipeline. Proposez une hiérarchie de dossiers avec différents niveaux (bronze, silver, gold) et justifiez votre choix.",
+        "niveau": "medium",
+        "reponse": "<p>La structure recommandée pour S3 serait :</p><pre>s3://entreprise-data/\n├── bronze/              # Données brutes, format original\n│   ├── kinesis/         # Logs en JSON<br>│   │   └── annee=YYYY/mois=MM/jour=JJ/<br>│   ├── postgres/         # Export quotidien de PostgreSQL<br>│   │   └── annee=YYYY/mois=MM/jour=JJ/<br>│   └── fournisseurs/     # Fichiers CSV des fournisseurs<br>│       └── annee=YYYY/mois=MM/jour=JJ/<br>├── silver/              # Données nettoyées et validées (Parquet)<br>│   ├── logs/            # Logs nettoyés<br>│   ├── commandes/       # Commandes transformées<br>│   ├── clients/         # Clients dédoublonnés<br>│   └── produits/        # Catalogue enrichi<br>└── gold/                # Données agrégées, prêtes pour l'analyse<br>    ├── factures/        # Tables de faits<br>    └── dimensions/      # Tables de dimensions<br></pre><p>Cette structure (bronze/silver/gold) permet : un stockage immuable des données brutes (bronze), des données nettoyées et standardisées (silver), et des données prêtes pour l'analyse (gold). Le partitionnement par date facilite la gestion, l'optimisation des requêtes et la purge des données.</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quels formats de fichier recommanderiez-vous pour chaque niveau et pourquoi ?",
+            "niveau": "medium",
+            "reponse": "<p>Recommandations :</p><ul><li><b>Bronze</b> : Conserver le format original (JSON, CSV, etc.) pour garder une trace de la donnée brute. C'est la source de vérité.</li><li><b>Silver</b> : Utiliser <b>Parquet</b> pour plusieurs raisons :<ul><li>Stockage colonnaire optimisé (réduction de 70-90% de la taille)</li><li>Support de la compression (Snappy, Gzip)</li><li>Schéma intégré (auto-descriptif)</li><li>Performances améliorées pour les requêtes analytiques</li></ul></li><li><b>Gold</b> : Également en Parquet, éventuellement partitionné par date pour des requêtes plus rapides.</li></ul>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Justifiez le choix des services AWS Glue et Athena dans ce pipeline. Quand utiliseriez-vous Redshift à la place d'Athena ?",
+            "niveau": "hard",
+            "reponse": "<p><b>AWS Glue</b> : Service d'ETL serverless qui permet de :</p><ul><li>Découvrir automatiquement les schémas (crawlers)</li><li>Transformer les données (Spark) avec une infrastructure gérée</li><li>Maintenir un catalogue de données (Data Catalog)</li></ul><p><b>Amazon Athena</b> : Service de requêtage serverless qui permet d'interroger directement les données dans S3 avec SQL sans avoir à charger de données dans un entrepôt. Idéal pour :</p><ul><li>Analyses ad-hoc</li><li>Exploration de données</li><li>Données historiques peu sollicitées</li></ul><p><b>Redshift</b> serait préférable pour :</p><ul><li>Requêtes complexes et performantes sur de gros volumes</li><li>Jointures multiples et sous-requêtes</li><li>Workloads prévisibles avec des performances constantes</li><li>Besoin de cache pour des dashboards en temps réel</li></ul><p>Une architecture hybride (Athena pour l'exploration, Redshift pour les reports fréquents) est souvent optimale.</p>"
+          },
+          {
+            "numero": "1.c",
+            "texte": "Proposez une stratégie de partitionnement pour optimiser les performances des requêtes Athena et les coûts.",
+            "niveau": "hard",
+            "reponse": "<p>Le partitionnement est essentiel pour Athena car le coût est basé sur la quantité de données scannées. Stratégie :</p><ul><li><b>Partitionner par date</b> : <code>annee=YYYY/mois=MM/jour=JJ</code> ou simplement <code>dt=YYYY-MM-DD</code></li><li><b>Partitionner par région ou pays</b> pour les données géolocalisées : <code>pays=XX/</code></li><li><b>Partitionner par type de données</b> : <code>source=kinesis/</code>, <code>source=postgres/</code></li></ul><p><b>Optimisation supplémentaire :</b></p><ul><li>Utiliser la compression (Snappy pour Parquet)</li><li>Limiter les colonnes dans les requêtes (SELECT sur les colonnes utiles uniquement)</li><li>Utiliser le partitionnement avec des prédicats dans la clause WHERE</li><li>Éviter les partitions trop petites (moins de 1000 fichiers par partition) pour ne pas surcharger le catalogue</li></ul>"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Décrivez le workflow complet d'intégration des données PostgreSQL dans ce pipeline. Comment géreriez-vous les mises à jour et les suppressions dans la base source ?",
+        "niveau": "hard",
+        "reponse": "<p>Pour l'intégration des données PostgreSQL :</p><ul><li><b>Export initial</b> : Utiliser AWS DMS (Database Migration Service) pour une migration full-load initiale</li><li><b>Capture des changements (CDC)</b> : Utiliser DMS en mode CDC (Change Data Capture) pour capturer les INSERT, UPDATE, DELETE</li><li><b>Stockage Bronze</b> : Stocker les événements CDC dans S3 (format JSON ou Parquet) avec les métadonnées (opération, timestamp, version)</li></ul><p><b>Gestion des mises à jour dans le layer Silver :</b></p><ul><li>Implémenter une logique de type <b>SCD Type 2</b> (Slowly Changing Dimension) pour les dimensions</li><li>Pour les tables de faits, utiliser les données avec l'opération correspondante</li><li>Effectuer des upserts (UPDATE ou INSERT) dans le Data Lake</li></ul><p><b>Exemple de logique de transformation avec Glue :</b></p><pre># Pseudo-code pour le traitement des CDC<br>for record in cdc_records:<br>    if record.op == 'INSERT':<br>        insert_into_silver(record)<br>    elif record.op == 'UPDATE':<br>        update_silver(record, effective_date=current_date)<br>    elif record.op == 'DELETE':<br>        mark_as_deleted(record, date_deleted=current_date)<br></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "L'équipe Data Science souhaite accéder aux données historiques (3 dernières années) pour entraîner des modèles de prédiction. Expliquez comment vous organiseriez les données pour faciliter cet accès.",
+        "niveau": "medium",
+        "reponse": "<p>Pour faciliter l'accès des Data Scientists :</p><ul><li><b>Créer une zone 'feature_store'</b> dans S3 (ou utiliser SageMaker Feature Store) avec des features précalculées</li><li><b>Structurer les données par cas d'usage</b> :<ul><li><code>s3://entreprise-data/features/predictions_ventes/</code></li><li><code>s3://entreprise-data/features/segmentation_clients/</code></li></ul></li><li><b>Fournir des vues matérialisées</b> via Athena ou Redshift avec des colonnes prêtes à être utilisées pour le ML</li><li><b>Proposer des échantillons</b> pour le développement (par exemple, un mois de données)</li><li><b>Documenter le catalogue</b> des données (schéma, description, ligne de sang)</li></ul><p>Il est aussi important de :</p><ul><li>Garantir la qualité des données (gestion des NULL, des outliers)</li><li>Mettre en place un versioning des features</li><li>Rendre les données accessible via des APIs ou des datasets structurés</li></ul>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Mise en Œuvre de l'Ingestion de Données dans S3",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Une entreprise reçoit quotidiennement des fichiers de logs au format JSON compressé (gzip) dans un bucket S3. Vous devez automatiser l'ingestion et la transformation de ces données.</p><p>Voici un exemple de structure de log :</p><pre>{\n    \"user_id\": \"12345\",\n    \"event_type\": \"page_view\",\n    \"page_url\": \"/products/laptop\",\n    \"timestamp\": \"2026-08-07T10:15:30Z\",\n    \"session_id\": \"sess_abc123\"\n}</pre><p><b>Questions :</b></p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédigez un script AWS Glue (PySpark) pour lire les fichiers JSON, les transformer en Parquet et les partitionner par date (jour).",
+        "niveau": "hard",
+        "reponse": "<pre>from pyspark.sql import SparkSession<br>from pyspark.sql.functions import col, to_date, from_utc_timestamp, year, month, day<br>from awsglue.transforms import *<br>from awsglue.utils import getResolvedOptions<br>import sys<br><br>args = getResolvedOptions(sys.argv, ['JOB_NAME'])<br>spark = SparkSession.builder.appName(args['JOB_NAME']).getOrCreate()<br><br># Lire les logs JSON depuis S3<br>input_path = \"s3://entreprise-data/bronze/logs/\"<br>df = spark.read.json(input_path)<br><br># Nettoyage et transformation<br>df_transformed = df \\<br>    .withColumn(\"date\", to_date(\"timestamp\")) \\<br>    .withColumn(\"year\", year(col(\"date\"))) \\<br>    .withColumn(\"month\", month(col(\"date\"))) \\<br>    .withColumn(\"day\", day(col(\"date\"))) \\<br>    .filter(col(\"user_id\").isNotNull()) \\<br>    .dropDuplicates([\"user_id\", \"timestamp\", \"event_type\"])<br><br># Écrire en Parquet partitionné<br>output_path = \"s3://entreprise-data/silver/logs/\"<br>df_transformed.write \\<br>    .mode(\"append\") \\<br>    .partitionBy(\"year\", \"month\", \"day\") \\<br>    .parquet(output_path)</pre><p><b>Explication des choix :</b></p><ul><li>Utilisation de <code>to_date()</code> pour extraire la date</li><li>Nettoyage : suppression des NULL et des doublons</li><li>Partitionnement par année/mois/jour pour optimiser les requêtes Athena</li><li>Mode append pour ajouter les nouveaux logs sans écraser les existants</li></ul>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez comment vous géreriez les erreurs de parsing des fichiers JSON mal formés ou corrompus.",
+        "niveau": "medium",
+        "reponse": "<p>Stratégie de gestion des erreurs :</p><ul><li><b>Utiliser un mode 'PERMISSIVE'</b> : <code>spark.read.option(\"mode\", \"PERMISSIVE\").json()</code> pour ignorer les lignes mal formées</li><li><b>Collecter les erreurs</b> dans une table de logs d'erreurs :<pre>malformed_df = spark.read.option(\"mode\", \"FAILFAST\") ...<br># Capturer les exceptions et stocker dans S3</pre></li><li><b>Mettre en place des alertes</b> via Amazon CloudWatch pour notifier si le taux d'erreur dépasse un seuil (ex: 5%)</li><li><b>Faire des retries</b> en cas d'erreur temporaire (avec AWS Glue retry policy)</li><li><b>Valider les données</b> avec des checks : nombre de colonnes, types de données, champs obligatoires</li></ul><p>Les fichiers en erreur sont déplacés vers un dossier <code>quarantine/</code> pour une analyse manuelle ultérieure.</p>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Comparez AWS Glue et AWS Lambda pour l'ingestion et la transformation de données. Dans quel cas utiliseriez-vous chaque service ?",
+        "niveau": "medium",
+        "reponse": "<p><b>AWS Glue :</b></p><ul><li><b>Avantages</b> : Gère les gros volumes de données, supporte Spark pour des transformations complexes, offre un Data Catalog, gère les partitions automatiquement</li><li><b>Cas d'usage</b> : ETL batch (quotidien, horaire), transformations complexes (jointures, agrégations), données volumineuses (> 10GB)</li></ul><p><b>AWS Lambda :</b></p><ul><li><b>Avantages</b> : Serverless, exécution rapide, réponse événementielle en temps réel, faible coût pour de petits volumes</li><li><b>Limites</b> : Temps d'exécution limité (15 minutes max), mémoire limitée (10GB), pas adapté aux gros volumes</li><li><b>Cas d'usage</b> : Événements S3 (trigger à l'upload), transformations légères, data validation, notifications</li></ul><p><b>Recommandation :</b> Utiliser Lambda pour des transformations de validation simples à l'arrivée des données, et Glue pour le traitement batch lourd.</p>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation des Coûts et des Performances du Pipeline",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous avez mis en place un pipeline de données sur AWS qui ingère, transforme et interroge des données. Cependant, les coûts mensuels sont plus élevés que prévu. Vous devez analyser la situation et proposer des optimisations.</p><p><b>Données du contexte :</b></p><ul><li>Volume de données : 5 TB par jour en bronze, 1 TB par jour en silver (Parquet)</li><li>Nombre de requêtes Athena par jour : environ 1000, scannant en moyenne 500 GB chacune</li><li>Jobs Glue : 3 jobs quotidiens de 2 heures chacun (DPU = 10)</li><li>Stockage S3 : 6 mois de données conservés</li></ul><p><b>Questions :</b></p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Calculez le coût mensuel estimé du pipeline (année 2026) en utilisant les données fournies. Utilisez les tarifs AWS de 2026 pour justifier vos calculs.",
+        "niveau": "hard",
+        "reponse": "<p><b>Hypothèses de tarification AWS (2026) :</b></p><ul><li>Athena : $5.00 par TB scanné</li><li>Glue : $0.44 par DPU-heure (10 DPU = 20 heures par jour)</li><li>S3 Standard : $0.023 par GB/mois</li><li>S3 Intelligent-Tiering : $0.021 par GB/mois</li></ul><p><b>Calculs :</b></p><ul><li><b>Athena</b> : 1000 requêtes × 500 GB = 500 000 GB = 500 TB scannés par jour → 500 × 30 = 15 000 TB/mois → 15 000 × $5 = <b>$75 000/mois</b></li><li><b>Glue</b> : 10 DPU × 2 heures × 3 jobs = 60 DPU-heures/jour → 60 × 30 = 1800 DPU-heures/mois → 1800 × $0.44 = <b>$792/mois</b></li><li><b>S3 (6 mois de données en bronze et silver)</b> :<ul><li>Bronze : 5 TB × 30 jours × 6 mois = 900 TB → 900 × 1024 = 921 600 GB → 921 600 × $0.023 = <b>$21 197/mois</b></li><li>Silver : 1 TB × 30 jours × 6 mois = 180 TB → 180 × 1024 = 184 320 GB → 184 320 × $0.023 = <b>$4 239/mois</b></li><li>Total S3 = <b>$25 436/mois</b></li></ul></li><li><b>Coût total mensuel estimé</b> : $75 000 + $792 + $25 436 = <b>$101 228/mois</b></li></ul><p><b>Observation</b> : Athena représente 74% du coût total.</p>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposez trois optimisations pour réduire significativement les coûts du pipeline, en justifiant leur impact estimé.",
+        "niveau": "hard",
+        "reponse": "<p><b>Optimisation 1 : Partitionnement et compression des données Athena</b></p><ul><li>Action : Ajouter un partitionnement par date (année/mois/jour) et utiliser le format Parquet avec compression Snappy</li><li>Impact : Réduction de la quantité de données scannée de 90% → 50 TB/jour au lieu de 500 TB</li><li>Économie : ($75 000 - $7 500) = <b>$67 500/mois</b></li></ul><p><b>Optimisation 2 : Utiliser S3 Intelligent-Tiering pour les données</b></p><ul><li>Action : Déplacer les données bronze vers S3 Intelligent-Tiering (90 jours) et S3 Glacier Flexible Retrieval (6 mois)</li><li>Impact : Réduction des coûts de stockage de 50% (bronze) et 70% (anciennes données)</li><li>Économie : $25 436 × 30% = <b>$7 630/mois</b></li></ul><p><b>Optimisation 3 : Mettre en cache les requêtes Athena avec Redshift</b></p><ul><li>Action : Créer des tables matérialisées dans Redshift pour les requêtes les plus fréquentes (top 20% des requêtes)</li><li>Impact : Réduction de 80% des requêtes Athena (celles fréquentes) → 200 requêtes/jour au lieu de 1000</li><li>Économie : ($7 500 × 30) - ($0.25 × 200 × 30) - (Redshift cost $1 000) = <b>$6 500/mois</b></li></ul><p><b>Économie totale estimée</b> : $67 500 + $7 630 + $6 500 = <b>$81 630/mois</b> (réduction de 81%)</p>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Discutez les compromis entre performance et coût dans le choix d'un entrepôt de données. Quand utiliseriez-vous Redshift par rapport à Athena ?",
+        "niveau": "medium",
+        "reponse": "<p><b>Comparaison Athena vs Redshift :</b></p><table border='1'><tr><th>Critère</th><th>Athena</th><th>Redshift</th></tr><tr><td><b>Modèle de coût</b></td><td>Pay-per-query (données scannées)</td><td>Pay-per-node (ressources provisionnées)</td></tr><tr><td><b>Performance</b></td><td>Variable, dépend de la taille des données</td><td>Constante et prévisible</td></tr><tr><td><b>Latence</b></td><td>Secondes à minutes</td><td>Millisecondes à secondes</td></tr><tr><td><b>Gestion</b></td><td>Serverless (0 gestion)</td><td>Nécessite de l'administration (index, vacuum, maintenance)</td></tr></table><p><b>Quand utiliser chaque service :</b></p><ul><li><b>Athena</b> : Analyses ad-hoc, exploration, données historiques rarement utilisées, équipes avec besoin de flexibilité</li><li><b>Redshift</b> : Dashboards en temps réel, workloads prévisibles, join complexes sur gros volumes, besoin de performances constantes</li></ul><p><b>Compromis</b> : Le coût de Redshift est fixe (ex: $0.25/heure pour une instance dc2.large, soit $180/mois) mais peut être plus économique que Athena pour des requêtes fréquentes. Pour 1000 requêtes/jour scannant 50 GB chacun (après optimisation), Athena coûterait $7 500/mois, tandis que Redshift pourrait être plus avantageux.</p>",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

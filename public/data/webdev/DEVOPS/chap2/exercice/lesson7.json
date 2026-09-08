@@ -1,0 +1,108 @@
+[
+  {
+    "intitule": "Automatisation de sauvegarde avec Bash",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>En tant qu'administrateur système d'une petite entreprise, vous devez automatiser la sauvegarde du répertoire <code>/var/www/monsite</code> tous les jours à 2h du matin. Les sauvegardes doivent être compressées (<code>.tar.gz</code>), nommées avec la date du jour (<code>backup_AAAA-MM-JJ.tar.gz</code>) et conservées pendant 7 jours.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire un script Bash complet qui réalise cette sauvegarde et supprime les sauvegardes de plus de 7 jours.",
+        "niveau": "medium",
+        "reponse": "```bash\n#!/bin/bash\nSOURCE=\"/var/www/monsite\"\nDEST=\"/backups\"\nDATE=$(date +%Y-%m-%d)\nFILENAME=\"backup_$DATE.tar.gz\"\nmkdir -p \"$DEST\"\ntar -czf \"$DEST/$FILENAME\" \"$SOURCE\"\nfind \"$DEST\" -name \"backup_*.tar.gz\" -type f -mtime +7 -delete\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer à quoi sert la commande `find` dans ce script.",
+            "niveau": "easy",
+            "reponse": "La commande `find` cherche dans le répertoire de destination tous les fichiers dont le nom commence par 'backup_' et se termine par '.tar.gz', qui sont des fichiers normaux (`-type f`) et dont la date de modification est supérieure à 7 jours (`-mtime +7`), puis les supprime avec `-delete`."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Proposer une amélioration pour exécuter ce script automatiquement chaque jour à 2h du matin.",
+            "niveau": "medium",
+            "reponse": "Ajouter une ligne dans la crontab de l'utilisateur root : `0 2 * * * /chemin/vers/script.sh`."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Vérification de l'espace disque",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Un serveur Linux peut tomber en panne si l'espace disque est saturé. Écrivez un script Bash qui vérifie l'utilisation du disque pour la partition racine (<code>/</code>) et envoie un avertissement si l'utilisation dépasse 80%.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Compléter le script suivant (en utilisant `df` et `awk`) pour afficher un message d'alerte si le seuil est dépassé.",
+        "niveau": "easy",
+        "reponse": "```bash\n#!/bin/bash\nSEUIL=80\nUTILISATION=$(df / | awk 'NR==2 {print $5}' | sed 's/%//')\nif [ $UTILISATION -gt $SEUIL ]; then\n    echo \"Alerte : espace disque sur / à ${UTILISATION}% dépasse le seuil de ${SEUIL}%\"\nfi\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Identifier le rôle de `awk 'NR==2 {print $5}'` dans cette commande.",
+            "niveau": "easy",
+            "reponse": "`awk` sélectionne la deuxième ligne (`NR==2`) de la sortie de `df /` (celle correspondant à la partition racine) et extrait la cinquième colonne (le pourcentage d'utilisation)."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion des utilisateurs avec arguments",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Dans une entreprise, on vous demande de créer un script Bash nommé <code>gestion_utilisateur.sh</code> capable de :</p>\n<ul>\n  <li>Ajouter un utilisateur (<code>./gestion_utilisateur.sh add nom_utilisateur</code>)</li>\n  <li>Supprimer un utilisateur (<code>./gestion_utilisateur.sh del nom_utilisateur</code>)</li>\n  <li>Afficher l'aide (<code>./gestion_utilisateur.sh help</code>)</li>\n</ul>\n<p>Le script doit vérifier que l'exécuteur a les droits root (ou utiliser <code>sudo</code>).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédiger le script complet en utilisant `case`, `$1`, `$2`, et la vérification des privilèges.",
+        "niveau": "hard",
+        "reponse": "```bash\n#!/bin/bash\nif [[ $EUID -ne 0 ]]; then\n   echo \"Ce script doit être exécuté en tant que root (sudo)\"\n   exit 1\nfi\ncase $1 in\n    add)\n        useradd \"$2\" && echo \"Utilisateur $2 ajouté avec succès.\"\n        ;;\n    del)\n        userdel -r \"$2\" && echo \"Utilisateur $2 supprimé avec son home.\"\n        ;;\n    help)\n        echo \"Usage: $0 {add|del|help} [nom_utilisateur]\"\n        ;;\n    *)\n        echo \"Commande inconnue. Utilisez $0 help\"\n        exit 1\n        ;;\nesac\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer pourquoi `userdel -r` est utilisé plutôt que `userdel` seul.",
+            "niveau": "medium",
+            "reponse": "L'option `-r` supprime également le répertoire personnel et le mail spool de l'utilisateur, évitant ainsi de laisser des fichiers orphelins sur le système."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Automatisation du déploiement d'une application web",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous gérez un serveur web (Apache/Nginx) pour plusieurs sites. Écrivez un script Bash qui :</p>\n<ul>\n  <li>Reçoit en paramètre le nom du site et l’URL du dépôt Git contenant les sources.</li>\n  <li>Clone ou met à jour le dépôt dans <code>/var/www/$SITE</code>.</li>\n  <li>Vérifie l’existence d’un fichier <code>requirements.txt</code> pour installer les dépendances Python avec pip.</li>\n  <li>Redémarre le service web si nécessaire.</li>\n</ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire le script en respectant les bonnes pratiques (vérification des erreurs, fonctions).",
+        "niveau": "very hard",
+        "reponse": "```bash\n#!/bin/bash\nset -e  # Arrêt à la première erreur\n\ndeploy() {\n    local SITE=$1\n    local REPO_URL=$2\n    local DIR=\"/var/www/$SITE\"\n\n    if [ -d \"$DIR/.git\" ]; then\n        echo \"Mise à jour du dépôt existant...\"\n        cd \"$DIR\" && git pull\n    else\n        echo \"Clonage du dépôt...\"\n        git clone \"$REPO_URL\" \"$DIR\"\n    fi\n\n    if [ -f \"$DIR/requirements.txt\" ]; then\n        echo \"Installation des dépendances Python...\"\n        pip install -r \"$DIR/requirements.txt\"\n    fi\n\n    systemctl restart apache2 || systemctl restart nginx\n    echo \"Déploiement de $SITE terminé avec succès.\"\n}\n\nif [ $# -ne 2 ]; then\n    echo \"Usage: $0 <nom_site> <url_git>\"\n    exit 1\nfi\n\ndeploy \"$1\" \"$2\"\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Justifier l'utilisation de `set -e` en début de script.",
+            "niveau": "medium",
+            "reponse": "`set -e` force le script à s’arrêter immédiatement si une commande retourne un code d’erreur différent de zéro. Cela évite de continuer l'exécution dans un état incohérent."
+          }
+        ]
+      }
+    ]
+  }
+]

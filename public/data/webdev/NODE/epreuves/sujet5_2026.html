@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+  "matiere": "Backend avec Node.js",
+  "classe": "Développement Web",
+  "sequence": "Séquence 5",
+  "anneeScolaire": "2025-2026",
+  "exercices": [
+    {
+      "titre": "Exercice 1 : Modules et système de fichiers (4 pts)",
+      "points": "4 pts",
+      "enonce": "<div style='background-color:#f5f5f5; padding:15px; border-radius:8px; color:#1a1a1a; font-size:1em;'><p style='font-weight:bold;'>Consigne :</p><p>Vous devez écrire un script Node.js qui lit un fichier <code>data.json</code> contenant un tableau d'objets, effectue un traitement, et écrit le résultat dans un nouveau fichier.</p><p>Le fichier <code>data.json</code> contient la liste des personnages suivants :</p><pre style='background-color:#2d2d2d; color:#f8f8f2; padding:15px; border-radius:5px; overflow-x:auto; font-size:0.9em;'>[\n  { \"nom\": \"Iron Man\", \"serie\": \"Iron Man\", \"annee\": 1963 },\n  { \"nom\": \"Spider-Man\", \"serie\": \"The Amazing Spider-Man\", \"annee\": 1962 },\n  { \"nom\": \"Black Panther\", \"serie\": \"Black Panther\", \"annee\": 1966 },\n  { \"nom\": \"Captain America\", \"serie\": \"Captain America\", \"annee\": 1941 }\n]</pre><p>Votre programme doit :</p><ul><li>Lire le fichier <code>data.json</code> de manière asynchrone</li><li>Ajouter une propriété <code>decennie</code> à chaque personnage (ex: 1960)</li><li>Écrire le résultat dans un fichier <code>output.json</code> avec une indentation de 2 espaces</li></ul></div>",
+      "questions": [
+        {
+          "question": "<div style='margin-bottom:10px;'><strong>1.1 (2 pts)</strong> Écrivez le code complet du script en utilisant les modules <code>fs</code> et <code>path</code> de Node.js.</div>",
+          "reponse": "<pre style='background-color:#2d2d2d; color:#f8f8f2; padding:15px; border-radius:5px; overflow-x:auto;'>const fs = require('fs');\nconst path = require('path');\n\nconst inputPath = path.join(__dirname, 'data.json');\nconst outputPath = path.join(__dirname, 'output.json');\n\nfs.readFile(inputPath, 'utf8', (err, data) => {\n  if (err) {\n    console.error('Erreur de lecture :', err);\n    return;\n  }\n  try {\n    const personnages = JSON.parse(data);\n    const resultat = personnages.map(p => ({\n      ...p,\n      decennie: Math.floor(p.annee / 10) * 10\n    }));\n    fs.writeFile(outputPath, JSON.stringify(resultat, null, 2), (err) => {\n      if (err) console.error('Erreur d\\'écriture :', err);\n      else console.log('Fichier output.json créé avec succès');\n    });\n  } catch (e) {\n    console.error('Erreur de parsing JSON :', e);\n  }\n});</pre>"
+        },
+        {
+          "question": "<div style='margin-bottom:10px;'><strong>1.2 (1 pt)</strong> Expliquez la différence entre <code>readFileSync</code> et <code>readFile</code>. Quel est l'avantage d'utiliser la version asynchrone dans une application serveur ?</div>",
+          "reponse": "<code>readFileSync</code> est bloquant : il attend que le fichier soit lu avant de continuer l'exécution du code. <code>readFile</code> est non-bloquant : il utilise un callback qui est exécuté une fois la lecture terminée. L'avantage de la version asynchrone est qu'elle ne bloque pas le thread principal, ce qui permet à l'application de traiter d'autres requêtes simultanément, ce qui est crucial pour un serveur Node.js."
+        },
+        {
+          "question": "<div style='margin-bottom:10px;'><strong>1.3 (1 pt)</strong> Comment utiliseriez-vous <code>fs.promises</code> pour réécrire ce code avec <code>async/await</code> ?</div>",
+          "reponse": "<pre style='background-color:#2d2d2d; color:#f8f8f2; padding:15px; border-radius:5px; overflow-x:auto;'>const fs = require('fs').promises;\nconst path = require('path');\n\nasync function traiterFichier() {\n  try {\n    const data = await fs.readFile(path.join(__dirname, 'data.json'), 'utf8');\n    const personnages = JSON.parse(data);\n    const resultat = personnages.map(p => ({\n      ...p,\n      decennie: Math.floor(p.annee / 10) * 10\n    }));\n    await fs.writeFile(path.join(__dirname, 'output.json'), JSON.stringify(resultat, null, 2));\n    console.log('Fichier output.json créé avec succès');\n  } catch (err) {\n    console.error('Erreur :', err);\n  }\n}\ntraiterFichier();</pre>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 2 : Serveur HTTP et routes (4 pts)",
+      "points": "4 pts",
+      "enonce": "<div style='background-color:#f5f5f5; padding:15px; border-radius:8px; color:#1a1a1a; font-size:1em;'><p style='font-weight:bold;'>Consigne :</p><p>En utilisant le module <code>http</code> de Node.js (sans Express), créez un serveur HTTP qui expose une API REST simple.</p><p>Le serveur doit répondre aux routes suivantes :</p><ul><li><code>GET /</code> → retourne un message JSON <code>{ \"message\": \"Bienvenue sur mon API !\" }</code></li><li><code>GET /personnages</code> → retourne la liste des personnages (voir Exercice 1) en JSON</li><li><code>GET /personnages/:id</code> → retourne le personnage correspondant à l'id (1-based)</li><li><code>POST /personnages</code> → permet d'ajouter un nouveau personnage (les données sont lues depuis le body)</li></ul></div>",
+      "questions": [
+        {
+          "question": "<div style='margin-bottom:10px;'><strong>2.1 (2 pts)</strong> Écrivez le code du serveur HTTP en utilisant uniquement le module <code>http</code>.</div>",
+          "reponse": "<pre style='background-color:#2d2d2d; color:#f8f8f2; padding:15px; border-radius:5px; overflow-x:auto;'>const http = require('http');\nconst url = require('url');\nconst { readFile } = require('fs').promises;\n\nconst personnages = [\n  { id: 1, nom: 'Iron Man', serie: 'Iron Man', annee: 1963 },\n  { id: 2, nom: 'Spider-Man', serie: 'The Amazing Spider-Man', annee: 1962 },\n  { id: 3, nom: 'Black Panther', serie: 'Black Panther', annee: 1966 }\n];\n\nconst server = http.createServer((req, res) => {\n  const parsedUrl = url.parse(req.url, true);\n  const path = parsedUrl.pathname;\n  const method = req.method;\n\n  res.setHeader('Content-Type', 'application/json');\n\n  if (method === 'GET' && path === '/') {\n    res.end(JSON.stringify({ message: 'Bienvenue sur mon API !' }));\n  } \n  else if (method === 'GET' && path === '/personnages') {\n    res.end(JSON.stringify(personnages));\n  }\n  else if (method === 'GET' && path.startsWith('/personnages/')) {\n    const id = parseInt(path.split('/')[2]);\n    const p = personnages.find(p => p.id === id);\n    if (p) res.end(JSON.stringify(p));\n    else { res.statusCode = 404; res.end(JSON.stringify({ error: 'Personnage non trouvé' })); }\n  }\n  else if (method === 'POST' && path === '/personnages') {\n    let body = '';\n    req.on('data', chunk => body += chunk);\n    req.on('end', () => {\n      try {\n        const data = JSON.parse(body);\n        const nouveau = { id: personnages.length + 1, ...data };\n        personnages.push(nouveau);\n        res.statusCode = 201;\n        res.end(JSON.stringify(nouveau));\n      } catch (e) {\n        res.statusCode = 400;\n        res.end(JSON.stringify({ error: 'Données invalides' }));\n      }\n    });\n  }\n  else {\n    res.statusCode = 404;\n    res.end(JSON.stringify({ error: 'Route non trouvée' }));\n  }\n});\n\nserver.listen(3000, () => console.log('Serveur démarré sur le port 3000'));</pre>"
+        },
+        {
+          "question": "<div style='margin-bottom:10px;'><strong>2.2 (1 pt)</strong> Expliquez comment vous géreriez les erreurs de parsing JSON et les routes inexistantes dans ce serveur.</div>",
+          "reponse": "Les erreurs de parsing JSON sont gérées avec un bloc try/catch autour de JSON.parse(), renvoyant un code 400. Pour les routes inexistantes, un code 404 est renvoyé avec un message d'erreur approprié. On peut aussi ajouter un middleware pour capturer toutes les erreurs non gérées."
+        },
+        {
+          "question": "<div style='margin-bottom:10px;'><strong>2.3 (1 pt)</strong> Quel module Node.js utiliseriez-vous pour simplifier la gestion des routes et des requêtes HTTP ? Expliquez brièvement ses avantages.</div>",
+          "reponse": "On utiliserait Express.js, qui offre une syntaxe plus concise pour définir les routes (app.get, app.post), une gestion intégrée du parsing des requêtes avec express.json(), des middlewares pour la gestion des erreurs, et une meilleure organisation du code grâce à express.Router(). [citation:4]"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 3 : NPM et gestion des dépendances (3 pts)",
+      "points": "3 pts",
+      "enonce": "<div style='background-color:#f5f5f5; padding:15px; border-radius:8px; color:#1a1a1a; font-size:1em;'><p style='font-weight:bold;'>Consigne :</p><p>Vous devez initialiser un projet Node.js et gérer ses dépendances.</p><p>Répondez aux questions suivantes concernant la gestion des paquets avec npm.</p></div>",
+      "questions": [
+        {
+          "question": "<div style='margin-bottom:10px;'><strong>3.1 (1 pt)</strong> Quelles commandes utilisez-vous pour : a) initialiser un projet, b) installer une dépendance en développement, c) installer une dépendance en production ?</div>",
+          "reponse": "a) <code>npm init -y</code> pour initialiser avec les valeurs par défaut. b) <code>npm install --save-dev nom-paquet</code> pour une dépendance de développement. c) <code>npm install --save nom-paquet</code> ou simplement <code>npm install nom-paquet</code> pour une dépendance de production. [citation:1]"
+        },
+        {
+          "question": "<div style='margin-bottom:10px;'><strong>3.2 (1 pt)</strong> Expliquez le rôle de <code>package.json</code>, <code>package-lock.json</code> et du dossier <code>node_modules</code>.</div>",
+          "reponse": "<code>package.json</code> est le manifeste du projet : il contient les métadonnées et la liste des dépendances avec leurs versions. <code>package-lock.json</code> verrouille les versions exactes installées pour garantir la reproductibilité des installations. <code>node_modules</code> contient le code source des dépendances installées."
+        },
+        {
+          "question": "<div style='margin-bottom:10px;'><strong>3.3 (1 pt)</strong> Comment ajouter un script <code>start</code> qui exécute <code>node index.js</code> dans le <code>package.json</code> ?</div>",
+          "reponse": "Dans la section <code>scripts</code> du <code>package.json</code>, ajouter : <code>\"start\": \"node index.js\"</code>. On peut ensuite lancer avec <code>npm start</code>. Pour le développement, on peut aussi ajouter <code>\"dev\": \"nodemon index.js\"</code> pour bénéficier du rechargement automatique. [citation:1]"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 4 : API avec Express (5 pts)",
+      "points": "5 pts",
+      "enonce": "<div style='background-color:#f5f5f5; padding:15px; border-radius:8px; color:#1a1a1a; font-size:1em;'><p style='font-weight:bold;'>Consigne :</p><p>Vous devez créer une API REST complète avec Express pour gérer une liste de tâches (To-Do List).</p><p>Les tâches sont stockées dans un tableau en mémoire (<code>tasks</code>). Chaque tâche a :</p><ul><li><code>id</code> (number, auto-incrémenté)</li><li><code>title</code> (string, obligatoire)</li><li><code>description</code> (string, optionnel)</li><li><code>completed</code> (boolean, false par défaut)</li><li><code>createdAt</code> (Date, auto-générée)</li></ul><p>L'API doit exposer les endpoints suivants :</p><ul><li><code>GET /tasks</code> → liste toutes les tâches</li><li><code>GET /tasks/:id</code> → récupère une tâche par son id</li><li><code>POST /tasks</code> → crée une nouvelle tâche</li><li><code>PUT /tasks/:id</code> → met à jour une tâche</li><li><code>DELETE /tasks/:id</code> → supprime une tâche</li></ul></div>",
+      "questions": [
+        {
+          "question": "<div style='margin-bottom:10px;'><strong>4.1 (2 pts)</strong> Écrivez le code de l'application Express complète.</div>",
+          "reponse": "<pre style='background-color:#2d2d2d; color:#f8f8f2; padding:15px; border-radius:5px; overflow-x:auto;'>const express = require('express');\nconst app = express();\napp.use(express.json());\n\nlet tasks = [];\nlet idCounter = 1;\n\n// GET /tasks\napp.get('/tasks', (req, res) => {\n  res.json(tasks);\n});\n\n// GET /tasks/:id\napp.get('/tasks/:id', (req, res) => {\n  const task = tasks.find(t => t.id === parseInt(req.params.id));\n  if (!task) return res.status(404).json({ error: 'Tâche non trouvée' });\n  res.json(task);\n});\n\n// POST /tasks\napp.post('/tasks', (req, res) => {\n  const { title, description } = req.body;\n  if (!title) return res.status(400).json({ error: 'Le titre est obligatoire' });\n  const newTask = {\n    id: idCounter++,\n    title,\n    description: description || '',\n    completed: false,\n    createdAt: new Date()\n  };\n  tasks.push(newTask);\n  res.status(201).json(newTask);\n});\n\n// PUT /tasks/:id\napp.put('/tasks/:id', (req, res) => {\n  const task = tasks.find(t => t.id === parseInt(req.params.id));\n  if (!task) return res.status(404).json({ error: 'Tâche non trouvée' });\n  const { title, description, completed } = req.body;\n  if (title !== undefined) task.title = title;\n  if (description !== undefined) task.description = description;\n  if (completed !== undefined) task.completed = completed;\n  res.json(task);\n});\n\n// DELETE /tasks/:id\napp.delete('/tasks/:id', (req, res) => {\n  const index = tasks.findIndex(t => t.id === parseInt(req.params.id));\n  if (index === -1) return res.status(404).json({ error: 'Tâche non trouvée' });\n  tasks.splice(index, 1);\n  res.status(204).send();\n});\n\napp.listen(3000, () => console.log('Serveur Express démarré sur le port 3000'));</pre>"
+        },
+        {
+          "question": "<div style='margin-bottom:10px;'><strong>4.2 (1 pt)</strong> Comment valider les données entrantes pour s'assurer que le <code>title</code> est présent et non vide ?</div>",
+          "reponse": "On peut vérifier la présence du title avant de créer la tâche. Si title est manquant, on renvoie une erreur 400. On peut aussi utiliser express-validator pour une validation plus avancée : <code>body('title').notEmpty().withMessage('Le titre est obligatoire')</code>. [citation:6]"
+        },
+        {
+          "question": "<div style='margin-bottom:10px;'><strong>4.3 (1 pt)</strong> Qu'est-ce qu'un middleware dans Express ? Donnez un exemple de middleware qui pourrait être ajouté à cette application.</div>",
+          "reponse": "Un middleware est une fonction qui a accès à req, res et next. Elle peut exécuter du code, modifier req/res, ou terminer la requête. Exemple : un middleware de logging qui enregistre chaque requête : <code>app.use((req, res, next) => { console.log(req.method, req.url); next(); });</code> ou un middleware d'authentification pour protéger les routes. [citation:4]"
+        },
+        {
+          "question": "<div style='margin-bottom:10px;'><strong>4.4 (1 pt)</strong> Comment organiser ce code de manière professionnelle en utilisant <code>express.Router()</code> ?</div>",
+          "reponse": "On peut créer un fichier <code>routes/tasks.js</code> : <pre style='background-color:#2d2d2d; color:#f8f8f2; padding:15px; border-radius:5px; overflow-x:auto;'>const express = require('express');\nconst router = express.Router();\n\nrouter.get('/', (req, res) => { /* ... */ });\nrouter.get('/:id', (req, res) => { /* ... */ });\n// ...\n\nmodule.exports = router;</pre> Puis dans <code>app.js</code> : <code>app.use('/tasks', require('./routes/tasks'));</code>"
+        }
+      ]
+    }
+  ]
+};
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,110 @@
+[
+  {
+    "intitule": "Architecture des systèmes d'exploitation : Mode noyau vs mode utilisateur",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Un système d'exploitation sépare le mode noyau (kernel) du mode utilisateur pour des raisons de sécurité et de stabilité. Un programme utilisateur qui tente d'accéder directement à la mémoire physique ou à un périphérique sans passer par l'OS provoque une exception.</p>",
+      "images": [
+        "Diagramme illustrant le passage du mode utilisateur au mode noyau via un appel système (system call), avec les anneaux de protection (ring 0 pour noyau, ring 3 pour utilisateur)"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer pourquoi le processeur bascule du mode utilisateur au mode noyau lors d'un appel système.",
+        "niveau": "easy",
+        "reponse": "Le processeur bascule du mode utilisateur au mode noyau lors d'un appel système car les instructions privilégiées (accès matériel direct, modification des tables de pages, gestion des interruptions) ne sont accessibles qu'en mode noyau. Ce changement de mode permet à l'OS de vérifier la légitimité de la requête et d'exécuter l'opération demandée en toute sécurité, puis de redonner la main au programme utilisateur.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Classer les actions suivantes selon qu'elles s'exécutent en mode utilisateur ou en mode noyau :\n- Lecture d'un fichier sur disque\n- Calcul de la somme de deux entiers\n- Modification d'une entrée dans la table des pages mémoire\n- Affichage d'un caractère à l'écran via un driver",
+        "niveau": "medium",
+        "reponse": "- Lecture d'un fichier sur disque → mode noyau (nécessite appel système pour accéder au périphérique)\n- Calcul de la somme de deux entiers → mode utilisateur (opération arithmétique simple)\n- Modification d'une entrée dans la table des pages mémoire → mode noyau (gestion mémoire privilégiée)\n- Affichage d'un caractère à l'écran via un driver → mode noyau (accès au matériel)",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Comparaison des architectures de noyau",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un fabricant de matériel embarqué souhaite concevoir un système d'exploitation pour une montre connectée. Les contraintes sont : faible consommation d'énergie, 128 Mo de RAM, processeur 32 MHz. Deux choix d'architecture s'offrent à lui : noyau monolithique (Linux) ou micro-noyau (ex: L4, QNX).</p>",
+      "images": [
+        "Tableau comparatif des architectures monolithique, micro-noyau, hybride et modulaire avec schémas des appels système et de la communication inter-processus"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Justifier quelle architecture serait la plus adaptée pour cette montre connectée en vous appuyant sur trois arguments techniques.",
+        "niveau": "hard",
+        "reponse": "Le micro-noyau serait le plus adapté pour une montre connectée pour trois raisons :\n1. Fiabilité et robustesse : en cas de panne d'un service (ex: pilote Bluetooth), seul ce service redémarre sans faire planifier tout le système, critique pour un dispositif portable.\n2. Empreinte mémoire faible : le micro-noyau ne contient que l'essentiel (IPC, planification basique), les services (système de fichiers, pile réseau) tournent en espace utilisateur, permettant une configuration sur mesure.\n3. Sécurité renforcée : l'isolation des composants limite l'impact d'une éventuelle faille de sécurité, important pour des données personnelles de santé.\nContre-argument pour Linux : bien que plus lourd, il pourrait être adapté avec une compilation sur mesure (kernel minuscule), mais la consommation énergétique due aux appels système plus nombreux (passages noyau/utilisateur fréquents) pénaliserait l'autonomie.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Déterminer un inconvénient majeur du micro-noyau par rapport à l'architecture monolithique dans ce contexte, et proposer une solution possible.",
+        "niveau": "medium",
+        "reponse": "Inconvénient majeur : les performances dues à la multiplication des communications inter-processus (IPC). Dans un micro-noyau, chaque service (pilote, gestionnaire de fichiers) est un processus séparé. Pour lire un fichier, il faut : appel système → noyau → service FS (IPC) → noyau → driver disque (IPC) → noyau → réponse. La montre ayant un processeur lent (32 MHz), cette latence peut dégrader l'expérience utilisateur.\nSolution possible : regrouper certains services critiques dans le même espace d'adressage (architecture hybride), ou utiliser des canaux IPC optimisés avec passage mémoire zéro-copy (comme dans QNX).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Rôle et mécanisme des appels système (system calls)",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un appel système est l'interface entre un programme utilisateur et le noyau. Sous Linux, l'appel système <code>write()</code> permet d'écrire des données dans un fichier ou sur la sortie standard. La fonction C <code>printf()</code> utilise en interne <code>write()</code>.</p>",
+      "images": [
+        "Schéma séquentiel : programme C → fonction bibliothèque (printf) → wrapper d'appel système → interrupt (int 0x80 ou syscall) → table des appels système → service noyau → retour au programme"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire les étapes successives qui se produisent dans le processeur et le système d'exploitation lorsqu'un programme exécute la ligne C suivante : <code>write(1, \"Bonjour\\n\", 8);</code>",
+        "niveau": "medium",
+        "reponse": "Étapes de l'appel système write() :\n1. Le programme utilisateur place les paramètres dans les registres (RAX = numéro de l'appel système pour write, RDI = 1 pour stdout, RSI = adresse de la chaîne \"Bonjour\\n\", RDX = 8 octets).\n2. Le programme exécute l'instruction spéciale 'syscall' (sur x86-64) ou 'int 0x80' (sur 32 bits).\n3. Le processeur bascule du mode utilisateur (ring 3) au mode noyau (ring 0), sauvegarde le contexte (registres, pointeur d'instruction).\n4. Le CPU consulte la table des vecteurs d'interruption (IDT) ou le registre MSR_LSTAR pour trouver l'adresse du gestionnaire d'appels système dans le noyau.\n5. Le gestionnaire du noyau vérifie les paramètres (adresse mémoire valide, droits).\n6. Le noyau exécute le véritable code d'écriture : copie les données depuis l'espace utilisateur, appelle le driver du terminal ou du fichier.\n7. Une fois terminé, le noyau place la valeur de retour (nombre d'octets écrits ou -1 pour erreur) dans un registre (RAX).\n8. Le processeur exécute 'sysret' ou 'iret', repasse en mode utilisateur et redonne la main au programme juste après l'appel système.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Distinguer un appel système d'un simple appel de fonction C classique (comme <code>strlen()</code>) en précisant deux différences fondamentales.",
+        "niveau": "easy",
+        "reponse": "Différence 1 : Changement de privilège. Un appel système nécessite un passage du mode utilisateur au mode noyau (changement de contexte), alors qu'un appel de fonction C reste dans le même mode.\nDifférence 2 : Vitesse. Un appel système est nettement plus lent (plusieurs centaines de cycles CPU) à cause du changement de mode, de la sauvegarde du contexte et des vérifications de sécurité. Un appel de fonction C ne coûte que le temps de l'appel (push/pop de paramètres, saut).\nDifférence 3 : Droits d'accès. Un appel système peut effectuer des opérations privilégiées (accès disque, allocation mémoire physique, contrôler d'autres processus). Une fonction C normale ne peut accéder qu'à la mémoire utilisateur et exécuter des instructions non privilégiées.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Étude de cas : Interruption matérielle vs appel système",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Dans un système d'exploitation, on distingue interruptions matérielles (clavier, souris, disque) et interruptions logicielles (appels système, exceptions). Un professeur demande à ses étudiants d'analyser le fonctionnement d'un noyau à travers deux scénarios.</p>",
+      "images": [
+        "Graphe temporel montrant l'exécution d'un processus interrompue par une interruption du disque dur (IRQ), puis reprise de l'exécution"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Comparer la manière dont le noyau traite une interruption du disque (fin de lecture de données) et un appel système <code>read()</code>.",
+        "niveau": "hard",
+        "reponse": "| Critère | Interruption disque | Appel système read() |\n|---------|---------------------|----------------------|\n| Origine | Matérielle (contrôleur disque) | Logicielle (programme utilisateur) |\n| Moment | Asynchrone (peut survenir à tout instant) | Synchrone (survient au moment précis où le programme l'appelle) |\n| Contexte d'exécution | S'exécute sur la pile noyau du processus interrompu (mais peut être dans tout processus) | S'exécute sur la pile noyau du processus appelant |\n| Objectif | Signaler la fin d'une opération E/S (données prêtes) | Demander explicitement des données au noyau |\n| Gestion | Le noyau exécute un handler IRQ qui réveille le processus endormi en attente de données | Le noyau bloque le processus si les données ne sont pas disponibles, puis le met en file d'attente sur le périphérique |\n| Retour | Une fois l'IRQ traitée, le noyau peut décider de reprendre le processus interrompu ou de planifier un autre processus | Le processus reprend après l'appel système avec les données disponibles ou un code d'erreur |\n\nEn pratique, un read() sur un disque déclenche : appel système → noyau demande lecture disque → processus endormi (bloqué) → interruption disque → handler réveille processus → processus retour de read().",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer une méthode permettant de mesurer le temps passé en mode noyau par un processus sous Linux. Justifier l'utilité d'une telle mesure pour un administrateur système.",
+        "niveau": "medium",
+        "reponse": "Méthode : utiliser la commande 'time' ou 'time -v' sur un programme. La sortie affiche 'user time' (temps mode utilisateur) et 'system time' (temps mode noyau).\nExemple : $ time ./monprogramme\n\nUne autre méthode est d'utiliser l'outil 'strace -c' qui affiche le temps et le nombre d'appels système par type.\n\nUtilité pour un administrateur :\n1. Identifier les programmes qui font trop d'appels système (ex: programme qui lit/écrit fichier octet par octet au lieu d'utiliser un buffer) → optimisation possible.\n2. Détecter des comportements anormaux : un processus avec un temps noyau anormalement élevé peut indiquer une boucle infinie dans un driver, une fuite de descripteurs de fichiers, ou une attaque par déni de service.\n3. Dimensionnement matériel : si le temps noyau est systématiquement élevé pour des opérations standard (E/S disque, réseau), cela peut indiquer que le matériel est sous-dimensionné.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

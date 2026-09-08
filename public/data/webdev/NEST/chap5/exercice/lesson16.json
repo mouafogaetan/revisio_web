@@ -1,0 +1,152 @@
+[
+  {
+    "intitule": "Hachage sécurisé des mots de passe avec bcrypt",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Dans une application NestJS, pour stocker les mots de passe des utilisateurs en base de données, on utilise la bibliothèque <code>bcrypt</code>.</p><p>Rappel : <code>bcrypt.hash(data, saltRounds)</code> génère un hash et <code>bcrypt.compare(data, hash)</code> vérifie un mot de passe.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier et expliquer les deux raisons principales pour lesquelles on ne doit jamais stocker un mot de passe en clair dans une base de données.",
+        "niveau": "easy",
+        "reponse": "1. Protection contre les fuites de données : si la base de données est compromise, les mots de passe hachés ne permettent pas à l'attaquant de se connecter directement. 2. Respect des réglementations (RGPD, lois sur la protection des données) qui imposent le stockage sécurisé des données personnelles sensibles.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Justifier l'utilisation de bcrypt plutôt qu'un simple algorithme de hachage comme SHA-256 pour les mots de passe.",
+            "niveau": "medium",
+            "reponse": "bcrypt est un algorithme de hachage lent et paramétrable (salt rounds). Il inclut automatiquement un 'salt' (valeur aléatoire) pour éviter les attaques par tables rainbow. Sa lenteur rend les attaques par force brute beaucoup plus coûteuses en temps. SHA-256 est trop rapide et ne gère pas le salt nativement."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Hachage d'un mot de passe lors de la création d'utilisateur",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous créez un endpoint <code>POST /users</code> pour enregistrer un nouvel utilisateur. Le mot de passe envoyé dans le body (champ <code>password</code>) doit être haché avant d'être sauvegardé.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire la méthode <code>create(createUserDto)</code> dans un service UserService. Utiliser bcrypt pour hacher le mot de passe avec 10 rounds de salage avant de sauvegarder via le repository TypeORM.",
+        "niveau": "medium",
+        "reponse": "```typescript\nimport * as bcrypt from 'bcrypt';\nimport { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { User } from './user.entity';\nimport { CreateUserDto } from './dto/create-user.dto';\n\n@Injectable()\nexport class UserService {\n  constructor(\n    @InjectRepository(User)\n    private userRepository: Repository<User>,\n  ) {}\n\n  async create(createUserDto: CreateUserDto): Promise<User> {\n    const { password, ...userData } = createUserDto;\n    const hashedPassword = await bcrypt.hash(password, 10);\n    const user = this.userRepository.create({\n      ...userData,\n      password: hashedPassword,\n    });\n    return this.userRepository.save(user);\n  }\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Décrire comment modifier le DTO CreateUserDto pour ne jamais exposer le mot de passe dans les réponses.",
+            "niveau": "medium",
+            "reponse": "On utilise class-transformer avec le décorateur @Exclude() sur le champ password dans le DTO de réponse, ou on crée un UserResponseDto qui exclut explicitement le champ password. Exemple :\n```typescript\nimport { Exclude } from 'class-transformer';\n\nexport class UserResponseDto {\n  id: number;\n  email: string;\n  \n  @Exclude()\n  password: string;\n}\n```"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Vérification d'un mot de passe lors de la connexion",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Lors de l'authentification, vous devez comparer le mot de passe fourni par l'utilisateur avec le hash stocké en base.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémenter la méthode <code>validateUser(email: string, password: string)</code> dans AuthService. Elle doit rechercher l'utilisateur par email, comparer le mot de passe avec bcrypt.compare, et retourner l'utilisateur (sans le mot de passe) si valide, sinon null.",
+        "niveau": "medium",
+        "reponse": "```typescript\nimport * as bcrypt from 'bcrypt';\nimport { Injectable } from '@nestjs/common';\nimport { UserService } from '../user/user.service';\n\n@Injectable()\nexport class AuthService {\n  constructor(private userService: UserService) {}\n\n  async validateUser(email: string, password: string): Promise<any> {\n    const user = await this.userService.findByEmail(email);\n    if (user && await bcrypt.compare(password, user.password)) {\n      const { password, ...result } = user;\n      return result;\n    }\n    return null;\n  }\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer pourquoi bcrypt.compare est une fonction asynchrone et pourquoi cela est important pour la sécurité.",
+            "niveau": "medium",
+            "reponse": "bcrypt.compare est asynchrone car l'opération de comparaison est délibérément lente (calculs cryptographiques). Ne pas bloquer le thread principal est essentiel pour les performances du serveur Node.js. De plus, la lenteur intrinsèque de bcrypt protège contre les attaques par force brute."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Problème de sécurité : fuite du mot de passe dans les logs",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Dans votre application NestJS, vous avez mis en place un middleware de logging qui enregistre toutes les requêtes entrantes. Vous découvrez que les mots de passe des utilisateurs apparaissent en clair dans les logs lors des appels à <code>POST /auth/login</code> et <code>POST /users</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposer une stratégie pour empêcher l'enregistrement des mots de passe dans les logs sans supprimer complètement le logging des requêtes.",
+        "niveau": "hard",
+        "reponse": "Plusieurs approches : 1) Créer un interceptor ou un middleware qui filtre les champs sensibles (password, oldPassword, newPassword, etc.) du corps de la requête avant le logging. 2) Utiliser un système de logging structuré qui permet d'exclure certains champs. 3) Configurer le logger pour qu'il ne logge pas le body sur les endpoints sensibles (via un décorateur @ExcludeLogging()). 4) Utiliser le package 'express-http-context' pour masquer les champs sensibles au niveau du middleware.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Écrire un interceptor NestJS qui supprime le champ 'password' du body de la requête avant qu'elle n'atteigne le logger global.",
+            "niveau": "hard",
+            "reponse": "```typescript\nimport { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nestjs/common';\nimport { Observable } from 'rxjs';\n\n@Injectable()\nexport class SanitizePasswordInterceptor implements NestInterceptor {\n  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {\n    const request = context.switchToHttp().getRequest();\n    if (request.body && request.body.password) {\n      request.body = {\n        ...request.body,\n        password: '***REDACTED***',\n      };\n    }\n    return next.handle();\n  }\n}\n```\n\nPuis l'appliquer globalement ou sur les routes concernées avec @UseInterceptors(SanitizePasswordInterceptor)."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Attaque par timing et comparaison sécurisée",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>bcrypt utilise des comparaisons à temps constant pour vérifier les mots de passe. Imaginez que vous deviez implémenter manuellement la vérification d'un hash SHA-256.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer ce qu'est une attaque par timing (timing attack) et pourquoi une comparaison sécurisée (temps constant) est essentielle pour la vérification des mots de passe ou des signatures HMAC.",
+        "niveau": "hard",
+        "reponse": "Une attaque par timing exploite les variations de temps d'exécution d'une fonction pour en déduire des informations secrètes. Si on compare deux chaînes caractère par caractère et qu'on s'arrête dès une différence, le temps d'exécution varie selon la position de la première différence. Un attaquant peut mesurer ces temps pour reconstruire progressivement le secret. Une comparaison à temps constant compare tous les caractères systématiquement, quelle que soit la correspondance, rendant cette attaque impossible.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "En Node.js, quelle fonction utilise-t-on pour une comparaison sécurisée à temps constant ? Donner un exemple d'utilisation.",
+            "niveau": "medium",
+            "reponse": "On utilise crypto.timingSafeEqual(a, b). Cette fonction nécessite que les deux buffers aient la même longueur. Exemple :\n```typescript\nimport { timingSafeEqual } from 'crypto';\n\nfunction safeCompare(a: string, b: string): boolean {\n  if (a.length !== b.length) return false;\n  return timingSafeEqual(Buffer.from(a), Buffer.from(b));\n}\n```\nbcrypt l'utilise en interne, ce qui le rend sûr."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Réinitialisation de mot de passe sécurisée",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous devez implémenter une fonctionnalité de réinitialisation de mot de passe. Un utilisateur oublié son mot de passe, reçoit un lien par email, et peut en définir un nouveau.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevoir le flux complet de réinitialisation de mot de passe sécurisé dans NestJS. Inclure : génération d'un token unique, expiration, hachage du token en base, et vérification avant la mise à jour du mot de passe. Justifier chaque choix de sécurité.",
+        "niveau": "very hard",
+        "reponse": "Flux sécurisé :\n1. L'utilisateur demande une réinitialisation avec son email.\n2. Générer un token aléatoire sécurisé (crypto.randomBytes(32).toString('hex')).\n3. Stocker en base le hash du token (bcrypt) avec une date d'expiration (ex: +1h). Ne jamais stocker le token en clair.\n4. Envoyer par email un lien contenant l'identifiant utilisateur + token (ex: /reset?userId=123&token=...).\n5. L'utilisateur clique, saisit son nouveau mot de passe.\n6. Vérifier le token : retrouver l'entrée en base par userId, comparer le token fourni avec le hash stocké (bcrypt.compare).\n7. Vérifier l'expiration.\n8. Hacher le nouveau mot de passe et le sauvegarder.\n9. Supprimer ou invalider le token de réinitialisation.\n10. Optionnel : déconnecter toutes les sessions actives (invalider les JWT).\n\nJustifications :\n- Token stocké en hash : si la base fuitée, les tokens ne sont pas exploitables.\n- Expiration : limite la fenêtre d'attaque.\n- Pas d'identifiant dans le token (juste un random) : évite la prévisibilité.\n- Le lien contient userId et token : évite de lier le token directement à l'utilisateur sans contrôle.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Écrire le code du service de réinitialisation pour la méthode requestReset(email: string) qui génère et stocke le token haché.",
+            "niveau": "hard",
+            "reponse": "```typescript\nimport * as bcrypt from 'bcrypt';\nimport { randomBytes } from 'crypto';\n\nasync requestReset(email: string): Promise<void> {\n  const user = await this.userService.findByEmail(email);\n  if (!user) return; // Ne pas révéler si l'email existe (évite énumération)\n  \n  const rawToken = randomBytes(32).toString('hex');\n  const hashedToken = await bcrypt.hash(rawToken, 10);\n  const expiresAt = new Date();\n  expiresAt.setHours(expiresAt.getHours() + 1);\n  \n  await this.resetTokenRepository.save({\n    userId: user.id,\n    tokenHash: hashedToken,\n    expiresAt,\n  });\n  \n  // Envoyer email avec lien contenant userId et rawToken\n  await this.emailService.sendResetEmail(user.email, user.id, rawToken);\n}\n```"
+          }
+        ]
+      }
+    ]
+  }
+]

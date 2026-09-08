@@ -1,0 +1,134 @@
+[
+  {
+    "intitule": "Analyser une hiérarchie d'exceptions NestJS",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Dans NestJS, toutes les exceptions héritent de la classe <code>HttpException</code>. Observez la hiérarchie suivante :</p><ul><li><code>HttpException</code> (classe de base)</li><li><code>BadRequestException</code> (400)</li><li><code>NotFoundException</code> (404)</li><li><code>UnauthorizedException</code> (401)</li><li><code>ForbiddenException</code> (403)</li><li><code>InternalServerErrorException</code> (500)</li></ul><p>Répondez aux questions ci-dessous.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "À partir de la hiérarchie donnée, identifiez quelle exception doit être levée lorsqu’un utilisateur tente d’accéder à une ressource qui n’existe pas dans la base de données.",
+        "niveau": "easy",
+        "reponse": "NotFoundException (HTTP 404) est l’exception appropriée car elle indique que la ressource demandée est introuvable.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez la différence entre <code>UnauthorizedException</code> et <code>ForbiddenException</code> en vous basant sur la sémantique HTTP.",
+        "niveau": "medium",
+        "reponse": "UnauthorizedException (401) signifie que l’utilisateur n’est pas authentifié (aucune identité valide). ForbiddenException (403) indique que l’utilisateur est authentifié mais n’a pas les droits suffisants pour accéder à la ressource.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Lever et personnaliser une exception dans un service",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous développez une API de gestion de produits. Le service <code>ProductService</code> contient une méthode <code>findOne(id: number)</code>. Si aucun produit n’est trouvé, vous devez lever une exception <code>NotFoundException</code> avec un message personnalisé : <code>Produit avec l'identifiant ${id} introuvable</code>.</p><p>Écrivez le code TypeScript correspondant dans le service. Ensuite, répondez aux questions.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédigez l’implémentation de la méthode <code>findOne</code> qui lève l’exception personnalisée.",
+        "niveau": "medium",
+        "reponse": "import { NotFoundException } from '@nestjs/common';\n\nasync findOne(id: number) {\n  const product = await this.productRepository.findOneBy({ id });\n  if (!product) {\n    throw new NotFoundException(`Produit avec l'identifiant ${id} introuvable`);\n  }\n  return product;\n}",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez pourquoi il est préférable de lever une exception plutôt que de retourner <code>null</code> dans un contexte d’API REST.",
+        "niveau": "medium",
+        "reponse": "Lever une exception permet de respecter les codes HTTP standard (404), de centraliser la gestion des erreurs dans des filtres, et d’éviter au client de devoir tester des valeurs nulles ce qui augmente la clarté et la maintenabilité.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Créer un filtre d'exception global personnalisé",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Dans une application NestJS, vous souhaitez créer un filtre d’exception global qui capture toutes les exceptions de type <code>HttpException</code> et reformate la réponse JSON comme suit :</p><pre>{\n  \"statusCode\": 404,\n  \"timestamp\": \"2025-03-15T10:30:00.000Z\",\n  \"path\": \"/products/99\",\n  \"message\": \"Produit introuvable\"\n}</pre><p>Implémentez ce filtre en utilisant <code>@Catch(HttpException)</code> et en respectant les bonnes pratiques.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le code complet du filtre personnalisé (classe <code>GlobalExceptionFilter</code>).",
+        "niveau": "hard",
+        "reponse": "import { ExceptionFilter, Catch, ArgumentsHost, HttpException } from '@nestjs/common';\nimport { Request, Response } from 'express';\n\n@Catch(HttpException)\nexport class GlobalExceptionFilter implements ExceptionFilter {\n  catch(exception: HttpException, host: ArgumentsHost) {\n    const ctx = host.switchToHttp();\n    const response = ctx.getResponse<Response>();\n    const request = ctx.getRequest<Request>();\n    const status = exception.getStatus();\n    const exceptionResponse = exception.getResponse();\n    const message = typeof exceptionResponse === 'string' ? exceptionResponse : (exceptionResponse as any).message;\n\n    response.status(status).json({\n      statusCode: status,\n      timestamp: new Date().toISOString(),\n      path: request.url,\n      message: message || exception.message\n    });\n  }\n}",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez comment enregistrer ce filtre globalement dans l’application (dans <code>main.ts</code>).",
+        "niveau": "medium",
+        "reponse": "Dans main.ts, après la création de l’application avec NestFactory, utiliser app.useGlobalFilters(new GlobalExceptionFilter()).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Diagnostiquer et corriger une gestion d'exceptions défaillante",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous reprenez un projet NestJS existant où les exceptions ne sont pas bien gérées. Voici un extrait du contrôleur :</p><pre>@Get(':id')\nasync getUser(@Param('id') id: string) {\n  const user = await this.userService.findById(id);\n  if (!user) return { error: 'User not found' };\n  return user;\n}</pre><p>Problème : l’API renvoie toujours un code HTTP 200 même si l’utilisateur n’existe pas, ce qui ne respecte pas les standards REST.</p><p>Corrigez le code en levant une exception appropriée. Ensuite, décrivez comment un filtre d’exception global améliorerait la cohérence des erreurs.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Réécrivez la méthode du contrôleur pour lever une exception NotFoundException lorsque l’utilisateur n’existe pas.",
+        "niveau": "hard",
+        "reponse": "import { NotFoundException } from '@nestjs/common';\n\n@Get(':id')\nasync getUser(@Param('id') id: string) {\n  const user = await this.userService.findById(id);\n  if (!user) {\n    throw new NotFoundException(`Utilisateur avec l'id ${id} non trouvé`);\n  }\n  return user;\n}",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Argumentez l’intérêt d’un filtre d’exception global pour uniformiser les réponses d’erreur dans toute l’API.",
+        "niveau": "hard",
+        "reponse": "Un filtre global garantit que toutes les exceptions (quelle que soit leur provenance) produisent une structure JSON cohérente (timestamp, chemin, code, message). Cela facilite l’intégration côté client, réduit la duplication de code et permet d’ajouter des logs automatiques ou une anonymisation des erreurs en production.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Adapter la gestion d'erreurs pour un contexte métier (paiement)",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous construisez un module de paiement. Selon les règles métier :</p><ul><li>Si le solde est insuffisant → lever <code>PaymentRequiredException</code> (inspiré de 402 Payment Required non standard) ou une exception personnalisée.</li><li>Si la carte est expirée → lever <code>BadRequestException</code> avec un message clair.</li><li>Si le service de paiement externe est indisponible → lever <code>ServiceUnavailableException</code> (503).</li></ul><p>Créez les trois exceptions (si nécessaire) et écrivez le code d’un service qui les utilise selon les cas.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémentez une exception personnalisée <code>InsufficientFundsException</code> qui hérite de <code>HttpException</code> avec le code HTTP 402 (ou 422). Montrez son code.",
+        "niveau": "hard",
+        "reponse": "import { HttpException, HttpStatus } from '@nestjs/common';\n\nexport class InsufficientFundsException extends HttpException {\n  constructor(message = 'Solde insuffisant pour effectuer ce paiement') {\n    super(message, 402); // ou HttpStatus.UNPROCESSABLE_ENTITY (422)\n  }\n}",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrivez une méthode <code>processPayment(amount, cardDetails)</code> qui lève les exceptions adéquates selon les conditions métier.",
+        "niveau": "hard",
+        "reponse": "async processPayment(amount: number, cardDetails: any) {\n  const balance = await this.getBalance();\n  if (balance < amount) {\n    throw new InsufficientFundsException();\n  }\n  if (this.isCardExpired(cardDetails)) {\n    throw new BadRequestException('Carte bancaire expirée');\n  }\n  try {\n    await this.externalPaymentGateway.charge(amount);\n  } catch (err) {\n    throw new ServiceUnavailableException('Le service de paiement est temporairement indisponible');\n  }\n  return { success: true };\n}",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquez comment la taxonomie de Bloom s’applique à cet exercice (création, analyse, évaluation).",
+        "niveau": "medium",
+        "reponse": "La création de nouvelles exceptions personnalisées relève du niveau « Créer ». L’analyse des conditions métier et le choix de l’exception appropriée correspondent à « Analyser ». L’évaluation de la pertinence des codes HTTP pour chaque cas fait appel à « Évaluer ».",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

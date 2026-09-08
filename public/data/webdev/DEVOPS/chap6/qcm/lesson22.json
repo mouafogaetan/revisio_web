@@ -1,0 +1,122 @@
+[
+  {
+    "questionText": "Quelle est la principale différence d'usage entre un `ConfigMap` et un `Secret` dans Kubernetes ?",
+    "options": [
+      "Les `ConfigMap` stockent des données chiffrées, les `Secret` stockent du texte clair.",
+      "Les `ConfigMap` sont pour les données non sensibles (texte clair), les `Secret` pour les données sensibles (encodées en base64).",
+      "Les `ConfigMap` ne peuvent être utilisés que par les `Pods`, les `Secret` par les `Services`.",
+      "Il n'y a aucune différence, ce sont deux noms pour la même ressource."
+    ],
+    "correctAnswer": 1,
+    "difficulty": "easy",
+    "explanation": "Les `ConfigMap` sont conçus pour la configuration non sensible (variables d'environnement, paramètres). Les `Secret` sont destinés aux données sensibles comme les mots de passe ou clés API. Les données des `Secret` sont encodées en base64 (et peuvent être chiffrées au repos) alors que les `ConfigMap` sont en texte clair."
+  },
+  {
+    "questionText": "Quelle commande `kubectl` permet de créer un `Secret` littéral à partir de la ligne de commande ?",
+    "options": [
+      "`kubectl create configmap secret --from-literal=password=123`",
+      "`kubectl create secret generic --from-literal=password=123`",
+      "`kubectl new secret password=123`",
+      "`kubectl apply -f secret.yaml --literal=password=123`"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium",
+    "explanation": "La syntaxe correcte est `kubectl create secret generic &lt;nom-secret&gt; --from-literal=&lt;clé&gt;=&lt;valeur&gt;`. L'option `generic` est le type de secret le plus courant pour les données arbitraires."
+  },
+  {
+    "questionText": "Comment montez-vous un `ConfigMap` nommé `app-config` en tant que fichier dans un Pod, à l'emplacement `/etc/config/app.properties` ?",
+    "options": [
+      "En utilisant `envFrom` dans la spécification du conteneur.",
+      "En définissant un `volume` de type `configMap` et un `volumeMount` sur le conteneur.",
+      "En utilisant une annotation `configMap.mount=/etc/config` sur le Pod.",
+      "Les `ConfigMap` ne peuvent pas être montés comme fichiers, seulement comme variables d'environnement."
+    ],
+    "correctAnswer": 1,
+    "difficulty": "hard",
+    "explanation": "Pour monter un ConfigMap en tant que fichier, il faut : 1) Définir un volume dans `spec.volumes` avec `configMap.name: app-config`. 2) Monter ce volume dans le conteneur via `volumeMounts.mountPath: /etc/config`. Chaque entrée du ConfigMap devient un fichier dans ce répertoire."
+  },
+  {
+    "questionText": "Vous avez un Secret nommé `db-secret` contenant une clé `password`. Quelle syntaxe dans un Pod YAML permet d'injecter cette valeur comme variable d'environnement `DB_PASSWORD` ?",
+    "options": [
+      "`env: - name: DB_PASSWORD valueFrom: secretKeyRef: name: db-secret key: password`",
+      "`env: - name: DB_PASSWORD value: {{secret.db-secret.password}}`",
+      "`secrets: - name: db-secret as: DB_PASSWORD`",
+      "`configMapKeyRef: name: db-secret key: password`"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "medium",
+    "explanation": "La syntaxe correcte utilise `valueFrom` avec `secretKeyRef`. Elle précise le nom du Secret et la clé à extraire. L'option `configMapKeyRef` existe mais pour les ConfigMaps, pas les Secrets."
+  },
+  {
+    "questionText": "Un étudiant a créé un Secret avec `kubectl create secret generic mysecret --from-literal=user=admin`. Il veut voir son contenu. Que va afficher `kubectl get secret mysecret -o yaml` ?",
+    "options": [
+      "La valeur `admin` en clair.",
+      "La valeur `admin` encodée en base64.",
+      "Une erreur car les Secrets sont invisibles.",
+      "Un hash SHA256 de la valeur."
+    ],
+    "correctAnswer": 1,
+    "difficulty": "easy",
+    "explanation": "Par défaut, `kubectl get secret -o yaml` affiche les données encodées en base64 pour des raisons de sécurité (éviter l'affichage accidentel de texte clair dans les logs). Pour décoder : `echo 'admin_encodé' | base64 --decode`."
+  },
+  {
+    "questionText": "Quel est l'avantage d'utiliser `subPath` lors du montage d'un `ConfigMap` ou `Secret` comme volume ?",
+    "options": [
+      "Cela permet de compresser les données du volume.",
+      "Cela permet de monter un seul fichier spécifique du ConfigMap/Secret sans écraser tout le répertoire de destination.",
+      "Cela permet de monter le volume en lecture-écriture au lieu de lecture seule.",
+      "Cela permet d'activer le rechargement automatique sans redémarrer le Pod."
+    ],
+    "correctAnswer": 1,
+    "difficulty": "hard",
+    "explanation": "`subPath` est utile quand on veut monter un ConfigMap/Secret comme un seul fichier dans un répertoire qui contient déjà d'autres fichiers. Sans `subPath`, le volume entier (toutes les clés) remplace le contenu du répertoire cible."
+  },
+  {
+    "questionText": "Si vous modifiez un `ConfigMap` déjà monté dans un Pod, que se passe-t-il par défaut ?",
+    "options": [
+      "Le Pod doit être redémarré manuellement pour voir les changements.",
+      "Le contenu du volume est mis à jour automatiquement (après un certain délai) sans redémarrer le Pod.",
+      "La modification est impossible, les ConfigMaps sont immutables par défaut.",
+      "Kubernetes supprime le Pod immédiatement et en crée un nouveau."
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium",
+    "explanation": "Par défaut, les volumes montés depuis un ConfigMap (ou Secret) sont automatiquement mis à jour lorsque l'objet est modifié. Le kubelet synchronise périodiquement le contenu. Attention : cela ne s'applique pas aux variables d'environnement injectées ; celles-ci ne sont mises à jour qu'au redémarrage."
+  },
+  {
+    "questionText": "Dans un contexte de pipeline CI/CD, pourquoi est-il dangereux de versionner un fichier contenant des Secrets (ex: `secret.yaml`) dans Git ?",
+    "options": [
+      "Parce que Git ne peut pas encoder le fichier correctement.",
+      "Parce que les valeurs seraient en base64 et facilement décodables par toute personne ayant accès au dépôt.",
+      "Parce que Kubernetes ne lit pas les Secrets depuis un dépôt Git.",
+      "Parce que cela allonge le temps de déploiement."
+    ],
+    "correctAnswer": 1,
+    "difficulty": "easy",
+    "explanation": "Un Secret en YAML contient les données sensibles en base64, qui n'est pas un chiffrement. Quiconque a accès au dépôt peut décoder ces valeurs. Les Secrets doivent être injectés par des outils externes (Vault, Sealed Secrets, ou variables d'environnement CI/CD)."
+  },
+  {
+    "questionText": "Un `ConfigMap` peut être utilisé pour : (Sélectionnez la ou les bonnes réponses)",
+    "options": [
+      "Stocker une clé API sensible.",
+      "Stocker le nom d'un serveur de base de données (`DB_HOST=postgres-svc`).",
+      "Stocker une propriété d'application (`LOG_LEVEL=debug`).",
+      "Stocker un fichier de configuration complet (ex: `nginx.conf`)."
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium",
+    "explanation": "Les trois réponses concernent des cas d'usage typiques d'un ConfigMap : variable d'environnement non sensible (`DB_HOST`, `LOG_LEVEL`) ou fichier de configuration. La clé API sensible relève du Secret."
+  },
+  {
+    "questionText": "Quelle est la taille maximale par défaut d'un `ConfigMap` ou d'un `Secret` dans Kubernetes ?",
+    "options": [
+      "1 Mo",
+      "256 Ko",
+      "10 Mo",
+      "Illimité"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "very hard",
+    "explanation": "La limite par défaut pour un objet etcd (donc pour un ConfigMap ou Secret) est d'environ 1 Mo. Cela permet de maintenir les performances d'etcd. Pour des fichiers plus gros, il faut utiliser un volume ou un stockage externe."
+  }
+]

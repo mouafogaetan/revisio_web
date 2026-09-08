@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+    "matiere": "API .NET (ASP.NET Core)",
+    "classe": "Développement Web",
+    "sequence": "Séquence 3",
+    "anneeScolaire": "2025-2026",
+    "exercices": [
+        {
+            "titre": "Architecture en Couches et Injection de Dépendances",
+            "points": "4 pts",
+            "enonce": "<p style='font-size: 1.1em; line-height: 1.6;'>Cette section évalue votre compréhension de l'architecture en couches et de l'injection de dépendances dans ASP.NET Core.</p>",
+            "questions": [
+                {
+                    "question": "<p style='font-weight: bold;'>1) Expliquez pourquoi une API .NET professionnelle est structurée en couches (Controllers, Services, Repository, DTOs). Quels sont les bénéfices de cette séparation des responsabilités ?</p>",
+                    "reponse": "<p><strong>Réponse :</strong> Une API structurée en couches offre plusieurs avantages :</p><ul><li><strong>Maintenabilité :</strong> Chaque couche a une responsabilité unique, ce qui facilite les modifications sans impacter les autres parties de l'application.</li><li><strong>Testabilité :</strong> Les services et repositories peuvent être testés unitairement sans dépendre du framework web [citation:1].</li><li><strong>Évolutivité :</strong> L'architecture permet d'ajouter de nouvelles fonctionnalités ou de changer des implémentations (ex: passer d'une base de données SQL à NoSQL) sans refondre toute l'application.</li></ul>"
+                },
+                {
+                    "question": "<p style='font-weight: bold;'>2) Décrivez les trois durées de vie d'un service dans le conteneur d'injection de dépendances d'ASP.NET Core (Transient, Scoped, Singleton) et donnez un exemple d'utilisation pour chacune.</p>",
+                    "reponse": "<p><strong>Réponse :</strong></p><ul><li><strong>Transient :</strong> Une nouvelle instance est créée à chaque fois qu'elle est demandée. <em>Exemple :</em> Les services légers sans état comme un générateur d'ID.</li><li><strong>Scoped :</strong> Une seule instance est créée par requête HTTP. <em>Exemple :</em> Le <code>DbContext</code> d'EF Core, car il doit être partagé par tous les services d'une même requête.</li><li><strong>Singleton :</strong> Une seule instance est créée pour toute la durée de vie de l'application. <em>Exemple :</em> Un cache en mémoire ou un logger partagé.</li></ul>"
+                },
+                {
+                    "question": "<p style='font-weight: bold;'>3) En quoi consiste le pattern Repository et quel est son rôle dans une architecture en couches ?</p>",
+                    "reponse": "<p><strong>Réponse :</strong> Le pattern Repository est une couche d'abstraction entre la logique métier (Services) et la base de données. Il encapsule les opérations d'accès aux données (CRUD) et masque les détails d'implémentation de la persistence. Cela permet de :</p><ul><li>Centraliser les requêtes de base de données.</li><li>Faciliter le test des services avec des mocks.</li><li>Rendre l'application plus flexible en cas de changement de la source de données.</li></ul>"
+                }
+            ]
+        },
+        {
+            "titre": "Entity Framework Core et Validation",
+            "points": "5 pts",
+            "enonce": "<p style='font-size: 1.1em; line-height: 1.6;'>Cette section évalue votre capacité à utiliser Entity Framework Core pour les opérations CRUD et à valider les données entrantes.</p>",
+            "questions": [
+                {
+                    "question": "<p style='font-weight: bold;'>1) Expliquez la différence entre les approches 'Code First' et 'Database First' dans Entity Framework Core. Quelle est la plus utilisée dans un contexte moderne et pourquoi ?</p>",
+                    "reponse": "<p><strong>Réponse :</strong></p><ul><li><strong>Code First :</strong> Les classes de modèles (entités) sont créées en code C#, puis les migrations génèrent la base de données. C'est l'approche moderne privilégiée car elle permet de versionner le schéma de la base de données avec le code dans Git.</li><li><strong>Database First :</strong> La base de données existe déjà et les modèles sont générés à partir d'elle. Cette approche est souvent utilisée pour migrer des applications existantes vers EF Core.</li></ul><p>L'approche Code First est la plus utilisée aujourd'hui car elle s'intègre parfaitement avec le workflow DevOps (CI/CD) et permet de garder le contrôle total sur le schéma de la base de données.</p>"
+                },
+                {
+                    "question": "<p style='font-weight: bold;'>2) Écrivez un exemple de code C# pour un contrôleur qui gère les opérations CRUD sur une entité <code>Product</code> en utilisant un repository et un DTO. Incluez les méthodes <code>GetAll</code>, <code>GetById</code>, <code>Create</code>, <code>Update</code> et <code>Delete</code>.</p>",
+                    "reponse": "<p><strong>Réponse :</strong></p><pre style='background-color: #2c3e50; color: #ecf0f1; padding: 10px; border-radius: 4px; font-size: 0.85em; overflow-x: auto;'>[ApiController]<br>[Route(\"api/[controller]\")]<br>public class ProductsController : ControllerBase<br>{<br>    private readonly IProductService _service;<br>    <br>    public ProductsController(IProductService service)<br>    {<br>        _service = service;<br>    }<br>    <br>    [HttpGet]<br>    public async Task&lt;ActionResult&lt;IEnumerable&lt;ProductDto&gt;&gt;&gt; GetAll()<br>    {<br>        return Ok(await _service.GetAllAsync());<br>    }<br>    <br>    [HttpGet(\"{id}\")]<br>    public async Task&lt;ActionResult&lt;ProductDto&gt;&gt; GetById(int id)<br>    {<br>        var product = await _service.GetByIdAsync(id);<br>        if (product == null) return NotFound();<br>        return Ok(product);<br>    }<br>    <br>    [HttpPost]<br>    public async Task&lt;ActionResult&lt;ProductDto&gt;&gt; Create(CreateProductDto dto)<br>    {<br>        var product = await _service.CreateAsync(dto);<br>        return CreatedAtAction(nameof(GetById), new { id = product.Id }, product);<br>    }<br>    <br>    [HttpPut(\"{id}\")]<br>    public async Task&lt;IActionResult&gt; Update(int id, UpdateProductDto dto)<br>    {<br>        if (id != dto.Id) return BadRequest();<br>        await _service.UpdateAsync(dto);<br>        return NoContent();<br>    }<br>    <br>    [HttpDelete(\"{id}\")]<br>    public async Task&lt;IActionResult&gt; Delete(int id)<br>    {<br>        await _service.DeleteAsync(id);<br>        return NoContent();<br>    }<br>}</pre>"
+                },
+                {
+                    "question": "<p style='font-weight: bold;'>3) Expliquez le rôle des attributs de validation comme <code>[Required]</code>, <code>[StringLength]</code> et <code>[Range]</code> dans un DTO, et comment la validation automatique fonctionne avec l'attribut <code>[ApiController]</code>.</p>",
+                    "reponse": "<p><strong>Réponse :</strong> Les attributs de validation définissent des règles que les données reçues doivent respecter. Par exemple :</p><ul><li><code>[Required]</code> : La propriété doit être fournie.</li><li><code>[StringLength(100)]</code> : La chaîne doit avoir une longueur maximale de 100 caractères.</li><li><code>[Range(0, double.MaxValue)]</code> : La valeur doit être comprise entre 0 et l'infini.</li></ul><p>Lorsque le contrôleur est décoré avec <code>[ApiController]</code>, ASP.NET Core valide automatiquement le modèle reçu. En cas d'erreur, une réponse <code>400 Bad Request</code> est renvoyée avec les détails des erreurs, sans que vous ayez à écrire de code de validation supplémentaire.</p>"
+                }
+            ]
+        },
+        {
+            "titre": "Optimisation et Sécurité : Cache, Rate Limiting et CORS",
+            "points": "5 pts",
+            "enonce": "<p style='font-size: 1.1em; line-height: 1.6;'>Cette section évalue votre compréhension des mécanismes d'optimisation et de sécurité avancés dans une API .NET.</p>",
+            "questions": [
+                {
+                    "question": "<p style='font-weight: bold;'>1) Qu'est-ce que le rate limiting et pourquoi est-il important pour la sécurité et la fiabilité d'une API ?</p>",
+                    "reponse": "<p><strong>Réponse :</strong> Le rate limiting est une technique qui limite le nombre de requêtes qu'un client peut effectuer sur une API dans un laps de temps donné. Il est important pour :</p><ul><li><strong>Prévenir les attaques DDoS :</strong> Empêche un attaquant de submerger l'API de requêtes.</li><li><strong>Protéger les ressources :</strong> Évite la surcharge des serveurs et des bases de données.</li><li><strong>Garantir l'équité :</strong> Assure que tous les clients ont un accès équitable aux ressources de l'API.</li></ul><p>ASP.NET Core offre un système de rate limiting intégré depuis .NET 7, avec des politiques comme FixedWindow, SlidingWindow et TokenBucket [citation:6].</p>"
+                },
+                {
+                    "question": "<p style='font-weight: bold;'>2) Expliquez l'importance de CORS (Cross-Origin Resource Sharing) dans le contexte d'une API web. Comment configurer CORS dans ASP.NET Core ?</p>",
+                    "reponse": "<p><strong>Réponse :</strong> CORS est un mécanisme de sécurité qui permet à une application web s'exécutant sur une origine (ex: <code>http://localhost:3000</code>) d'accéder à des ressources sur une autre origine (ex: <code>https://api.mon-site.com</code>). Sans CORS, un navigateur bloque les requêtes inter-origines pour des raisons de sécurité.</p><p>Dans ASP.NET Core, on configure CORS dans <code>Program.cs</code> :</p><pre style='background-color: #2c3e50; color: #ecf0f1; padding: 10px; border-radius: 4px; font-size: 0.85em;'>builder.Services.AddCors(options =><br>{<br>    options.AddPolicy(\"AllowFrontend\",<br>        policy =><br>        {<br>            policy.WithOrigins(\"https://mon-frontend.com\")<br>                  .AllowAnyHeader()<br>                  .AllowAnyMethod();<br>        });<br>});<br><br>app.UseCors(\"AllowFrontend\");</pre>"
+                },
+                {
+                    "question": "<p style='font-weight: bold;'>3) Décrivez deux techniques de mise en cache dans une API .NET et leurs cas d'usage respectifs.</p>",
+                    "reponse": "<p><strong>Réponse :</strong></p><ul><li><strong>Cache côté client (Response Caching) :</strong> Utilise l'attribut <code>[ResponseCache]</code> pour ajouter des en-têtes HTTP (Cache-Control) qui indiquent au navigateur ou au proxy de mettre en cache la réponse. <em>Cas d'usage :</em> Données statiques (ex: une liste de catégories) qui changent rarement.</li><li><strong>Cache en mémoire (IMemoryCache) :</strong> Stocke les données dans la mémoire du serveur pour éviter de refaire des requêtes coûteuses (ex: bases de données ou APIs externes). <em>Cas d'usage :</em> Résultats de calculs complexes ou données fréquemment demandées avec un taux de rafraîchissement modéré.</li></ul>"
+                }
+            ]
+        },
+        {
+            "titre": "Étude de Cas : Optimisation d'une API de Gestion de Patients",
+            "points": "6 pts",
+            "enonce": "<p style='font-size: 1.1em; line-height: 1.6;'>Lisez l'étude de cas suivante et répondez aux questions en utilisant vos connaissances en architecture .NET, optimisation et sécurité.</p>",
+            "questions": [
+                {
+                    "question": "<p><strong>Étude de Cas :</strong> Vous développez une API de gestion de patients pour un hôpital de Yaoundé. L'API est structurée en couches (Controllers, Services, Repository) avec Entity Framework Core. L'hôpital constate qu'aux heures de pointe, l'API devient lente et que certains endpoints publics (comme la liste des médecins) sont appelés très fréquemment, créant une charge importante sur la base de données.</p><p style='font-weight: bold;'>a) (2 pts) Proposez des solutions pour améliorer les performances des endpoints fréquemment appelés.</p>",
+                    "reponse": "<p><strong>Réponse :</strong> Pour améliorer les performances :</p><ul><li>Mettre en place un <strong>cache en mémoire (IMemoryCache)</strong> pour les données qui changent peu, comme la liste des médecins. Ainsi, les requêtes ultérieures seront servies depuis le cache sans solliciter la base de données [citation:1].</li><li>Utiliser des <strong>requêtes EF Core optimisées</strong> avec <code>AsNoTracking()</code> pour les données en lecture seule, car cela évite la surcharge de tracking des entités.</li><li>Ajouter une <strong>stratégie de rate limiting</strong> pour éviter que les clients ne submergent l'API de requêtes.</li></ul>"
+                },
+                {
+                    "question": "<p style='font-weight: bold;'>b) (2 pts) L'hôpital souhaite déployer l'API en production. Que devez-vous vérifier au niveau de la configuration (environnements, sécurité) avant le déploiement ?</p>",
+                    "repose": "<p><strong>Réponse :</strong> Avant le déploiement en production :</p><ul><li>Configurer les <strong>chaînes de connexion</strong> pour la base de données de production via <code>appsettings.Production.json</code> ou des variables d'environnement.</li><li>Désactiver la <strong>documentation Swagger</strong> en production ou la sécuriser par authentification [citation:6].</li><li>Configurer <strong>CORS</strong> pour autoriser uniquement les origines des applications front-end autorisées.</li><li>Activer les <strong>health checks</strong> pour surveiller la disponibilité de l'API et de la base de données [citation:6].</li><li>Mettre en place un <strong>gestionnaire d'erreurs global</strong> pour retourner des réponses uniformisées en cas d'exception (RFC 7807).</li></ul>"
+                },
+                {
+                    "question": "<p style='font-weight: bold;'>c) (2 pts) L'API doit être consommée par une application mobile et une application web. Comment assurer une sécurité renforcée des communications et des données sensibles comme les dossiers médicaux ?</p>",
+                    "reponse": "<p><strong>Réponse :</strong> Pour sécuriser l'API :</p><ul><li>Implémenter <strong>l'authentification JWT</strong> avec <code>Microsoft.AspNetCore.Authentication.JwtBearer</code> pour vérifier l'identité des clients avant l'accès aux endpoints protégés.</li><li>Utiliser <strong>HTTPS/TLS</strong> pour chiffrer toutes les communications entre le client et l'API.</li><li>Appliquer le <strong>principe du moindre privilège</strong> avec l'autorisation par rôles (<code>[Authorize(Roles = \"Admin\")]</code>) pour restreindre l'accès aux données sensibles.</li><li>Stocker les secrets (clés JWT, chaînes de connexion) dans des <strong>gestionnaires de secrets</strong> comme Azure Key Vault ou AWS Secrets Manager, et non dans le code.</li></ul>"
+                }
+            ]
+        }
+    ]
+};
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

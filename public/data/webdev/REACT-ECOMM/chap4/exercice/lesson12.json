@@ -1,0 +1,167 @@
+[
+  {
+    "intitule": "Exercice 1 : Identifier les états globaux d'un e-commerce",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Dans une application e-commerce, la gestion d'état (state management) est cruciale pour partager des données entre plusieurs composants. Vous travaillez sur un site de vente de chaussures en ligne.</p><p><strong>Consigne :</strong> À partir de votre analyse, identifiez les différentes données qui doivent être gérées au niveau global (et non localement) dans l'application.</p>",
+      "images": [
+        "schéma d'application React avec plusieurs composants partageant un état global",
+        "exemple d'interface e-commerce avec panier et compte utilisateur"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Listez au moins 5 types de données qui nécessitent un état global dans un e-commerce et justifiez brièvement pourquoi.",
+        "niveau": "easy",
+        "reponse": "1. État d'authentification (utilisateur connecté, token) : utilisé dans tout le site (header, checkout, compte). 2. Contenu du panier : nécessaire sur toutes les pages (icône panier, page panier, checkout). 3. Liste des favoris : accessible depuis le compte et la page produit. 4. Filtres de recherche actifs : partagés entre la barre de recherche et la liste des produits. 5. Thème (clair/sombre) : impacte tous les composants visuels. 6. Notifications/Toasts : pour informer l'utilisateur partout.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez pourquoi le nom d'un produit affiché dans la page produit ne devrait pas être géré dans un état global.",
+        "niveau": "easy",
+        "reponse": "Le nom du produit est une donnée locale à la page produit. Il n'est pas nécessaire de le partager avec d'autres composants (sauf si affiché dans le breadcrumb ou le panier, mais là on utilise l'ID du produit pour récupérer les infos depuis le panier store). Stocker tous les détails des produits dans un état global serait inefficace et causerait des re-renders inutiles. On utilise plutôt React Query pour le cache serveur.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 2 : Créer un store Zustand pour le panier",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous développez un e-commerce de produits électroniques. Le panier doit stocker des objets contenant : <code>id, nom, prix, quantité, image</code>. Le store doit permettre d'ajouter un produit, supprimer un produit, mettre à jour la quantité et calculer le total.</p><p><strong>Consigne :</strong> Écrivez le code du store Zustand complet avec les fonctions nécessaires et la persistance dans <code>localStorage</code>.</p>",
+      "images": [
+        "capture d'écran d'un panier e-commerce avec liste d'articles et total",
+        "schéma de fonctionnement de Zustand store avec actions"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémentez le store Zustand nommé <code>useCartStore</code> avec les propriétés : items (tableau), addItem, removeItem, updateQuantity, getTotal, clearCart. Ajoutez la persistance avec le middleware <code>persist</code>.",
+        "niveau": "medium",
+        "reponse": "```javascript\nimport { create } from 'zustand';\nimport { persist } from 'zustand/middleware';\n\nconst useCartStore = create(\n  persist(\n    (set, get) => ({\n      items: [],\n      addItem: (product) => set((state) => {\n        const existing = state.items.find(item => item.id === product.id);\n        if (existing) {\n          return { items: state.items.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item) };\n        }\n        return { items: [...state.items, { ...product, quantity: 1 }] };\n      }),\n      removeItem: (id) => set((state) => ({ items: state.items.filter(item => item.id !== id) })),\n      updateQuantity: (id, quantity) => set((state) => ({\n        items: quantity <= 0 ? state.items.filter(item => item.id !== id) : state.items.map(item => item.id === id ? { ...item, quantity } : item)\n      })),\n      getTotal: () => get().items.reduce((sum, item) => sum + (item.prix * item.quantity), 0),\n      clearCart: () => set({ items: [] })\n    }),\n    { name: 'cart-storage' }\n  )\n);\nexport default useCartStore;\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment utiliser ce store dans un composant React pour afficher le nombre d'articles dans l'icône panier ?",
+            "niveau": "easy",
+            "reponse": "```jsx\nconst CartIcon = () => {\n  const items = useCartStore((state) => state.items);\n  const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);\n  return <div>🛒 {itemCount > 0 && <span className=\"badge\">{itemCount}</span>}</div>;\n};\n```\nOn utilise un selector pour ne se réabonner qu'aux changements de `items`."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez comment synchroniser le panier local avec le backend après la connexion de l'utilisateur.",
+        "niveau": "hard",
+        "reponse": "Après un login réussi, on récupère le panier sauvegardé en base (si l'utilisateur avait des articles avant déconnexion). On fusionne avec le panier local (si existant) : on ajoute les produits du panier local au panier distant ou on remplace selon la politique choisie. Ensuite on met à jour le store Zustand avec les données fusionnées et on appelle une mutation pour sauvegarder sur le serveur. Exemple : `const mergeCarts = (localCart, serverCart) => { ... }`",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 3 : Gérer les filtres produits avec Zustand",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Un catalogue de 500 produits doit être filtré par catégorie, fourchette de prix et marque. Les filtres sont partagés entre la sidebar et la barre de recherche. De plus, l'URL doit refléter les filtres actifs pour permettre le partage.</p><p><strong>Consigne :</strong> Concevez un store Zustand pour gérer ces filtres, avec synchronisation avec l'URL (via React Router).</p>",
+      "images": [
+        "sidebar de filtres avec sliders de prix et checkboxes de catégories",
+        "URL contenant des paramètres de recherche (?category=electronique&prix_min=100)"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créez un store `useFilterStore` avec les champs : categories (tableau), priceRange (min, max), brands (tableau), sortBy (prix_asc, prix_desc, popularite). Ajoutez des actions pour mettre à jour chaque filtre et une fonction `resetFilters`.",
+        "niveau": "medium",
+        "reponse": "```javascript\nconst useFilterStore = create((set) => ({\n  categories: [],\n  priceRange: { min: 0, max: 1000 },\n  brands: [],\n  sortBy: 'popularite',\n  setCategories: (categories) => set({ categories }),\n  setPriceRange: (priceRange) => set({ priceRange }),\n  setBrands: (brands) => set({ brands }),\n  setSortBy: (sortBy) => set({ sortBy }),\n  resetFilters: () => set({ categories: [], priceRange: { min: 0, max: 1000 }, brands: [], sortBy: 'popularite' })\n}));\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment synchroniser ce store avec l'URL (ex: <code>?categories=electronique,maison&prix_min=100&prix_max=500&sort=prix_asc</code>) à l'aide de <code>useEffect</code> et <code>useSearchParams</code> ?",
+            "niveau": "very hard",
+            "reponse": "Dans un composant `FilterSync`, on lit `searchParams` au montage et on initialise le store avec `useFilterStore.getState().setCategories(...)`. On utilise aussi un `useEffect` qui écoute le store et met à jour l'URL via `setSearchParams`. Attention aux boucles infinies : comparer les valeurs avant de mettre à jour l'URL. Exemple : \n```js\nuseEffect(() => {\n  const params = new URLSearchParams();\n  if (filters.categories.length) params.set('categories', filters.categories.join(','));\n  setSearchParams(params);\n}, [filters]);\n```"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Proposez une fonction `getFilteredProducts(products, filters)` qui applique les filtres et le tri, en utilisant les méthodes JavaScript (filter, sort).",
+        "niveau": "medium",
+        "reponse": "```javascript\nconst getFilteredProducts = (products, filters) => {\n  let result = [...products];\n  // Filtre catégories\n  if (filters.categories.length) {\n    result = result.filter(p => filters.categories.includes(p.category));\n  }\n  // Filtre prix\n  result = result.filter(p => p.price >= filters.priceRange.min && p.price <= filters.priceRange.max);\n  // Filtre marques\n  if (filters.brands.length) {\n    result = result.filter(p => filters.brands.includes(p.brand));\n  }\n  // Tri\n  if (filters.sortBy === 'prix_asc') result.sort((a,b) => a.price - b.price);\n  else if (filters.sortBy === 'prix_desc') result.sort((a,b) => b.price - a.price);\n  else if (filters.sortBy === 'popularite') result.sort((a,b) => b.rating - a.rating);\n  return result;\n};\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 4 : Comparer Zustand avec Context API",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans une équipe de développement, certains défendent l'utilisation de Context API pour la gestion d'état global, d'autres préfèrent Zustand. Vous devez argumenter pour le choix de Zustand dans un e-commerce avec des performances critiques (panier, filtres, authentification).</p>",
+      "images": [
+        "graphique comparant les re-renders avec Context vs Zustand",
+        "logo de Zustand et logo de React Context"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Comparez Zustand et Context API sur les critères suivants : performances, boilerplate, facilité de persistance, et compatibilité avec le rendu concurrent.",
+        "niveau": "medium",
+        "reponse": "1. Performances : Zustand évite les re-renders inutiles grâce aux selectors ; Context provoque un re-render de tous les consommateurs même si seule une partie de l'état change. 2. Boilerplate : Zustand nécessite très peu de code (<10 lignes pour un store) ; Context demande Provider, value, et useReducer/useState. 3. Persistance : Zustand propose un middleware `persist` intégré ; Context nécessite une implémentation manuelle avec localStorage. 4. Rendu concurrent : Zustand est compatible avec React 18 et Suspense ; Context fonctionne mais peut bloquer.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Dans quel cas spécifique utiliseriez-vous quand même Context API plutôt que Zustand ? Justifiez.",
+        "niveau": "easy",
+        "reponse": "Context API est suffisant pour des états globaux simples et peu fréquemment modifiés, comme le thème (clair/sombre) ou la langue. Dans ces cas, les performances ne sont pas critiques et le surcoût de Zustand n'est pas nécessaire. Context est aussi natif à React, sans dépendance supplémentaire.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 5 : Implémenter la pagination client-side avec Zustand",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Votre catalogue contient 120 produits. Vous devez implémenter une pagination côté client avec 12 produits par page. L'état de la page courante doit être partagé entre plusieurs composants (liste des produits, contrôles de pagination). Utilisez Zustand pour stocker la page active.</p>",
+      "images": [
+        "barre de pagination avec numéros de page (1,2,3...) et boutons précédent/suivant",
+        "schéma de slicing de tableau pour pagination"
+      ],
+      "images": [
+        "barre de pagination avec numéros de page et boutons précédent/suivant",
+        "schéma de slicing de tableau pour pagination"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créez un store `usePaginationStore` avec `currentPage` et `itemsPerPage` (12). Ajoutez les actions `setPage`, `nextPage`, `prevPage`, `goToPage`. Ajoutez un getter `totalPages` (basé sur la longueur d'un tableau de produits passé en paramètre).",
+        "niveau": "medium",
+        "reponse": "```javascript\nconst usePaginationStore = create((set, get) => ({\n  currentPage: 1,\n  itemsPerPage: 12,\n  setPage: (page) => set({ currentPage: page }),\n  nextPage: (totalItems) => {\n    const { currentPage, itemsPerPage } = get();\n    const maxPage = Math.ceil(totalItems / itemsPerPage);\n    if (currentPage < maxPage) set({ currentPage: currentPage + 1 });\n  },\n  prevPage: () => {\n    const { currentPage } = get();\n    if (currentPage > 1) set({ currentPage: currentPage - 1 });\n  },\n  goToPage: (page, totalItems) => {\n    const maxPage = Math.ceil(totalItems / get().itemsPerPage);\n    if (page >= 1 && page <= maxPage) set({ currentPage: page });\n  },\n  totalPages: (totalItems) => Math.ceil(totalItems / get().itemsPerPage)\n}));\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Écrivez un sélecteur `getPaginatedProducts` qui utilise le store et une liste de produits pour renvoyer les produits de la page courante.",
+            "niveau": "medium",
+            "reponse": "```javascript\nconst getPaginatedProducts = (products) => {\n  const { currentPage, itemsPerPage } = usePaginationStore.getState();\n  const start = (currentPage - 1) * itemsPerPage;\n  return products.slice(start, start + itemsPerPage);\n};\n```\nDans un composant, on utilise `usePaginationStore((state) => state.currentPage)` pour déclencher le re-render quand la page change, puis on calcule les produits affichés avec `useMemo`."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez comment réinitialiser la page courante à 1 lorsque les filtres de produits changent (ex: nouvelle catégorie sélectionnée).",
+        "niveau": "easy",
+        "reponse": "Dans le composant qui gère les filtres, après avoir modifié le filtre (ex: setCategories), on appelle `usePaginationStore.getState().setPage(1)`. On peut aussi ajouter un `useEffect` qui écoute les changements de filtres et réinitialise la page automatiquement.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

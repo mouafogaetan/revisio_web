@@ -1,0 +1,222 @@
+[
+  {
+    "intitule": "Exercice 1 : Arborescence de catégories et cache",
+    "type": "competence",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous êtes développeur backend sur la plateforme e-commerce Sawamart. L'équipe front-end vous signale que l'API de récupération de l'arborescence des catégories est trop lente à cause du grand nombre de catégories.</p><p>En vous basant sur vos connaissances de la leçon 7, proposez une solution pour améliorer les performances de cet endpoint. Expliquez en détail comment vous implémenteriez cette solution en utilisant les annotations NestJS appropriées.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Quelle annotation utiliseriez-vous pour mettre en cache la réponse de l'endpoint public de récupération de l'arborescence des catégories ?",
+        "niveau": "easy",
+        "reponse": "L'annotation `@CacheTTL()` (ou `@CacheKey()` et `@CacheTTL()` combinées) est utilisée pour définir la durée de vie du cache.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Avec quelle valeur de TTL (Time To Live) configureriez-vous ce cache pour un catalogue de produits qui est mis à jour quotidiennement ? Justifiez votre réponse.",
+            "niveau": "medium",
+            "reponse": "Une valeur de 3600 secondes (1 heure) ou 86400 secondes (24 heures) selon la fréquence des mises à jour. Il faut trouver un équilibre entre la fraîcheur des données et les performances."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Quel module NestJS devez-vous importer et configurer dans votre module principal pour activer le mécanisme de cache ?",
+            "niveau": "easy",
+            "reponse": "Le `CacheModule` de `@nestjs/cache-manager`."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "En plus du cache, quelle autre optimisation pourrait être apportée au niveau de la base de données pour accélérer la récupération de l'arborescence des catégories ?",
+        "niveau": "hard",
+        "reponse": "On pourrait utiliser des indexes sur les colonnes utilisées dans les requêtes de recherche et optimiser les requêtes SQL avec des CTE (Common Table Expressions) récursives pour les arborescences.",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Pourquoi une approche de 'materialized path' pourrait-elle être plus efficace qu'une approche 'adjacency list' pour ce cas d'usage ?",
+            "niveau": "very hard",
+            "reponse": "Le 'materialized path' stocke le chemin complet de chaque catégorie, ce qui permet de récupérer toute une sous-arborescence avec une seule requête simple, sans avoir à faire de requêtes récursives."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 2 : CRUD des catégories avec validation des données",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Une entreprise de e-commerce souhaite mettre en place un système de gestion des catégories de produits. Les administrateurs doivent pouvoir créer, modifier et supprimer des catégories. Les clients doivent pouvoir consulter l'arborescence des catégories.</p><p>En tant que développeur, vous devez créer le module de gestion des catégories avec les fonctionnalités suivantes :</p><ul><li>Les admins peuvent créer une catégorie avec un nom unique, une description optionnelle et une catégorie parente optionnelle.</li><li>La suppression d'une catégorie doit être possible uniquement si elle n'a pas de sous-catégories.</li><li>Les clients peuvent consulter l'arborescence complète des catégories.</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le code du DTO (Data Transfer Object) pour la création d'une catégorie en utilisant `class-validator` pour valider les entrées. Incluez les validations nécessaires.",
+        "niveau": "hard",
+        "reponse": "```typescript\nimport { IsString, IsOptional, IsUUID, IsNotEmpty } from 'class-validator';\n\nexport class CreateCategoryDto {\n  @IsString()\n  @IsNotEmpty()\n  name: string;\n\n  @IsString()\n  @IsOptional()\n  description?: string;\n\n  @IsUUID()\n  @IsOptional()\n  parentId?: string;\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment vérifier que le nom de la catégorie est unique avant de l'enregistrer en base de données ?",
+            "niveau": "medium",
+            "reponse": "Il faut utiliser un service qui interroge la base de données avec le nom fourni pour vérifier s'il existe déjà, et si c'est le cas, lever une exception appropriée (ex: `ConflictException`)."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Quel type d'exception devez-vous lever si un administrateur tente de supprimer une catégorie qui possède des sous-catégories ?",
+            "niveau": "easy",
+            "reponse": "Une `BadRequestException` ou une `ConflictException` avec un message clair indiquant que la suppression n'est pas possible car la catégorie contient des sous-catégories."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Quels endpoints doivent être publics et lesquels doivent être protégés par authentification et autorisation (rôle admin) ?",
+        "niveau": "medium",
+        "reponse": "Les endpoints `GET /categories` (récupération de l'arborescence) et `GET /categories/:id` sont publics. Les endpoints `POST /categories`, `PUT /categories/:id`, `DELETE /categories/:id` doivent être protégés par authentification et autorisation admin.",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Comment implémenteriez-vous la protection de ces routes avec `JwtAuthGuard` et `RolesGuard` ?",
+            "niveau": "hard",
+            "reponse": "En utilisant `@UseGuards(JwtAuthGuard, RolesGuard)` au niveau des contrôleurs ou des méthodes, et en ajoutant `@Roles('admin')` pour spécifier que seul un utilisateur avec le rôle admin peut accéder à ces endpoints."
+          }
+        ]
+      },
+      {
+        "numero": 3,
+        "texte": "Concevez une requête TypeORM pour récupérer toutes les catégories avec leurs sous-catégories dans une structure arborescente.",
+        "niveau": "very hard",
+        "reponse": "On peut utiliser `find` avec une relation `children` chargée en eager ou avec une requête spécifique. Exemple : `this.categoryRepository.find({ relations: ['children'] })`.",
+        "sousQuestions": [
+          {
+            "numero": "3.a",
+            "texte": "Quel est le risque d'utiliser `relations: ['children']` si l'arbre est profond ? Quelle alternative proposez-vous ?",
+            "niveau": "very hard",
+            "reponse": "Le risque est de charger toutes les sous-catégories en cascade, ce qui peut entraîner des problèmes de performance (N+1 queries) et une réponse trop volumineuse. On peut utiliser une approche 'lazy loading' ou des requêtes spécifiques avec des CTE récursifs."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 3 : Implémentation pratique d'un CRUD de catégories",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous devez implémenter le CRUD complet des catégories pour la plateforme e-commerce. Le projet utilise NestJS avec TypeORM et PostgreSQL.</p><p>Les spécifications sont les suivantes :</p><ul><li>La table `categories` doit contenir : `id` (UUID), `name` (unique), `description` (texte), `parentId` (UUID, nullable), `createdAt`, `updatedAt`.</li><li>Les endpoints à développer : `GET /categories` (public), `GET /categories/:id` (public), `POST /categories` (admin), `PUT /categories/:id` (admin), `DELETE /categories/:id` (admin).</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le code de l'entité `Category` avec les décors TypeORM appropriés.",
+        "niveau": "hard",
+        "reponse": "```typescript\nimport { Entity, Column, PrimaryGeneratedColumn, ManyToOne, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';\n\n@Entity()\nexport class Category {\n  @PrimaryGeneratedColumn('uuid')\n  id: string;\n\n  @Column({ unique: true })\n  name: string;\n\n  @Column({ nullable: true })\n  description?: string;\n\n  @ManyToOne(() => Category, category => category.children, { nullable: true })\n  parent?: Category;\n\n  @OneToMany(() => Category, category => category.parent)\n  children?: Category[];\n\n  @CreateDateColumn()\n  createdAt: Date;\n\n  @UpdateDateColumn()\n  updatedAt: Date;\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment configurer la relation parent-enfant dans l'entité et quel type de relation est-ce ?",
+            "niveau": "medium",
+            "reponse": "C'est une relation OneToMany/ManyToOne auto-référencée. Une catégorie peut avoir plusieurs enfants (`children`) et un enfant a un parent (`parent`)."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Écrivez le service `CategoriesService` avec les méthodes `create`, `findAll`, `findOne`, `update`, `remove`.",
+        "niveau": "very hard",
+        "reponse": "```typescript\nimport { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Category } from './entities/category.entity';\nimport { CreateCategoryDto } from './dto/create-category.dto';\nimport { UpdateCategoryDto } from './dto/update-category.dto';\n\n@Injectable()\nexport class CategoriesService {\n  constructor(\n    @InjectRepository(Category)\n    private categoryRepository: Repository<Category>,\n  ) {}\n\n  async create(createCategoryDto: CreateCategoryDto): Promise<Category> {\n    const { parentId, ...data } = createCategoryDto;\n    const category = this.categoryRepository.create(data);\n    if (parentId) {\n      const parent = await this.findOne(parentId);\n      category.parent = parent;\n    }\n    return this.categoryRepository.save(category);\n  }\n\n  async findAll(): Promise<Category[]> {\n    return this.categoryRepository.find({ relations: ['children'] });\n  }\n\n  async findOne(id: string): Promise<Category> {\n    const category = await this.categoryRepository.findOne({ where: { id }, relations: ['children'] });\n    if (!category) {\n      throw new NotFoundException(`Category with ID ${id} not found`);\n    }\n    return category;\n  }\n\n  async update(id: string, updateCategoryDto: UpdateCategoryDto): Promise<Category> {\n    const category = await this.findOne(id);\n    const { parentId, ...data } = updateCategoryDto;\n    if (parentId) {\n      const parent = await this.findOne(parentId);\n      category.parent = parent;\n    }\n    Object.assign(category, data);\n    return this.categoryRepository.save(category);\n  }\n\n  async remove(id: string): Promise<void> {\n    const category = await this.findOne(id);\n    if (category.children && category.children.length > 0) {\n      throw new BadRequestException('Cannot delete category with children');\n    }\n    await this.categoryRepository.remove(category);\n  }\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Quelle exception devez-vous lever si une catégorie avec un ID donné n'existe pas ?",
+            "niveau": "easy",
+            "reponse": "Une `NotFoundException` (404) avec un message approprié."
+          },
+          {
+            "numero": "2.b",
+            "texte": "Comment gérer le cas où l'on essaie de créer une catégorie avec un nom qui existe déjà ?",
+            "niveau": "medium",
+            "reponse": "On peut utiliser une contrainte d'unicité au niveau de la base de données et attraper l'exception `QueryFailedError` pour renvoyer une `ConflictException` avec un message personnalisé."
+          }
+        ]
+      },
+      {
+        "numero": 3,
+        "texte": "Écrivez le contrôleur `CategoriesController` avec les endpoints correspondants en utilisant les décorateurs NestJS appropriés.",
+        "niveau": "hard",
+        "reponse": "```typescript\nimport { Controller, Get, Post, Put, Delete, Body, Param, UseGuards } from '@nestjs/common';\nimport { CategoriesService } from './categories.service';\nimport { CreateCategoryDto } from './dto/create-category.dto';\nimport { UpdateCategoryDto } from './dto/update-category.dto';\nimport { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';\nimport { RolesGuard } from '../auth/guards/roles.guard';\nimport { Roles } from '../auth/decorators/roles.decorator';\n\n@Controller('categories')\nexport class CategoriesController {\n  constructor(private readonly categoriesService: CategoriesService) {}\n\n  @Get()\n  findAll() {\n    return this.categoriesService.findAll();\n  }\n\n  @Get(':id')\n  findOne(@Param('id') id: string) {\n    return this.categoriesService.findOne(id);\n  }\n\n  @Post()\n  @UseGuards(JwtAuthGuard, RolesGuard)\n  @Roles('admin')\n  create(@Body() createCategoryDto: CreateCategoryDto) {\n    return this.categoriesService.create(createCategoryDto);\n  }\n\n  @Put(':id')\n  @UseGuards(JwtAuthGuard, RolesGuard)\n  @Roles('admin')\n  update(@Param('id') id: string, @Body() updateCategoryDto: UpdateCategoryDto) {\n    return this.categoriesService.update(id, updateCategoryDto);\n  }\n\n  @Delete(':id')\n  @UseGuards(JwtAuthGuard, RolesGuard)\n  @Roles('admin')\n  remove(@Param('id') id: string) {\n    return this.categoriesService.remove(id);\n  }\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "3.a",
+            "texte": "Pourquoi les méthodes `create`, `update` et `remove` utilisent-elles les guards `JwtAuthGuard` et `RolesGuard` ?",
+            "niveau": "medium",
+            "reponse": "Pour s'assurer que l'utilisateur est authentifié (JWT valide) et qu'il a le rôle admin nécessaire pour effectuer ces actions."
+          },
+          {
+            "numero": "3.b",
+            "texte": "Quel serait l'impact sur l'API si on supprimait le `@Roles('admin')` sur ces endpoints ?",
+            "niveau": "hard",
+            "reponse": "Tout utilisateur authentifié (y compris les clients) pourrait créer, modifier ou supprimer des catégories, ce qui représenterait une faille de sécurité majeure."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 4 : Optimisation des requêtes et modélisation avancée",
+    "type": "ressource",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>La plateforme Sawamart connaît un grand succès et le nombre de catégories a explosé. L'endpoint public de récupération de l'arborescence des catégories commence à montrer des signes de lenteur.</p><p>Vous devez proposer et implémenter des solutions d'optimisation tout en conservant les fonctionnalités existantes.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez une amélioration de l'entité `Category` pour optimiser les requêtes d'arborescence en utilisant le pattern 'Materialized Path'.",
+        "niveau": "very hard",
+        "reponse": "Ajouter une colonne `path` de type `varchar` qui contiendra le chemin complet de la catégorie (ex: '1.2.5' pour les IDs ou 'uuid1.uuid2.uuid3') et indexer cette colonne.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quel avantage cette approche apporte-t-elle par rapport à l'approche 'Adjacency List' ?",
+            "niveau": "hard",
+            "reponse": "Elle permet de récupérer toute une sous-arborescence avec une seule requête simple (`WHERE path LIKE '1.2.%'`) sans requêtes récursives, ce qui est beaucoup plus performant."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Quel est le principal inconvénient de l'approche 'Materialized Path' dans un contexte de gestion de catégories ?",
+            "niveau": "hard",
+            "reponse": "La mise à jour du chemin lors du déplacement d'une catégorie est coûteuse car il faut mettre à jour tous les chemins de ses descendants."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Proposez une solution de cache distribué (Redis) pour l'endpoint public des catégories. Expliquez comment vous mettriez à jour le cache lors des modifications.",
+        "niveau": "very hard",
+        "reponse": "Utiliser Redis comme cache store avec `@nestjs/cache-manager` et `cache-manager-redis-store`. Mettre en place une stratégie d'invalidation du cache (TTL ou invalidation explicite) lors de la création, mise à jour ou suppression d'une catégorie.",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Comment implémenteriez-vous l'invalidation du cache lors de la modification d'une catégorie ?",
+            "niveau": "hard",
+            "reponse": "En utilisant `this.cacheManager.del('categories-tree')` après une opération de modification pour supprimer l'entrée du cache et forcer un rechargement."
+          },
+          {
+            "numero": "2.b",
+            "texte": "Quelle serait une alternative plus efficace pour ne pas invalider tout le cache à chaque modification ?",
+            "niveau": "very hard",
+            "reponse": "On pourrait utiliser des tags de cache (si supportés par Redis) pour invalider uniquement les branches modifiées, ou implémenter un cache de second niveau avec des TTL plus courts."
+          }
+        ]
+      }
+    ]
+  }
+]

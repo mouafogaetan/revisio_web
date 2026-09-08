@@ -1,0 +1,99 @@
+[
+  {
+    "intitule": "Mise en place d’un endpoint CRUD sécurisé",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous développez une API de gestion de produits pour une petite boutique en ligne. Chaque produit est défini par : <strong>Id</strong> (entier), <strong>Nom</strong> (chaîne, obligatoire, max 100 caractères), <strong>Prix</strong> (décimal, supérieur à 0) et <strong>Stock</strong> (entier, ≥ 0).</p><p>Vous utilisez <strong>ASP.NET Core</strong>, <strong>Entity Framework Core</strong> et l’authentification <strong>JWT</strong>. Seuls les utilisateurs ayant le rôle <strong>Admin</strong> peuvent ajouter ou supprimer des produits ; les utilisateurs authentifiés (rôle User) peuvent consulter la liste.</p><p>Implémentez les endpoints suivants :</p><ul><li><code>GET /api/products</code> : accessible aux rôles User et Admin</li><li><code>POST /api/products</code> : accessible uniquement au rôle Admin</li><li><code>DELETE /api/products/{id}</code> : accessible uniquement au rôle Admin</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédigez le code du contrôleur (ProductsController) avec les actions nécessaires, les décorations d’autorisation, l’injection du service ou du repository, et la gestion des codes HTTP (201, 200, 400, 401, 403, 404).",
+        "niveau": "hard",
+        "reponse": "Voici un exemple complet de contrôleur respectant les contraintes :\n\n```csharp\n[ApiController]\n[Route(\"api/[controller]\")]\n[Authorize]\npublic class ProductsController : ControllerBase\n{\n    private readonly IProductService _productService;\n\n    public ProductsController(IProductService productService)\n    {\n        _productService = productService;\n    }\n\n    [HttpGet]\n    [Authorize(Roles = \"User,Admin\")]\n    public async Task<ActionResult<IEnumerable<ProductDto>>> GetProducts()\n    {\n        var products = await _productService.GetAllAsync();\n        return Ok(products);\n    }\n\n    [HttpPost]\n    [Authorize(Roles = \"Admin\")]\n    public async Task<ActionResult<ProductDto>> CreateProduct(ProductCreateDto productDto)\n    {\n        if (!ModelState.IsValid)\n            return BadRequest(ModelState);\n\n        var created = await _productService.CreateAsync(productDto);\n        return CreatedAtAction(nameof(GetProducts), new { id = created.Id }, created);\n    }\n\n    [HttpDelete(\"{id}\")]\n    [Authorize(Roles = \"Admin\")]\n    public async Task<IActionResult> DeleteProduct(int id)\n    {\n        var success = await _productService.DeleteAsync(id);\n        if (!success)\n            return NotFound();\n        return NoContent();\n    }\n}\n```\n\nExplications :\n- `[Authorize]` sur le contrôleur impose une authentification globale.\n- `[Authorize(Roles = \"...\")]` sur chaque action affine les droits.\n- `CreatedAtAction` retourne 201 avec l’emplacement de la ressource.\n- `NoContent()` est standard pour un DELETE réussi (204).\n- Les DTOs (`ProductDto`, `ProductCreateDto`) évitent l’exposition directe des entités.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion des rôles et politiques d’autorisation",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Dans une API .NET avec authentification JWT, la classe suivante est utilisée pour générer le token :</p>\n<pre><code>var claims = new List&lt;Claim&gt;\n{\n    new Claim(ClaimTypes.Name, user.Email),\n    new Claim(ClaimTypes.Role, \"User\"),\n    new Claim(\"department\", \"Sales\")\n};\n</code></pre>\n<p>Répondez aux questions ci-dessous.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifiez le type de claim utilisé pour spécifier le rôle de l’utilisateur.",
+        "niveau": "easy",
+        "reponse": "`ClaimTypes.Role` est utilisé (ou directement la chaîne `\"role\"`).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez comment restreindre un endpoint aux utilisateurs ayant le rôle \"Admin\" et le department \"Sales\".",
+            "niveau": "medium",
+            "reponse": "Il faut créer une politique d’autorisation personnalisée via `AuthorizationPolicyBuilder` en exigeant les deux claims. Exemple :\n```csharp\noptions.AddPolicy(\"AdminSales\", policy =>\n    policy.RequireClaim(ClaimTypes.Role, \"Admin\")\n          .RequireClaim(\"department\", \"Sales\"));\n```\nPuis utiliser `[Authorize(Policy = \"AdminSales\")]` sur le contrôleur/action."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Validation des entrées et codes HTTP REST",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Considérez l’action suivante dans un contrôleur API :</p>\n<pre><code>[HttpPost]\npublic IActionResult Create([FromBody] UserCreateDto user)\n{\n    if (user.Age &lt; 18)\n        return BadRequest(\"L'utilisateur doit avoir au moins 18 ans.\");\n    \n    // Ajout en base...\n    return Ok();\n}\n</code></pre>\n<p>Améliorez cette action pour respecter les standards REST et la validation automatique d’ASP.NET Core.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez les modifications à apporter pour utiliser les attributs de validation (Data Annotations) et retourner un statut 201 avec l’emplacement de la ressource.",
+        "niveau": "medium",
+        "reponse": "Modifications :\n1. Ajouter `[ApiController]` sur le contrôleur (si ce n’est pas déjà fait) pour activer la validation automatique.\n2. Dans `UserCreateDto`, placer `[Range(18, 120)]` sur la propriété `Age`.\n3. Supprimer le `if` manuel.\n4. Remplacer `return Ok()` par `return CreatedAtAction(nameof(GetUser), new { id = newUser.Id }, newUser);` après l’insertion.\n5. Si la validation échoue, ASP.NET Core retourne automatiquement un 400 avec les détails d’erreur.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Sécurisation complète d’une route avec JWT",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous devez sécuriser l’endpoint <code>PATCH /api/orders/{id}/status</code> qui permet de modifier le statut d’une commande. Seuls les utilisateurs ayant le rôle <strong>Manager</strong> ou l’utilisateur propriétaire de la commande (champ <code>UserId</code> dans l’entité Order) peuvent effectuer cette action. De plus, le token JWT doit contenir un claim <code>userId</code>.</p><p>Implémentez la logique d’autorisation personnalisée dans l’action du contrôleur.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédigez l’action du contrôleur avec la vérification d’accès basée sur le rôle ET la propriété de la ressource. Gérez les réponses HTTP 403 (Forbidden) et 404 si la commande n’existe pas.",
+        "niveau": "very hard",
+        "reponse": "```csharp\n[HttpPatch(\"{id}/status\")]\n[Authorize(Roles = \"Manager\")] // Au moins Manager peut toujours passer\npublic async Task<IActionResult> UpdateOrderStatus(int id, [FromBody] StatusUpdateDto dto)\n{\n    var order = await _context.Orders.FindAsync(id);\n    if (order == null)\n        return NotFound();\n\n    // Récupération du userId depuis le token JWT\n    var userIdClaim = User.FindFirst(\"userId\")?.Value;\n    if (userIdClaim == null)\n        return Forbid();\n\n    bool isOwner = order.UserId.ToString() == userIdClaim;\n    bool isManager = User.IsInRole(\"Manager\");\n\n    if (!isManager && !isOwner)\n        return Forbid();\n\n    order.Status = dto.NewStatus;\n    await _context.SaveChangesAsync();\n    return NoContent();\n}\n```\n\nExplication :\n- `[Authorize(Roles = \"Manager\")]` seul ne suffit pas, car un Owner peut ne pas être Manager.\n- On récupère le `userId` du token (ajouté lors de la création du JWT).\n- On compare avec l’`order.UserId`.\n- Si aucun des deux droits n’est satisfait → 403 Forbidden.\n- La réponse 204 NoContent est standard pour un PATCH réussi.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Implémentation complète d’une API de gestion de tâches",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Réalisez une mini-API de gestion de tâches (Task) avec les caractéristiques suivantes :</p>\n<ul>\n<li>Modèle : <strong>TaskItem</strong> (Id, Title (string, required), Description, IsCompleted (bool), UserId (int))</li>\n<li>Authentification JWT (endpoint <code>/api/auth/login</code>) avec génération de token contenant l’<code>UserId</code> et le rôle (User ou Admin).</li>\n<li>Endpoints :</li>\n<ul>\n<li><code>GET /api/tasks</code> : renvoie les tâches de l’utilisateur connecté (User) ou toutes les tâches (Admin).</li>\n<li><code>POST /api/tasks</code> : crée une tâche pour l’utilisateur connecté (UserId pris du token).</li>\n<li><code>PUT /api/tasks/{id}</code> : modifie une tâche, mais seul l’auteur ou un Admin peut le faire.</li>\n<li><code>DELETE /api/tasks/{id}</code> : supprime une tâche, mêmes droits que PUT.</li>\n</ul>\n</ul>\n<p>Fournissez le code complet du contrôleur et la logique d’autorisation.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le contrôleur TasksController en implémentant les actions et les vérifications d’accès. Utilisez un service (ITaskService) pour la logique métier.",
+        "niveau": "very hard",
+        "reponse": "```csharp\n[ApiController]\n[Route(\"api/[controller]\")]\n[Authorize]\npublic class TasksController : ControllerBase\n{\n    private readonly ITaskService _taskService;\n    private readonly IHttpContextAccessor _httpContextAccessor;\n\n    public TasksController(ITaskService taskService, IHttpContextAccessor httpContextAccessor)\n    {\n        _taskService = taskService;\n        _httpContextAccessor = httpContextAccessor;\n    }\n\n    private int GetCurrentUserId()\n    {\n        var userIdClaim = User.FindFirst(\"userId\")?.Value;\n        return int.Parse(userIdClaim);\n    }\n\n    [HttpGet]\n    public async Task<ActionResult<IEnumerable<TaskDto>>> GetTasks()\n    {\n        var userId = GetCurrentUserId();\n        var isAdmin = User.IsInRole(\"Admin\");\n        var tasks = await _taskService.GetTasksAsync(userId, isAdmin);\n        return Ok(tasks);\n    }\n\n    [HttpPost]\n    public async Task<ActionResult<TaskDto>> CreateTask(TaskCreateDto dto)\n    {\n        var userId = GetCurrentUserId();\n        var created = await _taskService.CreateAsync(dto, userId);\n        return CreatedAtAction(nameof(GetTasks), new { id = created.Id }, created);\n    }\n\n    [HttpPut(\"{id}\")]\n    public async Task<IActionResult> UpdateTask(int id, TaskUpdateDto dto)\n    {\n        var userId = GetCurrentUserId();\n        var isAdmin = User.IsInRole(\"Admin\");\n        var success = await _taskService.UpdateAsync(id, dto, userId, isAdmin);\n        if (!success) return NotFound();\n        return NoContent();\n    }\n\n    [HttpDelete(\"{id}\")]\n    public async Task<IActionResult> DeleteTask(int id)\n    {\n        var userId = GetCurrentUserId();\n        var isAdmin = User.IsInRole(\"Admin\");\n        var success = await _taskService.DeleteAsync(id, userId, isAdmin);\n        if (!success) return NotFound();\n        return NoContent();\n    }\n}\n```\n\nLe service vérifie si l’utilisateur est autorisé (estAdmin ou propriétaire) avant chaque opération de modification/suppression.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

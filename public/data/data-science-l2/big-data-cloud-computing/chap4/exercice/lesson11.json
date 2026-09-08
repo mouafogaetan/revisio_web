@@ -1,0 +1,184 @@
+[
+  {
+    "intitule": "Architecture de HDFS",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<div style='font-family: Arial, sans-serif; padding: 10px;'><p style='font-size: 1em; line-height: 1.6;'>Le <strong>Hadoop Distributed File System (HDFS)</strong> est le système de fichiers distribué de l'écosystème Hadoop. Il est conçu pour stocker de très grands volumes de données sur un cluster de machines.</p><p style='font-size: 1em; line-height: 1.6;'>L'architecture de HDFS repose sur deux composants principaux : le <strong>NameNode</strong> et les <strong>DataNodes</strong>.</p></div>",
+      "images": [
+        "Schéma d'architecture HDFS montrant un NameNode central connecté à plusieurs DataNodes, avec des blocs de données répliqués",
+        "Diagramme illustrant le processus de lecture/écriture dans HDFS : client → NameNode (métadonnées) → DataNodes (données)"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez le rôle du <strong>NameNode</strong> dans l'architecture HDFS.",
+        "niveau": "easy",
+        "reponse": "<p style='font-size: 0.95em; line-height: 1.6;'>Le <strong>NameNode</strong> est le <strong>maître</strong> du système HDFS. Il a deux rôles principaux :</p><ul style='font-size: 0.95em; line-height: 1.6; padding-left: 20px;'><li><strong>Gestion des métadonnées :</strong> Il stocke l'arborescence des fichiers et des répertoires, ainsi que les informations sur les blocs de données (emplacement des blocs sur les DataNodes).</li><li><strong>Gestion des espaces de noms :</strong> Il gère les opérations sur les fichiers (ouverture, fermeture, renommage, suppression).</li></ul><p style='font-size: 0.95em; line-height: 1.6;'>Le NameNode ne stocke pas les données elles-mêmes, mais les métadonnées. Il est un point central de l'architecture, et sa disponibilité est critique pour le bon fonctionnement du cluster.</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quelle est la conséquence d'une panne du NameNode ?",
+            "niveau": "medium",
+            "reponse": "Une panne du NameNode rend le système HDFS <strong>indisponible</strong> car le cluster ne peut plus accéder aux métadonnées. Les DataNodes continuent de fonctionner, mais sans le NameNode, les clients ne peuvent pas :<ul><li>Lire ou écrire des fichiers (car ils ne savent pas où se trouvent les blocs).</li><li>Connaître la structure du système de fichiers.</li></ul><p>Pour remédier à cela, Hadoop propose des mécanismes de <strong>haute disponibilité (HA)</strong> avec un NameNode actif et un NameNode en veille (standby), ou l'utilisation de <strong>JournalNodes</strong> pour partager les métadonnées.</p>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Quel est le rôle des <strong>DataNodes</strong> dans HDFS ?",
+            "niveau": "easy",
+            "reponse": "Les <strong>DataNodes</strong> sont les <strong>esclaves</strong> du système HDFS. Ils ont deux rôles principaux :<ul><li><strong>Stockage des données :</strong> Ils stockent les blocs de données réels des fichiers. Chaque fichier est divisé en blocs (généralement 128 Mo) qui sont répartis sur les DataNodes.</li><li><strong>Exécution des opérations :</strong> Ils gèrent les opérations de lecture et d'écriture demandées par les clients, en coordination avec le NameNode.</li><li><strong>Réplication :</strong> Ils participent à la réplication des données en s'envoyant des blocs entre eux selon les instructions du NameNode.</li></ul>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "La Réplication dans HDFS",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<div style='font-family: Arial, sans-serif; padding: 10px;'><p style='font-size: 1em; line-height: 1.6;'>HDFS assure la <strong>tolérance aux pannes</strong> grâce à la <strong>réplication</strong> des données. Chaque bloc de données est répliqué sur plusieurs DataNodes.</p><p style='font-size: 1em; line-height: 1.6;'>Le <strong>facteur de réplication</strong> (par défaut 3) détermine le nombre de copies de chaque bloc.</p></div>",
+      "images": [
+        "Schéma montrant un fichier divisé en blocs, chaque bloc étant répliqué sur 3 DataNodes différents",
+        "Diagramme illustrant la stratégie de placement des répliques (rack awareness) : 2 répliques dans un rack, 1 dans un autre rack"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez la <strong>stratégie de placement des répliques</strong> dans HDFS (rack awareness).",
+        "niveau": "hard",
+        "reponse": "<p style='font-size: 0.95em; line-height: 1.6;'>La stratégie de placement des répliques dans HDFS, avec un facteur de réplication de 3, est la suivante :</p><ul style='font-size: 0.95em; line-height: 1.6; padding-left: 20px;'><li><strong>Première réplique :</strong> Placée sur le nœud où le client écrit (si le client est sur un DataNode) ou sur un DataNode aléatoire dans le même rack.</li><li><strong>Deuxième réplique :</strong> Placée sur un DataNode dans un <strong>rack différent</strong> du premier. Cela permet d'assurer la tolérance aux pannes en cas de panne d'un rack entier.</li><li><strong>Troisième réplique :</strong> Placée sur un DataNode dans le <strong>même rack</strong> que la deuxième réplique, mais sur un nœud différent.</li></ul><p style='font-size: 0.95em; line-height: 1.6;'>Cette stratégie équilibre la tolérance aux pannes (répartition sur plusieurs racks) et les performances (deux répliques dans le même rack pour réduire la latence réseau).</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quelle est l'importance de la <strong>conscience des racks (rack awareness)</strong> ?",
+            "niveau": "hard",
+            "reponse": "La <strong>conscience des racks</strong> est importante car :<ul><li><strong>Tolérance aux pannes :</strong> En répartissant les répliques sur plusieurs racks, HDFS résiste à la panne d'un rack entier (panne de commutateur réseau, panne électrique).</li><li><strong>Performance :</strong> En plaçant deux répliques dans le même rack, HDFS réduit la latence réseau pour les opérations de lecture et d'écriture entre ces nœuds.</li><li><strong>Disponibilité :</strong> Si un DataNode tombe, le NameNode peut répliquer les blocs manquants sur d'autres DataNodes dans le même rack ou dans d'autres racks.</li></ul>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Calculez l'espace de stockage total utilisé sur le cluster pour un fichier de 1 To avec un facteur de réplication de 3.",
+            "niveau": "easy",
+            "reponse": "Avec un facteur de réplication de 3, le fichier de 1 To est stocké <strong>3 fois</strong> sur le cluster. L'espace de stockage total utilisé est donc : <strong>1 To × 3 = 3 To</strong>.<br><br>Cela signifie que pour stocker 1 To de données utiles, le cluster doit disposer de <strong>3 To d'espace de stockage brut</strong> (hors overhead). C'est le compromis entre tolérance aux pannes et coût de stockage."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Lecture et Écriture dans HDFS",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<div style='font-family: Arial, sans-serif; padding: 10px;'><p style='font-size: 1em; line-height: 1.6;'>Dans HDFS, les opérations de lecture et d'écriture suivent des protocoles spécifiques impliquant le client, le NameNode et les DataNodes.</p></div>",
+      "images": [
+        "Schéma du flux d'écriture dans HDFS : client → NameNode (métadonnées) → pipeline d'écriture sur DataNodes (1ère, 2ème, 3ème réplique)",
+        "Schéma du flux de lecture dans HDFS : client → NameNode (métadonnées) → lecture depuis le DataNode le plus proche"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez le <strong>processus d'écriture</strong> d'un fichier dans HDFS, en détaillant les interactions entre le client, le NameNode et les DataNodes.",
+        "niveau": "medium",
+        "reponse": "<p style='font-size: 0.95em; line-height: 1.6;'>Le processus d'écriture dans HDFS se déroule en plusieurs étapes :</p><ol style='font-size: 0.95em; line-height: 1.6; padding-left: 20px;'><li><strong>Demande au NameNode :</strong> Le client demande au NameNode de créer un fichier. Le NameNode vérifie les permissions et crée l'entrée dans l'espace de noms.</li><li><strong>Division en blocs :</strong> Le client divise le fichier en blocs (par défaut 128 Mo).</li><li><strong>Obtention des DataNodes :</strong> Pour chaque bloc, le client demande au NameNode la liste des DataNodes où écrire les répliques. Le NameNode applique la stratégie de placement.</li><li><strong>Pipeline d'écriture :</strong> Le client écrit le bloc sur le premier DataNode. Ce DataNode le transmet au deuxième, qui le transmet au troisième, formant un <strong>pipeline</strong>.</li><li><strong>Accusé de réception (ack) :</strong> Les DataNodes envoient des accusés de réception au client via le pipeline.</li><li><strong>Fermeture :</strong> Une fois tous les blocs écrits, le client ferme le fichier. Le NameNode met à jour les métadonnées.</li></ol>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Que se passe-t-il si un DataNode tombe en panne pendant l'écriture ?",
+            "niveau": "hard",
+            "reponse": "Si un DataNode tombe en panne pendant l'écriture :<ol><li>Le pipeline d'écriture est <strong>rompu</strong>. Le client reçoit une erreur.</li><li>Le client <strong>ferme</strong> le pipeline actuel et <strong>relance</strong> l'écriture sur un nouveau pipeline (les blocs déjà écrits sont validés).</li><li>Le NameNode est informé du DataNode défaillant. Il va <strong>répliquer</strong> les blocs qui étaient sur le DataNode défaillant sur d'autres DataNodes.</li><li>L'écriture continue sur les DataNodes restants du pipeline.</li></ol><p>Ce mécanisme assure la <strong>tolérance aux pannes</strong> lors de l'écriture.</p>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Décrivez le <strong>processus de lecture</strong> d'un fichier dans HDFS.",
+            "niveau": "easy",
+            "reponse": "Le processus de lecture dans HDFS se déroule comme suit :<ol><li><strong>Demande au NameNode :</strong> Le client demande au NameNode les métadonnées du fichier (emplacement des blocs).</li><li><strong>Réponse du NameNode :</strong> Le NameNode retourne la liste des DataNodes pour chaque bloc, en privilégiant les DataNodes proches du client (même rack).</li><li><strong>Lecture des blocs :</strong> Le client lit chaque bloc directement depuis le DataNode le plus proche.</li><li><strong>Vérification des blocs :</strong> Les blocs lus sont vérifiés avec leur checksum pour détecter d'éventuelles corruptions.</li></ol>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Tolérance aux Pannes et Réplication dans HDFS",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<div style='font-family: Arial, sans-serif; padding: 10px;'><p style='font-size: 1em; line-height: 1.6;'>Un cluster Hadoop est utilisé par une entreprise de logistique pour stocker des données de suivi des colis. Le cluster est configuré avec un facteur de réplication de <strong>3</strong> et une taille de bloc de <strong>128 Mo</strong>.</p><p style='font-size: 1em; line-height: 1.6;'>Le cluster est composé de :</p><ul style='font-size: 0.95em; line-height: 1.6; padding-left: 20px;'><li>1 NameNode (actif)</li><li>1 Secondary NameNode</li><li>10 DataNodes, répartis sur 2 racks (5 par rack)</li></ul></div>",
+      "images": [
+        "Schéma d'un cluster Hadoop avec 1 NameNode, 1 Secondary NameNode, et 10 DataNodes répartis sur 2 racks",
+        "Diagramme illustrant la réplication des blocs dans ce cluster (facteur de réplication 3)"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Calculez le nombre maximal de blocs que peut contenir un fichier de 3 Go.",
+        "niveau": "easy",
+        "reponse": "<p style='font-size: 0.95em; line-height: 1.6;'>Un fichier de 3 Go = 3 × 1024 = <strong>3072 Mo</strong>.</p><p style='font-size: 0.95em; line-height: 1.6;'>Avec une taille de bloc de 128 Mo, le nombre de blocs est :</p><div class='math-block'><div class='math'>$$ \\text{Nombre de blocs} = \\left\\lceil \\frac{3072}{128} \\right\\rceil = \\lceil 24 \\rceil = 24 \\text{ blocs} $$</div></div><p style='font-size: 0.95em; line-height: 1.6;'>Le fichier occupe donc 24 blocs de 128 Mo (le dernier bloc peut être partiellement rempli).</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Si le facteur de réplication est de 3, combien de <strong>répliques</strong> totales de ces blocs sont-elles stockées sur le cluster ?",
+            "niveau": "easy",
+            "reponse": "Avec un facteur de réplication de 3, chaque bloc est stocké 3 fois. Pour 24 blocs, le nombre total de répliques est : <strong>24 blocs × 3 répliques = 72 répliques</strong>.<br><br>L'espace de stockage total utilisé est : <strong>3 Go × 3 = 9 Go</strong> (hors overhead)."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Que se passe-t-il si un DataNode tombe en panne ? Expliquez les actions du NameNode.",
+            "niveau": "hard",
+            "reponse": "Si un DataNode tombe en panne :<ol><li>Le NameNode détecte la panne via les <strong>heartbeats</strong> (le DataNode n'envoie plus de signal).</li><li>Le NameNode vérifie les métadonnées pour identifier les blocs qui étaient sur ce DataNode.</li><li>Pour chaque bloc dont le facteur de réplication est inférieur à 3, le NameNode <strong>planifie une réplication</strong> sur d'autres DataNodes disponibles.</li><li>Le NameNode met à jour les métadonnées avec les nouveaux emplacements des répliques.</li></ol><p>Le système reste disponible pendant ce processus. La réplication se fait en arrière-plan sans interruption de service.</p>"
+          },
+          {
+            "numero": "1.c",
+            "texte": "Quel serait l'impact d'une panne du <strong>NameNode</strong> dans cette architecture ? Proposez une solution.",
+            "niveau": "hard",
+            "reponse": "Une panne du NameNode rend le cluster HDFS <strong>indisponible</strong> car :<ul><li>Les clients ne peuvent plus lire ou écrire de fichiers (métadonnées indisponibles).</li><li>Le système de fichiers n'est plus accessible.</li></ul><p><strong>Solution :</strong> Mettre en place la <strong>haute disponibilité (HA)</strong> de HDFS :</p><ul><li>Configurer un <strong>NameNode actif</strong> et un <strong>NameNode en veille (standby)</strong>.</li><li>Utiliser des <strong>JournalNodes</strong> pour partager les métadonnées entre les deux NameNodes.</li><li>En cas de panne, un basculement automatique (failover) vers le NameNode en veille.</li></ul>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Fonctionnement de HDFS avec un Cas Concret",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<div style='font-family: Arial, sans-serif; padding: 10px;'><p style='font-size: 1em; line-height: 1.6;'>Une startup camerounaise, <strong>DataHealth Cameroun</strong>, utilise HDFS pour stocker des données de santé. Le cluster HDFS a les caractéristiques suivantes :</p><ul style='font-size: 0.95em; line-height: 1.6; padding-left: 20px;'><li><strong>Facteur de réplication :</strong> 3</li><li><strong>Taille de bloc :</strong> 64 Mo</li><li><strong>Nombre de DataNodes :</strong> 15</li><li><strong>Espace total :</strong> 10 To par DataNode</li></ul><p style='font-size: 1em; line-height: 1.6;'>L'entreprise stocke des fichiers de 10 Go contenant des images médicales.</p></div>",
+      "images": [
+        "Schéma du cluster HDFS de DataHealth Cameroun avec 15 DataNodes",
+        "Illustration du stockage des fichiers d'images médicales dans HDFS"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Calculez le nombre de blocs pour un fichier de 10 Go.",
+        "niveau": "easy",
+        "reponse": "<p style='font-size: 0.95em; line-height: 1.6;'>10 Go = 10 × 1024 = <strong>10240 Mo</strong>.</p><div class='math-block'><div class='math'>$$ \\text{Nombre de blocs} = \\left\\lceil \\frac{10240}{64} \\right\\rceil = \\lceil 160 \\rceil = 160 \\text{ blocs} $$</div></div>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quel est l'espace total utilisé sur le cluster pour un fichier de 10 Go avec un facteur de réplication de 3 ?",
+            "niveau": "easy",
+            "reponse": "L'espace total utilisé est : <strong>10 Go × 3 = 30 Go</strong>.<br><br>Cela représente 30 Go d'espace de stockage brut utilisé sur le cluster pour ce fichier."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Si l'entreprise souhaite stocker 100 fichiers de 10 Go, quel espace total sera nécessaire sur le cluster ?",
+            "niveau": "easy",
+            "reponse": "Pour 100 fichiers de 10 Go, la taille totale est : <strong>100 × 10 Go = 1000 Go = 1 To</strong>.<br><br>Avec un facteur de réplication de 3, l'espace total nécessaire est : <strong>1 To × 3 = 3 To</strong>."
+          },
+          {
+            "numero": "1.c",
+            "texte": "Le cluster peut-il stocker ces 100 fichiers ? Quelle est la capacité totale du cluster ?",
+            "niveau": "medium",
+            "reponse": "<ul><li><strong>Capacité totale du cluster :</strong> 15 DataNodes × 10 To = <strong>150 To</strong>.</li><li><strong>Espace nécessaire :</strong> <strong>3 To</strong>.</li></ul><p>Le cluster a largement assez de capacité pour stocker ces fichiers (3 To < 150 To). Il y a de la place pour beaucoup d'autres données.</p><p><strong>Remarque :</strong> Il faut aussi prendre en compte l'overhead de HDFS (métadonnées, espaces réservés).</p>"
+          }
+        ]
+      }
+    ]
+  }
+]

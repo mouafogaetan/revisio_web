@@ -1,0 +1,212 @@
+[
+  {
+    "intitule": "Analyse et Création d'un DAG Airflow Simple",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous travaillez dans une entreprise de e-commerce. Vous devez créer un pipeline de données qui s'exécute quotidiennement. Le pipeline doit :</p><ol><li>Télécharger un fichier de ventes depuis une API externe (simulé par une commande bash qui crée un fichier <code>ventes_$(date +%Y%m%d).csv</code>).</li><li>Nettoyer et transformer les données en calculant le chiffre d'affaires par catégorie de produit (simulé par un script Python <code>process_ventes.py</code>).</li><li>Envoyer un email de confirmation une fois le traitement terminé (simulé par un message dans les logs).</li></ol><p>Créez un DAG Airflow nommé <code>pipeline_ventes_dag</code> pour orchestrer ce pipeline.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le code Python complet du DAG en utilisant les opérateurs appropriés (BashOperator, PythonOperator, EmailOperator simulé).",
+        "niveau": "medium",
+        "reponse": "```python\nfrom datetime import datetime, timedelta\nfrom airflow import DAG\nfrom airflow.operators.bash import BashOperator\nfrom airflow.operators.python import PythonOperator\nfrom airflow.operators.dummy import DummyOperator\n\ndef process_sales():\n    # Simulation du traitement\n    print(\"Processing sales data...\")\n    print(\"Revenue by category: ...\")\n\ndef send_notification():\n    # Simulation d'envoi d'email\n    print(\"Email sent: Sales pipeline completed successfully!\")\n\ndefault_args = {\n    'owner': 'data_team',\n    'depends_on_past': False,\n    'start_date': datetime(2024, 1, 1),\n    'email_on_failure': True,\n    'email_on_retry': False,\n    'retries': 1,\n    'retry_delay': timedelta(minutes=5)\n}\n\nwith DAG(\n    'pipeline_ventes_dag',\n    default_args=default_args,\n    description='Pipeline de traitement des ventes quotidien',\n    schedule_interval='@daily',\n    catchup=False,\n    tags=['ecommerce', 'sales']\n) as dag:\n    \n    start = DummyOperator(task_id='start')\n    \n    download_task = BashOperator(\n        task_id='download_sales_data',\n        bash_command='touch ventes_$(date +%Y%m%d).csv && echo \"Downloading sales data...\"'\n    )\n    \n    process_task = PythonOperator(\n        task_id='process_sales_data',\n        python_callable=process_sales\n    )\n    \n    notify_task = PythonOperator(\n        task_id='send_notification',\n        python_callable=send_notification\n    )\n    \n    end = DummyOperator(task_id='end')\n    \n    start >> download_task >> process_task >> notify_task >> end\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez la signification de chaque paramètre dans l'objet 'default_args'.",
+            "niveau": "medium",
+            "reponse": "- `owner`: Identifie le propriétaire ou l'équipe responsable du DAG.\n- `depends_on_past`: Si True, la tâche ne s'exécute que si la tâche précédente dans la même exécution du DAG a réussi.\n- `start_date`: Date à partir de laquelle le DAG commence à être planifié.\n- `email_on_failure`: Envoie un email si la tâche échoue.\n- `email_on_retry`: Envoie un email lorsque la tâche est relancée.\n- `retries`: Nombre de tentatives en cas d'échec.\n- `retry_delay`: Délai d'attente avant une nouvelle tentative."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Proposez une amélioration pour rendre ce DAG plus robuste en cas d'échec du téléchargement.",
+            "niveau": "medium",
+            "reponse": "On pourrait ajouter un mécanisme de retry plus sophistiqué avec `retries=3` et `retry_delay=timedelta(minutes=5)`. On pourrait aussi ajouter une tâche de vérification de l'existence du fichier avant de lancer le traitement, ou utiliser un opérateur comme `PythonOperator` avec gestion d'exception pour capturer les erreurs de téléchargement."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Définition de Dépendances Complexes",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous supervisez un pipeline de données qui doit charger des données dans 3 tables différentes : <code>table_clients</code>, <code>table_produits</code> et <code>table_commandes</code>. Une fois que les données sont chargées dans ces 3 tables, un rapport quotidien doit être généré. Cependant, la génération du rapport ne doit commencer que lorsque toutes les tables sont prêtes.</p><p>De plus, le chargement de la table <code>table_commandes</code> dépend de la disponibilité des données dans <code>table_clients</code> et <code>table_produits</code> (pour les jointures et les vérifications d'intégrité). Les chargements de <code>table_clients</code> et <code>table_produits</code> peuvent s'exécuter en parallèle.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créez un DAG Airflow qui modélise ce pipeline avec les tâches appropriées et les dépendances correctes. Utilisez des opérateurs de type 'DummyOperator' pour représenter les différentes étapes.",
+        "niveau": "hard",
+        "reponse": "```python\nfrom datetime import datetime, timedelta\nfrom airflow import DAG\nfrom airflow.operators.dummy import DummyOperator\n\ndefault_args = {\n    'owner': 'data_team',\n    'start_date': datetime(2024, 1, 1),\n    'retries': 1,\n}\n\nwith DAG(\n    'data_loading_dag',\n    default_args=default_args,\n    schedule_interval='@daily',\n    catchup=False\n) as dag:\n    \n    start = DummyOperator(task_id='start')\n    \n    # Tâches parallèles\n    load_clients = DummyOperator(task_id='load_table_clients')\n    load_products = DummyOperator(task_id='load_table_produits')\n    \n    # Cette tâche dépend des deux précédentes\n    load_orders = DummyOperator(task_id='load_table_commandes')\n    \n    # Génération du rapport dépend des 3 tables\n    generate_report = DummyOperator(task_id='generate_report')\n    \n    end = DummyOperator(task_id='end')\n    \n    # Définition des dépendances\n    start >> [load_clients, load_products]\n    [load_clients, load_products] >> load_orders\n    [load_clients, load_products, load_orders] >> generate_report\n    generate_report >> end\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quelles sont les dépendances spécifiques définies dans ce DAG ? Expliquez leur logique.",
+            "niveau": "hard",
+            "reponse": "- `load_clients` et `load_products` s'exécutent en parallèle après `start`.\n- `load_orders` ne commence qu'après la réussite de `load_clients` ET `load_products` (dépendance AND).\n- `generate_report` ne commence qu'après la réussite de `load_clients`, `load_products` ET `load_orders`.\nCette structure garantit que les données sont intégrées et cohérentes avant de générer le rapport."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Proposez deux façons différentes d'écrire les dépendances dans ce DAG en utilisant les opérateurs `>>` et `<<` d'Airflow.",
+            "niveau": "hard",
+            "reponse": "1. En utilisant l'opérateur `>>` :\n```python\nstart >> [load_clients, load_products]\n[load_clients, load_products] >> load_orders\n[load_clients, load_products, load_orders] >> generate_report >> end\n```\n\n2. En utilisant l'opérateur `set_downstream()` ou `set_upstream()` :\n```python\nstart.set_downstream([load_clients, load_products])\nload_orders.set_upstream([load_clients, load_products])\ngenerate_report.set_upstream([load_clients, load_products, load_orders])\n```\nToutes ces syntaxes sont valides dans Airflow."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation des DAGs avec Branching et Jinja Templates",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Une entreprise de logistique traite des fichiers de commandes quotidiens. Le pipeline doit :</p><ol><li>Vérifier si un fichier de commandes existe pour la date du jour dans un bucket S3 (simulé par un script Python).</li><li>Si le fichier existe, lancer un job de traitement Spark en mode batch.</li><li>Si le fichier n'existe pas, envoyer une notification et terminer le pipeline.</li><li>Dans tous les cas, logguer l'état du pipeline.</li></ol><p>De plus, le chemin du fichier doit être paramétré dynamiquement en fonction de la date d'exécution (format YYYY/MM/DD).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez un DAG Airflow complet qui implémente cette logique de branching conditionnel.",
+        "niveau": "very hard",
+        "reponse": "```python\nfrom datetime import datetime, timedelta\nfrom airflow import DAG\nfrom airflow.operators.python import PythonOperator, BranchPythonOperator\nfrom airflow.operators.dummy import DummyOperator\nimport os\n\ndef check_file_exists(**context):\n    \"\"\"Vérifie si le fichier existe pour la date d'exécution\"\"\"\n    execution_date = context['execution_date'].strftime('%Y/%m/%d')\n    file_path = f\"/data/orders/{execution_date}/orders.csv\"\n    \n    # Simulation de la vérification\n    # Dans la réalité, on vérifierait avec S3 ou un système de fichiers\n    if os.path.exists(file_path):\n        return 'process_orders'\n    else:\n        return 'send_notification'\n\ndef process_orders(**context):\n    \"\"\"Traite les commandes avec Spark (simulation)\"\"\"\n    execution_date = context['execution_date'].strftime('%Y%m%d')\n    print(f\"Processing orders for {execution_date} with Spark...\")\n    \ndef send_notification(**context):\n    \"\"\"Envoie une notification d'absence de fichier\"\"\"\n    execution_date = context['execution_date'].strftime('%Y-%m-%d')\n    print(f\"ALERT: No orders file found for {execution_date}\")\n\ndefault_args = {\n    'owner': 'logistics_team',\n    'start_date': datetime(2024, 1, 1),\n    'retries': 1,\n}\n\nwith DAG(\n    'orders_pipeline_branching',\n    default_args=default_args,\n    schedule_interval='@daily',\n    catchup=False\n) as dag:\n    \n    start = DummyOperator(task_id='start')\n    \n    check_file = BranchPythonOperator(\n        task_id='check_file_exists',\n        python_callable=check_file_exists,\n        provide_context=True\n    )\n    \n    process_task = PythonOperator(\n        task_id='process_orders',\n        python_callable=process_orders,\n        provide_context=True\n    )\n    \n    notify_task = PythonOperator(\n        task_id='send_notification',\n        python_callable=send_notification,\n        provide_context=True\n    )\n    \n    log_status = DummyOperator(\n        task_id='log_status',\n        trigger_rule='one_success'  # S'exécute si au moins une tâche parente réussit\n    )\n    \n    end = DummyOperator(task_id='end')\n    \n    start >> check_file\n    check_file >> process_task >> log_status\n    check_file >> notify_task >> log_status\n    log_status >> end\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez l'utilisation de Jinja Templates dans ce contexte. Comment pourriez-vous améliorer la tâche de vérification pour utiliser des templates ?",
+            "niveau": "very hard",
+            "reponse": "Les Jinja Templates dans Airflow permettent d'utiliser des variables dynamiques dans les tâches. On pourrait améliorer la tâche `check_file_exists` en utilisant une template pour le chemin du fichier :\n```python\nfrom airflow.operators.bash import BashOperator\n\ncheck_file_bash = BashOperator(\n    task_id='check_file_exists_bash',\n    bash_command='test -f /data/orders/{{ ds }}/orders.csv',\n    # ou avec formatage personnalisé\n    bash_command='test -f /data/orders/{{ execution_date.strftime(\"%Y/%m/%d\") }}/orders.csv'\n)\n```\nCependant, pour du branching, BranchPythonOperator est plus flexible car il peut contenir plus de logique."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Quel est le rôle du paramètre `trigger_rule` sur la tâche `log_status` ? Expliquez pourquoi il est crucial ici.",
+            "niveau": "very hard",
+            "reponse": "Par défaut, une tâche en Airflow a une `trigger_rule='all_success'`, ce qui signifie qu'elle ne s'exécute que si toutes ses tâches parentes ont réussi. Mais dans notre DAG, une seule branche sera exécutée (soit `process_orders`, soit `send_notification`). Si on garde la règle par défaut, `log_status` ne s'exécutera jamais. En utilisant `trigger_rule='one_success'`, on indique que `log_status` peut s'exécuter si au moins une de ses tâches parentes a réussi, ce qui est parfait pour notre cas de branching."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse des Erreurs et Logging",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous examinez les logs d'un DAG Airflow et vous trouvez les messages d'erreur suivants :</p><pre>ERROR - Task 'export_data' failed with exception: FileNotFoundError: [Errno 2] No such file or directory: '/data/raw/daily_export.csv'</pre><pre>WARNING - Task 'transform_data' was scheduled to run but its upstream task 'export_data' is in state 'failed'</pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Quel est le problème principal et quel en est la cause probable ? Proposez des solutions pour résoudre ce problème.",
+        "niveau": "medium",
+        "reponse": "Le problème principal est l'échec de la tâche `export_data` car le fichier `daily_export.csv` n'existe pas dans le répertoire `/data/raw/`. La cause probable est que le processus qui génère ce fichier n'a pas fonctionné ou que le chemin est incorrect.\n\nSolutions :\n1. Vérifier que le chemin est correct et que le fichier est bien créé avant l'exécution du DAG.\n2. Ajouter une tâche de vérification de l'existence du fichier avant `export_data`.\n3. Mettre en place des mécanismes de retry dans le DAG (`retries` et `retry_delay`).\n4. Ajouter une tâche de notification pour alerter en cas d'absence de fichier.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment pourriez-vous utiliser l'interface web d'Airflow pour diagnostiquer plus précisément ce problème ?",
+            "niveau": "medium",
+            "reponse": "Dans l'interface web d'Airflow, on peut :\n1. Aller dans l'onglet 'Browse' > 'Task Instances' pour voir le statut et les logs de la tâche.\n2. Cliquer sur le DAG et voir la représentation graphique pour visualiser l'échec.\n3. Consulter les logs détaillés de la tâche `export_data` pour plus de contexte.\n4. Vérifier l'historique des exécutions pour voir si c'est un problème ponctuel ou récurrent.",
+            "niveau": "medium"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Quelles modifications apporteriez-vous au DAG pour le rendre plus résilient ?",
+            "niveau": "medium",
+            "reponse": "1. Augmenter le nombre de retries et le délai entre les retries.\n2. Créer une tâche de vérification préalable qui s'assure que les fichiers sources existent.\n3. Ajouter des alertes email en cas d'échec.\n4. Implémenter une logique de fallback (ex: utiliser un fichier de sauvegarde).\n5. Documenter les dépendances entre les tâches et les sources de données."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Implémentation d'une Tâche de Notification",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous devez intégrer une notification par email à la fin d'un DAG qui traite des rapports financiers. Le DAG s'appelle <code>financial_report_dag</code> et se termine par une tâche <code>finalize_report</code>.</p><p>L'email doit être envoyé à l'équipe finance (finance@company.com) avec l'objet 'Rapport Financier Généré' et un message indiquant que le rapport a été généré avec succès.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez la tâche de notification en utilisant EmailOperator.",
+        "niveau": "easy",
+        "reponse": "```python\nfrom airflow.operators.email import EmailOperator\n\nsend_email = EmailOperator(\n    task_id='send_finance_email',\n    to='finance@company.com',\n    subject='Rapport Financier Généré',\n    html_content='<p>Le rapport financier a été généré avec succès par Airflow.</p>',\n    dag=dag\n)\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Où placeriez-vous cette tâche dans le DAG existant ? Justifiez votre choix.",
+            "niveau": "easy",
+            "reponse": "Cette tâche doit être placée après la tâche `finalize_report` en utilisant la dépendance :\n```python\nfinalize_report >> send_email\n```\nCela garantit que l'email n'est envoyé que lorsque le rapport a bien été généré et que le pipeline est terminé avec succès.",
+            "niveau": "easy"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Utilisation du BashOperator avec Variables d'Environnement",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous souhaitez exécuter un script shell qui utilise des variables d'environnement pour se connecter à une base de données. Le script s'appelle <code>backup_db.sh</code> et se trouve dans <code>/opt/scripts/</code>. Il nécessite les variables <code>DB_HOST</code>, <code>DB_USER</code> et <code>DB_PASSWORD</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez une tâche avec BashOperator qui exécute correctement ce script en passant les variables d'environnement.",
+        "niveau": "medium",
+        "reponse": "```python\nfrom airflow.operators.bash import BashOperator\n\nbackup_task = BashOperator(\n    task_id='backup_database',\n    bash_command='export DB_HOST=\"{{ conn.airflow_db.host }}\" && '\n                 'export DB_USER=\"{{ conn.airflow_db.login }}\" && '\n                 'export DB_PASSWORD=\"{{ conn.airflow_db.password }}\" && '\n                 '/opt/scripts/backup_db.sh',\n    dag=dag\n)\n```\nOu en utilisant les variables Airflow :\n```python\nbackup_task = BashOperator(\n    task_id='backup_database',\n    bash_command='DB_HOST=postgres.company.com DB_USER=admin DB_PASSWORD=secret /opt/scripts/backup_db.sh',\n    dag=dag\n)\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quelle approche recommandez-vous pour gérer les mots de passe et les informations sensibles dans Airflow ?",
+            "niveau": "medium",
+            "reponse": "Il est recommandé d'utiliser les Connections d'Airflow pour stocker les informations de connexion de manière sécurisée. Les mots de passe et les identifiants ne doivent jamais être écrits en dur dans le code du DAG. Airflow chiffre les informations de connexion dans la base de données. On peut aussi utiliser des Variables Airflow ou des secrets managers externes (comme HashiCorp Vault ou AWS Secrets Manager).",
+            "niveau": "medium"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Exécution Parallèle de Tâches Indépendantes",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous devez exécuter trois scripts Python indépendants en parallèle. Ces scripts sont :</p><ul><li><code>clean_data.py</code></li><li><code>compute_stats.py</code></li><li><code>generate_features.py</code></li></ul><p>Ces scripts ne dépendent pas les uns des autres et peuvent s'exécuter simultanément pour gagner du temps.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez un DAG simple qui exécute ces trois scripts en parallèle et ensuite un rapport final.",
+        "niveau": "easy",
+        "reponse": "```python\nfrom datetime import datetime\nfrom airflow import DAG\nfrom airflow.operators.python import PythonOperator\nfrom airflow.operators.dummy import DummyOperator\n\ndef clean_data():\n    print(\"Cleaning data...\")\n\ndef compute_stats():\n    print(\"Computing statistics...\")\n\ndef generate_features():\n    print(\"Generating features...\")\n\ndef generate_report():\n    print(\"Generating final report...\")\n\ndefault_args = {\n    'owner': 'data_team',\n    'start_date': datetime(2024, 1, 1)\n}\n\nwith DAG(\n    'parallel_tasks_dag',\n    default_args=default_args,\n    schedule_interval='@daily',\n    catchup=False\n) as dag:\n    \n    start = DummyOperator(task_id='start')\n    \n    clean_task = PythonOperator(\n        task_id='clean_data',\n        python_callable=clean_data\n    )\n    \n    stats_task = PythonOperator(\n        task_id='compute_stats',\n        python_callable=compute_stats\n    )\n    \n    features_task = PythonOperator(\n        task_id='generate_features',\n        python_callable=generate_features\n    )\n    \n    report_task = PythonOperator(\n        task_id='generate_report',\n        python_callable=generate_report\n    )\n    \n    end = DummyOperator(task_id='end')\n    \n    start >> [clean_task, stats_task, features_task] >> report_task >> end\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi est-il bénéfique d'exécuter ces tâches en parallèle ? Quels sont les risques potentiels ?",
+            "niveau": "easy",
+            "reponse": "L'exécution en parallèle est bénéfique car elle réduit le temps total d'exécution du pipeline (les tâches s'exécutent simultanément plutôt que séquentiellement). Les risques potentiels incluent :\n- La contention des ressources (si les tâches utilisent beaucoup de CPU ou de mémoire).\n- Des problèmes d'accès concurrentiel aux fichiers ou bases de données.\n- Une gestion plus complexe des erreurs et des notifications.",
+            "niveau": "easy"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Comment s'assurer que `report_task` ne s'exécute qu'après que toutes les trois tâches parallèles ont réussi ?",
+            "niveau": "easy",
+            "reponse": "Par défaut, Airflow utilise la règle `trigger_rule='all_success'` qui garantit qu'une tâche ne s'exécute que si toutes ses tâches parentes ont réussi. Cette règle s'applique automatiquement, donc `report_task` ne s'exécutera que si `clean_task`, `stats_task` et `features_task` ont toutes réussi.",
+            "niveau": "easy"
+          }
+        ]
+      }
+    ]
+  }
+]

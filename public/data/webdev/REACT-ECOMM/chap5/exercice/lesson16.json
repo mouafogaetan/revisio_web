@@ -1,0 +1,109 @@
+[
+  {
+    "intitule": "Construction des services API avec Axios",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans le cadre du développement d'une interface e-commerce avec React, vous devez créer les services de communication avec l'API backend NestJS développée précédemment. L'API expose les endpoints suivants :</p><ul><li><code>POST /auth/login</code> - attend { email, password } → retourne { user, access_token }</li><li><code>GET /products</code> - retourne la liste des produits</li><li><code>GET /products/:id</code> - retourne un produit spécifique</li><li><code>POST /orders</code> - nécessite un token JWT, attend { items, total, shippingAddress }</li></ul><p>Vous devez créer une instance Axios configurée avec la baseURL <code>https://api.ecommerce.com/v1</code> et un intercepteur pour ajouter automatiquement le token JWT (stocké dans localStorage sous la clé 'access_token') aux requêtes authentifiées.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créez l'instance Axios configurée avec la baseURL et l'intercepteur de requête pour ajouter le token JWT.",
+        "niveau": "medium",
+        "reponse": "```javascript\nimport axios from 'axios';\n\nconst api = axios.create({\n  baseURL: 'https://api.ecommerce.com/v1',\n  headers: { 'Content-Type': 'application/json' }\n});\n\napi.interceptors.request.use((config) => {\n  const token = localStorage.getItem('access_token');\n  if (token) {\n    config.headers.Authorization = `Bearer ${token}`;\n  }\n  return config;\n});\n\nexport default api;\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Implémentez le service d'authentification (<code>authService.js</code>) avec une méthode <code>login</code> qui appelle l'endpoint correspondant et retourne la réponse.",
+        "niveau": "medium",
+        "reponse": "```javascript\nimport api from './api';\n\nexport const authService = {\n  login: async (email, password) => {\n    const response = await api.post('/auth/login', { email, password });\n    return response.data;\n  },\n  logout: () => {\n    localStorage.removeItem('access_token');\n  }\n};\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Créez le service produit (<code>productService.js</code>) avec les méthodes <code>getAllProducts</code> et <code>getProductById</code>. Gérez les erreurs en lançant une exception personnalisée avec un message approprié.",
+        "niveau": "hard",
+        "reponse": "```javascript\nimport api from './api';\n\nexport const productService = {\n  getAllProducts: async () => {\n    try {\n      const response = await api.get('/products');\n      return response.data;\n    } catch (error) {\n      throw new Error(error.response?.data?.message || 'Erreur lors du chargement des produits');\n    }\n  },\n  getProductById: async (id) => {\n    try {\n      const response = await api.get(`/products/${id}`);\n      return response.data;\n    } catch (error) {\n      throw new Error(error.response?.data?.message || 'Produit non trouvé');\n    }\n  }\n};\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Création de hooks personnalisés pour la gestion des données",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous avez déjà créé les services API. Maintenant, vous devez créer des hooks personnalisés React qui utilisent ces services pour exposer des données et fonctions aux composants. Chaque hook doit gérer les états de <code>loading</code>, <code>error</code> et <code>data</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le hook <code>useProducts</code> qui charge la liste des produits à l'initialisation et expose <code>products</code>, <code>loading</code>, <code>error</code> et une fonction <code>refetch</code> pour recharger.",
+        "niveau": "hard",
+        "reponse": "```javascript\nimport { useState, useEffect, useCallback } from 'react';\nimport { productService } from '../services/productService';\n\nexport const useProducts = () => {\n  const [products, setProducts] = useState([]);\n  const [loading, setLoading] = useState(true);\n  const [error, setError] = useState(null);\n\n  const fetchProducts = useCallback(async () => {\n    setLoading(true);\n    setError(null);\n    try {\n      const data = await productService.getAllProducts();\n      setProducts(data);\n    } catch (err) {\n      setError(err.message);\n    } finally {\n      setLoading(false);\n    }\n  }, []);\n\n  useEffect(() => {\n    fetchProducts();\n  }, [fetchProducts]);\n\n  return { products, loading, error, refetch: fetchProducts };\n};\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Créez le hook <code>useAuth</code> qui gère l'authentification. Il doit exposer les fonctions <code>login</code> (qui appelle le service et stocke le token), <code>logout</code> (qui supprime le token), et les états <code>isAuthenticated</code>, <code>loading</code>, <code>error</code>.",
+        "niveau": "very hard",
+        "reponse": "```javascript\nimport { useState, useEffect } from 'react';\nimport { authService } from '../services/authService';\n\nexport const useAuth = () => {\n  const [isAuthenticated, setIsAuthenticated] = useState(false);\n  const [loading, setLoading] = useState(false);\n  const [error, setError] = useState(null);\n\n  useEffect(() => {\n    const token = localStorage.getItem('access_token');\n    setIsAuthenticated(!!token);\n  }, []);\n\n  const login = async (email, password) => {\n    setLoading(true);\n    setError(null);\n    try {\n      const { user, access_token } = await authService.login(email, password);\n      localStorage.setItem('access_token', access_token);\n      setIsAuthenticated(true);\n      return user;\n    } catch (err) {\n      setError(err.message);\n      throw err;\n    } finally {\n      setLoading(false);\n    }\n  };\n\n  const logout = () => {\n    authService.logout();\n    setIsAuthenticated(false);\n  };\n\n  return { isAuthenticated, loading, error, login, logout };\n};\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion des commandes avec validation et feedback",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Un client a sélectionné des produits dans son panier et souhaite finaliser sa commande. Vous devez implémenter la fonctionnalité de création de commande.</p><p>Le service <code>orderService.js</code> contient déjà une méthode <code>createOrder(orderData)</code> qui appelle <code>POST /orders</code>. Le composant <code>CheckoutPage</code> doit utiliser cette méthode, gérer l'état de chargement, afficher une notification de succès ou d'erreur, et rediriger vers la page de confirmation en cas de succès.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "À partir des informations fournies, concevez (en pseudo-code ou code commenté) la logique du composant <code>CheckoutPage</code> pour gérer la soumission du formulaire, les états de chargement, les erreurs et la redirection.",
+        "niveau": "hard",
+        "reponse": "```javascript\n// Composant CheckoutPage\nimport { useState } from 'react';\nimport { useNavigate } from 'react-router-dom';\nimport { orderService } from '../services/orderService';\nimport { toast } from 'sonner';\n\nconst CheckoutPage = () => {\n  const [loading, setLoading] = useState(false);\n  const navigate = useNavigate();\n\n  const handleSubmit = async (orderData) => {\n    setLoading(true);\n    try {\n      const createdOrder = await orderService.createOrder(orderData);\n      toast.success('Commande créée avec succès !');\n      navigate(`/confirmation/${createdOrder.id}`);\n    } catch (error) {\n      toast.error(error.message || 'Erreur lors de la création de la commande');\n      console.error(error);\n    } finally {\n      setLoading(false);\n    }\n  };\n\n  return (\n    &lt;form onSubmit={(e) => { e.preventDefault(); handleSubmit(getOrderData()); }}&gt;\n      {/* champs du formulaire */}\n      &lt;button type=\"submit\" disabled={loading}&gt;\n        {loading ? 'Traitement...' : 'Valider la commande'}\n      &lt;/button&gt;\n    &lt;/form&gt;\n  );\n};\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Identifiez et expliquez deux types d'erreurs réseau qui pourraient survenir lors de l'appel à <code>createOrder</code> et comment les gérer élégamment côté frontend.",
+        "niveau": "medium",
+        "reponse": "1. **Timeout ou perte de connexion** : Le navigateur ne reçoit pas de réponse du serveur. Le hook personnalisé peut afficher un message 'Vérifiez votre connexion internet' et proposer un bouton 'Réessayer'.\n2. **Erreur 401 Unauthorized** : Le token JWT a expiré. Le frontend doit tenter un refresh token automatique ou rediriger l'utilisateur vers la page de connexion avec un message 'Session expirée, veuillez vous reconnecter'.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation des appels API avec React Query (optionnel)",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>L'application e-commerce affiche la liste des produits sur la page d'accueil. Actuellement, un hook personnalisé <code>useProducts</code> basé sur <code>useEffect</code> recharge les données à chaque montage du composant. Vous souhaitez optimiser cela en utilisant <code>@tanstack/react-query</code> pour bénéficier du cache, de la revalidation automatique et de la gestion d'état intégrée.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Réécrivez le hook <code>useProducts</code> en utilisant <code>useQuery</code> de React Query. Expliquez comment le paramètre <code>staleTime</code> améliore les performances.",
+        "niveau": "very hard",
+        "reponse": "```javascript\nimport { useQuery } from '@tanstack/react-query';\nimport { productService } from '../services/productService';\n\nexport const useProducts = () => {\n  return useQuery({\n    queryKey: ['products'],\n    queryFn: productService.getAllProducts,\n    staleTime: 5 * 60 * 1000, // 5 minutes\n    retry: 2,\n  });\n};\n\n// Utilisation dans le composant :\n// const { data: products, isLoading, error, refetch } = useProducts();\n```\n\nExplication : <code>staleTime</code> définit la durée pendant laquelle les données sont considérées comme 'fraîches'. Pendant cette période, React Query ne refera pas l'appel API, même si le composant se remonte. Cela réduit les requêtes réseau inutiles.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Après l'ajout d'un nouveau produit par l'administrateur, comment pouvez-vous invalider le cache des produits pour forcer un rechargement ? Donnez un exemple de code utilisant <code>useQueryClient</code>.",
+        "niveau": "hard",
+        "reponse": "```javascript\nimport { useQueryClient, useMutation } from '@tanstack/react-query';\n\nconst AddProductForm = () => {\n  const queryClient = useQueryClient();\n\n  const mutation = useMutation({\n    mutationFn: productService.createProduct,\n    onSuccess: () => {\n      // Invalide la requête 'products' pour qu'elle se recharge\n      queryClient.invalidateQueries({ queryKey: ['products'] });\n      toast.success('Produit ajouté');\n    },\n  });\n\n  // ...\n};\n```\n\nL'appel à <code>invalidateQueries</code> marque les données comme périmées et déclenche un nouveau <code>fetch</code> silencieux en arrière-plan.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

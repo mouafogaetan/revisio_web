@@ -1,0 +1,122 @@
+[
+  {
+    "intitule": "Validation d’un formulaire d’adresse avec React Hook Form et Zod",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans une application e-commerce React, vous devez implémenter un formulaire d’adresse de livraison réutilisable. Les champs requis sont : <code>fullName</code>, <code>addressLine</code>, <code>city</code>, <code>postalCode</code> (5 chiffres), <code>country</code> et un champ optionnel <code>phone</code>. Vous utilisez <strong>React Hook Form</strong> avec le schéma de validation <strong>Zod</strong>.</p><p>Rappel : La validation Zod permet de définir des règles comme <code>z.string().min(2)</code>, <code>z.string().regex(/\\d{5}/)</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le schéma Zod correspondant à ce formulaire et montrez comment l’intégrer dans un composant avec <code>useForm</code>. Expliquez chaque règle.",
+        "niveau": "medium",
+        "reponse": "```typescript\nconst addressSchema = z.object({\n  fullName: z.string().min(3, { message: \"Nom complet requis (min 3 caractères)\" }),\n  addressLine: z.string().min(5, { message: \"Adresse trop courte\" }),\n  city: z.string().min(2, { message: \"Ville invalide\" }),\n  postalCode: z.string().regex(/^\\d{5}$/, { message: \"Code postal à 5 chiffres\" }),\n  country: z.string().min(2, { message: \"Pays requis\" }),\n  phone: z.string().optional(),\n});\n\ntype AddressForm = z.infer<typeof addressSchema>;\n\nconst { register, handleSubmit, formState: { errors } } = useForm<AddressForm>({\n  resolver: zodResolver(addressSchema)\n});\n```\nChaque champ est validé : postalCode avec expression régulière, fullName avec longueur minimale, etc. ZodResolver connecte le schéma à React Hook Form.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment afficher les messages d’erreur sous chaque champ en utilisant `errors` ?",
+            "niveau": "easy",
+            "reponse": "On utilise `errors.fieldName?.message` : `<input {...register('fullName')} />` puis `{errors.fullName && <p className=\"text-red-500\">{errors.fullName.message}</p>}`."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion multi-adresses : sélection et ajout dynamique",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Dans une interface de checkout, l’utilisateur peut sélectionner une adresse parmi ses adresses enregistrées (stockées dans le backend) OU en ajouter une nouvelle via le formulaire.</p><p>L’API fournit : <code>GET /addresses</code> (liste des adresses) et <code>POST /addresses</code> (création). Vous devez gérer l’état local avec Zustand et les appels avec React Query.</p>",
+      "images": [
+        "schéma d'une interface avec une liste déroulante d'adresses et un bouton + pour ajouter une nouvelle adresse",
+        "exemple de composant React pour sélectionner ou créer une adresse"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevez un composant `AddressManager` qui permet de lister les adresses existantes (via `useQuery`), d’en sélectionner une, et d’ouvrir un modal pour en ajouter une nouvelle (avec `useMutation`). Décrivez la structure des stores et la gestion des états de chargement/erreur.",
+        "niveau": "hard",
+        "reponse": "Le composant utilise `useQuery` pour récupérer les adresses. Un état local `selectedAddressId` gère l’adresse choisie. Le modal contient un formulaire géré par React Hook Form. La mutation `addAddressMutation` envoie les données au backend et invalide la requête des adresses (`queryClient.invalidateQueries`). Un store Zustand optionnel peut stocker l’adresse de livraison sélectionnée pour l’utiliser dans les étapes suivantes. Les états de chargement affichent un spinner, et les erreurs sont capturées avec un toast.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment empêcher l’envoi du formulaire si la mutation est en cours ?",
+            "niveau": "medium",
+            "reponse": "On utilise `mutation.isPending` pour désactiver le bouton de soumission et afficher un indicateur de chargement."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Proposez une stratégie pour pré-remplir le formulaire avec les données d’une adresse existante si l’utilisateur souhaite la modifier.",
+            "niveau": "hard",
+            "reponse": "On peut ajouter un bouton \"Modifier\" à côté de chaque adresse, qui ouvre le modal avec `defaultValues` issue de l’adresse sélectionnée. La mutation devient une mise à jour (`PUT /addresses/:id`) au lieu d’une création."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Persistance de l’adresse dans le store global (Zustand)",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>L’utilisateur peut saisir son adresse de livraison dans le formulaire. Pour garder l’adresse même après un rafraîchissement de la page, vous devez utiliser un store Zustand avec persistance (localStorage).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez un store Zustand nommé `useDeliveryStore` qui contient l’objet `shippingAddress` et une action `setAddress`. Utilisez le middleware `persist` pour stocker les données dans localStorage.",
+        "niveau": "easy",
+        "reponse": "```typescript\nimport { create } from 'zustand';\nimport { persist } from 'zustand/middleware';\n\ninterface DeliveryState {\n  shippingAddress: any | null;\n  setAddress: (address: any) => void;\n}\n\nexport const useDeliveryStore = create<DeliveryState>()(\n  persist(\n    (set) => ({\n      shippingAddress: null,\n      setAddress: (address) => set({ shippingAddress: address }),\n    }),\n    { name: 'delivery-storage' }\n  )\n);\n```\nAprès validation du formulaire, on appelle `setAddress(data)`. Au prochain chargement, `shippingAddress` sera restauré.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Validation conditionnelle et champ pays dépendant",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Votre boutique e-commerce propose des frais de livraison différents selon le pays. Si l’utilisateur choisit le Cameroun, un champ supplémentaire `city` devient obligatoire et le code postal doit commencer par “CM-”. Vous devez adapter la validation Zod en conséquence.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Modifiez le schéma Zod pour que, lorsque `country === 'CM'`, `city` soit requis et `postalCode` doive respecter le format `CM-\\d{3}`. Dans les autres cas, `city` reste optionnel et `postalCode` n’est pas soumis à cette règle. Fournissez le code et expliquez la logique de validation conditionnelle.",
+        "niveau": "medium",
+        "reponse": "```typescript\nconst addressSchema = z.discriminatedUnion('country', [\n  z.object({\n    country: z.literal('CM'),\n    city: z.string().min(2, { message: \"Ville obligatoire pour le Cameroun\" }),\n    postalCode: z.string().regex(/^CM-\\d{3}$/, { message: \"Format CM-XXX\" }),\n    fullName: z.string().min(3),\n    addressLine: z.string().min(5),\n    phone: z.string().optional(),\n  }),\n  z.object({\n    country: z.string().min(2),\n    city: z.string().optional(),\n    postalCode: z.string().optional(),\n    fullName: z.string().min(3),\n    addressLine: z.string().min(5),\n    phone: z.string().optional(),\n  }),\n]);\n```\n`discriminatedUnion` permet de choisir le schéma selon la valeur du champ `country`. Ainsi la validation s’adapte dynamiquement.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Intégration de l’adresse dans le flux de checkout",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Dans un processus de commande en plusieurs étapes, l’utilisateur remplit d’abord son adresse de livraison, puis passe au paiement. Vous devez :</p><ul><li>Vérifier que l’adresse est valide avant de passer à l’étape suivante.</li><li>Envoyer l’adresse à l’API lors de la validation finale de la commande.</li><li>Gérer les erreurs réseau et afficher des toasts de succès/erreur.</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez comment organiser le code pour que le composant `CheckoutStepper` utilise le store `useDeliveryStore`, déclenche la validation via React Hook Form, et soumette l’adresse au backend lors de la création de la commande. Incluez la gestion des états asynchrones (useMutation) et la redirection après succès.",
+        "niveau": "hard",
+        "reponse": "Le composant `CheckoutStepper` contient un état `step` (1: adresse, 2: paiement). À l’étape 1, on affiche `AddressForm` qui valide et stocke l’adresse dans `useDeliveryStore` via `setAddress`. On passe à l’étape 2 seulement si le formulaire est valide. Lors de la validation finale, on appelle `useMutation` pour envoyer la commande (avec l’adresse stockée). En cas de succès, on redirige vers `/confirmation` et on vide le store. En cas d’erreur, on affiche un toast. On utilise `isPending` pour désactiver le bouton de validation.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment garantir que l’utilisateur ne passe pas à l’étape 2 sans avoir une adresse valide ?",
+            "niveau": "medium",
+            "reponse": "Le bouton \"Continuer\" de l’étape 1 appelle `handleSubmit` du formulaire. Si la validation réussit, on met à jour le store et on incrémente `step`. On peut aussi désactiver le bouton tant que le formulaire n’est pas `isValid` (grâce à `formState.isValid`)."
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -1,0 +1,172 @@
+[
+  {
+    "intitule": "Analyse d'un appel API avec fetch et gestion des états",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Un étudiant a écrit le code suivant pour récupérer une liste d'articles depuis une API. Analysez ce code et répondez aux questions.</p>\n<pre><code>\nimport React, { useState, useEffect } from 'react';\nimport { View, Text, FlatList } from 'react-native';\n\nfunction ArticleList() {\n  const [articles, setArticles] = useState([]);\n\n  useEffect(() => {\n    const url = 'https://api.example.com/articles';\n    fetch(url)\n      .then(response => response.json())\n      .then(data => setArticles(data));\n  }, []);\n\n  return (\n    &lt;FlatList\n      data={articles}\n      renderItem={({ item }) => &lt;Text&gt;{item.titre}&lt;/Text&gt;}\n    /&gt;\n  );\n}\n</code></pre>",
+      "images": [
+        "schéma du cycle de vie d'un appel API avec useEffect",
+        "capture d'écran d'une application avec état de chargement"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier les problèmes potentiels dans ce code (gestion d'erreur, état de chargement, cas où la réponse n'est pas au format JSON). Proposer des améliorations.",
+        "niveau": "easy",
+        "reponse": "Problèmes : 1) Pas de gestion d'erreur (fetch peut échouer). 2) Pas d'état de chargement (loading). 3) Pas de vérification du statut HTTP (response.ok). 4) Pas de nettoyage en cas de démontage du composant. 5) Pas de gestion du cas où les données ne sont pas un tableau. Améliorations : ajouter isLoading et error states, vérifier response.ok, utiliser try/catch, ajouter un cleanup avec AbortController.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Ajouter un état 'loading' qui affiche 'Chargement...' tant que les données ne sont pas reçues.",
+            "niveau": "easy",
+            "reponse": "```jsx\nconst [isLoading, setIsLoading] = useState(true);\n// Dans fetch, avant le fetch : setIsLoading(true);\n// Dans .then ou .finally : setIsLoading(false);\n// Dans le return : if (isLoading) return <Text>Chargement...</Text>;\n```"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Expliquer pourquoi il est important de vérifier response.ok avant d'appeler response.json()",
+            "niveau": "medium",
+            "reponse": "fetch ne rejette pas la promesse pour les erreurs HTTP (404, 500, etc.). response.ok est false pour ces statuts. Si on appelle response.json() sur une réponse 404, on obtient une erreur 'Unexpected end of JSON input' ou similaire. Il faut vérifier response.ok et lancer une erreur manuellement : if (!response.ok) throw new Error(`HTTP ${response.status}`);"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Affichage d'une liste d'utilisateurs avec FlatList",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous développez une application mobile pour une association camerounaise. Vous devez afficher la liste des membres depuis l'API : <code>https://jsonplaceholder.typicode.com/users</code>. Chaque utilisateur a : id, name, email, phone.</p>\n<p>Exigences :</p>\n<ul>\n  <li>Afficher un indicateur de chargement pendant la récupération</li>\n  <li>Afficher un message d'erreur personnalisé si l'API échoue</li>\n  <li>Utiliser FlatList pour l'affichage (performance)</li>\n  <li>Chaque élément doit afficher le nom, l'email et le téléphone</li>\n  <li>Ajouter un séparateur entre les éléments</li>\n  <li>Gérer le cas où la liste est vide</li>\n</ul>",
+      "images": [
+        "maquette d'une liste d'utilisateurs avec FlatList",
+        "exemple de séparateur (ItemSeparatorComponent)"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire le composant complet MemberList qui implémente toutes ces fonctionnalités.",
+        "niveau": "medium",
+        "reponse": "```jsx\nimport React, { useState, useEffect } from 'react';\nimport { View, Text, FlatList, ActivityIndicator, StyleSheet } from 'react-native';\n\nfunction MemberList() {\n  const [members, setMembers] = useState([]);\n  const [isLoading, setIsLoading] = useState(true);\n  const [error, setError] = useState(null);\n\n  useEffect(() => {\n    const fetchMembers = async () => {\n      try {\n        setIsLoading(true);\n        const response = await fetch('https://jsonplaceholder.typicode.com/users');\n        if (!response.ok) throw new Error(`Erreur HTTP ${response.status}`);\n        const data = await response.json();\n        setMembers(data);\n      } catch (err) {\n        setError(err.message);\n      } finally {\n        setIsLoading(false);\n      }\n    };\n    fetchMembers();\n  }, []);\n\n  if (isLoading) {\n    return (\n      &lt;View style={styles.center}&gt;\n        &lt;ActivityIndicator size=\"large\" color=\"#4f46e5\" /&gt;\n        &lt;Text&gt;Chargement des membres...&lt;/Text&gt;\n      &lt;/View&gt;\n    );\n  }\n\n  if (error) {\n    return (\n      &lt;View style={styles.center}&gt;\n        &lt;Text style={styles.error}&gt;⚠️ {error}&lt;/Text&gt;\n      &lt;/View&gt;\n    );\n  }\n\n  if (members.length === 0) {\n    return (\n      &lt;View style={styles.center}&gt;\n        &lt;Text&gt;Aucun membre trouvé.&lt;/Text&gt;\n      &lt;/View&gt;\n    );\n  }\n\n  const renderItem = ({ item }) => (\n    &lt;View style={styles.item}&gt;\n      &lt;Text style={styles.name}&gt;{item.name}&lt;/Text&gt;\n      &lt;Text style={styles.email}&gt;📧 {item.email}&lt;/Text&gt;\n      &lt;Text style={styles.phone}&gt;📞 {item.phone}&lt;/Text&gt;\n    &lt;/View&gt;\n  );\n\n  const ItemSeparator = () => &lt;View style={styles.separator} /&gt;;\n\n  return (\n    &lt;FlatList\n      data={members}\n      keyExtractor={(item) => item.id.toString()}\n      renderItem={renderItem}\n      ItemSeparatorComponent={ItemSeparator}\n    /&gt;\n  );\n}\n\nconst styles = StyleSheet.create({\n  center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },\n  error: { color: 'red', textAlign: 'center' },\n  item: { padding: 15, backgroundColor: '#fff' },\n  name: { fontSize: 16, fontWeight: 'bold' },\n  email: { fontSize: 14, color: '#4b5563', marginTop: 4 },\n  phone: { fontSize: 14, color: '#6b7280', marginTop: 2 },\n  separator: { height: 1, backgroundColor: '#e5e7eb' }\n});\n\nexport default MemberList;\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi utilise-t-on keyExtractor dans FlatList ? Que se passe-t-il si on ne le fait pas ?",
+            "niveau": "easy",
+            "reponse": "keyExtractor permet à FlatList de fournir une clé unique à chaque élément pour optimiser le rendu et le recyclage. Sans keyExtractor, React Native utilise l'index par défaut, ce qui peut causer des bugs de réorganisation, des problèmes de performance et un warning dans la console."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Ajouter un pull-to-refresh (rafraîchissement par tirage vers le bas) à cette liste.",
+            "niveau": "hard",
+            "reponse": "```jsx\nconst [refreshing, setRefreshing] = useState(false);\n\nconst onRefresh = async () => {\n  setRefreshing(true);\n  try {\n    const response = await fetch('https://jsonplaceholder.typicode.com/users');\n    const data = await response.json();\n    setMembers(data);\n  } catch (err) {\n    setError(err.message);\n  } finally {\n    setRefreshing(false);\n  }\n};\n\n// Dans FlatList, ajouter :\nrefreshControl={\n  <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />\n}\n```"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion des erreurs réseau et des cas limites",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Une application mobile doit afficher des produits depuis une API. Malheureusement, l'API peut être lente, instable ou renvoyer des données mal formatées.</p>\n<p>Cas à gérer :</p>\n<ul>\n  <li>Timeout de la requête (pas de réponse après 10 secondes)</li>\n  <li>API renvoie du HTML au lieu de JSON (erreur serveur)</li>\n  <li>Perte de connexion internet</li>\n  <li>Données reçues mais pas au format attendu (ex: objet au lieu de tableau)</li>\n</ul>",
+      "images": [
+        "schéma des différents codes d'erreur HTTP et leur gestion",
+        "interface avec message d'erreur et bouton réessayer"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire une fonction fetchWithTimeout et une validation des données pour gérer ces cas. Intégrer un bouton 'Réessayer'.",
+        "niveau": "hard",
+        "reponse": "```jsx\nconst fetchWithTimeout = (url, timeout = 10000) => {\n  return Promise.race([\n    fetch(url),\n    new Promise((_, reject) =>\n      setTimeout(() => reject(new Error('Délai de connexion dépassé')), timeout)\n    )\n  ]);\n};\n\nconst validateProducts = (data) => {\n  if (!Array.isArray(data)) throw new Error('Format de données invalide');\n  return data.map(item => ({\n    id: item.id,\n    name: item.title || item.name || 'Sans nom',\n    price: typeof item.price === 'number' ? item.price : 0\n  }));\n};\n\nfunction ProductList() {\n  const [products, setProducts] = useState([]);\n  const [isLoading, setIsLoading] = useState(false);\n  const [error, setError] = useState(null);\n\n  const loadProducts = async () => {\n    setIsLoading(true);\n    setError(null);\n    try {\n      const response = await fetchWithTimeout('https://api.example.com/products');\n      if (!response.ok) throw new Error(`HTTP ${response.status}`);\n      const contentType = response.headers.get('content-type');\n      if (!contentType || !contentType.includes('application/json')) {\n        throw new Error('Réponse non JSON');\n      }\n      const rawData = await response.json();\n      const validated = validateProducts(rawData);\n      setProducts(validated);\n    } catch (err) {\n      setError(err.message);\n    } finally {\n      setIsLoading(false);\n    }\n  };\n\n  useEffect(() => { loadProducts(); }, []);\n\n  if (error) {\n    return (\n      &lt;View&gt;\n        &lt;Text&gt;Erreur : {error}&lt;/Text&gt;\n        &lt;Button title=\"Réessayer\" onPress={loadProducts} /&gt;\n      &lt;/View&gt;\n    );\n  }\n  // ... affichage\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment détecter une perte de connexion internet avant même de faire l'appel API ?",
+            "niveau": "medium",
+            "reponse": "On peut utiliser NetInfo de '@react-native-community/netinfo' :\n```jsx\nimport NetInfo from '@react-native-community/netinfo';\nconst netInfo = await NetInfo.fetch();\nif (!netInfo.isConnected) {\n  setError('Pas de connexion internet');\n  return;\n}\n```"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Pourquoi est-il important de nettoyer les requêtes en cours lors du démontage du composant ? Comment faire ?",
+            "niveau": "hard",
+            "reponse": "Si le composant est démonté avant la fin de la requête, la mise à jour de l'état (setProducts, setError) sur un composant démonté provoque une erreur mémoire. Solution : utiliser AbortController.\n```jsx\nuseEffect(() => {\n  const controller = new AbortController();\n  const fetchData = async () => {\n    try {\n      const response = await fetch(url, { signal: controller.signal });\n      // ...\n    } catch (err) {\n      if (err.name !== 'AbortError') setError(err.message);\n    }\n  };\n  fetchData();\n  return () => controller.abort();\n}, []);\n```"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation des performances avec FlatList",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous affichez une liste de 1000 produits avec images. Le défilement est saccadé sur les appareils moins puissants. Analysez les problèmes et proposez des optimisations.</p>\n<p>Code actuel :</p>\n<pre><code>\n&lt;FlatList\n  data={products}\n  renderItem={({ item }) => (\n    &lt;View&gt;\n      &lt;Image source={{ uri: item.image }} style={{ width: 100, height: 100 }} /&gt;\n      &lt;Text&gt;{item.name}&lt;/Text&gt;\n    &lt;/View&gt;\n  )}\n/&gt;\n</code></pre>",
+      "images": [
+        "graphique comparant les performances avec et sans optimisation FlatList",
+        "schéma du recyclage des composants dans FlatList"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier les goulets d'étranglement et proposer des optimisations pour FlatList.",
+        "niveau": "hard",
+        "reponse": "Problèmes : 1) Les images chargent toutes en même temps, saturant la mémoire. 2) Pas de keyExtractor. 3) Pas d'optimisation des dimensions. 4) Re-rendus inutiles. Optimisations :\n- getItemLayout pour des hauteurs fixes\n- initialNumToRender={10}\n- maxToRenderPerBatch={10}\n- windowSize={21}\n- removeClippedSubviews={true}\n- Utiliser React.memo sur l'élément de liste\n- Utiliser lazy loading pour les images (ex: react-native-fast-image)\n- Optimiser les styles (éviter les objets créés à chaque rendu)",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment mettre en place getItemLayout pour une hauteur d'élément fixe ?",
+            "niveau": "medium",
+            "reponse": "```jsx\nconst getItemLayout = (data, index) => ({\n  length: 120, // hauteur totale de l'élément\n  offset: 120 * index,\n  index\n});\n\n&lt;FlatList\n  getItemLayout={getItemLayout}\n  // ...\n/&gt;\n```\nCela évite à FlatList de mesurer chaque élément asynchrone, améliorant les performances initiales."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Quel est l'impact de l'utilisation de fonctions fléchées dans renderItem sur les performances ?",
+            "niveau": "hard",
+            "reponse": "Si renderItem est défini directement dans le JSX, une nouvelle fonction est créée à chaque rendu, forçant FlatList à re-rendre tous les éléments. Il faut extraire renderItem en dehors du composant ou utiliser useCallback. Exemple : const renderItem = useCallback(({ item }) => <ProductItem item={item} />, []);"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Pagination et chargement infini",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous développez une application de type réseau social qui affiche les publications. L'API supporte la pagination avec les paramètres : <code>?_page=1&_limit=20</code>. Vous devez implémenter un chargement infini (load more) lorsqu'on atteint la fin de la liste.</p>\n<p>Exigences :</p>\n<ul>\n  <li>Charger les 20 premiers éléments au démarrage</li>\n  <li>Afficher un indicateur de chargement en bas de la liste pendant le chargement des pages suivantes</li>\n  <li>Ne pas déclencher de chargement si une requête est déjà en cours</li>\n  <li>Gérer le cas où il n'y a plus de données (fin de la pagination)</li>\n  <li>Permettre le rafraîchissement par tirage (pull-to-refresh) qui recharge la première page</li>\n</ul>",
+      "images": [
+        "schéma du chargement infini (infinite scroll) avec FlatList",
+        "interface avec spinner en bas de liste"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire le composant complet avec chargement infini, gestion des pages et pull-to-refresh.",
+        "niveau": "very hard",
+        "reponse": "```jsx\nimport React, { useState, useEffect, useCallback } from 'react';\nimport { FlatList, ActivityIndicator, Text, View, RefreshControl } from 'react-native';\n\nfunction PostList() {\n  const [posts, setPosts] = useState([]);\n  const [page, setPage] = useState(1);\n  const [isLoading, setIsLoading] = useState(false);\n  const [isLoadingMore, setIsLoadingMore] = useState(false);\n  const [refreshing, setRefreshing] = useState(false);\n  const [hasMore, setHasMore] = useState(true);\n\n  const fetchPosts = async (pageNum, isRefresh = false) => {\n    const url = `https://jsonplaceholder.typicode.com/posts?_page=${pageNum}&_limit=20`;\n    setIsLoading(true);\n    try {\n      const response = await fetch(url);\n      const data = await response.json();\n      if (data.length < 20) setHasMore(false);\n      if (isRefresh) {\n        setPosts(data);\n      } else {\n        setPosts(prev => [...prev, ...data]);\n      }\n    } catch (error) {\n      console.error(error);\n    } finally {\n      setIsLoading(false);\n      setIsLoadingMore(false);\n      setRefreshing(false);\n    }\n  };\n\n  useEffect(() => {\n    fetchPosts(1);\n  }, []);\n\n  const loadMore = () => {\n    if (!isLoadingMore && hasMore && !isLoading) {\n      setIsLoadingMore(true);\n      const nextPage = page + 1;\n      setPage(nextPage);\n      fetchPosts(nextPage);\n    }\n  };\n\n  const onRefresh = () => {\n    setRefreshing(true);\n    setPage(1);\n    setHasMore(true);\n    fetchPosts(1, true);\n  };\n\n  const renderFooter = () => {\n    if (!isLoadingMore) return null;\n    return &lt;ActivityIndicator style={{ margin: 20 }} /&gt;;\n  };\n\n  const renderEmpty = () => (\n    &lt;View style={{ flex: 1, alignItems: 'center', marginTop: 50 }}&gt;\n      &lt;Text&gt;Aucune publication&lt;/Text&gt;\n    &lt;/View&gt;\n  );\n\n  return (\n    &lt;FlatList\n      data={posts}\n      keyExtractor={(item) => item.id.toString()}\n      renderItem={({ item }) => &lt;Text&gt;{item.title}&lt;/Text&gt;}\n      onEndReached={loadMore}\n      onEndReachedThreshold={0.5}\n      ListFooterComponent={renderFooter}\n      ListEmptyComponent={renderEmpty}\n      refreshControl={\n        &lt;RefreshControl refreshing={refreshing} onRefresh={onRefresh} /&gt;\n      }\n    /&gt;\n  );\n}\n\nexport default PostList;\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer le rôle de onEndReachedThreshold et pourquoi 0.5 est une bonne valeur.",
+            "niveau": "medium",
+            "reponse": "onEndReachedThreshold détermine à quelle distance (en pourcentage de la hauteur visible) de la fin de la liste on déclenche onEndReached. 0.5 signifie que la fonction est appelée lorsque l'utilisateur est à mi-chemin du dernier élément. Une valeur trop basse (0.1) déclenche le chargement trop tard (risque de blanc), une valeur trop haute (1) déclenche trop tôt (requêtes inutiles)."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Comment éviter les doublons dans la liste en cas de rechargement rapide de la même page ?",
+            "niveau": "hard",
+            "reponse": "On peut utiliser un Set pour suivre les IDs déjà chargés, ou vérifier avant d'ajouter : setPosts(prev => [...prev, ...data.filter(newItem => !prev.some(p => p.id === newItem.id))]);. Alternativement, l'API peut fournir un timestamp ou un champ 'updatedAt' pour gérer les mises à jour."
+          }
+        ]
+      }
+    ]
+  }
+]

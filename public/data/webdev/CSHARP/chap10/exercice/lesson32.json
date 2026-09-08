@@ -1,0 +1,102 @@
+[
+  {
+    "intitule": "Identifier les blocs synchrones vs asynchrones",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Observe les extraits de code suivants. Indique pour chacun s'il s'exécute de manière synchrone ou asynchrone. Justifie brièvement.</p><pre><code>// Bloc A\npublic void LireFichier()\n{\n    string contenu = File.ReadAllText(\"data.txt\");\n    Console.WriteLine(contenu);\n}\n\n// Bloc B\npublic async Task LireFichierAsync()\n{\n    string contenu = await File.ReadAllTextAsync(\"data.txt\");\n    Console.WriteLine(contenu);\n}</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier le type d'exécution (synchrone ou asynchrone) du Bloc A et du Bloc B.",
+        "niveau": "easy",
+        "reponse": "Bloc A : synchrone (File.ReadAllText bloque le thread jusqu'à la fin de la lecture). Bloc B : asynchrone (await libère le thread pendant l'opération I/O).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer un avantage concret de l'approche asynchrone pour une application serveur (ex: API Web).",
+        "niveau": "medium",
+        "reponse": "L'approche asynchrone libère le thread pendant les opérations lentes (accès disque, appel réseau). Cela permet au serveur de traiter plus de requêtes simultanément avec moins de threads, améliorant l'évolutivité et la réactivité.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Transformer une méthode synchrone en asynchrone",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un développeur a écrit cette méthode synchrone pour appeler une API météo :</p><pre><code>public string GetMeteo(string ville)\n{\n    using (var client = new WebClient())\n    {\n        return client.DownloadString($\"https://api.meteo.com/{ville}\");\n    }\n}</code></pre><p>Transforme-la en méthode asynchrone en utilisant <code>HttpClient</code> (recommandé) et les mots-clés <code>async</code>/<code>await</code>. Modifie le type de retour si nécessaire.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Réécrire la méthode GetMeteo en version asynchrone avec async/await.",
+        "niveau": "medium",
+        "reponse": "```csharp\npublic async Task<string> GetMeteoAsync(string ville)\n{\n    using (var client = new HttpClient())\n    {\n        return await client.GetStringAsync($\"https://api.meteo.com/{ville}\");\n    }\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Justifier pourquoi le type de retour est maintenant Task<string> et plus string.",
+        "niveau": "easy",
+        "reponse": "Une méthode asynchrone retourne un objet Task (ou Task<T>) qui représente l'opération en cours. Task<string> permet à l'appelant d'attendre (await) le résultat string ultérieurement sans bloquer le thread appelant.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyser les risques du void asynchrone",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>On donne cette méthode asynchrone sans retour :</p><pre><code>public async void NotifierUtilisateur(string message)\n{\n    try\n    {\n        await Task.Delay(1000);\n        Console.WriteLine($\"Notification : {message}\");\n    }\n    catch (Exception ex)\n    {\n        Console.WriteLine($\"Erreur silencieuse ? {ex.Message}\");\n    }\n}\n\n// Appel\nNotifierUtilisateur(\"Bonjour\");\n// ... suite du programme\n</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Énumérer deux problèmes majeurs liés à l'utilisation de async void (sauf pour les gestionnaires d'événements).",
+        "niveau": "hard",
+        "reponse": "1. Impossible d'attendre la fin de la méthode (fire-and-forget dangereux).\n2. Les exceptions non gérées dans la méthode déclenchent un événement UnobservedTaskException et peuvent faire planter l'application (ou être perdues selon le contexte).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Corriger la signature et l'appel pour suivre les bonnes pratiques.",
+        "niveau": "medium",
+        "reponse": "Signature : `public async Task NotifierUtilisateurAsync(string message)`\nAppel : `await NotifierUtilisateurAsync(\"Bonjour\");` (dans une méthode async) ou `NotifierUtilisateurAsync(\"Bonjour\").Wait();` (si synchrone obligatoire, mais déconseillé).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Problème pratique : améliorer la réactivité d'une interface I/O bound",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Une application console doit traiter 10 fichiers texte volumineux. Le code actuel est synchrone :</p><pre><code>List<string> resultats = new List<string>();\nforeach (string chemin in fichiers)\n{\n    string contenu = File.ReadAllText(chemin);\n    resultats.Add(TraiterContenu(contenu));\n}\nAfficherResultats(resultats);</code></pre>\n<p><strong>Consigne</strong> : Réécris ce traitement pour qu'il s'exécute de manière asynchrone concurrente (lancer toutes les lectures en parallèle) tout en conservant l'ordre des résultats dans la liste finale. Utilise <code>Task.WhenAll</code> et <code>File.ReadAllTextAsync</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposer une implémentation asynchrone avec Task.WhenAll.",
+        "niveau": "very hard",
+        "reponse": "```csharp\nvar tasks = fichiers.Select(async chemin =>\n{\n    string contenu = await File.ReadAllTextAsync(chemin);\n    return TraiterContenu(contenu);\n});\nstring[] resultats = await Task.WhenAll(tasks);\n// L'ordre des resultats correspond à l'ordre d'itération des tâches (préservé par WhenAll)\nAfficherResultats(resultats.ToList());\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer pourquoi cette version peut être beaucoup plus rapide que la version synchrone.",
+        "niveau": "medium",
+        "reponse": "La version synchrone lit un fichier, bloque le thread pendant toute la durée de l'I/O disque, puis passe au suivant. La version asynchrone lance simultanément toutes les opérations de lecture ; le thread est libéré entre chaque await, permettant d'exploiter le parallélisme réel (si le disque le permet) ou au moins la concurrence asynchrone, réduisant le temps total ≈ au max des durées individuelles, non à leur somme.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

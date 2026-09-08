@@ -1,0 +1,113 @@
+[
+  {
+    "intitule": "Analyse d’un script de migration",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous travaillez sur un projet Node.js avec Sequelize et PostgreSQL. Un collègue a généré une migration pour ajouter une colonne <code>age</code> à la table <code>Users</code>. Voici le contenu de la migration :</p><pre><code>module.exports = {\n  up: async (queryInterface, Sequelize) => {\n    await queryInterface.addColumn('Users', 'age', {\n      type: Sequelize.INTEGER,\n      allowNull: true\n    });\n  },\n  down: async (queryInterface, Sequelize) => {\n    await queryInterface.removeColumn('Users', 'age');\n  }\n};</code></pre><p>Répondez aux questions suivantes.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez le rôle de la méthode `up` et de la méthode `down` dans une migration Sequelize.",
+        "niveau": "easy",
+        "reponse": "La méthode `up` applique les changements à la base de données (ajout de colonne, création de table, etc.). La méthode `down` permet d’annuler ces changements (suppression de colonne, suppression de table, etc.) pour pouvoir revenir en arrière.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Que se passerait-il si la méthode `down` était vide ? Justifiez.",
+        "niveau": "medium",
+        "reponse": "Si la méthode `down` est vide, la commande `db:migrate:undo` ne ferait rien, rendant impossible l’annulation de cette migration. Cela peut poser problème en cas d’erreur ou de rollback nécessaire.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Création d’une table avec migration",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous devez créer une table `Products` avec les colonnes suivantes :</p><ul><li>`id` (auto-incrémenté, clé primaire)</li><li>`name` (string, non null)</li><li>`price` (float, non null, valeur ≥ 0)</li><li>`stock` (integer, valeur par défaut 0)</li><li>`createdAt` et `updatedAt` (dates)</li></ul><p>Rédigez le code complet d’une migration Sequelize pour créer cette table, en utilisant les bonnes pratiques.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédigez la migration complète avec les méthodes `up` et `down`.",
+        "niveau": "medium",
+        "reponse": "```js\nmodule.exports = {\n  up: async (queryInterface, Sequelize) => {\n    await queryInterface.createTable('Products', {\n      id: {\n        type: Sequelize.INTEGER,\n        autoIncrement: true,\n        primaryKey: true\n      },\n      name: {\n        type: Sequelize.STRING,\n        allowNull: false\n      },\n      price: {\n        type: Sequelize.FLOAT,\n        allowNull: false,\n        validate: { min: 0 }\n      },\n      stock: {\n        type: Sequelize.INTEGER,\n        defaultValue: 0\n      },\n      createdAt: {\n        type: Sequelize.DATE,\n        allowNull: false\n      },\n      updatedAt: {\n        type: Sequelize.DATE,\n        allowNull: false\n      }\n    });\n  },\n  down: async (queryInterface, Sequelize) => {\n    await queryInterface.dropTable('Products');\n  }\n};\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Versionnement du schéma avec migrations",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous avez une base de données en production avec une table `Orders` contenant déjà des milliers d’enregistrements. Vous devez :</p><ol><li>Ajouter une colonne `discount` (float, valeur par défaut 0.0)</li><li>Renommer l’ancienne colonne `total` en `totalAmount`</li><li>Supprimer la colonne `notes` devenue inutile</li></ol><p>Écrivez la migration Sequelize correspondante, en veillant à ce qu’elle soit réversible (`down` fonctionnelle).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédigez le code complet de la migration.",
+        "niveau": "hard",
+        "reponse": "```js\nmodule.exports = {\n  up: async (queryInterface, Sequelize) => {\n    await queryInterface.addColumn('Orders', 'discount', {\n      type: Sequelize.FLOAT,\n      defaultValue: 0.0\n    });\n    await queryInterface.renameColumn('Orders', 'total', 'totalAmount');\n    await queryInterface.removeColumn('Orders', 'notes');\n  },\n\n  down: async (queryInterface, Sequelize) => {\n    await queryInterface.addColumn('Orders', 'notes', {\n      type: Sequelize.TEXT,\n      allowNull: true\n    });\n    await queryInterface.renameColumn('Orders', 'totalAmount', 'total');\n    await queryInterface.removeColumn('Orders', 'discount');\n  }\n};\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez pourquoi l’ordre des instructions dans `up` et `down` est important.",
+        "niveau": "medium",
+        "reponse": "L’ordre est essentiel pour éviter les conflits et garantir la réversibilité. Dans `up`, on ajoute d’abord la nouvelle colonne, puis on renomme, enfin on supprime. Dans `down`, on restaure d’abord la colonne supprimée, puis on renomme dans l’ordre inverse, enfin on supprime la colonne ajoutée. Cela permet de revenir exactement à l’état antérieur.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Utilisation des seeders pour peupler la base",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous avez une table `Categories` avec les colonnes `name` et `description`. Vous devez créer un seeder pour insérer les catégories par défaut suivantes :</p><ul><li>Informatique – 'Produits liés à l’informatique'</li><li>Mode – 'Vêtements et accessoires'</li><li>Maison – 'Décoration et électroménager'</li></ul><p>Rédigez le code du seeder (version Sequelize).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le seeder complet avec les méthodes `up` et `down`.",
+        "niveau": "medium",
+        "reponse": "```js\nmodule.exports = {\n  up: async (queryInterface, Sequelize) => {\n    await queryInterface.bulkInsert('Categories', [\n      { name: 'Informatique', description: 'Produits liés à l\\'informatique', createdAt: new Date(), updatedAt: new Date() },\n      { name: 'Mode', description: 'Vêtements et accessoires', createdAt: new Date(), updatedAt: new Date() },\n      { name: 'Maison', description: 'Décoration et électroménager', createdAt: new Date(), updatedAt: new Date() }\n    ], {});\n  },\n\n  down: async (queryInterface, Sequelize) => {\n    await queryInterface.bulkDelete('Categories', { name: ['Informatique', 'Mode', 'Maison'] }, {});\n  }\n};\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Migration avancée avec transformation des données",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous avez une table `Employees` avec une colonne `fullName` (string) contenant le prénom et le nom séparés par un espace. Vous souhaitez remplacer cette colonne par deux colonnes `firstName` et `lastName` sans perdre les données existantes, dans un environnement de production. Rédigez la migration complète avec transformation des données.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédigez la migration Sequelize qui réalise cette opération de manière sécurisée et réversible.",
+        "niveau": "very hard",
+        "reponse": "```js\nmodule.exports = {\n  up: async (queryInterface, Sequelize) => {\n    // 1. Ajouter les nouvelles colonnes temporairement nullable\n    await queryInterface.addColumn('Employees', 'firstName', { type: Sequelize.STRING });\n    await queryInterface.addColumn('Employees', 'lastName', { type: Sequelize.STRING });\n\n    // 2. Récupérer tous les employés pour scinder fullName\n    const employees = await queryInterface.sequelize.query(\n      'SELECT id, fullName FROM Employees;',\n      { type: queryInterface.sequelize.QueryTypes.SELECT }\n    );\n\n    for (const emp of employees) {\n      const [firstName, ...lastNameParts] = emp.fullName.split(' ');\n      const lastName = lastNameParts.join(' ');\n      await queryInterface.sequelize.query(\n        `UPDATE Employees SET firstName = '${firstName}', lastName = '${lastName}' WHERE id = ${emp.id};`\n      );\n    }\n\n    // 3. Rendre les nouvelles colonnes non nullables\n    await queryInterface.changeColumn('Employees', 'firstName', { type: Sequelize.STRING, allowNull: false });\n    await queryInterface.changeColumn('Employees', 'lastName', { type: Sequelize.STRING, allowNull: false });\n\n    // 4. Supprimer l'ancienne colonne\n    await queryInterface.removeColumn('Employees', 'fullName');\n  },\n\n  down: async (queryInterface, Sequelize) => {\n    // Recréer fullName à partir de firstName et lastName\n    await queryInterface.addColumn('Employees', 'fullName', { type: Sequelize.STRING });\n\n    const employees = await queryInterface.sequelize.query(\n      'SELECT id, firstName, lastName FROM Employees;',\n      { type: queryInterface.sequelize.QueryTypes.SELECT }\n    );\n\n    for (const emp of employees) {\n      const fullName = `${emp.firstName} ${emp.lastName}`;\n      await queryInterface.sequelize.query(\n        `UPDATE Employees SET fullName = '${fullName}' WHERE id = ${emp.id};`\n      );\n    }\n\n    await queryInterface.changeColumn('Employees', 'fullName', { type: Sequelize.STRING, allowNull: false });\n    await queryInterface.removeColumn('Employees', 'firstName');\n    await queryInterface.removeColumn('Employees', 'lastName');\n  }\n};\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Quels risques cette migration présente-t-elle en production ? Proposez des améliorations.",
+        "niveau": "hard",
+        "reponse": "Risques : temps d’exécution long (blocage de la table), perte de données si échec en cours de route, non-respect des contraintes de clé étrangère. Améliorations : faire les modifications par lots (batch), utiliser des transactions, prévoir un mode `--dry-run`, ou procéder en plusieurs migrations distinctes pour réduire le temps de verrouillage.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

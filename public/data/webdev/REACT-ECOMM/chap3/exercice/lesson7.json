@@ -1,0 +1,165 @@
+[
+  {
+    "intitule": "Configuration de base de React Router DOM",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous débutez un projet e-commerce avec React et Vite. Vous devez installer et configurer le routeur pour gérer la navigation entre les pages suivantes : Accueil (<code>/</code>), Catalogue (<code>/catalogue</code>), Connexion (<code>/connexion</code>), et Inscription (<code>/inscription</code>). Le layout principal doit contenir un en-tête (Header) et un pied de page (Footer) communs à toutes ces pages.</p><p>Le prix d'un produit est $P$ FCFA et la TVA est de $T = 19\\%$. Le prix TTC est donc $P_{TTC} = P \\times (1 + T)$.</p>",
+      "images": [
+        "Schéma d'installation de react-router-dom avec npm"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Énoncer la commande d'installation de react-router-dom et expliquer son rôle dans une application React.",
+        "niveau": "easy",
+        "reponse": "Commande : `npm install react-router-dom`. react-router-dom permet de gérer la navigation côté client (SPA) sans recharger la page, en synchronisant l'interface avec l'URL du navigateur. Il fournit des composants comme BrowserRouter, Routes, Route, Link, etc.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Créer la configuration du routeur avec createBrowserRouter en utilisant un RootLayout. Écrire le code complet se trouvant dans main.jsx ou App.jsx.",
+        "niveau": "medium",
+        "reponse": "```jsx\nimport { createBrowserRouter, RouterProvider } from 'react-router-dom';\nimport RootLayout from './layouts/RootLayout';\nimport HomePage from './pages/HomePage';\nimport CatalogPage from './pages/CatalogPage';\nimport LoginPage from './pages/LoginPage';\nimport RegisterPage from './pages/RegisterPage';\n\nconst router = createBrowserRouter([\n  {\n    path: '/',\n    element: <RootLayout />,\n    children: [\n      { index: true, element: <HomePage /> },\n      { path: 'catalogue', element: <CatalogPage /> },\n      { path: 'connexion', element: <LoginPage /> },\n      { path: 'inscription', element: <RegisterPage /> },\n    ],\n  },\n]);\n\nfunction App() {\n  return <RouterProvider router={router} />;\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": "2.a",
+        "texte": "Décrire le composant RootLayout minimal avec un <Outlet /> et les composants Header et Footer.",
+        "niveau": "easy",
+        "reponse": "```jsx\nimport { Outlet } from 'react-router-dom';\nimport Header from '../components/Header';\nimport Footer from '../components/Footer';\n\nexport default function RootLayout() {\n  return (\n    <div className=\"flex flex-col min-h-screen\">\n      <Header />\n      <main className=\"flex-grow\">\n        <Outlet />\n      </main>\n      <Footer />\n    </div>\n  );\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse et correction d'une configuration de routage",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un développeur a écrit la configuration suivante pour une application e-commerce. Malheureusement, certaines routes ne fonctionnent pas comme prévu. Identifiez les erreurs et proposez les corrections.</p><pre>const router = createBrowserRouter([\n  { path: '/', element: <HomePage /> },\n  { path: '/catalogue', element: <CatalogPage /> },\n  { path: '/produit/:id', element: <ProductPage /> },\n  { path: '/connexion', element: <LoginPage /> },\n  { path: '/compte', element: <AccountPage /> },\n  { path: '/admin', element: <AdminDashboard /> },\n]);\n\nfunction App() {\n  return <RouterProvider router={router} />;\n}</pre><p>Problèmes constatés :</p><ul><li>Le header et le footer sont absents de toutes les pages.</li><li>Les routes /compte et /admin devraient être protégées (non accessibles sans authentification).</li><li>Le lien actif (active link) ne fonctionne pas correctement.</li></ul>",
+      "images": [
+        "Capture d'erreur de routage React Router"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Justifier pourquoi le header et le footer sont absents et proposer une correction utilisant un layout partagé.",
+        "niveau": "medium",
+        "reponse": "Les routes sont indépendantes et n'ont pas de layout commun. Chaque page est responsable d'inclure son propre header/footer, ce qui génère du code dupliqué. Correction : créer un RootLayout avec <Outlet /> et le placer comme parent des routes. Toutes les routes enfants héritent du layout commun.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer une implémentation d'un composant ProtectedRoute qui redirige vers /connexion si l'utilisateur n'est pas authentifié. Comment l'intégrer dans la configuration ?",
+        "niveau": "medium",
+        "reponse": "```jsx\nconst ProtectedRoute = ({ children }) => {\n  const { user } = useAuthStore();\n  return user ? children : <Navigate to=\"/connexion\" replace />;\n};\n\n// Intégration dans la config :\n{ path: 'compte', element: <ProtectedRoute><AccountPage /></ProtectedRoute> },\n{ path: 'admin', element: <ProtectedRoute><AdminDashboard /></ProtectedRoute> },\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": "3",
+        "texte": "Expliquer comment résoudre le problème des liens actifs en utilisant NavLink au lieu de Link.",
+        "niveau": "easy",
+        "reponse": "NavLink accepte une prop `className` ou `style` qui reçoit un objet `{ isActive }`. On peut y appliquer une classe CSS différente lorsque isActive est true, par exemple : `className={({ isActive }) => isActive ? 'text-blue-600 font-bold' : 'text-gray-600'}`. Cela permet de styler le lien de la page courante.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Implémentation d'un layout avec routes imbriquées pour zone admin",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Pour la partie administration du site e-commerce, vous devez créer un layout spécifique avec une barre latérale (sidebar) différente du layout public. Les routes admin sont :</p><ul><li><code>/admin</code> : tableau de bord (dashboard)</li><li><code>/admin/produits</code> : gestion des produits (CRUD)</li><li><code>/admin/commandes</code> : gestion des commandes</li><li><code>/admin/utilisateurs</code> : gestion des utilisateurs</li></ul><p>Toutes ces routes doivent être protégées (authentification requise) et accessibles uniquement aux utilisateurs ayant le rôle 'admin'. De plus, la barre latérale doit rester visible sur toutes les pages admin.</p><p>Le seuil de rentabilité d'un produit est donné par $Q = \\frac{CF}{P - CV}$ où $CF$ sont les coûts fixes, $P$ le prix unitaire et $CV$ le coût variable unitaire.</p>",
+      "images": [
+        "Wireframe d'un dashboard admin avec sidebar"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire la configuration complète du routeur avec createBrowserRouter utilisant un AdminLayout et en intégrant la vérification des rôles.",
+        "niveau": "hard",
+        "reponse": "```jsx\nconst router = createBrowserRouter([\n  {\n    path: '/',\n    element: <RootLayout />,\n    children: [\n      { index: true, element: <HomePage /> },\n      { path: 'catalogue', element: <CatalogPage /> },\n      { path: 'connexion', element: <LoginPage /> },\n      { path: 'inscription', element: <RegisterPage /> },\n      { path: 'compte', element: <ProtectedRoute><AccountPage /></ProtectedRoute> },\n    ],\n  },\n  {\n    path: '/admin',\n    element: <RoleBasedRoute allowedRoles={['admin']}><AdminLayout /></RoleBasedRoute>,\n    children: [\n      { index: true, element: <AdminDashboard /> },\n      { path: 'produits', element: <AdminProducts /> },\n      { path: 'commandes', element: <AdminOrders /> },\n      { path: 'utilisateurs', element: <AdminUsers /> },\n    ],\n  },\n]);\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": "1.a",
+        "texte": "Décrire le composant RoleBasedRoute qui vérifie le rôle de l'utilisateur et redirige si nécessaire.",
+        "niveau": "medium",
+        "reponse": "```jsx\nconst RoleBasedRoute = ({ children, allowedRoles }) => {\n  const { user } = useAuthStore();\n  if (!user) return <Navigate to=\"/connexion\" replace />;\n  if (!allowedRoles.includes(user.role)) return <Navigate to=\"/\" replace />;\n  return children;\n};\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": "2",
+        "texte": "Comment implémenter la barre latérale dans AdminLayout pour qu'elle soit visible sur toutes les routes enfants ?",
+        "niveau": "easy",
+        "reponse": "Dans AdminLayout, on structure la page avec une div flex : `<div className=\"flex\"><aside>Sidebar</aside><main><Outlet /></main></div>`. Le composant <Outlet /> rend la route enfant correspondante. La sidebar reste fixe et contient des liens NavLink vers les différentes routes admin.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Diagnostic d'erreur : route dynamique et loader",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Dans l'application e-commerce, la page produit <code>/produit/:id</code> doit afficher les détails d'un produit. Le développeur a implémenté un loader pour charger les données avant le rendu. Cependant, la page affiche toujours 'Chargement...' puis une erreur 'Cannot read properties of undefined'. Voici le code :</p><pre>// router.jsx\n{\n  path: 'produit/:id',\n  element: <ProductPage />,\n  loader: async ({ params }) => {\n    const response = await fetch(`/api/products/${params.id}`);\n    return response.json();\n  },\n}\n\n// ProductPage.jsx\nimport { useLoaderData } from 'react-router-dom';\nexport default function ProductPage() {\n  const product = useLoaderData();\n  return (\n    <div>\n      <h1>{product.name}</h1>\n      <p>Prix : {product.price} FCFA</p>\n    </div>\n  );\n}</pre><p>Analysez les erreurs possibles et proposez les corrections. Le prix remisé est $P_{remisé} = P \\times (1 - \\frac{r}{100})$.</p>",
+      "images": [
+        "Capture d'erreur de chargement dans React Router"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier les problèmes potentiels dans ce code (gestion d'erreur, cas où le produit n'existe pas, état de chargement, accès à product.name si product est null).",
+        "niveau": "hard",
+        "reponse": "1) Aucune gestion d'erreur si l'API renvoie 404 ou si le réseau échoue ; 2) Pas d'état de chargement ; 3) Si response.json() est appelée sur une réponse non OK, cela peut planter ; 4) Si product est null ou undefined, product.name provoque une erreur ; 5) Le loader ne vérifie pas response.ok.",
+        "sousQuestions": []
+      },
+      {
+        "numero": "2",
+        "texte": "Corriger le loader pour gérer les erreurs et les cas de produit non trouvé, en utilisant throw new Response(...).",
+        "niveau": "hard",
+        "reponse": "```jsx\nloader: async ({ params }) => {\n  const response = await fetch(`/api/products/${params.id}`);\n  if (!response.ok) {\n    if (response.status === 404) {\n      throw new Response('Produit non trouvé', { status: 404 });\n    }\n    throw new Response('Erreur serveur', { status: response.status });\n  }\n  return response.json();\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": "3",
+        "texte": "Ajouter un état de chargement dans la page ProductPage en utilisant useNavigation et gérer l'erreur avec useRouteError.",
+        "niveau": "hard",
+        "reponse": "```jsx\nimport { useLoaderData, useNavigation, useRouteError } from 'react-router-dom';\n\nexport default function ProductPage() {\n  const product = useLoaderData();\n  const navigation = useNavigation();\n  const error = useRouteError();\n\n  if (navigation.state === 'loading') return <div>Chargement...</div>;\n  if (error) return <div>Erreur : {error.statusText || 'Produit introuvable'}</div>;\n\n  return (\n    <div>\n      <h1>{product.name}</h1>\n      <p>Prix : {product.price} FCFA</p>\n    </div>\n  );\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Organisation des routes dans un fichier dédié",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Pour maintenir une bonne architecture, on souhaite externaliser la configuration des routes dans un fichier séparé <code>src/routes/index.jsx</code>. Le projet contient de nombreuses routes : publiques, protégées, et routes admin. On veut également utiliser le lazy loading pour améliorer les performances.</p><p>La marge bénéficiaire est calculée par $M = \\frac{P_{vente} - P_{achat}}{P_{vente}} \\times 100$.</p>",
+      "images": [
+        "Arborescence d'un projet React avec dossier routes"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créer le fichier routes/index.jsx exportant la configuration du routeur, en utilisant React.lazy pour charger les pages de manière asynchrone.",
+        "niveau": "hard",
+        "reponse": "```jsx\nimport { lazy } from 'react';\nimport { createBrowserRouter } from 'react-router-dom';\nimport RootLayout from '../layouts/RootLayout';\nimport AdminLayout from '../layouts/AdminLayout';\nimport ProtectedRoute from '../components/ProtectedRoute';\nimport RoleBasedRoute from '../components/RoleBasedRoute';\n\nconst HomePage = lazy(() => import('../pages/HomePage'));\nconst CatalogPage = lazy(() => import('../pages/CatalogPage'));\nconst LoginPage = lazy(() => import('../pages/LoginPage'));\nconst AccountPage = lazy(() => import('../pages/AccountPage'));\nconst AdminDashboard = lazy(() => import('../pages/admin/Dashboard'));\n\nconst router = createBrowserRouter([\n  {\n    path: '/',\n    element: <RootLayout />,\n    children: [\n      { index: true, element: <HomePage /> },\n      { path: 'catalogue', element: <CatalogPage /> },\n      { path: 'connexion', element: <LoginPage /> },\n      { path: 'compte', element: <ProtectedRoute><AccountPage /></ProtectedRoute> },\n    ],\n  },\n  {\n    path: '/admin',\n    element: <RoleBasedRoute allowedRoles={['admin']}><AdminLayout /></RoleBasedRoute>,\n    children: [\n      { index: true, element: <AdminDashboard /> },\n    ],\n  },\n]);\n\nexport default router;\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": "1.a",
+        "texte": "Comment intégrer ce routeur dans main.jsx en utilisant Suspense pour le lazy loading ?",
+        "niveau": "easy",
+        "reponse": "```jsx\nimport { Suspense } from 'react';\nimport { RouterProvider } from 'react-router-dom';\nimport router from './routes';\n\nReactDOM.createRoot(document.getElementById('root')).render(\n  <Suspense fallback={<div>Chargement de l'application...</div>}>\n    <RouterProvider router={router} />\n  </Suspense>\n);\n```",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

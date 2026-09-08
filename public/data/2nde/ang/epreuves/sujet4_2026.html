@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+  "matiere": "Anglais",
+  "classe": "Seconde",
+  "sequence": "Sequence 4",
+  "anneeScolaire": "2025-2026",
+  "exercices": [
+    {
+      "titre": "Grammar and Sentence Transformation",
+      "points": "10 pts",
+      "enonce": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 10px; color: #1a1a1a;'><p>This section tests your mastery of key grammatical structures seen in Sequence 4: <strong>Conditionals, Passive Voice, Reported Speech, and Modal Verbs</strong>.</p></div>",
+      "questions": [
+        {
+          "question": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p><strong>1. Conditional Sentences</strong> - Put the verbs in brackets into the correct tense.</p><p style='margin-left: 20px;'>a) If I _____ (be) you, I _____ (accept) the offer. (Type 2)</p><p style='margin-left: 20px;'>b) If she _____ (study) harder, she _____ (pass) the exam last week. (Type 3)</p><p style='margin-left: 20px;'>c) Unless the government _____ (intervene), the situation _____ (get) worse. (Type 1)</p></div>",
+          "reponse": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p><strong>Correction:</strong></p><p>a) <strong>were</strong>, <strong>would accept</strong></p><p>b) <strong>had studied</strong>, <strong>would have passed</strong></p><p>c) <strong>intervenes</strong>, <strong>will get</strong></p></div>"
+        },
+        {
+          "question": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p><strong>2. Passive Voice</strong> - Transform the following sentences from active to passive.</p><p style='margin-left: 20px;'>a) The government is building a new hospital in the city.</p><p style='margin-left: 20px;'>b) The students have written a petition to the principal.</p><p style='margin-left: 20px;'>c) The police arrested the suspects yesterday.</p></div>",
+          "reponse": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p><strong>Correction:</strong></p><p>a) <strong>A new hospital is being built in the city by the government.</strong></p><p>b) <strong>A petition has been written to the principal by the students.</strong></p><p>c) <strong>The suspects were arrested by the police yesterday.</strong></p></div>"
+        },
+        {
+          "question": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p><strong>3. Reported Speech</strong> - Transform the following sentences from direct to indirect speech.</p><p style='margin-left: 20px;'>a) The teacher said to the students: \"You must finish your homework today.\"</p><p style='margin-left: 20px;'>b) Mary asked: \"Where did you buy this book?\"</p><p style='margin-left: 20px;'>c) He said: \"I will help you with your project next week.\"</p></div>",
+          "reponse": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p><strong>Correction:</strong></p><p>a) <strong>The teacher told the students that they had to finish their homework that day.</strong></p><p>b) <strong>Mary asked where I had bought that book.</strong></p><p>c) <strong>He said that he would help me with my project the following week.</strong></p></div>"
+        },
+        {
+          "question": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p><strong>4. Modal Verbs</strong> - Fill in the blanks with the appropriate modal verb (<em>must, should, can, could, may, needn't</em>).</p><p style='margin-left: 20px;'>a) You _____ wear a helmet when riding a motorcycle. (obligation)</p><p style='margin-left: 20px;'>b) _____ I borrow your phone please? (polite request)</p><p style='margin-left: 20px;'>c) You _____ worry about the test; it's going to be easy. (absence of obligation)</p></div>",
+          "reponse": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p><strong>Correction:</strong></p><p>a) <strong>must</strong></p><p>b) <strong>Can</strong> / <strong>Could</strong></p><p>c) <strong>needn't</strong></p></div>"
+        }
+      ]
+    },
+    {
+      "titre": "Vocabulary, Synonyms and Word Formation",
+      "points": "6 pts",
+      "enonce": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 10px; color: #1a1a1a;'><p>This section assesses your ability to use vocabulary related to community, health, and ICT, and to form new words using prefixes and suffixes [citation:8].</p></div>",
+      "questions": [
+        {
+          "question": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p><strong>1. Synonyms and Antonyms</strong> - Give a synonym for each of the following words.</p><p style='margin-left: 20px;'>a) clever → __________</p><p style='margin-left: 20px;'>b) courage → __________</p><p style='margin-left: 20px;'>c) begin → __________</p></div>",
+          "reponse": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p><strong>Correction:</strong></p><p>a) <strong>intelligent</strong> / <strong>smart</strong></p><p>b) <strong>bravery</strong> / <strong>heroism</strong></p><p>c) <strong>start</strong> / <strong>commence</strong></p></div>"
+        },
+        {
+          "question": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p><strong>2. Negative Prefixes</strong> - Add the correct negative prefix (<em>un-, in-, im-, dis-</em>) to form the opposite.</p><p style='margin-left: 20px;'>a) responsible → __________</p><p style='margin-left: 20px;'>b) legal → __________</p><p style='margin-left: 20px;'>c) polite → __________</p></div>",
+          "reponse": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p><strong>Correction:</strong></p><p>a) <strong>irresponsible</strong></p><p>b) <strong>illegal</strong></p><p>c) <strong>impolite</strong></p></div>"
+        },
+        {
+          "question": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p><strong>3. Thematic Vocabulary</strong> - Complete the sentences with the correct word from the list: <em>cyberbullying, volunteer, addiction, pedestrian, NGO</em>.</p><p style='margin-left: 20px;'>a) A ___________ is a person who walks along the street and crosses the road.</p><p style='margin-left: 20px;'>b) Many ___________ organizations help people in need.</p><p style='margin-left: 20px;'>c) ___________ is a serious problem on social media platforms.</p></div>",
+          "reponse": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p><strong>Correction:</strong></p><p>a) <strong>pedestrian</strong></p><p>b) <strong>NGO</strong></p><p>c) <strong>Cyberbullying</strong></p></div>"
+        }
+      ]
+    },
+    {
+      "titre": "Reading Comprehension",
+      "points": "4 pts",
+      "enonce": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 10px; color: #1a1a1a;'><p>Read the text carefully and answer the questions that follow [citation:6].</p><div style='background-color: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 5px solid #2980b9; margin: 10px 0; color: #1a1a1a;'><h4 style='color: #2c3e50;'>Teenage Pregnancy: A Community Problem</h4><p>Teenage pregnancy is a serious issue in many communities. It often leads to school dropout, poverty, and health problems for both the mother and the child. Several factors contribute to this problem, including peer pressure, lack of sex education, and poverty. The consequences are severe. Teenage mothers often struggle to find employment and raise their children alone. Moreover, children born to teenage mothers may not receive proper care and education.</p><p>To address this problem, communities must work together. Schools should provide comprehensive sex education. Parents need to communicate openly with their children. NGOs can support teenage mothers with healthcare and vocational training. Prevention is better than cure, and collective action is essential to reduce teenage pregnancy.</p></div></div>",
+      "questions": [
+        {
+          "question": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p>a) What is the main topic of the text?</p></div>",
+          "reponse": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p><strong>Correction:</strong> The main topic is teenage pregnancy and its consequences on communities.</p></div>"
+        },
+        {
+          "question": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p>b) List three factors that contribute to teenage pregnancy according to the text.</p></div>",
+          "reponse": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p><strong>Correction:</strong> The factors are peer pressure, lack of sex education, and poverty.</p></div>"
+        },
+        {
+          "question": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p>c) What are the consequences of teenage pregnancy?</p></div>",
+          "reponse": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p><strong>Correction:</strong> The consequences include school dropout, poverty, and health problems for the mother and child. Teenage mothers often struggle to find employment.</p></div>"
+        },
+        {
+          "question": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p>d) Find in the text a word that means <em>'teaching about how to prevent pregnancy and sexually transmitted diseases'</em>.</p></div>",
+          "reponse": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p><strong>Correction:</strong> The word is <strong>sex education</strong>.</p></div>"
+        }
+      ]
+    },
+    {
+      "titre": "Composition (Article Writing)",
+      "points": "4 pts",
+      "enonce": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 10px; color: #1a1a1a;'><p><strong>Choose ONE of the following topics and write an article of 180 to 220 words</strong> [citation:6].</p></div>",
+      "questions": [
+        {
+          "question": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p><strong>Topic 1:</strong> The Dangers of Drug Abuse Among Youth</p><p>Write an article for your school magazine to sensitize your schoolmates about the risks of drug abuse. Include causes, effects, and solutions.</p><hr style='border: 1px solid #ddd; margin: 15px 0;'><p><strong>Topic 2:</strong> The Importance of Volunteering in Our Community</p><p>Write an article for a local newspaper explaining why volunteering is important and how it can benefit both individuals and the community.</p></div>",
+          "reponse": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p><strong>Sample Answer for Topic 1:</strong></p><p style='margin-left: 20px;'><strong>SAY NO TO DRUGS: PROTECT YOUR FUTURE</strong></p><p style='margin-left: 20px;'><em>By John Doe, Form 5 Student</em></p><p style='margin-left: 20px;'>Drug abuse is destroying the lives of many young people in our community. Every day, teenagers make choices that damage their health and future. This article discusses the dangers of drugs and why we must say no.</p><p style='margin-left: 20px;'>Firstly, drug abuse causes serious health problems. Drugs damage the brain and organs, leading to addiction, mental illness, and even death. Many young people who use drugs end up in hospitals with severe conditions. Additionally, drug abuse affects academic performance, causing many students to fail exams and drop out of school.</p><p style='margin-left: 20px;'>Secondly, drug abuse leads to social problems. Addicted individuals often steal from their families to buy drugs, lose friends, and become isolated. This can lead to crime and imprisonment. Many young people have ruined their lives through one bad decision.</p><p style='margin-left: 20px;'>In conclusion, drugs are dangerous. We must organize awareness campaigns in schools. Parents should talk to their children about the risks. And every student must make the right choice. Remember, your future is too precious to waste on drugs. Say no to drugs. Say yes to life!</p></div>"
+        }
+      ]
+    }
+  ]
+};
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

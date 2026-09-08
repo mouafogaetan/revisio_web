@@ -1,0 +1,130 @@
+[
+  {
+    "intitule": "Analyse du problème du gradient évanescent dans un RNN",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un réseau de neurones récurrent (RNN) simple est entraîné pour prédire le prochain mot dans une phrase. Les phrases sont longues (plus de 50 mots). On observe que le RNN a du mal à retenir les informations du début de la phrase pour prédire les mots de la fin. Par exemple, pour la phrase 'Jean, qui avait vécu toute sa vie à Paris, avait décidé de déménager à ...', le modèle ne parvient pas à prédire correctement la ville alors que l'information est donnée au début.</p><p><strong>Questions :</strong></p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer le problème du gradient évanescent dans les RNN.",
+        "niveau": "medium",
+        "reponse": "Le problème du gradient évanescent se produit lors de la rétropropagation du gradient à travers le temps. Lorsque le gradient est rétropropagé à travers les couches temporelles, il est multiplié par les dérivées des fonctions d'activation et par les poids à chaque pas. Si ces facteurs sont inférieurs à 1 (ce qui est souvent le cas avec des poids petits ou des fonctions comme tanh/sigmoid), le gradient devient exponentiellement petit au fur et à mesure qu'on remonte dans le temps. Il en résulte que les poids des premières couches sont très peu mis à jour, et le réseau n'apprend pas efficacement les dépendances à long terme, car les gradients associés à ces relations lointaines deviennent proches de zéro et n'influencent plus la mise à jour des poids.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi cela affecte-t-il la capacité du RNN à capturer les dépendances à long terme comme dans l'exemple ?",
+            "niveau": "medium",
+            "reponse": "Dans l'exemple, pour prédire correctement la ville (ou un mot en fin de phrase), le réseau doit 'se souvenir' du mot 'Paris' qui apparaît en début de phrase. Avec un gradient évanescent, les gradients associés à la mise à jour des poids liés à ce mot 'Paris' seront extrêmement faibles lors de la propagation à travers les nombreuses étapes temporelles. Le réseau ne pourra donc pas apprendre efficacement la relation entre ce mot lointain et la prédiction finale, car l'impact de cette information sur la mise à jour des poids est quasiment nul."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Dessiner et décrire l'architecture d'une cellule LSTM",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous avez un RNN simple qui échoue sur un problème de modélisation de données séquentielles avec des dépendances longues. Vous décidez d'utiliser une cellule LSTM (Long Short-Term Memory) pour résoudre ce problème.</p><p><strong>Questions :</strong></p>",
+      "images": [
+        "Diagramme d'une cellule LSTM montrant les trois portes (oublier, entrée, sortie), la cellule d'état, l'état caché, les différents vecteurs d'entrée et de sortie, et les opérations (multiplication, addition, fonctions sigmoid et tanh)."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Dessiner un schéma d'une cellule LSTM et décrire ses composants principaux.",
+        "niveau": "medium",
+        "reponse": "Une cellule LSTM est composée de : une cellule d'état (qui transporte l'information à long terme), un état caché (qui est la sortie de la cellule), et trois portes : la porte d'oubli, la porte d'entrée et la porte de sortie.\n\n- **Cellule d'état ($C_t$)** : est la mémoire à long terme de la cellule. Elle traverse la cellule en étant modifiée par les portes.\n- **Porte d'oubli ($f_t$)** : décide quelles informations de l'état précédent ($C_{t-1}$) doivent être oubliées. Elle prend en entrée $h_{t-1}$ et $x_t$ et applique une fonction sigmoid. $f_t = \\sigma(W_f \\cdot [h_{t-1}, x_t] + b_f)$.\n- **Porte d'entrée ($i_t$)** : décide quelles nouvelles informations vont être stockées dans la cellule. Elle a deux parties : une couche sigmoid ($i_t$) qui décide quelles valeurs mettre à jour et une couche tanh ($\\tilde{C}_t$) qui crée un vecteur de nouvelles valeurs candidates. $i_t = \\sigma(W_i \\cdot [h_{t-1}, x_t] + b_i)$ et $\\tilde{C}_t = \\tanh(W_C \\cdot [h_{t-1}, x_t] + b_C)$.\n- **Mise à jour de la cellule d'état** : $C_t = f_t * C_{t-1} + i_t * \\tilde{C}_t$.\n- **Porte de sortie ($o_t$)** : décide quelles informations de la cellule d'état vont être utilisées pour la sortie. $o_t = \\sigma(W_o \\cdot [h_{t-1}, x_t] + b_o)$.\n- **État caché ($h_t$)** : est la sortie de la cellule, calculée avec $h_t = o_t * \\tanh(C_t)$.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer le rôle de chacune des trois portes dans la gestion du flux d'information.",
+            "niveau": "medium",
+            "reponse": "- **Porte d'oubli** : permet de contrôler quelles informations passées doivent être conservées ou écartées. Par exemple, dans une prédiction de texte, elle peut décider d'oublier le genre d'un substantif si le contexte ne l'exige plus.\n- **Porte d'entrée** : permet de contrôler l'ajout de nouvelles informations dans la mémoire à long terme (la cellule d'état). Elle décide si l'information actuelle est pertinente pour mémoriser.\n- **Porte de sortie** : permet de contrôler quelles parties de la mémoire doivent être extraites pour produire la sortie actuelle. Elle filtre la mémoire pour ne garder que les informations utiles à la prédiction suivante."
+          },
+          {
+            "numero": "1.b",
+            "texte": "En quoi l'architecture LSTM permet-elle de résoudre le problème du gradient évanescent ?",
+            "niveau": "hard",
+            "reponse": "La LSTM résout le problème du gradient évanescent grâce à la cellule d'état et aux portes. Lors de la rétropropagation, le gradient peut traverser la cellule d'état avec seulement des opérations de multiplication (par les portes) et d'addition, sans avoir à traverser de fonctions d'activation non-linéaires (comme tanh ou sigmoid) à chaque pas. La porte d'oubli peut être proche de 1 pour permettre au gradient de passer presque intact à travers le temps. Cela permet au réseau de propager efficacement le gradient sur de longues séquences et d'apprendre des dépendances à long terme. Les portes apprennent à contrôler ce flux de gradient, ce qui évite l'évanescence ou l'explosion."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Application d'une LSTM pour la prédiction de séries temporelles",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous travaillez sur la prédiction des prix de l'électricité. Vous disposez d'une série temporelle horaire sur plusieurs années. Vous décidez d'utiliser un modèle LSTM pour capturer les dépendances temporelles complexes. Vous créez des séquences d'entrée de 24 heures (1 jour) pour prédire la 25ème heure.</p><p><strong>Questions :</strong></p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer les étapes de préparation des données pour entraîner un modèle LSTM avec des fenêtres glissantes de 24 heures.",
+        "niveau": "medium",
+        "reponse": "Pour préparer les données, il faut créer des séquences d'entrée (X) et de sortie (y). Si la série temporelle est $y_1, y_2, ..., y_T$, on utilise une fenêtre de taille $L=24$ :\n- La première séquence d'entrée est $X_1 = [y_1, y_2, ..., y_{24}]$ et la sortie est $y_{25}$.\n- La deuxième séquence est $X_2 = [y_2, y_3, ..., y_{25}]$ et la sortie est $y_{26}$.\n- Et ainsi de suite.\nLes données doivent être normalisées (par exemple, mise à l'échelle entre 0 et 1) pour améliorer l'apprentissage. On divise les données en ensemble d'entraînement et de test en préservant l'ordre temporel pour éviter le data leakage. Enfin, on reshape les données en 3D : [échantillons, pas de temps (24), caractéristiques (1)].",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi est-il important de normaliser les données avant de les utiliser dans une LSTM ?",
+            "niveau": "easy",
+            "reponse": "La normalisation est importante car les LSTM utilisent des fonctions d'activation comme sigmoid ou tanh qui sont sensibles à l'échelle des entrées. Si les données ont des valeurs très différentes (par exemple, des prix de l'électricité de 0 à 1000), cela peut ralentir la convergence et rendre l'apprentissage instable. La normalisation (standardisation ou min-max scaling) ramène les données dans une plage similaire (souvent [0,1] ou moyenne 0 et écart-type 1), ce qui facilite l'apprentissage."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer une architecture de LSTM (nombre de couches, nombre de neurones, fonction d'activation, couche de sortie) pour ce problème de régression. Justifier vos choix.",
+        "niveau": "hard",
+        "reponse": "Pour un problème de régression de séries temporelles, on peut proposer l'architecture suivante :\n\n- **Couche d'entrée** : adaptée à la taille des séquences (24 pas de temps x 1 caractéristique).\n- **Couche(s) LSTM** : une ou deux couches LSTM. Une première couche avec retour de séquence (return_sequences=True) si on empile une deuxième couche LSTM, sinon (return_sequences=False) pour la dernière. Le nombre de neurones peut être de 50 ou 100, c'est un hyperparamètre à ajuster. La fonction d'activation par défaut des LSTM est tanh.\n- **Couche de sortie** : une couche Dense avec un neurone et une activation linéaire (ou aucune activation) pour prédire une valeur continue.\n- **Justifications** : Une ou deux couches LSTM permettent de capturer des dépendances temporelles complexes. Une seule couche peut suffire pour des séquences modérées (24). La couche Dense linéaire est standard pour la régression. L'activation linéaire permet de prédire des valeurs réelles non bornées, ce qui est approprié pour des prix d'électricité.",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Quelle fonction de perte et quel optimiseur recommandez-vous pour entraîner ce modèle ? Justifier.",
+            "niveau": "medium",
+            "reponse": "Pour un problème de régression, la fonction de perte recommandée est l'erreur quadratique moyenne (MSE) ou l'erreur absolue moyenne (MAE). La MSE est plus sensible aux grandes erreurs et est couramment utilisée. Pour l'optimiseur, on peut utiliser Adam, qui est efficace, s'adapte au gradient, et est largement utilisé pour les LSTM. Il combine les avantages de RMSprop et de Momentum, ce qui le rend bien adapté aux grands réseaux et aux données non stationnaires."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Comparer LSTM et GRU pour un problème de classification de séries temporelles",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous devez construire un modèle pour classifier des signaux ECG en fonction de la présence ou non d'arythmie. Vous avez un grand jeu de données de signaux ECG de 5000 points. Vous souhaitez utiliser un réseau de neurones récurrent.</p><p><strong>Questions :</strong></p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Justifier le choix entre une LSTM et une GRU pour cette classification.",
+        "niveau": "hard",
+        "reponse": "Pour la classification de signaux ECG, les deux peuvent être utilisés. Le choix dépend de la complexité des dépendances temporelles et des ressources.\n\n- **LSTM** : plus puissante, avec plus de paramètres (trois portes). Elle est meilleure pour capturer des dépendances très longues et complexes. Utile si les motifs d'arythmie sont subtils et nécessitent une mémoire fine.\n- **GRU** : plus simple, avec deux portes, moins de paramètres. Elle est plus rapide à entraîner et nécessite moins de données, tout en étant efficace pour de nombreuses tâches séquentielles.\n\nDans ce cas, avec des signaux longs (5000 points) et une classification binaire, une GRU pourrait être un bon compromis, car elle est plus légère et peut capturer les motifs temporels nécessaires. Si les performances ne sont pas satisfaisantes, on peut passer à une LSTM. Une LSTM est recommandée si les motifs à détecter sont très longs et subtils.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quels sont les avantages de la GRU par rapport à la LSTM en termes de ressources et de rapidité ?",
+            "niveau": "medium",
+            "reponse": "La GRU a deux portes (mise à jour et reset) contre trois pour la LSTM (entrée, oubli, sortie). Elle n'a pas de cellule d'état séparée, l'état caché est utilisé directement comme mémoire. Cela réduit le nombre de paramètres et les opérations par étape de temps. En conséquence, elle est plus rapide à entraîner, nécessite moins de mémoire, et peut être plus efficace avec des données limitées, tout en obtenant des performances comparables aux LSTM sur de nombreuses tâches."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Peut-on utiliser un RNN bidirectionnel pour cette tâche ? Pourquoi ?",
+            "niveau": "medium",
+            "reponse": "Oui, un RNN bidirectionnel peut être très utile pour la classification de signaux ECG. Il permet de capturer l'information des deux sens (passé et futur) du signal. Dans un ECG, la forme d'une onde (par exemple, un battement) peut être mieux comprise en connaissant le contexte avant et après. Un modèle bidirectionnel permettra d'identifier des motifs qui ne sont pas seulement séquentiels mais aussi contextuels dans les deux sens, ce qui peut améliorer la classification des arythmies, surtout si elles se manifestent par des écarts localisés dans le signal."
+          }
+        ]
+      }
+    ]
+  }
+]

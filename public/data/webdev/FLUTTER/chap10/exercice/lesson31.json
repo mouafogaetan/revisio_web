@@ -1,0 +1,66 @@
+[
+  {
+    "intitule": "Maîtrise de l'extension image_picker",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>En utilisant la documentation officielle et vos connaissances, répondez aux questions suivantes concernant le package <code>image_picker</code> sous Flutter.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez la procédure complète pour intégrer <code>image_picker</code> dans un projet Flutter : ajout dans <code>pubspec.yaml</code>, importation dans le fichier Dart, et configuration minimale pour Android et iOS.",
+        "niveau": "medium",
+        "reponse": "1. Ajouter <code>image_picker: ^1.0.4</code> (ou dernière version) dans <code>dependencies</code> de <code>pubspec.yaml</code>.<br>2. Exécuter <code>flutter pub get</code>.<br>3. Importer : <code>import 'package:image_picker/image_picker.dart';</code><br>4. Android : aucune configuration spéciale récente si <code>minSdkVersion >= 21</code>.<br>5. iOS : ajouter dans <code>ios/Podfile</code> la plateforme cible (<code>platform :ios, '12.0'</code>) et ajouter les permissions d’accès à la galerie/caméra dans <code>ios/Runner/Info.plist</code> (clés <code>NSPhotoLibraryUsageDescription</code>, <code>NSCameraUsageDescription</code>).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Analysez les différences entre <code>ImageSource.gallery</code> et <code>ImageSource.camera</code> dans le contexte d’une application mobile. Pour chaque source, donnez un cas d’usage typique au Cameroun (exemple : validation d’un formulaire administratif, contrôle qualité, etc.).",
+        "niveau": "hard",
+        "reponse": "<code>ImageSource.gallery</code> permet de sélectionner une image existante dans la galerie ; cas d’usage : mise à jour de la photo de profil d’un utilisateur ou soumission d’une copie de pièce d’identité déjà stockée.<br><code>ImageSource.camera</code> ouvre l’appareil photo pour prendre une nouvelle image ; cas d’usage : prise de vue d’un compteur d’eau/électricité pour une facture, ou capture d’une signature manuscrite pour un contrat mobile.<br>Différence clé : <code>camera</code> nécessite une permission explicite et génère un fichier temporaire, <code>gallery</code> lit depuis le stockage externe.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Évaluez les risques d’erreur lors de l’utilisation de <code>image_picker</code> sur un émulateur Android sans caméra. Proposez une stratégie de gestion robuste de ces erreurs.",
+        "niveau": "hard",
+        "reponse": "Risques : levée d’exception (<code>MissingPluginException</code> si mauvais channel), retour <code>null</code> de l’image (annulation), absence de caméra physique sur l’émulateur.<br>Stratégie : utiliser <code>try/catch</code> autour de <code>picker.pickImage()</code> ; vérifier si <code>pickedFile != null</code> avant affichage ; afficher un message utilisateur adapté ('Aucune image sélectionnée', 'Caméra non disponible sur cet appareil'). Pour l’émulateur, guider vers l’utilisation de la galerie (<code>ImageSource.gallery</code>) comme fallback.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Application mobile pour constat d'état civil mobile au Cameroun",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous devez développer une petite application Flutter destinée aux agents d’état civil dans une mairie du Cameroun. L’agent doit pouvoir prendre ou importer la photo d’une pièce d’identité, la prévisualiser et valider l’enregistrement. L’application doit fonctionner même si la connexion internet est coupée.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevez l’algorithme principal en pseudo-code de la fonction qui, après avoir obtenu une image depuis la galerie ou la caméra, l’affiche dans un widget <code>Image.file</code> et sauvegarde localement le chemin du fichier avec <code>shared_preferences</code> pour une reprise ultérieure.",
+        "niveau": "very hard",
+        "reponse": "Pseudo-code :<br>1. Fonction <code>getAndStoreImage(ImageSource source)</code><br>2.   Appeler <code>ImagePicker().pickImage(source: source, imageQuality: 80)</code><br>3.   Si fichier != null :<br>4.      Lire les bytes : <code>await file.readAsBytes()</code><br>5.      Sauvegarder le chemin absolu ou encoder en base64 dans <code>SharedPreferences</code> (clé 'saved_image_path')<br>6.      Mettre à jour un <code>StatefulWidget</code> : <code>setState(() { _imageFile = file; })</code><br>7.   Sinon : afficher un snackbar 'Aucune image sélectionnée'<br>8.   Gérer les exceptions (permission refusée) avec <code>try/catch</code>.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Implémentez en Dart/Flutter la fonction de sélection d’image uniquement depuis la galerie. Gérez le cas où l’utilisateur n’a pas accordé la permission de stockage sous Android 13+.",
+        "niveau": "very hard",
+        "reponse": "```dart\nFuture<void> _pickImageFromGallery() async {\n  try {\n    final picker = ImagePicker();\n    final XFile? image = await picker.pickImage(\n      source: ImageSource.gallery,\n      imageQuality: 70,\n    );\n    if (image != null) {\n      setState(() {\n        _image = File(image.path);\n      });\n    } else {\n      ScaffoldMessenger.of(context).showSnackBar(\n        SnackBar(content: Text('Aucune image sélectionnée')),\n      );\n    }\n  } catch (e) {\n    if (e is PlatformException && e.code == 'photo_access_denied') {\n      // Rediriger vers les paramètres ou afficher une demande de permission\n      _showPermissionDialog();\n    } else {\n      print('Erreur: $e');\n    }\n  }\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquez comment vous testez cette fonction sur un appareil physique Camerounais (réseau parfois lent, permission système différente selon la version Android). Donnez trois cas de test non fonctionnels.",
+        "niveau": "hard",
+        "reponse": "Tests non fonctionnels :<br>1. **Performance** : mesurer le temps de pickImage avec une image de 12 Mpx sur un smartphone d’entrée de gamme (ex: Tecno Spark).<br>2. **Résilience** : simuler un manque d’espace disque avant la capture ; vérifier que l’application n’explose pas et affiche un message clair.<br>3. **Sécurité / vie privée** : s’assurer que l’image n’est pas exposée dans le cache public de l’application et que les permissions sont demandées au bon moment (runtime).<br>Procédure : déployer en debug sur un vrai appareil, révoquer les permissions dans les paramètres système, puis relancer la fonction. Vérifier le fallback.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

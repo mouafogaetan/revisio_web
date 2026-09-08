@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+  "matiere": "SVT 1ère C",
+  "classe": "Première C",
+  "sequence": "Séquence 3",
+  "anneeScolaire": "2025-2026",
+  "exercices": [
+    {
+      "titre": "Exercice 1 : Le cycle biogéochimique du carbone",
+      "points": "6 pts",
+      "enonce": "<p>L'\u00e9tude du cycle du carbone est fondamentale pour comprendre le fonctionnement des \u00e9cosyst\u00e8mes et l'impact des activit\u00e9s humaines sur le climat. Les \u00e9changes de carbone entre les diff\u00e9rents r\u00e9servoirs sont essentiels \u00e0 la vie sur Terre.</p><div style='max-width: 100%; margin: 15px 0; padding: 10px; background: #f5f7fa; border-radius: 8px;'><img alt='Schéma du cycle du carbone montrant les réservoirs (atmosphère, biomasse, sol, océans, roches carbonatées, combustibles fossiles) et les flèches entre eux (photosynthèse, respiration, décomposition, combustion, échanges océans-atmosphère, formation de roches carbonatées, volcanisme).' src=''></div><p>Le tableau ci-dessous pr\u00e9sente les flux de carbone (en milliards de tonnes par an) entre les diff\u00e9rents r\u00e9servoirs.</p><div style='max-width: 100%; margin: 15px 0; padding: 10px; background: #f5f7fa; border-radius: 8px;'><table style='width:100%; border-collapse:collapse;'><thead style='background:#e9ecef;'><tr><th style='padding:8px; border:1px solid #ddd;'>Flux</th><th style='padding:8px; border:1px solid #ddd;'>Quantit\u00e9 (Gt C/an)</th></tr></thead><tbody><tr><td style='padding:8px; border:1px solid #ddd;'>Photosynth\u00e8se</td><td style='padding:8px; border:1px solid #ddd;'>120</td></tr><tr><td style='padding:8px; border:1px solid #ddd;'>Respiration (v\u00e9g\u00e9taux + animaux)</td><td style='padding:8px; border:1px solid #ddd;'>100</td></tr><tr><td style='padding:8px; border:1px solid #ddd;'>D\u00e9composition</td><td style='padding:8px; border:1px solid #ddd;'>15</td></tr><tr><td style='padding:8px; border:1px solid #ddd;'>Combustion des \u00e9nergies fossiles</td><td style='padding:8px; border:1px solid #ddd;'>10</td></tr><tr><td style='padding:8px; border:1px solid #ddd;'>Absorption oc\u00e9anique</td><td style='padding:8px; border:1px solid #ddd;'>25</td></tr><tr><td style='padding:8px; border:1px solid #ddd;'>D\u00e9gazage oc\u00e9anique</td><td style='padding:8px; border:1px solid #ddd;'>22</td></tr></tbody></table></div>",
+      "questions": [
+        {
+          "question": "<p> Identifie les r\u00e9servoirs de carbone qui sont en \u00e9change avec l'atmosph\u00e8re et pr\u00e9cise les flux correspondants.</p>",
+          "reponse": "<p>Les r\u00e9servoirs en \u00e9change avec l'atmosph\u00e8re sont :</p><ul><li><b>La biomasse :</b> photosynth\u00e8se (flux de l'atmosph\u00e8re vers la biomasse, 120 Gt C/an) et respiration (flux de la biomasse vers l'atmosph\u00e8re, 100 Gt C/an).</li><li><b>Les oc\u00e9ans :</b> absorption oc\u00e9anique (flux de l'atmosph\u00e8re vers les oc\u00e9ans, 25 Gt C/an) et d\u00e9gazage (flux des oc\u00e9ans vers l'atmosph\u00e8re, 22 Gt C/an).</li><li><b>Les combustibles fossiles :</b> combustion (flux vers l'atmosph\u00e8re, 10 Gt C/an).</li><li><b>Le sol :</b> d\u00e9composition (flux vers l'atmosph\u00e8re, 15 Gt C/an).</li></ul>"
+        },
+        {
+          "question": "<p> Calcule le bilan net du CO<sub>2</sub> atmosph\u00e9rique \u00e0 partir des donn\u00e9es du tableau. Interpr\u00e8te le r\u00e9sultat.</p>",
+          "reponse": "<p><b>Flux entrants dans l'atmosph\u00e8re :</b></p><ul><li>Respiration : 100 Gt C/an</li><li>D\u00e9composition : 15 Gt C/an</li><li>Combustion : 10 Gt C/an</li><li>D\u00e9gazage oc\u00e9anique : 22 Gt C/an</li></ul><p>Total entrant = 100 + 15 + 10 + 22 = 147 Gt C/an</p><p><b>Flux sortants de l'atmosph\u00e8re :</b></p><ul><li>Photosynth\u00e8se : 120 Gt C/an</li><li>Absorption oc\u00e9anique : 25 Gt C/an</li></ul><p>Total sortant = 120 + 25 = 145 Gt C/an</p><p><b>Bilan = 147 - 145 = 2 Gt C/an</b></p><p>L'atmosph\u00e8re re\u00e7oit 2 Gt de carbone de plus qu'elle n'en perd chaque ann\u00e9e. Ce bilan positif explique l'augmentation de la concentration de CO<sub>2</sub> atmosph\u00e9rique observ\u00e9e depuis la r\u00e9volution industrielle.</p>"
+        },
+        {
+          "question": "<p> Analyse l'impact de la combustion des \u00e9nergies fossiles sur le cycle du carbone et ses cons\u00e9quences climatiques.</p>",
+          "reponse": "<p>La combustion des \u00e9nergies fossiles lib\u00e8re du carbone qui \u00e9tait stock\u00e9 dans les roches s\u00e9dimentaires depuis des millions d'ann\u00e9es. Ce carbone s'ajoute au cycle court de la mati\u00e8re organique, augmentant le CO<sub>2</sub> atmosph\u00e9rique. Les cons\u00e9quences sont :</p><ul><li><b>Renforcement de l'effet de serre :</b> le CO<sub>2</sub> est un gaz \u00e0 effet de serre, son augmentation entra\u00eene un r\u00e9chauffement climatique.</li><li><b>Acidification des oc\u00e9ans :</b> une partie du CO<sub>2</sub> suppl\u00e9mentaire est absorb\u00e9e par les oc\u00e9ans, ce qui modifie leur pH.</li><li><b>Perturbation des \u00e9cosyst\u00e8mes :</b> le changement climatique affecte la biodiversit\u00e9 et la distribution des esp\u00e8ces.</li></ul>"
+        },
+        {
+          "question": "<p> Propose des solutions pour r\u00e9duire les \u00e9missions de CO<sub>2</sub> et augmenter les puits de carbone.</p>",
+          "reponse": "<p><b>R\u00e9duire les \u00e9missions :</b></p><ul><li>D\u00e9velopper les \u00e9nergies renouvelables (solaire, \u00e9olien, hydro\u00e9lectricit\u00e9) pour remplacer les \u00e9nergies fossiles.</li><li>Am\u00e9liorer l'efficacit\u00e9 \u00e9nerg\u00e9tique des transports, des b\u00e2timents et des industries.</li><li>Promouvoir l'agriculture durable qui r\u00e9duit les \u00e9missions de gaz \u00e0 effet de serre.</li></ul><p><b>Augmenter les puits de carbone :</b></p><ul><li>R\u00e9duire la d\u00e9forestation et favoriser le reboisement.</li><li>Prot\u00e9ger et restaurer les \u00e9cosyst\u00e8mes naturels (for\u00eats, mangroves, tourbi\u00e8res) qui stockent du carbone.</li><li>D\u00e9velopper des techniques de capture et de stockage du carbone.</li></ul>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 2 : La photosynthèse, moteur du cycle du carbone",
+      "points": "6 pts",
+      "enonce": "<p>La photosynth\u00e8se est le processus biologique qui permet aux v\u00e9g\u00e9taux de capter l'\u00e9nergie lumineuse et de la convertir en \u00e9nergie chimique. Elle est au c\u0153ur du cycle du carbone.</p>",
+      "questions": [
+        {
+          "question": "<p> D\u00e9finis la chlorophylle et indique son r\u00f4le dans le processus photosynth\u00e9tique.</p>",
+          "reponse": "<p>La chlorophylle est un pigment v\u00e9g\u00e9tal de couleur verte, pr\u00e9sent dans les chloroplastes. Elle a la propri\u00e9t\u00e9 d'absorber l'\u00e9nergie lumineuse, principalement dans le bleu-violet et le rouge. Cette \u00e9nergie est utilis\u00e9e pour initier les r\u00e9actions de la photosynth\u00e8se. La chlorophylle est le capteur d'\u00e9nergie lumineuse essentiel \u00e0 la conversion de l'\u00e9nergie lumineuse en \u00e9nergie chimique.</p>"
+        },
+        {
+          "question": "<p> Distingue les deux phases de la photosynth\u00e8se en pr\u00e9cisant leur localisation dans le chloroplaste et les produits form\u00e9s.</p>",
+          "reponse": "<p><b>Phase claire (lumineuse) :</b></p><ul><li>Localisation : membranes des thylako\u00efdes (grana) dans le chloroplaste.</li><li>Processus : photolyse de l'eau, production d'O<sub>2</sub>, d'ATP et de pouvoir r\u00e9ducteur (NADPH).</li><li>Rendement : ATP et NADPH sont utilis\u00e9s dans la phase sombre.</li></ul><p><b>Phase sombre (cycle de Calvin) :</b></p><ul><li>Localisation : stroma du chloroplaste.</li><li>Processus : fixation du CO<sub>2</sub> par les enzymes, synth\u00e8se du glucose.</li><li>Rendement : glucose (mati\u00e8re organique) et r\u00e9g\u00e9n\u00e9ration des accepteurs de CO<sub>2</sub>.</li></ul>"
+        },
+        {
+          "question": "<p> Explique le couplage entre la phase claire et la phase sombre de la photosynth\u00e8se.</p>",
+          "reponse": "<p>La phase claire et la phase sombre sont coupl\u00e9es : la phase claire fournit l'\u00e9nergie (ATP) et le pouvoir r\u00e9ducteur (NADPH) n\u00e9cessaires \u00e0 la phase sombre pour fixer le CO<sub>2</sub> et synth\u00e9tiser du glucose. La phase sombre consomme l'ATP et le NADPH produits par la phase claire. Sans la phase claire, la phase sombre ne peut pas avoir lieu faute d'\u00e9nergie et de pouvoir r\u00e9ducteur.</p>"
+        },
+        {
+          "question": "<p> Cite trois r\u00f4les essentiels de la photosynth\u00e8se dans les \u00e9cosyst\u00e8mes terrestres.</p>",
+          "reponse": "<p><b>Production de mati\u00e8re organique :</b> la photosynth\u00e8se est \u00e0 l'origine de toute la mati\u00e8re organique, base de l'alimentation des \u00eatres vivants.</p><p><b>Production d'oxyg\u00e8ne :</b> la photosynth\u00e8se lib\u00e8re l'oxyg\u00e8ne n\u00e9cessaire \u00e0 la respiration des organismes a\u00e9robies.</p><p><b>R\u00e9gulation du CO<sub>2</sub> atmosph\u00e9rique :</b> la photosynth\u00e8se absorbe du CO<sub>2</sub>, contribuant \u00e0 r\u00e9guler le climat en agissant comme un puits de carbone.</p>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 3 : Flux d'énergie dans l'écosystème et photosynthèse",
+      "points": "8 pts",
+      "enonce": "<p>Dans un \u00e9cosyst\u00e8me forestier, l'\u00e9nergie solaire est capt\u00e9e par les v\u00e9g\u00e9taux et circule ensuite \u00e0 travers les diff\u00e9rents niveaux trophiques.</p><div style='max-width: 100%; margin: 15px 0; padding: 10px; background: #f5f7fa; border-radius: 8px;'><table style='width:100%; border-collapse:collapse;'><thead style='background:#e9ecef;'><tr><th style='padding:8px; border:1px solid #ddd;'>Niveau trophique</th><th style='padding:8px; border:1px solid #ddd;'>\u00c9nergie re\u00e7ue (kcal/m\u00b2/an)</th></tr></thead><tbody><tr><td style='padding:8px; border:1px solid #ddd;'>Rayonnement solaire total</td><td style='padding:8px; border:1px solid #ddd;'>1 000 000</td></tr><tr><td style='padding:8px; border:1px solid #ddd;'>Producteurs primaires (v\u00e9g\u00e9taux)</td><td style='padding:8px; border:1px solid #ddd;'>5 000</td></tr><tr><td style='padding:8px; border:1px solid #ddd;'>Consommateurs primaires (herbivores)</td><td style='padding:8px; border:1px solid #ddd;'>500</td></tr><tr><td style='padding:8px; border:1px solid #ddd;'>Consommateurs secondaires (carnivores)</td><td style='padding:8px; border:1px solid #ddd;'>50</td></tr></tbody></table></div>",
+      "questions": [
+        {
+          "question": "<p> D\u00e9finis les niveaux trophiques et identifie les producteurs et les consommateurs dans l'\u00e9cosyst\u00e8me forestier pr\u00e9sent\u00e9.</p>",
+          "reponse": "<p>Les niveaux trophiques sont les \u00e9tages successifs de la cha\u00eene alimentaire :</p><ul><li><b>Producteurs primaires :</b> v\u00e9g\u00e9taux (arbres, herbac\u00e9es) qui produisent de la mati\u00e8re organique par photosynth\u00e8se.</li><li><b>Consommateurs primaires :</b> herbivores qui se nourrissent des v\u00e9g\u00e9taux.</li><li><b>Consommateurs secondaires :</b> carnivores qui se nourrissent des herbivores.</li></ul><p>Dans l'\u00e9cosyst\u00e8me forestier, les producteurs sont les arbres et plantes, les consommateurs primaires sont les insectes ou mammif\u00e8res herbivores, et les consommateurs secondaires sont les pr\u00e9dateurs.</p>"
+        },
+        {
+          "question": "<p> Calcule le pourcentage d'\u00e9nergie solaire capt\u00e9e par les producteurs primaires. Comment expliques-tu cette perte d'\u00e9nergie ?</p>",
+          "reponse": "<p>Pourcentage = (5 000 / 1 000 000) × 100 = 0,5%</p><p>Seulement 0,5% de l'\u00e9nergie solaire totale est capt\u00e9e par la photosynth\u00e8se. Cette perte est due au fait que :</p><ul><li>Une grande partie de la lumi\u00e8re n'est pas absorb\u00e9e par les v\u00e9g\u00e9taux (r\u00e9fl\u00e9chie par le sol, l'eau, les nuages).</li><li>Seules certaines longueurs d'onde (rouge et bleu-violet) sont utilisables par la chlorophylle.</li><li>Une partie de l'\u00e9nergie est dissip\u00e9e sous forme de chaleur lors des processus biologiques.</li></ul>"
+        },
+        {
+          "question": "<p> Analyse la diminution de l'\u00e9nergie entre les diff\u00e9rents niveaux trophiques. Quelle r\u00e8gle g\u00e9n\u00e9rale peux-tu en d\u00e9duire ?</p>",
+          "reponse": "<p>Observations :</p><ul><li>Producteurs primaires → consommateurs primaires : 5 000 → 500 kcal (perte de 90%)</li><li>Consommateurs primaires → consommateurs secondaires : 500 → 50 kcal (perte de 90%)</li></ul><p>La r\u00e8gle des 10% s'applique : environ 10% de l'\u00e9nergie d'un niveau trophique est transmise au niveau suivant. Cette perte s'explique par la dissipation d'\u00e9nergie sous forme de chaleur, les d\u00e9penses de maintien de l'organisme et les \u00e9l\u00e9ments non consomm\u00e9s.</p>"
+        },
+        {
+          "question": "<p> Explique comment la diminution de la photosynth\u00e8se (due \u00e0 la d\u00e9forestation) peut affecter l'ensemble de l'\u00e9cosyst\u00e8me.</p>",
+          "reponse": "<p>La d\u00e9forestation r\u00e9duit la quantit\u00e9 de v\u00e9g\u00e9taux, donc la photosynth\u00e8se diminue. Les cons\u00e9quences sont :</p><ul><li><b>Moins de mati\u00e8re organique produite :</b> les consommateurs ont moins de nourriture disponible, entra\u00eenant une r\u00e9duction des populations animales.</li><li><b>Moins d'oxyg\u00e8ne produit :</b> l'atmosph\u00e8re s'enrichit moins en oxyg\u00e8ne.</li><li><b>Moins de CO<sub>2</sub> absorb\u00e9 :</b> le puits de carbone est r\u00e9duit, ce qui contribue au r\u00e9chauffement climatique.</li><li><b>Perturbation du cycle de l'eau :</b> les for\u00eats r\u00e9gulent le cycle de l'eau, leur disparition affecte les pr\u00e9cipitations.</li><li><b>Perte de biodiversit\u00e9 :</b> la destruction des habitats entra\u00eene la disparition d'esp\u00e8ces animales et v\u00e9g\u00e9tales.</li></ul>"
+        }
+      ]
+    }
+  ]
+};
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,162 @@
+[
+  {
+    "intitule": "Intégration de Stripe Elements - Configuration et éléments de base",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous devez intégrer Stripe Elements dans votre page de paiement pour collecter les informations de carte bancaire. L'utilisateur doit pouvoir saisir son numéro de carte, sa date d'expiration et son CVC.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rappelez les commandes d'installation nécessaires pour utiliser Stripe.js et Stripe Elements dans un projet React.",
+        "niveau": "easy",
+        "reponse": "npm install @stripe/stripe-js @stripe/react-stripe-js",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Décrivez les étapes pour configurer le fournisseur ElementsProvider à la racine du composant de paiement. Quelles données doivent être chargées depuis Stripe ?",
+        "niveau": "medium",
+        "reponse": "1. Importer `loadStripe` depuis '@stripe/stripe-js' et `ElementsProvider` depuis '@stripe/react-stripe-js'. 2. Charger la clé publique Stripe : `const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLIC_KEY);`. 3. Envelopper le formulaire de paiement avec `<ElementsProvider stripe={stripePromise}>...</ElementsProvider>`. Cela permet aux composants enfants d'accéder à l'objet Stripe.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Écrivez le code JSX pour créer un formulaire de carte bancaire avec CardElement ou CardNumberElement, CardExpiryElement, CardCvcElement.",
+        "niveau": "medium",
+        "reponse": "```jsx\nimport { CardElement, useStripe, useElements } from '@stripe/react-stripe-js';\n\nfunction PaymentForm() {\n  const stripe = useStripe();\n  const elements = useElements();\n  return (\n    <form>\n      <CardElement options={{ hidePostalCode: true }} />\n      <button type=\"submit\">Payer</button>\n    </form>\n  );\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Création d'un PaymentIntent et gestion du secret client",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Avant de collecter les informations de paiement, votre backend doit créer un PaymentIntent auprès de Stripe. Le secret client (client_secret) est retourné au frontend pour confirmer le paiement.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez le rôle du PaymentIntent dans Stripe et pourquoi il est nécessaire de le créer côté serveur avant d'appeler confirmCardPayment.",
+        "niveau": "medium",
+        "reponse": "Le PaymentIntent représente l'intention de collecter un paiement. Il contient le montant, la devise, la méthode de paiement, et gère le cycle de vie du paiement. Il doit être créé côté serveur pour des raisons de sécurité (clé secrète Stripe) et pour éviter que le client ne modifie le montant. Le client_secret retourné permet de confirmer le paiement côté frontend en toute sécurité.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposez une implémentation d'un service `createPaymentIntent` qui appelle l'API backend et retourne le client_secret. Utilisez TanStack Query pour gérer l'appel.",
+        "niveau": "hard",
+        "reponse": "```js\nconst useCreatePaymentIntent = () => {\n  return useMutation({\n    mutationFn: async (orderData) => {\n      const response = await fetch('/api/create-payment-intent', {\n        method: 'POST',\n        headers: { 'Content-Type': 'application/json' },\n        body: JSON.stringify({ amount: orderData.total, currency: 'eur' })\n      });\n      const data = await response.json();\n      return data.clientSecret;\n    }\n  });\n};\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Décrivez comment utiliser `confirmCardPayment` avec le client_secret récupéré pour finaliser le paiement après que l'utilisateur a soumis le formulaire.",
+        "niveau": "hard",
+        "reponse": "```js\nconst handleSubmit = async (e) => {\n  e.preventDefault();\n  if (!stripe || !elements) return;\n  const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {\n    payment_method: { card: elements.getElement(CardElement) }\n  });\n  if (error) { console.error(error); }\n  else if (paymentIntent.status === 'succeeded') { /* rediriger vers confirmation */ }\n};\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Intégration des PayPal Smart Buttons",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>En plus de Stripe, vous devez intégrer PayPal comme méthode de paiement alternative. Les boutons PayPal doivent s'afficher dynamiquement et gérer la création et la capture de la commande.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez comment charger le SDK PayPal de manière conditionnelle (uniquement si l'utilisateur choisit PayPal) et comment initialiser les boutons.",
+        "niveau": "hard",
+        "reponse": "On peut charger dynamiquement le script PayPal via `useEffect` lorsque la méthode PayPal est sélectionnée. Utiliser `window.paypal.Buttons(...).render('#paypal-button-container')`. Il faut s'assurer que le script n'est pas chargé plusieurs fois. Une bibliothèque comme `@paypal/react-paypal-js` simplifie ce processus avec le composant `<PayPalScriptProvider>`.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrivez les fonctions `onCreateOrder` et `onApprove` nécessaires pour créer une commande PayPal côté backend et capturer le paiement après approbation.",
+        "niveau": "very hard",
+        "reponse": "```js\ncreateOrder: (data, actions) => {\n  return fetch('/api/create-paypal-order', { method: 'POST' })\n    .then(res => res.json())\n    .then(order => order.id);\n},\nonApprove: (data, actions) => {\n  return fetch(`/api/capture-paypal-order/${data.orderID}`, { method: 'POST' })\n    .then(res => res.json())\n    .then(details => { /* redirection page confirmation */ });\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Comparez les avantages et inconvénients de Stripe et PayPal pour un e-commerce ciblant le marché camerounais.",
+        "niveau": "medium",
+        "reponse": "Stripe : API moderne, bien documentée, supporte plusieurs devises, mais moins présent en Afrique. PayPal : très répandu, connu des utilisateurs, mais frais plus élevés et parfois restrictions. Pour le Cameroun, il est conseillé d'intégrer les deux + paiement mobile (MTN Mobile Money, Orange Money) car le taux de pénétration bancaire est plus faible.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion des codes promo - Validation et application",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Le site e-commerce propose des codes promo (réduction en pourcentage ou montant fixe). L'utilisateur peut saisir un code dans le panier, qui est validé côté backend avant d'être appliqué au total.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créez un store Zustand pour gérer l'état du code promo (code saisi, réduction appliquée, erreur). Implémentez une action `applyCoupon` qui appelle l'API de validation.",
+        "niveau": "hard",
+        "reponse": "```js\nconst useCouponStore = create((set, get) => ({\n  couponCode: '',\n  discount: 0,\n  error: null,\n  setCouponCode: (code) => set({ couponCode: code }),\n  applyCoupon: async () => {\n    const { couponCode, subtotal } = get();\n    try {\n      const res = await fetch(`/api/validate-coupon?code=${couponCode}&subtotal=${subtotal}`);\n      const data = await res.json();\n      if (data.valid) set({ discount: data.discountAmount, error: null });\n      else set({ error: data.message, discount: 0 });\n    } catch { set({ error: 'Erreur de validation', discount: 0 }); }\n  }\n}));\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposez un composant `CouponInput` avec un champ de saisie et un bouton \"Appliquer\". Affichez le montant de la réduction et les messages d'erreur.",
+        "niveau": "medium",
+        "reponse": "```jsx\nfunction CouponInput() {\n  const { couponCode, setCouponCode, applyCoupon, discount, error } = useCouponStore();\n  return (\n    <div>\n      <input value={couponCode} onChange={e => setCouponCode(e.target.value)} placeholder=\"Code promo\" />\n      <button onClick={applyCoupon}>Appliquer</button>\n      {discount > 0 && <p className=\"text-green-600\">Réduction de {discount} € appliquée</p>}\n      {error && <p className=\"text-red-500\">{error}</p>}\n    </div>\n  );\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquez comment le total du panier doit être recalculé dynamiquement après l'application d'un coupon. Quels composants doivent être mis à jour ?",
+        "niveau": "medium",
+        "reponse": "Le total final = sous-total - réduction + frais de livraison + taxes. Le store du panier peut avoir une fonction `getFinalTotal` qui utilise `discount` du coupon store. On utilise `subscribe` ou un sélecteur combiné pour que le composant `CartSummary` se mette à jour automatiquement lorsque le discount change.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion des erreurs de paiement et des fallbacks",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Pendant le processus de paiement, diverses erreurs peuvent survenir : carte refusée, problème réseau, timeout, 3D Secure échoué. Vous devez les gérer élégamment.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Listez trois types d'erreurs que Stripe peut retourner lors de `confirmCardPayment` et proposez des messages utilisateur adaptés.",
+        "niveau": "easy",
+        "reponse": "1. `incomplete_number` : 'Numéro de carte incomplet'. 2. `card_declined` : 'Votre carte a été refusée, vérifiez vos informations ou utilisez une autre carte'. 3. `expired_card` : 'Votre carte a expiré'.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez comment implémenter un mécanisme de fallback si Stripe n'est pas disponible (ex: panne réseau, serveur Stripe indisponible).",
+        "niveau": "very hard",
+        "reponse": "On peut détecter l'erreur de chargement de Stripe.js via un timeout ou un interceptor. Si l'initialisation échoue, on désactive les boutons Stripe et on affiche un message invitant l'utilisateur à réessayer plus tard ou à utiliser PayPal. On peut aussi implémenter un système de retry automatique avec un délai exponentiel.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposez un composant `PaymentErrorBoundary` qui capture les erreurs inattendues lors du paiement et affiche une interface de secours.",
+        "niveau": "medium",
+        "reponse": "```jsx\nclass PaymentErrorBoundary extends React.Component {\n  state = { hasError: false };\n  static getDerivedStateFromError() { return { hasError: true }; }\n  render() {\n    if (this.state.hasError) {\n      return <div>Une erreur est survenue. Veuillez recharger la page ou contacter le support.</div>;\n    }\n    return this.props.children;\n  }\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

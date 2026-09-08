@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+  "matiere": "Chimie",
+  "classe": "Terminale C",
+  "sequence": "Séquence 5",
+  "anneeScolaire": "2025-2026",
+  "exercices": [
+    {
+      "titre": "Partie A : Evaluation des ressources",
+      "points": "10 points",
+      "enonce": "<div style='display: flex; flex-direction: column; gap: 8px;'>\n  <p><strong>Exercice 1 : Vérification des savoirs (4 pts)</strong></p>\n</div>",
+      "questions": [
+        {
+          "question": "<p>1) Définir : solution acide ; solution basique. (0.5pt)</p>",
+          "reponse": "<p>Une <strong>solution acide</strong> est une solution aqueuse dans laquelle la concentration en ions \\( H_3O^+ \\) est supérieure à celle en ions \\( OH^- \\) (pH < 7 à 25°C).</p><p>Une <strong>solution basique</strong> est une solution aqueuse dans laquelle la concentration en ions \\( OH^- \\) est supérieure à celle en ions \\( H_3O^+ \\) (pH > 7 à 25°C).</p>"
+        },
+        {
+          "question": "<p>2) Donner la définition du produit ionique de l'eau \\( Ke \\). (0.5pt)</p>",
+          "reponse": "<p>Le produit ionique de l'eau est défini par \\( Ke = [H_3O^+] \\times [OH^-] \\) à une température donnée. A 25°C, \\( Ke = 10^{-14} \\).</p>"
+        },
+        {
+          "question": "<p>3) Écrire la relation entre pH, pKa et les concentrations de l'acide et de sa base conjuguée. (0.5pt)</p>",
+          "reponse": "<p>\\( pH = pKa + \\log\\dfrac{[A^-]}{[AH]} \\)</p>"
+        },
+        {
+          "question": "<p>4) Définir un alcool et donner sa formule générale. (0.5pt)</p>",
+          "reponse": "<p>Un alcool est un composé organique qui possède un groupe hydroxyle \\( -OH \\) lié à un atome de carbone tétraédrique (saturé). Sa formule générale est \\( R-OH \\).</p>"
+        },
+        {
+          "question": "<p>5) Donner la définition d'un acide carboxylique. (0.5pt)</p>",
+          "reponse": "<p>Un acide carboxylique est un composé organique contenant le groupe fonctionnel carboxyle \\( -COOH \\). Sa formule générale est \\( R-COOH \\).</p>"
+        },
+        {
+          "question": "<p>6) Définir la réaction d'estérification. (0.5pt)</p>",
+          "reponse": "<p>L'estérification est une réaction lente, limitée et athermique entre un acide carboxylique et un alcool, conduisant à la formation d'un ester et d'eau.</p>"
+        },
+        {
+          "question": "<p>7) Définir un acide α-aminé et citer les deux groupes fonctionnels qu'il possède. (0.5pt)</p>",
+          "reponse": "<p>Un acide α-aminé est un composé organique qui possède à la fois un groupe amine \\( -NH_2 \\) et un groupe acide carboxylique \\( -COOH \\) portés par le même atome de carbone (le carbone α).</p>"
+        },
+        {
+          "question": "<p>8) Définir une base au sens de Brönsted. (0.5pt)</p>",
+          "reponse": "<p>Une base au sens de Brönsted est une espèce chimique capable de capter un ou plusieurs protons \\( H^+ \\).</p>"
+        }
+      ]
+    },
+    {
+      "titre": "Partie A : Evaluation des ressources (suite)",
+      "points": "",
+      "enonce": "<div style='display: flex; flex-direction: column; gap: 8px;'>\n  <p><strong>Exercice 2 : Application des savoirs (6 pts)</strong></p>\n</div>",
+      "questions": [
+        {
+          "question": "<p>1) Une solution d'acide chlorhydrique (HCl) a une concentration \\( C = 2.0 \\times 10^{-2} \\, mol \\cdot L^{-1} \\).</p><p>1-1) Écrire l'équation-bilan de la dissolution de HCl dans l'eau. (0.5pt)</p>",
+          "reponse": "<p>\\( HCl_{(g)} + H_2O \\rightarrow H_3O^+ + Cl^- \\)</p>"
+        },
+        {
+          "question": "<p>1-2) Calculer le pH de cette solution. (0.5pt)</p>",
+          "reponse": "<p>Pour un acide fort : \\( [H_3O^+] = C = 2.0 \\times 10^{-2} \\, mol \\cdot L^{-1} \\)</p><p>\\( pH = -\\log(2.0 \\times 10^{-2}) = -\\log(2.0) - \\log(10^{-2}) = -0.30 + 2 = 1.70 \\)</p>"
+        },
+        {
+          "question": "<p>2) Une solution d'hydroxyde de sodium (NaOH) a un pH = 11.0.</p><p>2-1) Écrire l'équation-bilan de la dissolution de NaOH dans l'eau. (0.5pt)</p>",
+          "reponse": "<p>\\( NaOH_{(s)} \\rightarrow Na^+ + OH^- \\)</p>"
+        },
+        {
+          "question": "<p>2-2) Calculer la concentration molaire \\( C_b \\) de la solution. (0.5pt)</p>",
+          "reponse": "<p>\\( pH = 14 + \\log C_b \\Rightarrow \\log C_b = pH - 14 = 11.0 - 14 = -3.0 \\)</p><p>\\( C_b = 10^{-3.0} = 1.0 \\times 10^{-3} \\, mol \\cdot L^{-1} \\)</p>"
+        },
+        {
+          "question": "<p>3) On considère une solution d'acide éthanoïque \\( CH_3COOH \\) de concentration \\( C = 0.10 \\, mol \\cdot L^{-1} \\). Le pH de cette solution est 2.9.</p><p>3-1) Écrire l'équation-bilan de la réaction de l'acide éthanoïque avec l'eau. (0.5pt)</p>",
+          "reponse": "<p>\\( CH_3COOH + H_2O \\rightleftharpoons CH_3COO^- + H_3O^+ \\)</p>"
+        },
+        {
+          "question": "<p>3-2) Calculer le taux d'avancement final de la réaction. (0.5pt)</p>",
+          "reponse": "<p>\\( [H_3O^+] = 10^{-2.9} = 1.26 \\times 10^{-3} \\, mol \\cdot L^{-1} \\)</p><p>\\( \\tau = \\dfrac{[H_3O^+]}{C} = \\dfrac{1.26 \\times 10^{-3}}{0.10} = 1.26 \\times 10^{-2} = 1.26\\% \\)</p>"
+        },
+        {
+          "question": "<p>3-3) Calculer le pKa du couple \\( CH_3COOH/CH_3COO^- \\). (0.5pt)</p>",
+          "reponse": "<p>\\( Ka = \\dfrac{[CH_3COO^-][H_3O^+]}{[CH_3COOH]} = \\dfrac{(1.26 \\times 10^{-3})^2}{0.10 - 1.26 \\times 10^{-3}} = \\dfrac{1.59 \\times 10^{-6}}{9.87 \\times 10^{-2}} = 1.61 \\times 10^{-5} \\)</p><p>\\( pKa = -\\log(1.61 \\times 10^{-5}) = 4.8 \\)</p>"
+        },
+        {
+          "question": "<p>4) Soit l'alcool A de formule : \\( CH_3-CH_2-CH(OH)-CH_3 \\)</p><p>4-1) Déterminer la classe de A. (0.5pt)</p>",
+          "reponse": "<p>L'atome de carbone portant le groupe \\( -OH \\) est lié à deux groupements carbonés et un hydrogène : c'est un <strong>alcool secondaire</strong>.</p>"
+        },
+        {
+          "question": "<p>4-2) Donner le nom de A. (0.5pt)</p>",
+          "reponse": "<p>Nom : <strong>butan-2-ol</strong></p>"
+        },
+        {
+          "question": "<p>4-3) Écrire la réaction d'oxydation ménagée de A. (0.5pt)</p>",
+          "reponse": "<p>\\( CH_3-CH_2-CH(OH)-CH_3 \\xrightarrow{KMnO_4/H^+} CH_3-CH_2-CO-CH_3 \\)</p><p>Le produit est la <strong>butan-2-one</strong> (cétone).</p>"
+        },
+        {
+          "question": "<p>5) Soit l'acide α-aminé B : \\( HOOC-CH(NH_2)-CH_2-CH_3 \\)</p><p>5-1) Donner le nom de B. (0.5pt)</p>",
+          "reponse": "<p>Nom : <strong>acide 2-aminobutanoïque</strong></p>"
+        },
+        {
+          "question": "<p>5-2) Représenter le zwitterion de B. (0.5pt)</p>",
+          "reponse": "<p>\\( ^-OOC-CH(NH_3^+)-CH_2-CH_3 \\)</p>"
+        },
+        {
+          "question": "<p>5-3) Écrire la réaction de formation d'un dipeptide à partir de deux molécules de B. (0.5pt)</p>",
+          "reponse": "<p>\\( 2 \\, HOOC-CH(NH_2)-CH_2-CH_3 \\rightarrow HOOC-CH(NH_2)-CH_2-CH_3-CO-NH-CH(COOH)-CH_2-CH_3 + H_2O \\)</p>"
+        }
+      ]
+    },
+    {
+      "titre": "Partie B : Evaluation des compétences",
+      "points": "10 points",
+      "enonce": "<div style='display: flex; flex-direction: column; gap: 12px;'>\n  <p>Un laboratoire de contrôle de qualité reçoit un flacon contenant une solution aqueuse d'un acide carboxylique de concentration \\( C = 0.10 \\, mol \\cdot L^{-1} \\). L'étiquette est endommagée et ne permet pas d'identifier l'acide.</p>\n  <p><strong>Informations disponibles :</strong></p>\n  <ul>\n    <li>L'acide carboxylique a pour formule brute \\( C_3H_6O_2 \\).</li>\n    <li>Le pH de la solution est 2.9.</li>\n    <li>Les élèves disposent d'une solution d'hydroxyde de sodium (NaOH) de concentration \\( C_b = 0.10 \\, mol \\cdot L^{-1} \\).</li>\n    <li>L'acide provient de l'oxydation ménagée d'un alcool A.</li>\n  </ul>\n</div>",
+      "questions": [
+        {
+          "question": "<p>1) Identifier l'acide carboxylique présent dans le flacon à partir de sa formule brute. (2pts)</p>",
+          "reponse": "<p>La formule brute \\( C_3H_6O_2 \\) correspond à l'acide carboxylique saturé :</p><p><strong>Acide propanoïque</strong> : \\( CH_3-CH_2-COOH \\)</p>"
+        },
+        {
+          "question": "<p>2) Vérifier par le calcul que la concentration \\( C = 0.10 \\, mol \\cdot L^{-1} \\) est exacte. (4pts)</p>",
+          "reponse": "<p>Pour l'acide propanoïque (acide faible) :</p><p>\\( [H_3O^+] = 10^{-pH} = 10^{-2.9} = 1.26 \\times 10^{-3} \\, mol \\cdot L^{-1} \\)</p><p>On a : \\( Ka = \\dfrac{[H_3O^+]^2}{C - [H_3O^+]} \\)</p><p>Pour \\( C = 0.10 \\, mol \\cdot L^{-1} \\) :</p><p>\\( Ka = \\dfrac{(1.26 \\times 10^{-3})^2}{0.10 - 1.26 \\times 10^{-3}} = \\dfrac{1.59 \\times 10^{-6}}{9.87 \\times 10^{-2}} = 1.61 \\times 10^{-5} \\)</p><p>\\( pKa = -\\log(1.61 \\times 10^{-5}) = 4.8 \\)</p><p>Le pKa de l'acide propanoïque est d'environ 4.9. La concentration est donc exacte (légère différence due aux arrondis).</p>"
+        },
+        {
+          "question": "<p>3) Identifier l'alcool A qui a permis d'obtenir l'acide carboxylique. (2pts)</p>",
+          "reponse": "<p>L'acide propanoïque provient de l'oxydation ménagée d'un alcool primaire.</p><p>L'oxydation complète d'un alcool primaire donne un acide carboxylique avec le même nombre d'atomes de carbone.</p><p>L'alcool A est donc le <strong>propan-1-ol</strong> : \\( CH_3-CH_2-CH_2-OH \\)</p>"
+        },
+        {
+          "question": "<p>4) Écrire l'équation-bilan de la réaction d'oxydation de A en acide propanoïque. (2pts)</p>",
+          "reponse": "<p>\\( CH_3-CH_2-CH_2-OH + 2[O] \\xrightarrow{KMnO_4/H^+} CH_3-CH_2-COOH + H_2O \\)</p>"
+        }
+      ]
+    }
+  ]
+};
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

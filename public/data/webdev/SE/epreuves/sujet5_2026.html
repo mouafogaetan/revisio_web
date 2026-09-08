@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+  "matiere": "Initiation au Génie logiciel",
+  "classe": "Développement Web",
+  "sequence": "Séquence 5",
+  "anneeScolaire": "2025-2026",
+  "exercices": [
+    {
+      "titre": "Exercice 1 : Stratégies de test et qualité (Chap 6)",
+      "points": "6 pts",
+      "enonce": "<div style='font-family: Arial, sans-serif; padding: 10px;'><p>Vous êtes chargé de mettre en place une stratégie de test pour une nouvelle application e-commerce. La pyramide des tests et les différents niveaux de test sont essentiels pour garantir la qualité du logiciel.</p><p><strong>Partie A - Pyramide des tests</strong></p><ol><li>Dessinez et décrivez la pyramide des tests en précisant les proportions recommandées pour chaque niveau.</li><li>Pour chaque niveau de la pyramide, donnez un exemple concret de test applicable à l'application e-commerce (ex: tests unitaires sur le calcul du panier).</li></ol><p><strong>Partie B - Tests non fonctionnels</strong></p><p>L'application doit pouvoir supporter 10 000 utilisateurs simultanés pendant les périodes de soldes. Expliquez quel type de test vous recommandez et quelles métriques vous allez surveiller.</p></div>",
+      "questions": [
+        {
+          "question": "1) Dessinez et décrivez la pyramide des tests avec ses proportions recommandées.",
+          "reponse": "La pyramide des tests se compose de trois niveaux principaux, du bas vers le haut :<br><ul><li><strong>Tests unitaires (base large, ~70%)</strong> : Testent chaque composant individuellement. Exemple : tester la fonction qui calcule le total d'un panier.</li><li><strong>Tests d'intégration (milieu, ~20%)</strong> : Testent les interactions entre composants. Exemple : tester que l'ajout d'un produit met bien à jour le panier dans la base de données.</li><li><strong>Tests de bout en bout (E2E) / UI (sommet, ~10%)</strong> : Testent l'application complète. Exemple : simuler un parcours d'achat complet de l'utilisateur.</li></ul>L'idée est d'avoir beaucoup de tests unitaires (rapides et peu coûteux) et peu de tests E2E (lents et coûteux à maintenir)."
+        },
+        {
+          "question": "2) Pour chaque niveau de la pyramide, donnez un exemple concret pour l'application e-commerce.",
+          "reponse": "<ul><li><strong>Test unitaire :</strong> Vérifier que la fonction <code>applyDiscount(price, code)</code> retourne le bon prix après application d'un code promo.</li><li><strong>Test d'intégration :</strong> Vérifier que le service <code>OrderService</code> utilise correctement le <code>PaymentGateway</code> pour traiter un paiement.</li><li><strong>Test E2E :</strong> Automatiser un scénario utilisateur : se connecter → rechercher un produit → l'ajouter au panier → passer la commande → recevoir un email de confirmation.</li></ul>"
+        },
+        {
+          "question": "3) Quel type de test recommandez-vous pour gérer 10 000 utilisateurs simultanés ?",
+          "reponse": "Je recommande un <strong>test de charge (load testing)</strong> pour simuler 10 000 utilisateurs simultanés. Les métriques à surveiller sont :<br><ul><li><strong>Temps de réponse</strong> : Le temps moyen et le 95e percentile.</li><li><strong>Taux d'erreur</strong> : Le pourcentage de requêtes échouées.</li><li><strong>Utilisation CPU/Mémoire</strong> : La consommation des ressources serveur.</li><li><strong>Débit (throughput)</strong> : Le nombre de requêtes traitées par seconde.</li></ul>Des outils comme JMeter, Gatling ou k6 peuvent être utilisés."
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 2 : Gestion de versions et CI/CD (Chap 7)",
+      "points": "6 pts",
+      "enonce": "<div style='font-family: Arial, sans-serif; padding: 10px;'><p>Vous travaillez avec une équipe de 5 développeurs sur une application. Vous devez mettre en place une stratégie de gestion de versions et un pipeline d'intégration continue.</p><p><strong>Partie A - Stratégie Git</strong></p><ol><li>Expliquez la différence entre Git Flow et GitHub Flow. Pour quel type de projet recommanderiez-vous chacun ?</li><li>Décrivez les étapes pour gérer un conflit de fusion entre deux branches.</li></ol><p><strong>Partie B - Pipeline CI/CD</strong></p><p>Décrivez un pipeline CI/CD complet avec GitHub Actions en listant toutes les étapes, du commit au déploiement en production.</p></div>",
+      "questions": [
+        {
+          "question": "1) Expliquez la différence entre Git Flow et GitHub Flow.",
+          "reponse": "<ul><li><strong>Git Flow</strong> : Une stratégie plus complexe avec plusieurs branches permanentes (<code>main</code>, <code>develop</code>) et des branches de support (<code>feature</code>, <code>release</code>, <code>hotfix</code>). Adaptée aux projets avec des versions planifiées et un cycle de release régulier.</li><li><strong>GitHub Flow</strong> : Une stratégie plus simple avec une seule branche permanente (<code>main</code>). Les fonctionnalités sont développées dans des branches dédiées, fusionnées via des Pull Requests, puis déployées immédiatement. Idéale pour les projets avec un déploiement continu et des releases fréquentes.</li></ul>"
+        },
+        {
+          "question": "2) Décrivez les étapes pour gérer un conflit de fusion.",
+          "reponse": "1. <strong>Exécuter la fusion :</strong> <code>git merge branche-source</code>.<br>2. Git signale un conflit et liste les fichiers concernés.<br>3. Ouvrir les fichiers en conflit dans un éditeur pour résoudre manuellement les différences (les sections en conflit sont marquées avec <code><<<<<<< HEAD</code>, <code>=======</code>, <code>>>>>>>> branche-source</code>).<br>4. Après la résolution, <strong>ajouter les fichiers résolus</strong> : <code>git add fichier-conflit.js</code>.<br>5. <strong>Terminer la fusion</strong> : <code>git commit -m \"Résolution du conflit\"</code>."
+        },
+        {
+          "question": "3) Décrivez un pipeline CI/CD complet avec GitHub Actions.",
+          "reponse": "Un pipeline CI/CD avec GitHub Actions peut comprendre :<br><ol><li><strong>Déclenchement :</strong> Push sur la branche <code>main</code> ou création d'une Pull Request.</li><li><strong>Étape Checkout :</strong> Récupération du code (<code>actions/checkout@v3</code>).</li><li><strong>Setup :</strong> Installation de Node.js (<code>actions/setup-node@v3</code>).</li><li><strong>Installation des dépendances :</strong> <code>npm ci</code>.</li><li><strong>Vérifications de qualité :</strong> Exécution de linter (ESLint), vérification du format (Prettier).</li><li><strong>Exécution des tests :</strong> <code>npm test</code> (unitaires, intégration).</li><li><strong>Build :</strong> <code>npm run build</code>.</li><li><strong>Déploiement :</strong> Déploiement automatique sur l'environnement de staging, puis sur production après validation manuelle (ou automatique).</li></ol>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 3 : Maintenance et amélioration du code (Chap 8)",
+      "points": "5 pts",
+      "enonce": "<div style='font-family: Arial, sans-serif; padding: 10px;'><p>Vous reprenez un projet existant avec du code hérité. Vous devez analyser la dette technique et proposer des améliorations.</p><p><strong>Partie A - Dette technique</strong></p><ol><li>Définissez la dette technique et expliquez son impact sur un projet logiciel à long terme.</li><li>Proposez deux indicateurs (métriques) pour mesurer la dette technique.</li></ol><p><strong>Partie B - Refactoring et code smells</strong></p><p>Voici un extrait de code :</p><pre style='background:#f1f5f9; padding:10px; border-radius:6px; color:#0f172a;'><code>function processOrder(order) {\n    let total = 0;\n    for(let i = 0; i < order.items.length; i++) {\n        total += order.items[i].price * order.items[i].quantity;\n        if(order.items[i].category === 'ELECTRONICS') {\n            total += total * 0.1; // taxe 10%\n        }\n    }\n    if(order.user.isPremium) {\n        total = total * 0.9; // remise 10%\n    }\n    // ... 50 autres lignes de calcul\n    return total;\n}</code></pre><ol><li>Identifiez deux code smells dans cet extrait.</li><li>Proposez une amélioration en appliquant le principe de responsabilité unique (SRP) et montrez une version refactorisée.</li></ol></div>",
+      "questions": [
+        {
+          "question": "1) Définissez la dette technique et son impact.",
+          "reponse": "La dette technique est l'accumulation de compromis dans le code (code mal structuré, manque de tests, duplication) qui ralentissent le développement futur. À long terme, elle :<br><ul><li>Augmente le temps nécessaire pour ajouter de nouvelles fonctionnalités.</li><li>Rend le code difficile à maintenir et à comprendre pour les nouveaux développeurs.</li><li>Augmente le risque de bugs lors des modifications.</li><li>Peut entraîner une obsolescence du logiciel si elle n'est pas résolue.</li></ul>"
+        },
+        {
+          "question": "2) Proposez deux métriques pour mesurer la dette technique.",
+          "reponse": "<ul><li><strong>Couverture de code</strong> : Un faible pourcentage de code couvert par des tests unitaires (ex: < 60%) indique une dette technique importante.</li><li><strong>Complexité cyclomatique</strong> : Une complexité élevée (ex: moyenne > 10) indique un code difficile à comprendre et à tester, ce qui contribue à la dette technique.</li><li><strong>Duplication de code</strong> : Un pourcentage élevé de duplication (ex: > 5%) indique un manque de factorisation et une maintenance plus difficile.</li></ul>"
+        },
+        {
+          "question": "3) Identifiez deux code smells dans l'extrait de code.",
+          "reponse": "<ul><li><strong>Longue méthode (Long Method)</strong> : La fonction <code>processOrder</code> fait plusieurs choses : calculer le total, appliquer des taxes selon la catégorie, appliquer des remises, etc.</li><li><strong>Jalousie de fonction (Feature Envy)</strong> : La fonction utilise beaucoup de données de l'objet <code>order</code> et de ses sous-objets (<code>items</code>, <code>user</code>).</li><li><strong>Hard coding de valeurs</strong> : Les valeurs 10% et 0.9% sont codées en dur, ce qui les rend difficiles à modifier.</li></ul>"
+        },
+        {
+          "question": "4) Proposez une version refactorisée appliquant le SRP.",
+          "reponse": "<pre style='background:#f1f5f9; padding:10px; border-radius:6px; color:#0f172a;'><code>// Extraire la logique de calcul du total et des taxes\nfunction calculateSubtotal(items) {\n    return items.reduce((sum, item) => sum + item.price * item.quantity, 0);\n}\n\nfunction calculateTaxes(items) {\n    const TAX_RATE_ELECTRONICS = 0.1;\n    return items\n        .filter(item => item.category === 'ELECTRONICS')\n        .reduce((sum, item) => sum + item.price * item.quantity * TAX_RATE_ELECTRONICS, 0);\n}\n\nfunction applyDiscount(amount, user) {\n    const PREMIUM_DISCOUNT = 0.9;\n    return user.isPremium ? amount * PREMIUM_DISCOUNT : amount;\n}\n\nfunction processOrder(order) {\n    const subtotal = calculateSubtotal(order.items);\n    const taxes = calculateTaxes(order.items);\n    const totalBeforeDiscount = subtotal + taxes;\n    return applyDiscount(totalBeforeDiscount, order.user);\n}</code></pre>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 4 : Planification et suivi de projet (Chap 9)",
+      "points": "3 pts",
+      "enonce": "<div style='font-family: Arial, sans-serif; padding: 10px;'><p>Vous devez planifier le développement d'un site e-commerce avec une équipe de 6 développeurs sur une durée de 6 mois.</p><ol><li><strong>Estimation :</strong> Décrivez une méthode d'estimation que vous utiliseriez pour estimer l'effort et les délais du projet.</li><li><strong>Suivi :</strong> Expliquez comment vous utiliseriez un burn-down chart pour suivre l'avancement du projet Scrum.</li><li><strong>Gestion des risques :</strong> Identifiez deux risques potentiels pour ce projet et proposez une stratégie de mitigation pour chacun.</li></ol></div>",
+      "questions": [
+        {
+          "question": "1) Décrivez une méthode d'estimation pour le projet.",
+          "reponse": "Je recommanderais l'utilisation des <strong>points de story</strong> avec la méthode du <strong>Planning Poker</strong> :<br><ul><li>Décomposer le projet en user stories.</li><li>L'équipe estime chaque story en points de complexité (ex: 1, 2, 3, 5, 8, 13).</li><li>Se baser sur la vélocité de l'équipe (nombre de points réalisés par sprint) pour estimer le nombre de sprints nécessaires.</li><li>Alternative : utiliser une méthode par analogie en comparant les fonctionnalités avec des projets similaires réalisés.</li></ul>"
+        },
+        {
+          "question": "2) Expliquez l'utilisation d'un burn-down chart dans Scrum.",
+          "reponse": "Le burn-down chart est un graphique qui montre l'évolution du travail restant dans un sprint (ou un projet).<br><ul><li>L'axe des X représente le temps (jours du sprint).</li><li>L'axe des Y représente le nombre de points de story restants.</li><li>Une ligne idéale part du total des points en début de sprint vers 0 en fin de sprint.</li><li>L'équipe met à jour le graphique quotidiennement (ex: pendant le daily scrum).</li><li>L'écart entre la ligne idéale et la courbe réelle permet de visualiser l'avancement et d'ajuster le planning si nécessaire.</li></ul>"
+        },
+        {
+          "question": "3) Identifiez deux risques et proposez des stratégies de mitigation.",
+          "reponse": "<ul><li><strong>Risque 1 : Retard de livraison</strong> → Mitigation : Prioriser les fonctionnalités core (MoSCoW), augmenter la vélocité avec plus de développeurs sur le sprint en cours, prévoir des marges de sécurité dans le planning.</li><li><strong>Risque 2 : Départ d'un développeur clé</strong> → Mitigation : Mettre en place du pair programming, documenter le code, s'assurer que les connaissances sont partagées entre plusieurs membres de l'équipe.</li></ul>"
+        }
+      ]
+    }
+  ]
+};
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

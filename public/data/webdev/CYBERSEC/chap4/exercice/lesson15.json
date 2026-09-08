@@ -1,0 +1,134 @@
+[
+  {
+    "intitule": "Identifier les risques de sécurité des API",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Une entreprise de e-commerce a développé une API REST pour permettre à ses partenaires d'accéder au catalogue de produits, de passer des commandes et de consulter le stock. L'API est actuellement exposée sur Internet sans authentification, avec des endpoints comme <code>/api/products</code>, <code>/api/orders</code> et <code>/api/stock/{productId}</code>. En vous basant sur l'OWASP API Security Top 10, identifiez les risques potentiels auxquels cette API est exposée.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Citez et décrivez trois risques majeurs de l'OWASP API Security Top 10 qui s'appliquent à cette API. Justifiez chaque risque en lien avec l'exposition décrite.",
+        "niveau": "medium",
+        "reponse": "1. Broken Object Level Authorization (BOLA) : L'endpoint /api/stock/{productId} permet d'accéder au stock de n'importe quel produit sans vérification des droits, un attaquant pourrait parcourir les ID.\n2. Broken Authentication : Absence totale d'authentification, toute personne peut invoquer tous les endpoints, y compris /api/orders pour passer des commandes.\n3. Lack of Resources & Rate Limiting : Sans limitation de débit, un attaquant peut effectuer des requêtes massives (DDoS) ou brute force sur les ID produits.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Implémenter l'authentification JWT pour une API",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous êtes développeur back-end et devez sécuriser une API de gestion de tâches (Todo List). L'API doit permettre aux utilisateurs de se connecter, de créer, lire, modifier et supprimer leurs propres tâches. Vous choisissez d'utiliser JWT (JSON Web Token) pour l'authentification et l'autorisation.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez le processus complet d'authentification par JWT : de la soumission des identifiants par l'utilisateur jusqu'à la vérification d'une requête protégée.",
+        "niveau": "hard",
+        "reponse": "1. L'utilisateur envoie email/mot de passe à l'endpoint /login. 2. Le serveur vérifie les identifiants. 3. Si valides, le serveur génère un JWT signé contenant le userId et les rôles dans le payload. 4. Le serveur renvoie le token au client. 5. Le client stocke le token (localStorage/sessionStorage). 6. Pour chaque requête protégée, le client ajoute le token dans l'en-tête Authorization: Bearer <token>. 7. Le serveur vérifie la signature du token, son expiration, puis extrait le userId pour autoriser l'accès.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quelles informations doivent être incluses dans le payload du JWT ? Justifiez votre choix.",
+            "niveau": "medium",
+            "reponse": "Le payload doit contenir : 'sub' (subject) avec l'identifiant unique de l'utilisateur, 'roles' pour le contrôle d'accès, 'iat' (issued at) et 'exp' (expiration). On évite d'inclure des données sensibles (mot de passe) car le payload est seulement encodé en Base64, pas chiffré."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Expliquez comment vous implémentez la révocation d'un token JWT en cas de déconnexion ou de compromission.",
+            "niveau": "hard",
+            "reponse": "Comme les JWT sont généralement stateless, on utilise une blacklist stockée en mémoire (Redis). À la déconnexion, on ajoute le jeton à la blacklist avec sa date d'expiration. Un middleware vérifie à chaque requête si le token est blacklisté. Alternative : utiliser des tokens courts (15 min) avec refresh token stocké côté serveur."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Mettre en place un rate limiting et valider les entrées",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Votre API de paiement subit des attaques par force brute sur l'endpoint <code>/api/pay/confirm</code> et des tentatives d'injection de données malformées. Vous devez implémenter deux mesures de sécurité : le rate limiting et la validation stricte des entrées.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez une stratégie de rate limiting pour l'endpoint sensible. Précisez les paramètres (fenêtre de temps, nombre de requêtes autorisées, statut HTTP en cas de dépassement).",
+        "niveau": "medium",
+        "reponse": "Stratégie : fenêtre glissante de 60 secondes avec maximum 5 tentatives par adresse IP. En cas de dépassement, répondre avec le statut HTTP 429 Too Many Requests et un en-tête Retry-After: 60. On peut également appliquer une limitation plus stricte après plusieurs dépassements (ex: 10 requêtes / heure).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Décrivez les validations à appliquer sur un champ 'montant' (nombre décimal) et un champ 'email' pour prévenir les injections.",
+        "niveau": "easy",
+        "reponse": "Pour 'montant' : vérifier que la valeur est un nombre positif, avec au maximum 2 décimales, dans une plage raisonnable (ex: 0.01 à 999999.99). Pour 'email' : utiliser une expression régulière conforme à la RFC 5322, vérifier la présence de '@' et d'un domaine valide, sans caractères dangereux (comme <, >, ', \").",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyser une faille CSRF et proposer des contre-mesures",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Un site bancaire permet aux utilisateurs de transférer de l'argent via une requête POST vers <code>/api/transfer</code> avec les paramètres <code>destinataire</code> et <code>montant</code>. L'authentification repose sur un cookie de session. Un attaquant crée un site malveillant qui envoie une requête cachée à ce endpoint. Expliquez l'attaque CSRF et proposez des protections.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez le principe de l'attaque CSRF (Cross-Site Request Forgery) et pourquoi le site bancaire y est vulnérable.",
+        "niveau": "medium",
+        "reponse": "Le CSRF exploite la confiance qu'un site a dans le navigateur de l'utilisateur. L'attaquant force le navigateur d'un utilisateur déjà authentifié à envoyer une requête non intentionnelle au site cible. Le site bancaire est vulnérable car il utilise uniquement un cookie pour l'authentification, et les requêtes malveillantes incluent automatiquement ce cookie.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposez et expliquez trois contre-mesures efficaces contre les attaques CSRF.",
+        "niveau": "hard",
+        "reponse": "1. Token CSRF (synchronizer token) : générer un token unique lié à la session et l'inclure dans chaque formulaire (champ caché) ou en-tête personnalisé. Le serveur vérifie ce token.\n2. SameSite Cookie attribute : configurer les cookies avec SameSite=Lax ou SameSite=Strict pour empêcher leur envoi lors de requêtes cross-site.\n3. En-tête Referer/Origin validation : vérifier que l'en-tête Origin ou Referer correspond au domaine légitime du site.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Évaluer la maturité de la sécurité dans un pipeline CI/CD",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Votre équipe développe une application web et utilise GitHub Actions pour le CI/CD. Actuellement, le pipeline exécute les tests unitaires, construit l'image Docker et la déploie automatiquement en production. Aucun outil de sécurité n'est intégré. En tant que responsable sécurité, vous devez proposer l'intégration d'outils SAST, DAST et de scan de dépendances.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez ce que sont SAST et DAST. Pour chacun, proposez un outil open source que vous intégreriez et à quelle étape du pipeline.",
+        "niveau": "hard",
+        "reponse": "SAST (Static Application Security Testing) analyse le code source sans l'exécuter. Outil : SonarQube ou Semgrep. À intégrer après les tests unitaires, avant la construction.\nDAST (Dynamic Application Security Testing) analyse l'application en cours d'exécution. Outil : OWASP ZAP. À intégrer après le déploiement dans un environnement de staging, avant la mise en production.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi est-il important de scanner les dépendances (OWASP Dependency Check) ? Donnez un exemple concret de vulnérabilité célèbre dans une dépendance.",
+            "niveau": "medium",
+            "reponse": "Les dépendances tierces peuvent contenir des vulnérabilités connues. Exemple : Log4Shell (CVE-2021-44228) dans la bibliothèque Log4j permettant l'exécution de code à distance. Le scanner compare les versions des bibliothèques avec des bases de vulnérabilités (CVE).",
+            "reponse": "Les dépendances tierces peuvent contenir des vulnérabilités connues. Exemple : Log4Shell (CVE-2021-44228) dans la bibliothèque Log4j permettant l'exécution de code à distance. Le scanner compare les versions des bibliothèques avec des bases de vulnérabilités (CVE)."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Proposez un ordre d'exécution des étapes de sécurité dans le pipeline et justifiez cet ordre.",
+        "niveau": "hard",
+        "reponse": "1. Scan des dépendances (le plus rapide, détecte les vulnérabilités connues tôt). 2. SAST (analyse statique, avant compilation). 3. Tests unitaires + intégration. 4. Construction image Docker + scan de l'image (Trivy). 5. Déploiement en staging. 6. DAST (OWASP ZAP) sur l'environnement staging. 7. Si tous les tests passent, déploiement en production. Cela respecte le principe 'shift left' : détecter les failles le plus tôt possible.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

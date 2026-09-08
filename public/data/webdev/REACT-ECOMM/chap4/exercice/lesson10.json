@@ -1,0 +1,102 @@
+[
+  {
+    "intitule": "Configuration et utilisation de Zustand pour l'authentification",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans une application e-commerce React avec Vite, vous devez gérer l'état d'authentification. Vous choisissez Zustand pour sa légèreté. Le backend expose les endpoints suivants :</p><ul><li><code>POST /auth/login</code> → retourne <code>{ access_token, refresh_token, user }</code></li><li><code>POST /auth/logout</code> → invalide les tokens</li><li><code>GET /auth/me</code> → retourne l'utilisateur courant</li></ul><p><strong>Question :</strong> Créez un store Zustand complet nommé <code>useAuthStore</code> qui gère :</p><ul><li>l'état (<code>user</code>, <code>accessToken</code>, <code>isLoading</code>)</li><li>une action <code>login(email, password)</code> qui appelle l'API et met à jour le store</li><li>une action <code>logout()</code> qui efface les données</li><li>une action <code>hydrate()</code> pour restaurer la session depuis <code>localStorage</code></li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémenter le store Zustand décrit ci-dessus, en incluant la persistance avec le middleware `persist`.",
+        "niveau": "hard",
+        "reponse": "```typescript\nimport { create } from 'zustand';\nimport { persist } from 'zustand/middleware';\nimport axios from 'axios';\n\ninterface AuthState {\n  user: null | { id: string; email: string; name: string };\n  accessToken: string | null;\n  isLoading: boolean;\n  login: (email: string, password: string) => Promise<void>;\n  logout: () => Promise<void>;\n  hydrate: () => void;\n}\n\nexport const useAuthStore = create<AuthState>()(\n  persist(\n    (set, get) => ({\n      user: null,\n      accessToken: null,\n      isLoading: false,\n\n      login: async (email, password) => {\n        set({ isLoading: true });\n        try {\n          const response = await axios.post('/auth/login', { email, password });\n          const { access_token, user } = response.data;\n          set({ user, accessToken: access_token, isLoading: false });\n          // Configuration d'Axios pour les futures requêtes\n          axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;\n        } catch (error) {\n          set({ isLoading: false });\n          throw error;\n        }\n      },\n\n      logout: async () => {\n        try {\n          await axios.post('/auth/logout');\n        } catch (error) {\n          console.error('Logout error:', error);\n        } finally {\n          set({ user: null, accessToken: null });\n          delete axios.defaults.headers.common['Authorization'];\n        }\n      },\n\n      hydrate: () => {\n        const persisted = localStorage.getItem('auth-storage');\n        if (persisted) {\n          const { state } = JSON.parse(persisted);\n          set({ user: state.user, accessToken: state.accessToken });\n          if (state.accessToken) {\n            axios.defaults.headers.common['Authorization'] = `Bearer ${state.accessToken}`;\n          }\n        }\n      }\n    }),\n    {\n      name: 'auth-storage',\n      partialize: (state) => ({ user: state.user, accessToken: state.accessToken })\n    }\n  )\n);\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer le rôle du middleware `persist` et pourquoi on utilise `partialize`.",
+            "niveau": "medium",
+            "reponse": "Le middleware `persist` sauvegarde automatiquement l'état du store dans `localStorage` (ou autre storage) et le recharge au démarrage. `partialize` permet de choisir quelles parties de l'état doivent être persistées (par exemple, on ne veut pas persister `isLoading` qui est temporaire, seulement `user` et `accessToken`). Cela évite de stocker des données inutiles et réduit les risques de conflits."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Migration d'un composant classique vers Zustand",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous héritez d'un composant React qui utilise le Context API pour gérer le panier. Le code actuel présente des problèmes de performance (re-renders excessifs). Votre mission est de refactoriser la logique du panier en utilisant Zustand.</p><p>Le composant actuel :</p><pre><code>const CartContext = createContext();\nexport const CartProvider = ({ children }) => {\n  const [items, setItems] = useState([]);\n  const addItem = (product) => { /* ... */ };\n  const removeItem = (id) => { /* ... */ };\n  const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);\n  return <CartContext.Provider value={{ items, addItem, removeItem, total }}>{children}</CartContext.Provider>;\n};\n\n// Dans un composant produit\nconst { addItem } = useContext(CartContext);</code></pre><p><strong>Question :</strong> Rédigez le code Zustand équivalent pour le store du panier, puis montrez comment le composant produit l'utiliserait.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créer un store Zustand `useCartStore` avec les actions `addItem`, `removeItem`, `updateQuantity` et les sélecteurs `total` et `itemCount`. Puis réécrire le composant produit.",
+        "niveau": "hard",
+        "reponse": "```typescript\n// cartStore.ts\nimport { create } from 'zustand';\nimport { persist } from 'zustand/middleware';\n\ninterface CartItem {\n  id: string;\n  name: string;\n  price: number;\n  quantity: number;\n  image: string;\n}\n\ninterface CartState {\n  items: CartItem[];\n  addItem: (product: Omit<CartItem, 'quantity'>) => void;\n  removeItem: (id: string) => void;\n  updateQuantity: (id: string, quantity: number) => void;\n  clearCart: () => void;\n}\n\nexport const useCartStore = create<CartState>()(\n  persist(\n    (set, get) => ({\n      items: [],\n\n      addItem: (product) => {\n        const existing = get().items.find(item => item.id === product.id);\n        if (existing) {\n          set({\n            items: get().items.map(item =>\n              item.id === product.id\n                ? { ...item, quantity: item.quantity + 1 }\n                : item\n            )\n          });\n        } else {\n          set({ items: [...get().items, { ...product, quantity: 1 }] });\n        }\n      },\n\n      removeItem: (id) => {\n        set({ items: get().items.filter(item => item.id !== id) });\n      },\n\n      updateQuantity: (id, quantity) => {\n        if (quantity <= 0) {\n          get().removeItem(id);\n          return;\n        }\n        set({\n          items: get().items.map(item =>\n            item.id === id ? { ...item, quantity } : item\n          )\n        });\n      },\n\n      clearCart: () => set({ items: [] })\n    }),\n    { name: 'cart-storage' }\n  )\n);\n\n// Sélecteurs dérivés (pour éviter les re-renders)\nexport const useCartTotal = () =>\n  useCartStore((state) => state.items.reduce((sum, item) => sum + item.price * item.quantity, 0));\n\nexport const useCartItemCount = () =>\n  useCartStore((state) => state.items.reduce((count, item) => count + item.quantity, 0));\n\n// Composant produit modifié\nconst ProductCard = ({ product }) => {\n  const addItem = useCartStore((state) => state.addItem);\n  const itemCount = useCartItemCount(); // seulement ce sélecteur\n\n  return (\n    <div>\n      <h3>{product.name}</h3>\n      <button onClick={() => addItem(product)}>\n        Ajouter au panier ({itemCount} articles)\n      </button>\n    </div>\n  );\n};\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer pourquoi l'utilisation de sélecteurs comme `useCartTotal()` est préférable à la récupération directe de tout l'état.",
+            "niveau": "medium",
+            "reponse": "Zustand optimise les re-renders : un composant ne se re-render que si la portion d'état qu'il écoute change. Si on utilise `const { items, total } = useCartStore()`, le composant se re-render à chaque modification des `items` (même si `total` n'a pas changé). Avec un sélecteur personnalisé comme `useCartTotal()`, le composant ne se re-render que lorsque la valeur du total change réellement. Cela améliore significativement les performances, surtout pour les composants qui n'ont besoin que de données dérivées."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Débogage d'un store Zustand avec middleware",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous travaillez sur une application e-commerce et vous avez implémenté un store Zustand pour gérer les filtres de produits. Cependant, vous constatez que l'état n'est pas mis à jour correctement et vous suspectez un problème d'immutabilité.</p><pre><code>const useFilterStore = create((set) => ({\n  filters: { category: 'all', priceRange: [0, 1000], sortBy: 'popular' },\n  setCategory: (category) => {\n    const filters = get().filters;\n    filters.category = category; // MUTATION DIRECTE !\n    set({ filters });\n  },\n  setPriceRange: (min, max) => {\n    set((state) => {\n      state.filters.priceRange = [min, max]; // AUTRE MUTATION\n      return state;\n    });\n  }\n}));</code></pre><p><strong>Question :</strong> Identifiez les erreurs dans ce code, corrigez-les, et ajoutez le middleware `devtools` et `subscribeWithSelector` pour faciliter le débogage.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Corriger le store en respectant l'immutabilité et ajouter les middlewares de débogage.",
+        "niveau": "medium",
+        "reponse": "```typescript\nimport { create } from 'zustand';\nimport { devtools, subscribeWithSelector } from 'zustand/middleware';\n\ninterface FilterState {\n  filters: {\n    category: string;\n    priceRange: [number, number];\n    sortBy: string;\n  };\n  setCategory: (category: string) => void;\n  setPriceRange: (min: number, max: number) => void;\n  setSortBy: (sortBy: string) => void;\n  resetFilters: () => void;\n}\n\nconst useFilterStore = create<FilterState>()(\n  devtools(\n    subscribeWithSelector((set, get) => ({\n      filters: { category: 'all', priceRange: [0, 1000], sortBy: 'popular' },\n\n      setCategory: (category) =>\n        set(\n          (state) => ({\n            filters: { ...state.filters, category }\n          }),\n          false,\n          'filter/setCategory'\n        ),\n\n      setPriceRange: (min, max) =>\n        set(\n          (state) => ({\n            filters: { ...state.filters, priceRange: [min, max] }\n          }),\n          false,\n          'filter/setPriceRange'\n        ),\n\n      setSortBy: (sortBy) =>\n        set(\n          (state) => ({\n            filters: { ...state.filters, sortBy }\n          }),\n          false,\n          'filter/setSortBy'\n        ),\n\n      resetFilters: () =>\n        set(\n          { filters: { category: 'all', priceRange: [0, 1000], sortBy: 'popular' } },\n          false,\n          'filter/reset'\n        )\n    })),\n    { name: 'FilterStore' }\n  )\n);\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "À quoi servent les middlewares `devtools` et `subscribeWithSelector` ?",
+            "niveau": "easy",
+            "reponse": "`devtools` permet d'intégrer Zustand avec les Redux DevTools : on peut visualiser l'historique des actions, le state, et même voyager dans le temps pendant le débogage. `subscribeWithSelector` ajoute la capacité de s'abonner à des portions spécifiques du state avec un sélecteur, ce qui permet d'écouter uniquement les changements pertinents et d'exécuter des callbacks lorsque certaines conditions sont remplies."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Synchronisation du panier entre plusieurs onglets",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Votre application e-commerce utilise Zustand avec le middleware `persist` pour stocker le panier dans `localStorage`. Un utilisateur ouvre votre site dans deux onglets différents, ajoute un produit dans le premier onglet, mais le deuxième onglet n'affiche pas la mise à jour automatiquement.</p><p><strong>Question :</strong> Implémentez une solution pour synchroniser le panier entre tous les onglets ouverts en utilisant l'événement `storage` et Zustand.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire le code nécessaire pour synchroniser le store Zustand du panier entre plusieurs onglets.",
+        "niveau": "hard",
+        "reponse": "```typescript\n// cartStore.ts\nimport { create } from 'zustand';\nimport { persist } from 'zustand/middleware';\n\ninterface CartItem {\n  id: string;\n  name: string;\n  price: number;\n  quantity: number;\n}\n\ninterface CartState {\n  items: CartItem[];\n  addItem: (item: CartItem) => void;\n  removeItem: (id: string) => void;\n  syncFromStorage: () => void;\n}\n\nexport const useCartStore = create<CartState>()(\n  persist(\n    (set, get) => ({\n      items: [],\n\n      addItem: (item) => {\n        const existing = get().items.find(i => i.id === item.id);\n        if (existing) {\n          set({\n            items: get().items.map(i =>\n              i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i\n            )\n          });\n        } else {\n          set({ items: [...get().items, { ...item, quantity: 1 }] });\n        }\n      },\n\n      removeItem: (id) => {\n        set({ items: get().items.filter(i => i.id !== id) });\n      },\n\n      syncFromStorage: () => {\n        const stored = localStorage.getItem('cart-storage');\n        if (stored) {\n          const { state } = JSON.parse(stored);\n          set({ items: state.items });\n        }\n      }\n    }),\n    { name: 'cart-storage' }\n  )\n);\n\n// Dans le composant racine (App.tsx ou un hook personnalisé)\nimport { useEffect } from 'react';\nimport { useCartStore } from './cartStore';\n\nexport function useCartSync() {\n  const syncFromStorage = useCartStore((state) => state.syncFromStorage);\n\n  useEffect(() => {\n    const handleStorageChange = (e: StorageEvent) => {\n      if (e.key === 'cart-storage') {\n        syncFromStorage();\n      }\n    };\n\n    window.addEventListener('storage', handleStorageChange);\n    return () => window.removeEventListener('storage', handleStorageChange);\n  }, [syncFromStorage]);\n}\n\n// Dans App.tsx\nfunction App() {\n  useCartSync(); // Active la synchronisation cross-tab\n  return <div>...</div>;\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quelle est la limite de l'événement `storage` et comment y remédier si le panier est volumineux ?",
+            "niveau": "medium",
+            "reponse": "L'événement `storage` ne se déclenche que lorsque `localStorage` est modifié dans un autre onglet. Sa principale limite est qu'il ne fonctionne pas pour les modifications faites dans le même onglet (auto-synchronisation). Pour un panier volumineux, stocker tout l'objet dans `localStorage` peut être inefficace. On peut optimiser en ne stockant que les modifications (delta) ou en utilisant un BroadcastChannel pour une communication plus fine entre les onglets, ou encore une solution backend avec WebSockets pour une synchronisation en temps réel multi-appareils."
+          }
+        ]
+      }
+    ]
+  }
+]

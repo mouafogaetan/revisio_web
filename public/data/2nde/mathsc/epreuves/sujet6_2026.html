@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+  "matiere": "Maths 2nd C",
+  "classe": "Seconde",
+  "sequence": "Séquence 6",
+  "anneeScolaire": "2025-2026",
+  "exercices": [
+    {
+      "titre": "Exercice 1 : Fonctions usuelles et équations",
+      "points": "5 pts",
+      "enonce": "<p>On consid\u00E8re les fonctions suivantes :</p><ul><li>\\( f(x) = 2x^2 - 6x + 4 \\)</li><li>\\( g(x) = \\frac{3x - 1}{x + 2} \\)</li></ul>",
+      "questions": [
+        {
+          "question": "1) D\u00E9terminer l'ensemble de d\u00E9finition de \\( g \\).",
+          "reponse": "<p>\\( g(x) \\) est une fonction rationnelle. Elle est d\u00E9finie si son d\u00E9nominateur est non nul :</p><p>\\( x + 2 \\neq 0 \\iff x \\neq -2 \\)</p><p>Donc \\( D_g = \\mathbb{R} \\setminus \\{-2\\} = ]-\\infty; -2[ \\cup ]-2; +\\infty[ \\).</p>"
+        },
+        {
+          "question": "2) R\u00E9soudre l'\u00E9quation \\( f(x) = 0 \\).",
+          "reponse": "<p>\\( 2x^2 - 6x + 4 = 0 \\)</p><p>On divise par 2 : \\( x^2 - 3x + 2 = 0 \\)</p><p>\\( \\Delta = (-3)^2 - 4(1)(2) = 9 - 8 = 1 \\)</p><p>\\( x_1 = \\frac{3 - 1}{2} = 1 \\) et \\( x_2 = \\frac{3 + 1}{2} = 2 \\)</p><p>Les solutions sont \\( S = \\{1; 2\\} \\).</p>"
+        },
+        {
+          "question": "3) R\u00E9soudre l'in\u00E9quation \\( f(x) \\leq 0 \\).",
+          "reponse": "<p>Les racines de \\( f \\) sont 1 et 2. Le coefficient \\( a = 2 > 0 \\), donc \\( f \\) est n\u00E9gative entre les racines.</p><p>\\( f(x) \\leq 0 \\iff x \\in [1; 2] \\).</p>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 2 : Angles orient\u00E9s et trigonom\u00E9trie",
+      "points": "4 pts",
+      "enonce": "<p>On consid\u00E8re un angle orient\u00E9 de mesure \\( \\frac{7\\pi}{3} \\).</p>",
+      "questions": [
+        {
+          "question": "1) D\u00E9terminer la mesure principale de cet angle.",
+          "reponse": "<p>On soustrait \\( 2\\pi \\) autant de fois que n\u00E9cessaire pour obtenir un angle dans \\( ]-\\pi; \\pi] \\) :</p><p>\\( \\frac{7\\pi}{3} - 2\\pi = \\frac{7\\pi}{3} - \\frac{6\\pi}{3} = \\frac{\\pi}{3} \\)</p><p>La mesure principale est \\( \\frac{\\pi}{3} \\).</p>"
+        },
+        {
+          "question": "2) Donner les coordonn\u00E9es du point image de cet angle sur le cercle trigonom\u00E9trique.",
+          "reponse": "<p>Le point image de \\( \\frac{\\pi}{3} \\) a pour coordonn\u00E9es :</p><p>\\( M\\left(\\cos\\frac{\\pi}{3}; \\sin\\frac{\\pi}{3}\\right) = M\\left(\\frac{1}{2}; \\frac{\\sqrt{3}}{2}\\right) \\).</p>"
+        },
+        {
+          "question": "3) \u00C9crire toutes les mesures de cet angle sous la forme \\( \\alpha + 2k\\pi \\) avec \\( k \\in \\mathbb{Z} \\).",
+          "reponse": "<p>Les mesures de cet angle sont :</p><p>\\( \\frac{\\pi}{3} + 2k\\pi \\), avec \\( k \\in \\mathbb{Z} \\).</p>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 3 : Statistiques et caract\u00E9ristiques",
+      "points": "6 pts",
+      "enonce": "<p>On a relev\u00E9 les notes d'une classe de 20 \u00E9l\u00E8ves \u00E0 un devoir de math\u00E9matiques. Les notes sont les suivantes :</p><p>8 ; 10 ; 12 ; 14 ; 9 ; 11 ; 13 ; 15 ; 10 ; 8 ; 12 ; 14 ; 11 ; 9 ; 13 ; 10 ; 12 ; 8 ; 14 ; 11</p>",
+      "questions": [
+        {
+          "question": "1) Construire le tableau des effectifs et des fr\u00E9quences en pourcentage.",
+          "reponse": "<table style=\"width:100%; border-collapse: collapse;\"><tr><th style=\"border: 1px solid #ddd; padding: 8px;\">Note</th><th style=\"border: 1px solid #ddd; padding: 8px;\">Effectif</th><th style=\"border: 1px solid #ddd; padding: 8px;\">Fr\u00E9quence (%)</th></tr><tr><td style=\"border: 1px solid #ddd; padding: 8px;\">8</td><td style=\"border: 1px solid #ddd; padding: 8px;\">3</td><td style=\"border: 1px solid #ddd; padding: 8px;\">15%</td></tr><tr><td style=\"border: 1px solid #ddd; padding: 8px;\">9</td><td style=\"border: 1px solid #ddd; padding: 8px;\">2</td><td style=\"border: 1px solid #ddd; padding: 8px;\">10%</td></tr><tr><td style=\"border: 1px solid #ddd; padding: 8px;\">10</td><td style=\"border: 1px solid #ddd; padding: 8px;\">3</td><td style=\"border: 1px solid #ddd; padding: 8px;\">15%</td></tr><tr><td style=\"border: 1px solid #ddd; padding: 8px;\">11</td><td style=\"border: 1px solid #ddd; padding: 8px;\">3</td><td style=\"border: 1px solid #ddd; padding: 8px;\">15%</td></tr><tr><td style=\"border: 1px solid #ddd; padding: 8px;\">12</td><td style=\"border: 1px solid #ddd; padding: 8px;\">3</td><td style=\"border: 1px solid #ddd; padding: 8px;\">15%</td></tr><tr><td style=\"border: 1px solid #ddd; padding: 8px;\">13</td><td style=\"border: 1px solid #ddd; padding: 8px;\">2</td><td style=\"border: 1px solid #ddd; padding: 8px;\">10%</td></tr><tr><td style=\"border: 1px solid #ddd; padding: 8px;\">14</td><td style=\"border: 1px solid #ddd; padding: 8px;\">3</td><td style=\"border: 1px solid #ddd; padding: 8px;\">15%</td></tr><tr><td style=\"border: 1px solid #ddd; padding: 8px;\">15</td><td style=\"border: 1px solid #ddd; padding: 8px;\">1</td><td style=\"border: 1px solid #ddd; padding: 8px;\">5%</td></tr><tr><td style=\"border: 1px solid #ddd; padding: 8px;\"><b>Total</b></td><td style=\"border: 1px solid #ddd; padding: 8px;\"><b>20</b></td><td style=\"border: 1px solid #ddd; padding: 8px;\"><b>100%</b></td></tr></table>"
+        },
+        {
+          "question": "2) Calculer la moyenne de cette s\u00E9rie.",
+          "reponse": "<p>\\( \\bar{x} = \\frac{3\\times8 + 2\\times9 + 3\\times10 + 3\\times11 + 3\\times12 + 2\\times13 + 3\\times14 + 1\\times15}{20} \\)</p><p>\\( \\bar{x} = \\frac{24 + 18 + 30 + 33 + 36 + 26 + 42 + 15}{20} = \\frac{224}{20} = 11.2 \\)</p><p>La moyenne est de 11.2.</p>"
+        },
+        {
+          "question": "3) D\u00E9terminer la m\u00E9diane de cette s\u00E9rie.",
+          "reponse": "<p>La s\u00E9rie a 20 valeurs (pair). La m\u00E9diane est la moyenne de la 10\u00E8me et de la 11\u00E8me valeur.</p><p>En ordonnant les valeurs : 8,8,8,9,9,10,10,10,11,11,11,12,12,12,13,13,14,14,14,15.</p><p>La 10\u00E8me valeur est 11 et la 11\u00E8me est 11.</p><p>La m\u00E9diane est \\( 11 \\).</p>"
+        },
+        {
+          "question": "4) Calculer l'\u00E9tendue de la s\u00E9rie.",
+          "reponse": "<p>L'\u00E9tendue est la diff\u00E9rence entre la valeur maximale et la valeur minimale :</p><p>\\( E = 15 - 8 = 7 \\).</p>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 4 : Vecteurs du plan",
+      "points": "5 pts",
+      "enonce": "<p>On consid\u00E8re un triangle \\( ABC \\). Soit \\( I \\) le milieu de \\( [AB] \\) et \\( J \\) le milieu de \\( [AC] \\).</p>",
+      "questions": [
+        {
+          "question": "1) Exprimer \\( \\vec{IJ} \\) en fonction de \\( \\vec{BC} \\).",
+          "reponse": "<p>D'apr\u00E8s le th\u00E9or\u00E8me des milieux dans le triangle \\( ABC \\) :</p><p>\\( \\vec{IJ} = \\frac{1}{2}\\vec{BC} \\).</p><p>En effet, \\( I \\) et \\( J \\) sont les milieux respectifs de \\( [AB] \\) et \\( [AC] \\), donc \\( (IJ) \\) est parall\u00E8le \u00E0 \\( (BC) \\) et \\( IJ = \\frac{BC}{2} \\).</p>"
+        },
+        {
+          "question": "2) Soit \\( G \\) d\u00E9fini par \\( \\vec{AG} = \\vec{AB} + \\vec{AC} \\). Exprimer \\( \\vec{BG} \\) en fonction de \\( \\vec{AC} \\).",
+          "reponse": "<p>On a \\( \\vec{AG} = \\vec{AB} + \\vec{AC} \\).</p><p>D'apr\u00E8s la relation de Chasles : \\( \\vec{BG} = \\vec{BA} + \\vec{AG} \\)</p><p>\\( \\vec{BG} = -\\vec{AB} + (\\vec{AB} + \\vec{AC}) = \\vec{AC} \\).</p><p>Donc \\( \\vec{BG} = \\vec{AC} \\).</p>"
+        },
+        {
+          "question": "3) Que peut-on en d\u00E9duire pour le quadrilat\u00E8re \\( ABGC \\) ?",
+          "reponse": "<p>On a \\( \\vec{BG} = \\vec{AC} \\). Les vecteurs \\( \\vec{BG} \\) et \\( \\vec{AC} \\) sont \u00E9gaux, donc \\( BGAC \\) est un parall\u00E9logramme.</p><p>Le quadrilat\u00E8re \\( ABGC \\) est un parall\u00E9logramme.</p>"
+        }
+      ]
+    }
+  ]
+};
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

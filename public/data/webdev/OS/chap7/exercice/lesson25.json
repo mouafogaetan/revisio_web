@@ -1,0 +1,136 @@
+[
+  {
+    "intitule": "Comparaison des technologies d'isolation",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Dans une infrastructure informatique, il existe plusieurs manières de faire fonctionner plusieurs syst\u00E8mes sur un m\u00EAme serveur physique. Vous \u00EAtes un technicien au sein d'une entreprise camerounaise de services num\u00E9riques \u00E0 Douala. On vous demande d'expliquer \u00E0 un stagiaire la diff\u00E9rence fondamentale entre un <strong>conteneur</strong> (comme Docker) et une <strong>machine virtuelle</strong> (comme VirtualBox).</p>",
+      "images": [
+        "Diagramme comparatif montrant une architecture de machine virtuelle avec hyperviseur et plusieurs OS invités c\u00F4te \u00E0 c\u00F4te avec une architecture de conteneurs partageant le m\u00EAme noyau Linux"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer, en deux ou trois phrases, la diff\u00E9rence architecturale majeure entre un conteneur et une machine virtuelle.",
+        "niveau": "easy",
+        "reponse": "Une machine virtuelle ex\u00E9cute un syst\u00E8me d'exploitation complet (OS invit\u00E9) au-dessus d'un hyperviseur, incluant son propre noyau. Un conteneur partage le noyau du syst\u00E8me d'exploitation h\u00F4te et n'isole que l'espace utilisateur. Cela rend les conteneurs beaucoup plus l\u00E9gers et rapides \u00E0 d\u00E9marrer qu'une VM.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Citer deux avantages des machines virtuelles par rapport aux conteneurs.",
+        "niveau": "medium",
+        "reponse": "1. Isolation plus forte : une VM est isol\u00E9e au niveau du noyau, ce qui est plus s\u00E9curis\u00E9 qu'un conteneur qui partage le noyau h\u00F4te. 2. Possibilit\u00E9 d'ex\u00E9cuter diff\u00E9rents types de syst\u00E8mes d'exploitation (ex: Linux sur Windows ou vice-versa), alors qu'un conteneur Linux ne peut pas faire tourner un noyau Windows.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Dans le contexte d'une startup \u00E0 Yaound\u00E9 avec des ressources limit\u00E9es (peu de RAM et de CPU), laquelle de ces deux technologies recommanderez-vous pour d\u00E9ployer plusieurs micro-services et pourquoi ? Justifier en citant une propri\u00E9t\u00E9 technique.",
+        "niveau": "medium",
+        "reponse": "Je recommande les conteneurs. Les conteneurs sont tr\u00E8s l\u00E9gers car ils n'embarquent pas de noyau complet, ce qui permet de faire tourner des dizaines de conteneurs sur un m\u00EAme petit serveur. Leur temps de d\u00E9marrage est quasi instantan\u00E9 (quelques millisecondes), ce qui est id\u00E9al pour des micro-services qui doivent scaler rapidement.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Configuration et manipulation des Namespaces et Cgroups",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Un ing\u00E9nieur syst\u00E8me \u00E0 l'Agence Nationale des Technologies de l'Information et de la Communication (ANTIC) au Cameroun doit s\u00E9curiser un serveur Linux h\u00E9bergeant plusieurs applications. Il utilise les <strong>namespaces</strong> et les <strong>cgroups</strong> pour cr\u00E9er un environnement isol\u00E9 semblable \u00E0 un conteneur, sans utiliser Docker.</p><p>Rappel : <code>unshare</code> est une commande Linux pour cr\u00E9er de nouveaux namespaces.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "D\u00E9crire pr\u00E9cis\u00E9ment la fonction des namespaces de type <code>PID</code> et <code>NET</code> dans la construction d'un conteneur.",
+        "niveau": "hard",
+        "reponse": "Le namespace PID isole l'espace des identifiants de processus : un processus \u00E0 l'int\u00E9rieur du namespace verra son PID comme \u00E9tant 1 (et ne verra pas les processus ext\u00E9rieurs). Le namespace NET isole la pile r\u00E9seau : le conteneur aura sa propre table de routage, ses propres iptables et sa propre interface loopback (lo), totalement ind\u00E9pendante de l'h\u00F4te.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Analyser la commande suivante et expliquer ce qu'elle r\u00E9alise : <code>sudo unshare --fork --pid --mount-proc bash</code>",
+        "niveau": "hard",
+        "reponse": "Cette commande cr\u00E9e un nouveau namespace PID (--pid) et un nouveau namespace pour le montage des syst\u00E8mes de fichiers (--mount). Le flag --fork permet de cr\u00E9er un nouveau processus enfant, et --mount-proc monte une nouvelle instance de /proc (n\u00E9cessaire pour que 'ps' ou 'top' fonctionnent correctement dans le nouveau namespace). On lance ensuite le shell bash dans cet environnement isol\u00E9.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Un utilisateur accapare toute la m\u00E9moire vive du serveur, ralentissant les autres. Proposer une solution pr\u00E9ventive en utilisant les cgroups.",
+        "niveau": "hard",
+        "reponse": "Il faut cr\u00E9er un cgroup de type 'memory' et y assigner le processus de l'utilisateur. Exemple :\n1. Cr\u00E9er le groupe : <code>cgcreate -g memory:groupe_limit</code>\n2. Limiter la RAM \u00E0 512 Mo : <code>cgset -r memory.limit_in_bytes=536870912 groupe_limit</code>\n3. Assigner le processus (PID 1234) : <code>cgclassify -g memory:groupe_limit 1234</code>\nAinsi, si le processus d\u00E9passe 512 Mo, il sera tu\u00E9 (OOM Kill) ou ralenti, prot\u00E9geant ainsi le reste du syst\u00E8me.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Architecture de Docker et gestion des ressources",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous \u00EAtes DevOps dans une start-up fintech \u00E0 Douala. L'\u00E9quipe d\u00E9veloppe une application de transfert d'argent. Vous utilisez Docker en production. Une erreur survient : un conteneur nomm\u00E9 <code>api_paiement</code> ne r\u00E9pond plus et l'administrateur constate que le serveur h\u00F4te est satur\u00E9 en CPU.</p>",
+      "images": [
+        "Logo de Docker compos\u00E9 de baleine transportant plusieurs conteneurs, architecture client-serveur montrant le Docker daemon, le registre et les conteneurs"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "D\u00E9crire le r\u00F4le du <strong>Docker Daemon</strong> (dockerd) et du <strong>Docker Client</strong> dans l'architecture de Docker.",
+        "niveau": "easy",
+        "reponse": "Le Docker Daemon (dockerd) est un processus en arri\u00E8re-plan qui s'ex\u00E9cute sur l'h\u00F4te. Il est responsable de la cr\u00E9ation, de l'ex\u00E9cution et de la surveillance des conteneurs, ainsi que de la gestion des images. Le Docker Client est l'interface en ligne de commande (CLI) qui envoie des requ\u00EAtes (comme 'docker run') au Daemon via une API REST pour lui ordonner d'agir.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Formuler la commande permettant de limiter l'utilisation CPU du conteneur <code>api_paiement</code> \u00E0 0.5 c\u0153ur (50% d'un CPU) et de lui allouer 256 Mo de RAM, puis red\u00E9marrer le conteneur avec ces nouvelles limites.",
+        "niveau": "medium",
+        "reponse": "Il faut d'abord arr\u00EAter et supprimer l'ancien conteneur, puis le relancer avec les flags d'options :\n<code>docker stop api_paiement</code>\n<code>docker rm api_paiement</code>\n<code>docker run -d --name api_paiement --cpus=\"0.5\" --memory=\"256m\" nom_image</code>\nLes options --cpus et --memory utilisent les cgroups en arri\u00E8re-plan pour restreindre les ressources.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Justifier pourquoi, m\u00EAme avec ces limites, un conteneur n'est pas aussi s\u00E9curis\u00E9 qu'une machine virtuelle dans un contexte bancaire.",
+        "niveau": "hard",
+        "reponse": "Parce que tous les conteneurs partagent le m\u00EAme noyau Linux h\u00F4te. Si une faille de s\u00E9curit\u00E9 (vuln\u00E9rabilit\u00E9) existe dans le noyau, un attaquant qui compromet un conteneur peut potentiellement 's'\u00E9chapper' pour prendre le contr\u00F4le de l'h\u00F4te et de tous les autres conteneurs. Une VM poss\u00E8de son propre noyau isol\u00E9, limitant la surface d'attaque. Pour la fintech, une VM ou une combinaison VM + Conteneur serait plus adapt\u00E9e.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Diagnostic d'incident sur un serveur mutualisé",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous administrez un serveur mutualis\u00E9 aupr\u00E8s de l'op\u00E9rateur <strong>CAMTEL</strong> \u00E0 Yaound\u00E9. Plusieurs sites web (chacun dans son conteneur) tournent sur une seule machine Linux. Un site e-commerce (conteneur <code>ecom</code>) signale des lenteurs extr\u00EAmes le soir entre 20h et 22h. Les autres sites tournent normalement.</p><p>En analysant avec <code>docker stats ecom</code>, vous voyez que le conteneur utilise 100% de CPU mais seulement 10% de la RAM allou\u00E9e. Vous pensez \u00E0 un probl\u00E8me de code applicatif (boucle infinie), mais l'\u00E9quipe de dev conteste.</p>",
+      "images": [
+        "Capture d'\u00E9cran de la commande 'docker stats' montrant un conteneur avec un pourcentage CPU tr\u00E8s \u00E9lev\u00E9 par rapport aux autres"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposer une m\u00E9thode pour identifier si le probl\u00E8me vient d'une surcharge r\u00E9seau (trop de requ\u00EAtes externes) ou d'une boucle infinie dans le code applicatif, en utilisant des commandes Linux de base (sans modifier le code).",
+        "niveau": "very hard",
+        "reponse": "Il faut entrer dans le conteneur : <code>docker exec -it ecom /bin/bash</code>. Ensuite :\n1. Pour v\u00E9rifier le r\u00E9seau : utiliser <code>netstat -an | grep :80 | wc -l</code> pour compter les connexions entrantes sur le port web. Si le nombre est anormalement \u00E9lev\u00E9 (ex: milliers de connexions simultan\u00E9es), c'est une attaque DDoS ou un trafic l\u00E9gitime massif.\n2. Pour v\u00E9rifier une boucle infinie : utiliser <code>top</code> ou <code>ps aux</code> pour identifier le PID du processus gourmand, puis <code>strace -p [PID]</code> pour voir les appels syst\u00E8me r\u00E9p\u00E9t\u00E9s. Une boucle infinie sans I/O montrera une s\u00E9quence infinie de m\u00EAmes appels (ex: gettimeofday) tr\u00E8s rapide.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Imaginer qu'il s'agisse d'une attaque par d\u00E9ni de service (DoS). Utiliser les cgroups ou les commandes Docker pour isoler dynamiquement ce conteneur sans l'arr\u00EAter, afin de prot\u00E9ger les autres sites.",
+        "niveau": "very hard",
+        "reponse": "M\u00EAme si le conteneur tourne, Docker permet de mettre \u00E0 jour ses limites \u00E0 chaud via <code>docker update</code>. Pour prot\u00E9ger les autres :\n- R\u00E9duire drastiquement son CPU : <code>docker update --cpus=\"0.1\" ecom</code> (limite \u00E0 10% d'un CPU).\n- Limiter le nombre de connexions ou la bande passante (plus complexe, n\u00E9cessite un proxy ou tc).\n- En cgroups manuel : trouver le PID du processus racine du conteneur, puis \u00E9crire dans <code>/sys/fs/cgroup/cpu/docker/[id]/cpu.cfs_quota_us</code>.\nCela \u00E9tranglera le conteneur incrimin\u00E9, lib\u00E9rant des ressources pour les autres tout en le gardant op\u00E9rationnel.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquer comment la commande <code>docker stats</code> utilise les <strong>cgroups</strong> pour collecter les m\u00E9triques, en citant les fichiers virtuels concern\u00E9s.",
+        "niveau": "very hard",
+        "reponse": "Docker lit les pseudo-fichiers expos\u00E9s par le syst\u00E8me de fichiers cgroup v2 (ou v1). Pour un conteneur donn\u00E9 (ID 'abc'), docker stats va lire :\n- CPU : <code>/sys/fs/cgroup/cpu,cpuacct/docker/abc/cpuacct.usage</code> pour le temps CPU consomm\u00E9 et <code>/sys/fs/cgroup/cpu/docker/abc/cpu.cfs_period_us</code> et <code>cpu.cfs_quota_us</code> pour conna\u00EEtre les limites.\n- M\u00E9moire : <code>/sys/fs/cgroup/memory/docker/abc/memory.usage_in_bytes</code> pour l'utilisation et <code>memory.limit_in_bytes</code> pour la limite.\n- I/O : <code>/sys/fs/cgroup/blkio/docker/abc/blkio.throttle.io_service_bytes</code>.\nDocker agr\u00E8ge ces donn\u00E9es pour les afficher en temps r\u00E9el.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

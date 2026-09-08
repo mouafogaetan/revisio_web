@@ -1,0 +1,116 @@
+[
+  {
+    "intitule": "Comparaison Procédure vs Fonction",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>En vous basant sur le cours sur les procédures et fonctions stockées, répondez aux questions suivantes.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer la différence fondamentale entre une procédure stockée et une fonction stockée concernant le type de valeur qu'elles retournent.",
+        "niveau": "easy",
+        "reponse": "Une fonction stockée doit obligatoirement retourner une valeur (via RETURN) d'un type de données spécifique (INT, VARCHAR, etc.), tandis qu'une procédure stockée ne retourne pas de valeur, elle peut uniquement avoir des paramètres de type OUT ou INOUT pour renvoyer des données.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Rappeler dans quel type d'instruction SQL une fonction stockée peut être utilisée, contrairement à une procédure.",
+        "niveau": "medium",
+        "reponse": "Une fonction stockée peut être appelée directement dans une requête SELECT, dans la clause WHERE, ou dans une expression (ex: SELECT ma_fonction(colonne) FROM table). Une procédure doit être appelée avec l'instruction CALL et ne peut pas être utilisée directement dans une requête SQL.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse de code : TVA",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>On considère la fonction stockée suivante en MySQL :</p><pre><code>CREATE FUNCTION calculerPrixTTC(prixHT DECIMAL(10,2), tauxTVA DECIMAL(5,2))<br>RETURNS DECIMAL(10,2)<br>DETERMINISTIC<br>BEGIN<br>    DECLARE prixTTC DECIMAL(10,2);<br>    SET prixTTC = prixHT * (1 + tauxTVA / 100);<br>    RETURN prixTTC;<br>END;</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier le type et le rôle de chaque paramètre de la fonction.",
+        "niveau": "easy",
+        "reponse": "Les deux paramètres sont de type IN (implicite). 'prixHT' représente le prix hors taxes et 'tauxTVA' le pourcentage de TVA (ex: 20 pour 20%).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Calculer le prix TTC pour un article de 150€ HT avec une TVA à 20%. Justifier votre raisonnement.",
+        "niveau": "medium",
+        "reponse": "La fonction calcule 150 * (1 + 20/100) = 150 * 1.20 = 180 €. Le résultat est 180.00.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquer pourquoi le mot-clé DETERMINISTIC est utilisé dans cette fonction.",
+        "niveau": "hard",
+        "reponse": "DETERMINISTIC indique que la fonction retourne toujours le même résultat pour les mêmes paramètres d'entrée. Cela permet au SGBD d'optimiser les requêtes (ex: mise en cache du résultat). Ici, le calcul du TTC est déterministe car il ne dépend que des entrées.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion de bibliothèque",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous êtes administrateur d'une base de données pour une bibliothèque. Vous devez créer une fonction stockée pour gérer les amendes.</p><p>Règles : <br>- 100 FCFA par jour de retard.<br>- Si le retard dépasse 30 jours, une majoration de 20% s'applique sur le total.<br>- Pas d'amende si l'ouvrage est rendu à temps (retard = 0).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevoir le code SQL (MySQL) de la fonction 'calculer_amende' qui prend en paramètre 'nb_jours_retard' (INT) et retourne le montant total de l'amende (DECIMAL(10,2)).",
+        "niveau": "hard",
+        "reponse": "```sql\nCREATE FUNCTION calculer_amende(nb_jours_retard INT)\nRETURNS DECIMAL(10,2)\nDETERMINISTIC\nBEGIN\n    DECLARE amende DECIMAL(10,2);\n    IF nb_jours_retard <= 0 THEN\n        SET amende = 0;\n    ELSE\n        SET amende = nb_jours_retard * 100;\n        IF nb_jours_retard > 30 THEN\n            SET amende = amende * 1.20;\n        END IF;\n    END IF;\n    RETURN amende;\nEND;\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrire la requête SQL utilisant cette fonction pour afficher le titre du livre et l'amende pour un emprunt ayant 45 jours de retard.",
+        "niveau": "medium",
+        "reponse": "SELECT titre, calculer_amende(45) AS amende FROM livres WHERE id_livre = 1; (Résultat : 45*100 = 4500, +20% = 5400 FCFA)",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Conversion de devises",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Dans une application e-commerce, vous gérez des prix en Euros (€). Pour un client basé au Cameroun, vous devez afficher les prix en Francs CFA (XAF). Le taux de change est de 1 € = 655,957 XAF.</p><p>Vous devez créer un ensemble d'outils côté base de données.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créer une fonction 'convertir_en_fcfa' qui prend un prix en € (DECIMAL(10,2)) et retourne le prix en FCFA (arrondi à l'entier supérieur).",
+        "niveau": "hard",
+        "reponse": "```sql\nCREATE FUNCTION convertir_en_fcfa(prix_eur DECIMAL(10,2))\nRETURNS INT\nDETERMINISTIC\nBEGIN\n    DECLARE prix_xaf DECIMAL(15,2);\n    SET prix_xaf = prix_eur * 655.957;\n    RETURN CEILING(prix_xaf);\nEND;\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Imaginer une situation où l'utilisation d'une fonction stockée plutôt qu'un calcul dans l'application serait plus avantageuse. Argumenter.",
+        "niveau": "very hard",
+        "reponse": "Une fonction stockée centralise la logique métier (taux de change) dans la base. Si le taux venait à changer ou si la règle d'arrondi évolue, on modifie uniquement la fonction sans avoir à redéployer l'application. Cela garantit aussi que tous les clients (web, mobile, API) utilisent exactement la même conversion, évitant les incohérences.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposer une amélioration pour que la fonction puisse gérer plusieurs devises sans être modifiée à chaque nouveau taux.",
+        "niveau": "very hard",
+        "reponse": "Créer une table 'taux_change' (id_devise, code_devise, taux_vers_xaf). La fonction prendrait alors deux paramètres : le montant et le code devise. Elle irait chercher le taux correspondant dans la table. Cela rend la fonction non-déterministe (car elle lit une table qui peut changer) mais bien plus flexible.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

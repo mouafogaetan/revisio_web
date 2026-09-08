@@ -1,0 +1,162 @@
+[
+  {
+    "intitule": "Providers personnalisés - useValue, useClass, useFactory",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans NestJS, les providers peuvent être déclarés de différentes manières dans le tableau <code>providers</code> d'un module.</p>\n<p>Répondez aux questions suivantes concernant les types de providers personnalisés.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer la différence entre <code>useValue</code>, <code>useClass</code> et <code>useFactory</code> dans la déclaration d'un provider NestJS.",
+        "niveau": "medium",
+        "reponse": "<code>useValue</code> : fournit une valeur concrète (objet, chaîne, nombre) comme provider. <code>useClass</code> : permet de spécifier une classe qui sera instanciée par le conteneur IoC (utile pour remplacer une implémentation par une autre). <code>useFactory</code> : utilise une fonction factory qui peut avoir ses propres dépendances injectées et permet une création dynamique et asynchrone du provider.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Créer un exemple concret d'utilisation de <code>useFactory</code> pour configurer un client Redis en fonction d'une variable d'environnement.",
+        "niveau": "medium",
+        "reponse": "<pre><code>// redis.provider.ts\nexport const RedisProvider = {\n  provide: 'REDIS_CLIENT',\n  useFactory: async (configService: ConfigService) => {\n    const client = redis.createClient({\n      url: configService.get('REDIS_URL'),\n    });\n    await client.connect();\n    return client;\n  },\n  inject: [ConfigService],\n};\n\n// app.module.ts\n@Module({\n  providers: [RedisProvider],\n})\nexport class AppModule {}</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Analyser un scénario où <code>useClass</code> serait préférable à <code>useFactory</code> et vice-versa.",
+        "niveau": "hard",
+        "reponse": "<code>useClass</code> est préférable quand on veut simplement substituer une implémentation par une autre (ex: <code>EmailService</code> remplacé par <code>MockEmailService</code> en test) sans logique complexe. <code>useFactory</code> est préférable quand la création du provider nécessite : (1) des opérations asynchrones (connexion à une base), (2) des calculs dynamiques basés sur d'autres providers, (3) des conditions complexes (choisir entre plusieurs implémentations selon un flag).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Implémentation d'un provider asynchrone pour une base de données",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous développez une application NestJS qui doit se connecter à une base de données MongoDB. La connexion est asynchrone (retourne une Promise). Vous devez créer un provider personnalisé nommé <code>DATABASE_CONNECTION</code> qui sera injectable dans les services.</p>\n<p>Le module <code>DatabaseModule</code> doit exposer cette connexion. Utilisez <code>useFactory</code> avec injection de <code>ConfigService</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire le code complet du provider asynchrone <code>DATABASE_CONNECTION</code> en utilisant <code>mongoose.connect()</code>.",
+        "niveau": "hard",
+        "reponse": "<pre><code>// database.providers.ts\nimport { Provider } from '@nestjs/common';\nimport { ConfigService } from '@nestjs/config';\nimport * as mongoose from 'mongoose';\n\nexport const DATABASE_CONNECTION = 'DATABASE_CONNECTION';\n\nexport const databaseProviders: Provider[] = [\n  {\n    provide: DATABASE_CONNECTION,\n    useFactory: async (configService: ConfigService) => {\n      const uri = configService.get&lt;string&gt;('MONGODB_URI');\n      const connection = await mongoose.connect(uri);\n      return connection;\n    },\n    inject: [ConfigService],\n  },\n];\n\n// database.module.ts\nimport { Module } from '@nestjs/common';\nimport { databaseProviders } from './database.providers';\n\n@Module({\n  providers: [...databaseProviders],\n  exports: [...databaseProviders],\n})\nexport class DatabaseModule {}</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer comment un service pourrait injecter et utiliser cette connexion via <code>@Inject()</code>.",
+        "niveau": "medium",
+        "reponse": "<pre><code>import { Injectable, Inject } from '@nestjs/common';\nimport { Connection } from 'mongoose';\nimport { DATABASE_CONNECTION } from './database.providers';\n\n@Injectable()\nexport class UserService {\n  constructor(\n    @Inject(DATABASE_CONNECTION) private connection: Connection,\n  ) {}\n\n  async getUsers() {\n    return this.connection.model('User').find();\n  }\n}</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Justifier l'utilisation d'un token personnalisé (<code>DATABASE_CONNECTION</code>) plutôt que d'utiliser directement la classe <code>Connection</code> comme token.",
+        "niveau": "hard",
+        "reponse": "Utiliser un token personnalisé (string ou symbol) plutôt que la classe présente plusieurs avantages : (1) On peut injecter des valeurs qui ne sont pas des classes (connexion, configuration, client externe). (2) On évite les conflits de nommage si plusieurs providers de même type existent. (3) On peut avoir plusieurs connexions différentes (ex: <code>READ_DATABASE_CONNECTION</code> et <code>WRITE_DATABASE_CONNECTION</code>). (4) On découple l'injection de l'implémentation concrète, facilitant les mocks en test.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Injection avec @Inject et tokens personnalisés",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>On souhaite injecter une valeur de configuration simple dans un service sans passer par <code>ConfigService</code>.</p>\n<p>Créez un provider <code>APP_NAME</code> qui fournit une chaîne de caractères, puis injectez-la dans <code>AppService</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire la déclaration du provider <code>APP_NAME</code> dans <code>AppModule</code> en utilisant <code>useValue</code>.",
+        "niveau": "easy",
+        "reponse": "<pre><code>// app.module.ts\nimport { Module } from '@nestjs/common';\n\nexport const APP_NAME = 'APP_NAME';\n\n@Module({\n  providers: [\n    {\n      provide: APP_NAME,\n      useValue: 'MonApplicationSuper',\n    },\n  ],\n})\nexport class AppModule {}</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrire le code du <code>AppService</code> qui injecte <code>APP_NAME</code> via <code>@Inject()</code> et expose une méthode <code>getAppName()</code>.",
+        "niveau": "easy",
+        "reponse": "<pre><code>// app.service.ts\nimport { Injectable, Inject } from '@nestjs/common';\nimport { APP_NAME } from './app.module';\n\n@Injectable()\nexport class AppService {\n  constructor(@Inject(APP_NAME) private readonly appName: string) {}\n\n  getAppName(): string {\n    return this.appName;\n  }\n}</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Discuter les avantages et inconvénients d'utiliser des tokens string (comme <code>'APP_NAME'</code>) versus des symboles ou des classes comme tokens.",
+        "niveau": "hard",
+        "reponse": "Avantages des tokens string : simplicité, lisibilité, facilité de débogage. Inconvénients : risques de collision (deux providers avec le même nom), pas de vérification de type à la compilation. Avantages des symboles : unicité garantie, évite les collisions. Avantages des classes comme tokens : bénéficient du typage TypeScript, meilleure intégration avec l'IDE. Pratique courante : utiliser une constante exportée (string ou symbole) pour éviter les erreurs de frappe.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Provider asynchrone avec gestion d'erreur",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous devez créer un provider asynchrone qui se connecte à une API externe (ex: service de météo). Si la connexion échoue, le provider doit réessayer 3 fois avec un délai exponentiel, puis échouer proprement.</p>\n<p>Le token du provider est <code>WEATHER_API_CLIENT</code>. Utilisez <code>useFactory</code> avec une fonction asynchrone.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémenter la fonction factory avec la logique de retry (réessayer 3 fois, délai exponentiel : 1s, 2s, 4s).",
+        "niveau": "very hard",
+        "reponse": "<pre><code>// weather.provider.ts\nimport { Provider } from '@nestjs/common';\nimport { ConfigService } from '@nestjs/config';\n\nexport const WEATHER_API_CLIENT = 'WEATHER_API_CLIENT';\n\nconst delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));\n\nasync function connectWithRetry(url: string, retries = 3): Promise<any> {\n  for (let i = 0; i < retries; i++) {\n    try {\n      // Simulation de connexion à l'API\n      const response = await fetch(url);\n      if (response.ok) return response;\n      throw new Error(`HTTP ${response.status}`);\n    } catch (error) {\n      if (i === retries - 1) throw error;\n      const waitTime = Math.pow(2, i) * 1000;\n      await delay(waitTime);\n    }\n  }\n}\n\nexport const WeatherProvider: Provider = {\n  provide: WEATHER_API_CLIENT,\n  useFactory: async (configService: ConfigService) => {\n    const apiUrl = configService.get('WEATHER_API_URL');\n    const client = await connectWithRetry(apiUrl);\n    return client;\n  },\n  inject: [ConfigService],\n};</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer comment gérer le cas où le provider échoue définitivement pour que l'application NestJS ne crashe pas au démarrage.",
+        "niveau": "hard",
+        "reponse": "Pour éviter que l'application ne crashe, on peut : (1) Capturer l'erreur dans la factory et retourner un client mocké ou null, (2) Utiliser un mécanisme de fallback (ex: service de cache), (3) Démarrer l'application normalement mais marquer le service comme dégradé et journaliser l'erreur. Une approche recommandée est d'utiliser <code>onApplicationBootstrap</code> pour initialiser le provider après le démarrage, ou d'utiliser un module optionnel avec <code>optional: true</code>.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposer une amélioration pour que le provider soit réinitialisable dynamiquement (sans redémarrer l'application).",
+        "niveau": "very hard",
+        "reponse": "On peut implémenter un service dédié (ex: <code>WeatherClientService</code>) qui gère lui-même la connexion et le retry. Ce service expose une méthode <code>reconnect()</code> et notifie les consommateurs via un EventEmitter ou RxJS Subject. On utilise alors un provider standard (<code>useClass</code>) avec injection de <code>ConfigService</code>. La logique de retry est dans le service, et on peut appeler <code>reconnect()</code> programmatiquement depuis un contrôleur d'administration.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Comparaison des stratégies d'injection",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Voici trois situations courantes. Pour chacune, choisissez la stratégie d'injection la plus appropriée parmi : <code>useValue</code>, <code>useClass</code>, <code>useFactory</code>. Justifiez.</p>\n<ul>\n  <li>Situation A : Fournir une constante de configuration (ex: port du serveur).</li>\n  <li>Situation B : Remplacer un service par une version mockée pendant les tests.</li>\n  <li>Situation C : Initialiser un client SDK externe qui nécessite une configuration asynchrone (ex: connexion à Stripe avec clé API chargée depuis .env).</li>\n</ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier pour chaque situation (A, B, C) la stratégie d'injection appropriée et justifier le choix.",
+        "niveau": "hard",
+        "reponse": "Situation A - useValue : une constante simple n'a pas besoin de logique de création. Situation B - useClass : permet de substituer une implémentation par une autre (ex: <code>EmailService</code> → <code>MockEmailService</code>) en modifiant uniquement le module de test. Situation C - useFactory : nécessaire car l'initialisation est asynchrone et dépend de <code>ConfigService</code>. La factory peut attendre la promesse de connexion.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Rédiger un exemple de code pour la situation B (remplacement par un mock en test) en utilisant <code>useClass</code>.",
+        "niveau": "medium",
+        "reponse": "<pre><code>// email.service.ts (réel)\nexport class EmailService {\n  async send(email: string, content: string) { /* envoi réel */ }\n}\n\n// mock-email.service.ts\nexport class MockEmailService {\n  async send(email: string, content: string) {\n    console.log(`Mock: email envoyé à ${email}`);\n    return Promise.resolve();\n  }\n}\n\n// test.module.ts\n@Module({\n  providers: [\n    {\n      provide: EmailService,\n      useClass: MockEmailService,\n    },\n  ],\n})\nexport class TestModule {}</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Critiquer l'utilisation systématique de <code>useFactory</code> pour tous les providers, même simples, et proposer des bonnes pratiques.",
+        "niveau": "hard",
+        "reponse": "Utiliser <code>useFactory</code> pour tous les providers est une mauvaise pratique car : (1) Cela ajoute une complexité inutile, (2) Cela rend le code moins lisible, (3) Cela peut masquer des erreurs simples. Bonnes pratiques : (a) Préférer <code>useClass</code> pour les providers standards, (b) Utiliser <code>useValue</code> pour les constantes et configurations, (c) Réserver <code>useFactory</code> aux cas nécessitant une logique dynamique ou asynchrone, (d) Toujours documenter pourquoi un factory est nécessaire.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

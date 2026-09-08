@@ -1,0 +1,144 @@
+[
+  {
+    "intitule": "Identifier les ressources Terraform pour AWS",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous découvrez un fichier Terraform <code>main.tf</code> contenant le bloc suivant :</p><pre><code>provider &quot;aws&quot; {\n  region = &quot;us-east-1&quot;\n}\n\nresource &quot;aws_instance&quot; &quot;web&quot; {\n  ami           = &quot;ami-0c55b159cbfafe1f0&quot;\n  instance_type = &quot;t2.micro&quot;\n}\n</code></pre><p>Répondez aux questions suivantes en vous basant sur ce code.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier le fournisseur (provider) utilisé et la région par défaut.",
+        "niveau": "easy",
+        "reponse": "Le fournisseur est `aws` (Amazon Web Services) et la région par défaut est `us-east-1` (Virginie du Nord).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Reconnaître le type de ressource créée et l’identifier dans le code.",
+        "niveau": "easy",
+        "reponse": "Le type de ressource est `aws_instance`, ce qui correspond à une instance EC2. L’identifiant local de cette ressource est `web`.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquer à quoi servent les arguments `ami` et `instance_type`.",
+        "niveau": "medium",
+        "reponse": "`ami` (Amazon Machine Image) définit le système d’exploitation et les logiciels de base de l’instance. `instance_type` définit les ressources matérielles (CPU, mémoire) de l’instance. Ici `t2.micro` est éligible au free tier.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyser un plan Terraform pour AWS",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un DevOps exécute <code>terraform plan</code> et obtient l’extrait suivant :</p><pre><code>  + resource &quot;aws_s3_bucket&quot; &quot;data&quot; {\n      + bucket = &quot;mon-bucket-devops-2025&quot;\n      + acl    = &quot;private&quot;\n      + tags   = {\n          + &quot;Environment&quot; = &quot;dev&quot;\n          + &quot;ManagedBy&quot;   = &quot;Terraform&quot;\n        }\n    }</code></pre><p>L’équipe souhaite stocker des fichiers sensibles (logs d’application) dans ce bucket.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Interpréter le symbole `+` dans la sortie de `terraform plan`.",
+        "niveau": "easy",
+        "reponse": "Le symbole `+` indique que Terraform va créer une nouvelle ressource (ajout).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Discuter du choix de l’ACL `private` pour ce bucket. Est-ce adapté pour des logs sensibles ? Justifier.",
+        "niveau": "medium",
+        "reponse": "Oui, `private` est adapté car il interdit tout accès public par défaut. Pour des logs sensibles, il est recommandé d’activer le blocage de l’accès public au niveau du bucket et du compte AWS, ainsi que le chiffrement côté serveur.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposer une amélioration de sécurité pour ce bucket en utilisant une ressource Terraform supplémentaire.",
+        "niveau": "hard",
+        "reponse": "Ajouter `aws_s3_bucket_public_access_block` pour bloquer tout accès public, et activer le chiffrement AES-256 avec `aws_s3_bucket_server_side_encryption_configuration`.",
+        "sousQuestions": [
+          {
+            "numero": "3.a",
+            "texte": "Rédiger le bloc Terraform correspondant à cette amélioration.",
+            "niveau": "hard",
+            "reponse": "```hcl\nresource \"aws_s3_bucket_public_access_block\" \"data_block\" {\n  bucket = aws_s3_bucket.data.id\n\n  block_public_acls       = true\n  block_public_policy     = true\n  ignore_public_acls      = true\n  restrict_public_buckets = true\n}\n\nresource \"aws_s3_bucket_server_side_encryption_configuration\" \"data_encrypt\" {\n  bucket = aws_s3_bucket.data.id\n\n  rule {\n    apply_server_side_encryption_by_default {\n      sse_algorithm = \"AES256\"\n    }\n  }\n}\n```"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Dépannage d’un déploiement EC2 avec Terraform",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Une équipe tente de provisionner une instance EC2 avec Terraform mais obtient l’erreur suivante lors du <code>terraform apply</code> :</p><pre><code>Error: Error launching source instance: VpcIdNotSpecified: No default VPC found in region 'eu-west-3'.\n</code></pre><p>Le code utilisé est :</p><pre><code>resource &quot;aws_instance&quot; &quot;app&quot; {\n  ami           = &quot;ami-0abcdef1234567890&quot;\n  instance_type = &quot;t3.micro&quot;\n}</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Diagnostiquer l’origine de cette erreur.",
+        "niveau": "medium",
+        "reponse": "L’erreur indique qu’il n’y a pas de VPC par défaut dans la région `eu-west-3` (Paris). Soit le compte AWS n’a pas de VPC par défaut (supprimé ou jamais créé), soit la région ne supporte pas le VPC par défaut. Terraform tente d’utiliser le VPC par défaut implicitement.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer deux solutions pour résoudre ce problème en modifiant le code Terraform.",
+        "niveau": "hard",
+        "reponse": "Solution 1 : Spécifier explicitement un subnet ID dans la ressource EC2 (`subnet_id = \"subnet-123456\"`).\nSolution 2 : Créer un VPC et un subnet avec Terraform puis y lancer l’instance.",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Écrire le code minimal de la solution 2 (création d’un VPC, d’un subnet et lien avec l’instance).",
+            "niveau": "very hard",
+            "reponse": "```hcl\nresource \"aws_vpc\" \"main\" {\n  cidr_block = \"10.0.0.0/16\"\n}\n\nresource \"aws_subnet\" \"main\" {\n  vpc_id     = aws_vpc.main.id\n  cidr_block = \"10.0.1.0/24\"\n}\n\nresource \"aws_instance\" \"app\" {\n  ami           = \"ami-0abcdef1234567890\"\n  instance_type = \"t3.micro\"\n  subnet_id     = aws_subnet.main.id\n}\n```"
+          }
+        ]
+      },
+      {
+        "numero": 3,
+        "texte": "Justifier pourquoi il est conseillé d’utiliser des variables pour l’AMI plutôt qu’une valeur en dur.",
+        "niveau": "medium",
+        "reponse": "Les AMI sont spécifiques à une région et changent régulièrement (mises à jour de sécurité). Utiliser une variable permet de rendre le code portable entre régions et de récupérer dynamiquement la dernière AMI via `data \"aws_ami\"`.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Conception d’une infrastructure scalable sur AWS avec Terraform",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous devez concevoir l’infrastructure suivante pour une application web :</p>\n<ul>\n  <li>Un VPC avec 2 sous-réseaux publics et 2 sous-réseaux privés.</li>\n  <li>Une instance EC2 dans un sous-réseau public (bastion) avec une IP élastique.</li>\n  <li>Un bucket S3 pour stocker les fichiers statiques du site.</li>\n  <li>Un Security Group autorisant SSH (port 22) uniquement depuis l’IP du bastion et HTTP (port 80) depuis Internet.</li>\n</ul>\n<p>Les élèves doivent écrire un fichier Terraform structuré respectant ces contraintes.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Organiser le code Terraform en plusieurs fichiers pour plus de clarté (variables, outputs, main, security groups). Lister les fichiers et leur contenu.",
+        "niveau": "very hard",
+        "reponse": "`variables.tf` : déclaration des variables (region, vpc_cidr, etc.)\n`main.tf` : provider, VPC, subnets, EC2, S3, associations\n`security.tf` : security groups\n`outputs.tf` : IP élastique, ID du bucket, etc.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Écrire le bloc du security group dans `security.tf` en respectant les règles décrites.",
+            "niveau": "very hard",
+            "reponse": "```hcl\nresource \"aws_security_group\" \"web_bastion_sg\" {\n  name        = \"web-bastion-sg\"\n  vpc_id      = aws_vpc.main.id\n\n  ingress {\n    from_port   = 22\n    to_port     = 22\n    protocol    = \"tcp\"\n    cidr_blocks = [aws_eip.bastion.public_ip]  # Dépendance circulaire à gérer avec `depends_on` ou en dissociant\n  }\n\n  ingress {\n    from_port   = 80\n    to_port     = 80\n    protocol    = \"tcp\"\n    cidr_blocks = [\"0.0.0.0/0\"]\n  }\n\n  egress {\n    from_port   = 0\n    to_port     = 0\n    protocol    = \"-1\"\n    cidr_blocks = [\"0.0.0.0/0\"]\n  }\n}\n```\n(Remarque : pour éviter la dépendance circulaire, on peut créer la SG sans la règle SSH bastion puis l’attacher après, ou utiliser une règle avec `self` ou un groupe de sécurité dédié).",
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer pourquoi il est préférable d’utiliser des modules Terraform pour ce type d’architecture.",
+        "niveau": "hard",
+        "reponse": "Les modules permettent la réutilisabilité du code (par exemple pour créer plusieurs environnements : dev, staging, prod), réduisent la duplication, améliorent la maintenabilité et facilitent le versioning de l’infrastructure.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

@@ -1,0 +1,162 @@
+[
+  {
+    "intitule": "Affichage des produits dans le panier - Structure et rendu conditionnel",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous devez afficher la liste des articles présents dans le panier d'un utilisateur. Chaque article possède : une image, un nom, un prix unitaire, une quantité et un bouton de suppression. Le panier est stocké dans un store Zustand.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez la structure d'un store Zustand pour le panier contenant les items et une fonction pour retirer un article.",
+        "niveau": "easy",
+        "reponse": "```js\nconst useCartStore = create((set) => ({\n  items: [],\n  removeItem: (id) => set((state) => ({\n    items: state.items.filter(item => item.id !== id)\n  }))\n}));\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrivez le composant CartItem qui affiche les informations d'un produit (image, nom, prix, quantité) avec un bouton pour le supprimer du panier.",
+        "niveau": "medium",
+        "reponse": "```jsx\nfunction CartItem({ item }) {\n  const removeItem = useCartStore(state => state.removeItem);\n  return (\n    <div className=\"flex gap-4 items-center border-b py-4\">\n      <img src={item.image} alt={item.name} className=\"w-20 h-20 object-cover\" />\n      <div className=\"flex-1\">\n        <h3 className=\"font-semibold\">{item.name}</h3>\n        <p className=\"text-gray-600\">{item.price} €</p>\n        <p>Quantité : {item.quantity}</p>\n      </div>\n      <button onClick={() => removeItem(item.id)} className=\"text-red-500\">Supprimer</button>\n    </div>\n  );\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquez comment afficher un message \"Votre panier est vide\" lorsque la liste des items est vide.",
+        "niveau": "easy",
+        "reponse": "```jsx\nconst items = useCartStore(state => state.items);\nif (items.length === 0) {\n  return <div className=\"text-center py-8\">Votre panier est vide</div>;\n}\nreturn <div>{items.map(item => <CartItem key={item.id} item={item} />)}</div>;\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Modification de la quantité d'un article et mise à jour du sous-total",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans la page panier, l'utilisateur doit pouvoir modifier la quantité de chaque article à l'aide d'un sélecteur (input number ou boutons + / -). Le sous-total de l'article (prix × quantité) doit se mettre à jour en temps réel.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créez une fonction updateQuantity dans le store Zustand qui modifie la quantité d'un article spécifique.",
+        "niveau": "medium",
+        "reponse": "```js\nupdateQuantity: (id, newQuantity) => set((state) => ({\n  items: state.items.map(item =>\n    item.id === id ? { ...item, quantity: Math.max(1, newQuantity) } : item\n  )\n}))\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Implémentez un composant QuantitySelector qui affiche la quantité actuelle et permet de l'incrémenter/décrémenter. Justifiez l'utilisation de Math.max pour éviter les quantités négatives.",
+        "niveau": "medium",
+        "reponse": "```jsx\nfunction QuantitySelector({ itemId, quantity }) {\n  const updateQuantity = useCartStore(state => state.updateQuantity);\n  return (\n    <div className=\"flex items-center gap-2\">\n      <button onClick={() => updateQuantity(itemId, quantity - 1)} disabled={quantity <= 1}>-</button>\n      <span>{quantity}</span>\n      <button onClick={() => updateQuantity(itemId, quantity + 1)}>+</button>\n    </div>\n  );\n}\n```\nMath.max(1, newQuantity) empêche la quantité de descendre en dessous de 1, évitant ainsi d'avoir un article avec quantité 0 ou négative.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Calculez le sous-total d'un article (prix × quantité) et affichez-le dynamiquement. Expliquez comment optimiser ce calcul pour éviter des re-rendus inutiles.",
+        "niveau": "hard",
+        "reponse": "Le sous-total peut être calculé directement dans le composant CartItem : `{item.price * item.quantity} €`. Pour optimiser, on peut utiliser `React.memo` sur CartItem pour éviter le re-rendu des articles non modifiés. On peut aussi utiliser un sélecteur Zustand qui ne s'abonne qu'aux changements de cet article spécifique.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Calcul du total du panier : taxes et frais de livraison",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Le panier doit afficher : le sous-total (somme des prix × quantités), la TVA (20% du sous-total), les frais de livraison (offerts à partir de 50€, sinon 5€), et le total final.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créez une fonction `getCartTotals` dans le store Zustand qui utilise `get()` pour calculer et retourner ces différentes valeurs.",
+        "niveau": "hard",
+        "reponse": "```js\ngetCartTotals: () => {\n  const { items } = get();\n  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);\n  const tax = subtotal * 0.20;\n  const shipping = subtotal >= 50 ? 0 : 5;\n  const total = subtotal + tax + shipping;\n  return { subtotal, tax, shipping, total };\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez pourquoi il est préférable de placer cette logique de calcul dans le store plutôt que dans le composant.",
+        "niveau": "medium",
+        "reponse": "Placer la logique métier dans le store permet de centraliser les règles (ex: seuil de livraison gratuite). Cela évite la duplication si plusieurs composants ont besoin de ces totaux. De plus, les calculs sont effectués uniquement quand le panier change, et peuvent être mémoïsés.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Implémentez un composant `CartSummary` qui affiche ces différentes lignes de calcul et le total.",
+        "niveau": "medium",
+        "reponse": "```jsx\nfunction CartSummary() {\n  const getCartTotals = useCartStore(state => state.getCartTotals);\n  const { subtotal, tax, shipping, total } = getCartTotals();\n  return (\n    <div className=\"border-t pt-4 mt-4\">\n      <p>Sous-total : {subtotal.toFixed(2)} €</p>\n      <p>TVA (20%) : {tax.toFixed(2)} €</p>\n      <p>Livraison : {shipping === 0 ? 'Gratuite' : shipping + ' €'}</p>\n      <p className=\"font-bold\">Total : {total.toFixed(2)} €</p>\n    </div>\n  );\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation des re-rendus dans la liste du panier",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Le panier peut contenir de nombreux articles. Chaque modification (changement de quantité, suppression) provoque un re-rendu de toute la liste. Vous devez optimiser les performances.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez le rôle de `React.memo` et comment l'appliquer au composant `CartItem` pour éviter les re-rendus inutiles.",
+        "niveau": "medium",
+        "reponse": "`React.memo` est un HOC qui mémoïse un composant : il ne le re-rend que si ses props changent (shallow comparison). Appliqué à CartItem, si seuls les autres articles changent, l'article non modifié ne sera pas re-rendu. Exemple : `export default React.memo(CartItem);`",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Quel problème peut survenir avec `React.memo` si les fonctions passées en props (comme `updateQuantity`) sont recréées à chaque rendu du parent ? Proposez une solution.",
+        "niveau": "hard",
+        "reponse": "Si la fonction `updateQuantity` est redéfinie à chaque rendu, `React.memo` considérera que la prop a changé et re-rendra le composant. La solution est d'utiliser `useCallback` pour stabiliser la fonction, ou mieux, d'utiliser directement la fonction du store Zustand qui est déjà stable (car elle ne change pas entre les rendus).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Comparez l'utilisation de `React.memo` avec la virtualisation (react-window) pour une très longue liste de panier (100+ articles).",
+        "niveau": "very hard",
+        "reponse": "`React.memo` évite les re-rendus inutiles mais tous les éléments restent dans le DOM, ce qui peut être lourd pour 100+ articles. La virtualisation (react-window) ne rend que les éléments visibles à l'écran, ce qui est plus performant pour de très longues listes. Pour un panier, la virtualisation est rarement nécessaire car un utilisateur a rarement plus de 20 articles.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion des stocks et messages d'erreur dans le panier",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Avant validation de la commande, il faut vérifier que la quantité demandée ne dépasse pas le stock disponible. Si c'est le cas, afficher un message d'erreur et désactiver la validation.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créez une fonction `validateStock` dans le store panier qui compare chaque article avec son stock réel (depuis un appel API ou un cache) et retourne les articles en rupture.",
+        "niveau": "very hard",
+        "reponse": "```js\nvalidateStock: async () => {\n  const { items } = get();\n  const stockPromises = items.map(item => fetch(`/api/products/${item.id}/stock`).then(res => res.json()));\n  const stocks = await Promise.all(stockPromises);\n  const errors = items.filter((item, idx) => item.quantity > stocks[idx].available);\n  set({ stockErrors: errors });\n  return errors.length === 0;\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Affichez un message d'erreur sous chaque article dont la quantité dépasse le stock disponible.",
+        "niveau": "medium",
+        "reponse": "```jsx\n{stockErrors.some(e => e.id === item.id) && (\n  <p className=\"text-red-500 text-sm\">Stock insuffisant. Maximum disponible : {item.maxStock}</p>\n)}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposez une stratégie pour vérifier les stocks en temps réel pendant que l'utilisateur modifie les quantités (sans appeler l'API à chaque frappe).",
+        "niveau": "very hard",
+        "reponse": "On peut charger le stock maximum pour chaque article au moment de l'ajout au panier ou au chargement de la page panier, et le stocker dans une Map locale. Ensuite, lors de la modification de quantité, on vérifie localement : `newQuantity <= maxStock`. Un indicateur visuel (icône de vérification) peut rafraîchir le stock manuellement. La validation finale doit toujours être faite côté serveur.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

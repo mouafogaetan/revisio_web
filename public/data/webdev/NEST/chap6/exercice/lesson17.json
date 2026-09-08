@@ -1,0 +1,141 @@
+[
+  {
+    "intitule": "Middleware de logging - Analyse et implémentation",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans une application NestJS, on souhaite créer un middleware qui journalise (log) chaque requête entrante avec les informations suivantes : méthode HTTP, URL, timestamp, et la durée d'exécution de la requête.</p>\n<p>Voici un squelette de middleware :</p>\n<pre><code>import { Injectable, NestMiddleware } from '@nestjs/common';\nimport { Request, Response, NextFunction } from 'express';\n\n@Injectable()\nexport class LoggerMiddleware implements NestMiddleware {\n  use(req: Request, res: Response, next: NextFunction) {\n    // À compléter\n  }\n}</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer le rôle du paramètre <code>next</code> dans un middleware NestJS et ce qui se passe si on ne l'appelle pas.",
+        "niveau": "easy",
+        "reponse": "La fonction <code>next()</code> est une fonction qui permet de passer la main au middleware suivant ou au contrôleur. Si on ne l'appelle pas, la requête reste bloquée et le client n'obtient jamais de réponse (timeout ou requête pendante).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Compléter le code du middleware LoggerMiddleware pour afficher dans la console : <code>[METHOD] URL - Début à timestamp</code> au début de la requête, et <code>[METHOD] URL - Durée: Xms</code> à la fin, où X est le temps écoulé en millisecondes.",
+        "niveau": "medium",
+        "reponse": "<pre><code>use(req: Request, res: Response, next: NextFunction) {\n  const start = Date.now();\n  const { method, originalUrl } = req;\n  console.log(`[${method}] ${originalUrl} - Début à ${new Date().toISOString()}`);\n  \n  res.on('finish', () => {\n    const duration = Date.now() - start;\n    console.log(`[${method}] ${originalUrl} - Durée: ${duration}ms`);\n  });\n  \n  next();\n}</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Identifier et justifier la différence entre un middleware, un guard et un interceptor dans le cycle de vie d'une requête NestJS.",
+        "niveau": "hard",
+        "reponse": "Le middleware s'exécute en premier. Il est le plus bas niveau et ne connaît pas le contexte d'exécution (contrôleur/méthode visée). Le guard s'exécute après le middleware, juste avant l'interceptor. Il a accès au contexte d'exécution (ExecutionContext) et permet de décider de l'accès (authentification, rôles). L'interceptor s'exécute après le guard (avant et après le contrôleur). Il permet de transformer la réponse, de mesurer le temps d'exécution ou de modifier le flux de données.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Configuration d'un middleware d'authentification basique",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous développez une API NestJS pour une boutique en ligne. Certaines routes (ex: <code>/admin/*</code>) doivent être protégées par un token d'API simple (clé statique).</p>\n<p>On vous demande de créer un middleware qui vérifie la présence d'un header <code>X-API-Key</code> et compare sa valeur à une clé secrète <code>SUPER_SECRET_KEY</code> stockée dans les variables d'environnement. Si la clé est absente ou incorrecte, le middleware doit retourner une erreur 401 Unauthorized.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémenter la classe <code>ApiKeyMiddleware</code> qui répond à la spécification ci-dessus.",
+        "niveau": "medium",
+        "reponse": "<pre><code>import { Injectable, NestMiddleware, UnauthorizedException } from '@nestjs/common';\nimport { Request, Response, NextFunction } from 'express';\nimport { ConfigService } from '@nestjs/config';\n\n@Injectable()\nexport class ApiKeyMiddleware implements NestMiddleware {\n  constructor(private configService: ConfigService) {}\n  \n  use(req: Request, res: Response, next: NextFunction) {\n    const apiKey = req.headers['x-api-key'];\n    const validKey = this.configService.get('SUPER_SECRET_KEY');\n    \n    if (!apiKey || apiKey !== validKey) {\n      throw new UnauthorizedException('Clé API invalide ou manquante');\n    }\n    \n    next();\n  }\n}</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer comment appliquer ce middleware uniquement aux routes commençant par <code>/admin</code> dans un module NestJS.",
+        "niveau": "medium",
+        "reponse": "Dans le module concerné (ex: AdminModule), on implémente l'interface <code>NestModule</code> et on utilise la méthode <code>configure()</code> : <pre><code>export class AdminModule implements NestModule {\n  configure(consumer: MiddlewareConsumer) {\n    consumer.apply(ApiKeyMiddleware).forRoutes('admin/*');\n  }\n}</code></pre> On peut aussi utiliser <code>forRoutes({ path: 'admin', method: RequestMethod.ALL })</code> pour une route spécifique.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Analyser les avantages et inconvénients d'utiliser un middleware plutôt qu'un guard pour cette authentification par clé API. Justifier votre réponse.",
+        "niveau": "hard",
+        "reponse": "Avantages du middleware : simplicité, exécution très tôt dans le cycle, pas besoin de connaitre le contexte. Inconvénients : ne permet pas d'accéder facilement aux métadonnées des contrôleurs (comme les rôles), plus difficile à paramétrer finement par route. Le guard serait plus approprié si on avait besoin de combiner cette authentification avec des rôles ou des permissions différentes selon les endpoints, car il a accès à ExecutionContext.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Comparaison des mécanismes cross-cutting",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Voici trois situations fréquentes dans une API NestJS. Pour chacune, indiquer le mécanisme approprié parmi : Middleware, Guard, Interceptor, Pipe, ExceptionFilter. Justifier le choix.</p>\n<ul>\n  <li>Situation A : Vérifier qu'un utilisateur est connecté et possède le rôle 'admin' avant d'accéder à une route.</li>\n  <li>Situation B : Modifier la structure de la réponse JSON pour ajouter un champ <code>timestamp</code> à toutes les réponses de l'API.</li>\n  <li>Situation C : Enregistrer dans un fichier l'adresse IP et la date de chaque requête entrante.</li>\n</ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier pour chaque situation (A, B, C) le mécanisme NestJS le plus adapté et expliquer pourquoi.",
+        "niveau": "hard",
+        "reponse": "A - Guard : les guards sont spécialement conçus pour l'authentification et l'autorisation. Ils ont accès au contexte d'exécution et peuvent lire les métadonnées (rôles). B - Interceptor : les interceptors peuvent transformer la réponse avant qu'elle ne soit envoyée. On peut créer un interceptor qui enveloppe la réponse dans un objet contenant timestamp. C - Middleware : c'est une tâche de logging bas niveau qui n'a pas besoin du contexte d'exécution. Le middleware s'exécute très tôt et peut enregistrer l'IP et la date avant tout traitement.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Créer un squelette de code pour le mécanisme choisi à la situation B (ajout d'un timestamp dans la réponse).",
+        "niveau": "medium",
+        "reponse": "<pre><code>import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nestjs/common';\nimport { Observable } from 'rxjs';\nimport { map } from 'rxjs/operators';\n\n@Injectable()\nexport class TimestampInterceptor implements NestInterceptor {\n  intercept(context: ExecutionContext, next: CallHandler): Observable&lt;any&gt; {\n    return next.handle().pipe(\n      map(data => ({\n        timestamp: new Date().toISOString(),\n        data: data\n      }))\n    );\n  }\n}</code></pre>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Middleware d'analyse de trafic",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous gérez une API NestJS qui rencontre des pics de trafic. Vous devez compter le nombre de requêtes par minute et bloquer temporairement les adresses IP qui dépassent 100 requêtes par minute (rate limiting simple).</p>\n<p>Implémentez un middleware <code>RateLimitMiddleware</code> qui stocke en mémoire (Map) le nombre de requêtes par IP et par tranche de 60 secondes. Si le seuil est dépassé, le middleware doit retourner une erreur 429 Too Many Requests.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire le code complet du middleware de rate limiting respectant la spécification.",
+        "niveau": "hard",
+        "reponse": "<pre><code>import { Injectable, NestMiddleware, HttpException, HttpStatus } from '@nestjs/common';\nimport { Request, Response, NextFunction } from 'express';\n\n@Injectable()\nexport class RateLimitMiddleware implements NestMiddleware {\n  private requests = new Map&lt;string, { count: number; timestamp: number }&gt;();\n  private readonly LIMIT = 100;\n  private readonly WINDOW_MS = 60000;\n\n  use(req: Request, res: Response, next: NextFunction) {\n    const ip = req.ip || req.connection.remoteAddress || 'unknown';\n    const now = Date.now();\n    const record = this.requests.get(ip);\n\n    if (!record) {\n      this.requests.set(ip, { count: 1, timestamp: now });\n      return next();\n    }\n\n    const elapsed = now - record.timestamp;\n\n    if (elapsed < this.WINDOW_MS) {\n      if (record.count >= this.LIMIT) {\n        throw new HttpException('Trop de requêtes', HttpStatus.TOO_MANY_REQUESTS);\n      }\n      record.count++;\n      this.requests.set(ip, record);\n    } else {\n      this.requests.set(ip, { count: 1, timestamp: now });\n    }\n\n    next();\n  }\n}</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Discuter les limites de cette implémentation en mémoire et proposer une alternative pour une application en production (plusieurs instances).",
+        "niveau": "hard",
+        "reponse": "Limites : En mémoire, les données ne sont pas partagées entre plusieurs instances du serveur (load balancing). Si l'application redémarre, le compteur est perdu. Alternative : Utiliser un store distribué comme Redis avec le package @nestjs/throttler ou une implémentation personnalisée avec Redis. Redis permet de partager le compteur entre instances et de gérer des fenêtres glissantes plus robustes.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Distinction pratique entre Middleware et Interceptor",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>On souhaite mesurer le temps de réponse d'une API. Deux approches sont possibles : un middleware ou un interceptor.</p>\n<p>Question : Laquelle de ces deux approches est la plus précise pour mesurer le temps total incluant le traitement du contrôleur ET l'exécution des autres middlewares ? Justifier.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Choisir entre middleware et interceptor pour mesurer le temps de réponse total. Argumenter la réponse.",
+        "niveau": "medium",
+        "reponse": "L'interceptor est plus précis car il s'exécute après tous les middlewares mais avant le contrôleur (via la méthode handle()), et il peut mesurer le temps jusqu'à la fin de la réponse via le pipe RxJS. Un middleware mesure le temps depuis son exécution mais n'inclut pas forcément le temps des middlewares suivants s'il est placé avant eux. De plus, l'interceptor a accès à la réponse finale (après transformation).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Rédiger un interceptor simple nommé <code>TimingInterceptor</code> qui logue la durée d'exécution de chaque requête.",
+        "niveau": "easy",
+        "reponse": "<pre><code>import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nestjs/common';\nimport { Observable } from 'rxjs';\nimport { tap } from 'rxjs/operators';\n\n@Injectable()\nexport class TimingInterceptor implements NestInterceptor {\n  intercept(context: ExecutionContext, next: CallHandler): Observable&lt;any&gt; {\n    const start = Date.now();\n    return next.handle().pipe(\n      tap(() => console.log(`Requête traitée en ${Date.now() - start}ms`))\n    );\n  }\n}</code></pre>",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

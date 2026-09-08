@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+  "matiere": "Initiation à React",
+  "classe": "Développement Web",
+  "sequence": "Évaluation Séquentielle n°4",
+  "anneeScolaire": "2025-2026",
+  "exercices": [
+    {
+      "titre": "Exercice 1 : QCM sur les Fondamentaux (Chap 1 à 3)",
+      "points": "4 pts",
+      "enonce": "Pour chaque question, cochez la ou les bonnes r\u00e9ponses.",
+      "questions": [
+        {
+          "question": "1) React est d\u00e9fini comme :",
+          "reponse": "R\u00e9ponse : b) Une biblioth\u00e8que JavaScript pour construire des interfaces utilisateur. Explication : React est une biblioth\u00e8que, pas un framework complet, sp\u00e9cialis\u00e9e dans la gestion des vues [citation:1][citation:10]."
+        },
+        {
+          "question": "2) Laquelle de ces affirmations est vraie \u00e0 propos du Virtual DOM ?",
+          "reponse": "R\u00e9ponse : a) C'est une copie l\u00e9g\u00e8re du DOM r\u00e9el qui permet d'optimiser les performances. Explication : Le Virtual DOM permet \u00e0 React de calculer les changements n\u00e9cessaires avant de mettre \u00e0 jour le DOM r\u00e9el, ce qui am\u00e9liore les performances [citation:8][citation:10]."
+        },
+        {
+          "question": "3) En JSX, pour ins\u00e9rer une expression JavaScript, on utilise :",
+          "reponse": "R\u00e9ponse : b) { } (des accolades). Explication : Les accolades en JSX permettent d'ins\u00e9rer des expressions JavaScript dynamiques dans le code HTML-like [citation:5][citation:10]."
+        },
+        {
+          "question": "4) Lequel de ces \u00e9l\u00e9ments n'est PAS une diff\u00e9rence entre JSX et HTML ?",
+          "reponse": "R\u00e9ponse : c) On utilise des guillemets pour les attributs. Explication : Bien que les guillemets soient utilis\u00e9s en HTML et JSX pour les attributs (ex: className=\"monStyle\"), les diff\u00e9rences majeures sont l'utilisation de camelCase (className au lieu de class) et l'auto-fermeture des balises (ex: <img />)."
+        },
+        {
+          "question": "5) Lequel de ces \u00e9l\u00e9ments est utilis\u00e9 pour cr\u00e9er un composant React ?",
+          "reponse": "R\u00e9ponse : b) Une fonction qui retourne du JSX. Explication : Les composants fonctionnels sont d\u00e9finis comme des fonctions JavaScript qui retournent du JSX, ce qui est la m\u00e9thode moderne et recommand\u00e9e [citation:5][citation:10]."
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 2 : Ma\u00eetrise des Props et Composition (Chap 2)",
+      "points": "6 pts",
+      "enonce": "En vous basant sur le concept de composition, analysez le code ci-dessous et r\u00e9pondez aux questions.<br><br><div style='background-color:#2d3748;color:#e2e8f0;padding:15px;border-radius:8px;font-family:monospace;'>\n<strong>// Composant Card g\u00e9n\u00e9rique</strong><br>\nfunction Card({ title, children, className }) {<br>\n&nbsp;&nbsp;return (<br>\n&nbsp;&nbsp;&nbsp;&nbsp;&lt;div className={\"card \" + className}&gt;<br>\n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;h2&gt;{title}&lt;/h2&gt;<br>\n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;div className=\"card-body\"&gt;{children}&lt;/div&gt;<br>\n&nbsp;&nbsp;&nbsp;&nbsp;&lt;/div&gt;<br>\n&nbsp;&nbsp;);<br>\n}<br><br>\n<strong>// Utilisation</strong><br>\nfunction App() {<br>\n&nbsp;&nbsp;return (<br>\n&nbsp;&nbsp;&nbsp;&nbsp;&lt;Card title=\"Bienvenue\" className=\"primary\"&gt;<br>\n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;p&gt;Ceci est le contenu de la carte.&lt;/p&gt;<br>\n&nbsp;&nbsp;&nbsp;&nbsp;&lt;/Card&gt;<br>\n&nbsp;&nbsp;);<br>\n}\n</div>",
+      "questions": [
+        {
+          "question": "1) Que repr\u00e9sente la propri\u00e9t\u00e9 `children` dans le composant `Card` ?",
+          "reponse": "R\u00e9ponse : `children` permet d'afficher le contenu imbriqu\u00e9 entre les balises d'ouverture et de fermeture du composant (`<Card>...</Card>`). Cela rend le composant r\u00e9utilisable car il peut contenir n'importe quel JSX. Les props sont immuables, ce qui signifie qu'elles ne peuvent pas \u00eatre modifi\u00e9es directement par le composant enfant [citation:8][citation:10]."
+        },
+        {
+          "question": "2) Expliquez le concept de composition en React. Pourquoi est-il pr\u00e9f\u00e9rable \u00e0 l'h\u00e9ritage ?",
+          "reponse": "R\u00e9ponse : La composition consiste \u00e0 construire des composants complexes \u00e0 partir de composants plus petits et sp\u00e9cialis\u00e9s. Elle est pr\u00e9f\u00e9rable car elle offre plus de flexibilit\u00e9 et \u00e9vite les probl\u00e8mes li\u00e9s \u00e0 l'h\u00e9ritage. Le pattern `children` permet de cr\u00e9er des composants g\u00e9n\u00e9riques comme Card, Modal, ou Layout qui peuvent \u00eatre personnalis\u00e9s facilement sans duplication de code [citation:10]."
+        },
+        {
+          "question": "3) R\u00e9\u00e9crivez le composant `Card` en utilisant la destructuration des props dans les param\u00e8tres.",
+          "reponse": "R\u00e9ponse : <br><div style='background-color:#2d3748;color:#e2e8f0;padding:10px;border-radius:5px;font-family:monospace;'>function Card({ title, children, className = \"\" }) {<br>&nbsp;&nbsp;return (<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;div className={\"card \" + className}&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;h2&gt;{title}&lt;/h2&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;div className=\"card-body\"&gt;{children}&lt;/div&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/div&gt;<br>&nbsp;&nbsp;);<br>}</div>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 3 : Gestion de l'\u00c9tat avec `useState` (Chap 3)",
+      "points": "8 pts",
+      "enonce": "On souhaite cr\u00e9er un compteur simple et un gestionnaire de t\u00e2ches.",
+      "questions": [
+        {
+          "question": "1) Quel est le r\u00f4le du hook `useState` ? Donnez un exemple de sa syntaxe avec un type num\u00e9rique.",
+          "reponse": "R\u00e9ponse : `useState` permet d'ajouter un \u00e9tat local \u00e0 un composant fonctionnel. Il retourne un tableau avec la valeur actuelle de l'\u00e9tat et une fonction pour le mettre \u00e0 jour. Syntaxe : `const [count, setCount] = useState(0);` Ici, `count` est la valeur initialis\u00e9e \u00e0 0 et `setCount` est la fonction de mise \u00e0 jour [citation:8]."
+        },
+        {
+          "question": "2) \u00c9crivez le code JSX et JavaScript pour un compteur avec un bouton d'incr\u00e9mentation (+1) et un autre de d\u00e9cr\u00e9mentation (-1).",
+          "reponse": "R\u00e9ponse : <div style='background-color:#2d3748;color:#e2e8f0;padding:10px;border-radius:5px;font-family:monospace;'>function Counter() {<br>&nbsp;&nbsp;const [count, setCount] = useState(0);<br><br>&nbsp;&nbsp;return (<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;div&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;p&gt;Compteur : {count}&lt;/p&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;button onClick={() =&gt; setCount(count - 1)}&gt;-1&lt;/button&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;button onClick={() =&gt; setCount(count + 1)}&gt;+1&lt;/button&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/div&gt;<br>&nbsp;&nbsp;);<br>}</div>"
+        },
+        {
+          "question": "3) Expliquez le concept de mise \u00e0 jour asynchrone de `useState` et comment utiliser la forme fonctionnelle `(prevState) => newState`.",
+          "reponse": "R\u00e9ponse : Les mises \u00e0 jour d'\u00e9tat dans React sont asynchrones, ce qui signifie que plusieurs mises \u00e0 jour peuvent \u00eatre regroup\u00e9es pour la performance. Pour garantir que la mise \u00e0 jour se base sur la valeur pr\u00e9c\u00e9dente la plus r\u00e9cente, on utilise la forme fonctionnelle `setCount(prevCount => prevCount + 1)`. C'est crucial quand la nouvelle valeur d\u00e9pend de l'ancienne pour \u00e9viter les bugs de concurrence [citation:8]."
+        },
+        {
+          "question": "4) Donnez un exemple de mise \u00e0 jour d'un tableau avec `useState` en respectant l'immutabilit\u00e9.",
+          "reponse": "R\u00e9ponse : Pour ajouter un \u00e9l\u00e9ment \u00e0 un tableau, on utilise le spread operator (`...`) :<br><div style='background-color:#2d3748;color:#e2e8f0;padding:10px;border-radius:5px;font-family:monospace;'>function TodoList() {<br>&nbsp;&nbsp;const [tasks, setTasks] = useState([]);<br>&nbsp;&nbsp;const addTask = (newTask) =&gt; {<br>&nbsp;&nbsp;&nbsp;&nbsp;setTasks([...tasks, newTask]);<br>&nbsp;&nbsp;};<br>&nbsp;&nbsp;// ...<br>}</div>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 4 : Rendu Dynamique et \u00c9v\u00e9nements (Chap 4 & 5)",
+      "points": "8 pts",
+      "enonce": "Vous devez afficher une liste de produits et g\u00e9rer les \u00e9v\u00e9nements.",
+      "questions": [
+        {
+          "question": "1) Avec la m\u00e9thode `map()`, cr\u00e9ez un tableau de noms de fruits ( ['Pomme', 'Banane', 'Orange'] ) pour g\u00e9n\u00e9rer des \u00e9l\u00e9ments JSX `<li>` dans une liste `<ul>`. Expliquez le r\u00f4le crucial de la prop `key` dans ce contexte.",
+          "reponse": "R\u00e9ponse : <br><div style='background-color:#2d3748;color:#e2e8f0;padding:10px;border-radius:5px;font-family:monospace;'>function FruitList() {<br>&nbsp;&nbsp;const fruits = ['Pomme', 'Banane', 'Orange'];<br>&nbsp;&nbsp;return (<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;ul&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{fruits.map((fruit, index) => (<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;li key={index}&gt;{fruit}&lt;/li&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;))}<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/ul&gt;<br>&nbsp;&nbsp;);<br>}</div>La prop `key` est cruciale pour aider React \u00e0 identifier quels \u00e9l\u00e9ments ont chang\u00e9, ont \u00e9t\u00e9 ajout\u00e9s ou supprim\u00e9s. Elle doit \u00eatre stable, unique et pr\u00e9visible. Il est recommand\u00e9 d'utiliser un ID unique plut\u00f4t que l'index [citation:7]."
+        },
+        {
+          "question": "2) \u00c9crivez un composant `Button` qui affiche 'Cliquez-moi' et qui, au clic (via `onClick`), affiche 'Bouton cliqu\u00e9 !' dans la console.",
+          "reponse": "R\u00e9ponse : <div style='background-color:#2d3748;color:#e2e8f0;padding:10px;border-radius:5px;font-family:monospace;'>function Button() {<br>&nbsp;&nbsp;const handleClick = () => {<br>&nbsp;&nbsp;&nbsp;&nbsp;console.log('Bouton cliqu\u00e9 !');<br>&nbsp;&nbsp;};<br><br>&nbsp;&nbsp;return (<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;button onClick={handleClick}&gt;Cliquez-moi&lt;/button&gt;<br>&nbsp;&nbsp;);<br>}</div>"
+        },
+        {
+          "question": "3) D\u00e9crivez les diff\u00e9rences entre un \u00e9v\u00e9nement DOM natif et un \u00e9v\u00e9nement React (SyntheticEvent).",
+          "reponse": "R\u00e9ponse : Les \u00e9v\u00e9nements React sont des `SyntheticEvent`, un wrapper cross-browser autour des \u00e9v\u00e9nements natifs du DOM. Cela garantit que les propri\u00e9t\u00e9s d'\u00e9v\u00e9nement sont coh\u00e9rentes quel que soit le navigateur [citation:5][citation:10]. Cependant, les `SyntheticEvent` sont mis en commun (pooling) pour des raisons de performance (dans les anciennes versions), ce qui signifie que l'objet \u00e9v\u00e9nement est r\u00e9utilis\u00e9 et ses propri\u00e9t\u00e9s sont r\u00e9initialis\u00e9es apr\u00e8s que la fonction de rappel a fini de s'ex\u00e9cuter."
+        },
+        {
+          "question": "4) En vous basant sur le pattern d'un input contr\u00f4l\u00e9, cr\u00e9ez un champ de texte qui affiche en temps r\u00e9el la valeur saisie en dessous du champ.",
+          "reponse": "R\u00e9ponse : <div style='background-color:#2d3748;color:#e2e8f0;padding:10px;border-radius:5px;font-family:monospace;'>function DisplayInput() {<br>&nbsp;&nbsp;const [inputValue, setInputValue] = useState('');<br><br>&nbsp;&nbsp;return (<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;div&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;input<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;type=\"text\"<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;value={inputValue}<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;onChange={(e) => setInputValue(e.target.value)}<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;p&gt;Saisie : {inputValue}&lt;/p&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/div&gt;<br>&nbsp;&nbsp;);<br>}</div>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 5 : Les Hooks `useEffect` et `useRef` (Chap 6)",
+      "points": "6 pts",
+      "enonce": "Analysez le comportement des hooks dans les sc\u00e9narios suivants.",
+      "questions": [
+        {
+          "question": "1) \u00c0 quoi sert le hook `useEffect` ? Donnez un exemple de son utilisation avec un tableau de d\u00e9pendances vide `[]`.",
+          "reponse": "R\u00e9ponse : `useEffect` permet d'ex\u00e9cuter des effets de bord dans les composants fonctionnels, comme des appels API, des abonnements ou la manipulation directe du DOM [citation:8][citation:10]. Avec un tableau de d\u00e9pendances vide `[]`, l'effet s'ex\u00e9cute une seule fois apr\u00e8s le premier rendu (montage), simulant le `componentDidMount` des composants de classe. Exemple : <br><div style='background-color:#2d3748;color:#e2e8f0;padding:10px;border-radius:5px;font-family:monospace;'>useEffect(() => {<br>&nbsp;&nbsp;console.log('Composant mont\u00e9 !');<br>}, []);</div>"
+        },
+        {
+          "question": "2) Dans quel cas utiliserait-on la fonction de nettoyage (cleanup function) retourn\u00e9e par `useEffect` ?",
+          "reponse": "R\u00e9ponse : La fonction de nettoyage est utilis\u00e9e pour annuler des abonnements, des timers (`setTimeout`, `setInterval`) ou annuler des requ\u00eates API en cours avant que le composant ne se d\u00e9monte ou avant la prochaine ex\u00e9cution de l'effet [citation:5][citation:10].\n\nExemple :<br><div style='background-color:#2d3748;color:#e2e8f0;padding:10px;border-radius:5px;font-family:monospace;'>useEffect(() => {<br>&nbsp;&nbsp;const timer = setInterval(() => {<br>&nbsp;&nbsp;&nbsp;&nbsp;console.log('Tick');<br>&nbsp;&nbsp;}, 1000);<br><br>&nbsp;&nbsp;return () => clearInterval(timer);<br>}, []);</div>"
+        },
+        {
+          "question": "3) Quelle est la diff\u00e9rence fondamentale entre `useState` et `useRef` concernant la d\u00e9clenchement de re-rendus ?",
+          "reponse": "R\u00e9ponse : `useState` est utilis\u00e9 pour g\u00e9rer des donn\u00e9es qui, lorsqu'elles sont modifi\u00e9es, doivent d\u00e9clencher un re-rendu du composant pour mettre \u00e0 jour l'interface. `useRef`, en revanche, permet de stocker des donn\u00e9es qui persistent entre les rendus mais **ne d\u00e9clenchent pas de re-rendu** lorsqu'elles sont modifi\u00e9es. On l'utilise pour r\u00e9f\u00e9rencer directement des \u00e9l\u00e9ments du DOM (pour le focus par exemple) ou pour stocker des valeurs qui ne doivent pas impacter l'affichage [citation:5]."
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 6 : Partage de Donn\u00e9es et Navigation (Chap 7 & 8)",
+      "points": "8 pts",
+      "enonce": "G\u00e9rez l'\u00e9tat global et les routes dans une application.",
+      "questions": [
+        {
+          "question": "1) D\u00e9finissez le 'props drilling'. Pourquoi est-ce un probl\u00e8me et comment la composition peut-elle aider ?",
+          "reponse": "R\u00e9ponse : Le 'props drilling' est le processus qui consiste \u00e0 passer des donn\u00e9es d'un composant parent \u00e0 un composant enfant en les faisant passer par des composants interm\u00e9diaires qui n'en ont pas besoin [citation:8]. Cela peut rendre le code difficile \u00e0 maintenir et \u00e9voluer. La composition, en utilisant `children` ou le pattern `render props`, permet d'\u00e9viter cela en passant directement le contenu depuis le parent le plus haut."
+        },
+        {
+          "question": "2) \u00c9crivez un exemple minimal d'utilisation du Context API : cr\u00e9ation, fourniture (Provider) et consommation (useContext).",
+          "reponse": "R\u00e9ponse : <div style='background-color:#2d3748;color:#e2e8f0;padding:10px;border-radius:5px;font-family:monospace;'>// Cr\u00e9ation du contexte<br>const ThemeContext = createContext('light');<br><br>// Fourniture de la valeur<br>function App() {<br>&nbsp;&nbsp;return (<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;ThemeContext.Provider value=\"dark\"&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;ChildComponent /&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/ThemeContext.Provider&gt;<br>&nbsp;&nbsp;);<br>}<br><br>// Consommation du contexte<br>function ChildComponent() {<br>&nbsp;&nbsp;const theme = useContext(ThemeContext);<br>&nbsp;&nbsp;return <p>Le th\u00e8me est {theme}</p>;<br>}</div>"
+        },
+        {
+          "question": "3) Expliquez \u00e0 quoi sert le module `react-router-dom` et comment d\u00e9finir une route simple.",
+          "reponse": "R\u00e9ponse : `react-router-dom` est une biblioth\u00e8que standard pour g\u00e9rer la navigation et les routes dans les applications React, en cr\u00e9ant une Single Page Application (SPA). Pour d\u00e9finir une route, on utilise le composant `Route` en fournissant le chemin (`path`) et l'\u00e9l\u00e9ment (`element`) \u00e0 afficher. Exemple : <div style='background-color:#2d3748;color:#e2e8f0;padding:10px;border-radius:5px;font-family:monospace;'>&lt;Route path=\"/about\" element={&lt;AboutPage /&gt;} /&gt;</div>"
+        },
+        {
+          "question": "4) \u00c0 l'aide de `useNavigate`, comment rediriger un utilisateur vers la page d'accueil (`/`) apr\u00e8s une action (ex: connexion) ?",
+          "reponse": "R\u00e9ponse : <div style='background-color:#2d3748;color:#e2e8f0;padding:10px;border-radius:5px;font-family:monospace;'>import { useNavigate } from 'react-router-dom';<br><br>function Login() {<br>&nbsp;&nbsp;const navigate = useNavigate();<br><br>&nbsp;&nbsp;const handleLogin = () => {<br>&nbsp;&nbsp;&nbsp;&nbsp;// Logique de connexion...<br>&nbsp;&nbsp;&nbsp;&nbsp;navigate('/');<br>&nbsp;&nbsp;};<br><br>&nbsp;&nbsp;return <button onClick={handleLogin}>Se connecter</button>;<br>}</div>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 7 : Requ\u00eates et Hooks Personnalis\u00e9s (Chap 9)",
+      "points": "6 pts",
+      "enonce": "Vous devez r\u00e9cup\u00e9rer des donn\u00e9es depuis une API.",
+      "questions": [
+        {
+          "question": "1) \u00c9crivez un bloc de code utilisant `fetch()` dans un `useEffect` pour r\u00e9cup\u00e9rer des donn\u00e9es depuis 'https://api.example.com/data'. G\u00e9rez les \u00e9tats de chargement et d'erreur.",
+          "reponse": "R\u00e9ponse : <div style='background-color:#2d3748;color:#e2e8f0;padding:10px;border-radius:5px;font-family:monospace;'>function DataFetcher() {<br>&nbsp;&nbsp;const [data, setData] = useState(null);<br>&nbsp;&nbsp;const [loading, setLoading] = useState(true);<br>&nbsp;&nbsp;const [error, setError] = useState(null);<br><br>&nbsp;&nbsp;useEffect(() => {<br>&nbsp;&nbsp;&nbsp;&nbsp;fetch('https://api.example.com/data')<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;.then((response) => {<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if (!response.ok) {<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;throw new Error('R\u00e9ponse r\u00e9seau incorrecte');<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return response.json();<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;})<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;.then((json) => setData(json))<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;.catch((err) => setError(err.message))<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;.finally(() => setLoading(false));<br>&nbsp;&nbsp;}, []);<br><br>&nbsp;&nbsp;if (loading) return <p>Chargement...</p>;<br>&nbsp;&nbsp;if (error) return <p>Erreur : {error}</p>;<br>&nbsp;&nbsp;return <pre>{JSON.stringify(data, null, 2)}</pre>;<br>}</div>"
+        },
+        {
+          "question": "2) Pourquoi cr\u00e9er un hook personnalis\u00e9 comme `useFetch` ? Quelles sont les r\u00e8gles fondamentales des hooks ?",
+          "reponse": "R\u00e9ponse : Un hook personnalis\u00e9 permet de partager et de r\u00e9utiliser la logique d'\u00e9tat et d'effets entre plusieurs composants. Par exemple, `useFetch` peut \u00eatre utilis\u00e9 dans toute l'application pour r\u00e9cup\u00e9rer des donn\u00e9es, \u00e9vitant la duplication de code [citation:5][citation:8]. Les r\u00e8gles des hooks sont :\n1. Ne les appelez qu'au niveau sup\u00e9rieur de vos composants (pas dans des boucles, conditions ou fonctions imbriqu\u00e9es).\n2. Ne les appelez que depuis des composants React ou des hooks personnalis\u00e9s."
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 8 : Performance, Tests et Mise en Pratique (Chap 10 & 11)",
+      "points": "6 pts",
+      "enonce": "Trouvez les solutions pour les probl\u00e8mes de performance et structurez une application.",
+      "questions": [
+        {
+          "question": "1) Quels outils ou hooks React permettent d'\u00e9viter les re-rendus inutiles d'un composant ? Expliquez-en un.",
+          "reponse": "R\u00e9ponse : Plusieurs outils permettent d'\u00e9viter les re-rendus inutiles :\n- `React.memo` : une fonction d'ordre sup\u00e9rieur qui m\u00e9morise un composant. Si ses props ne changent pas, le re-rendu est saut\u00e9.\n- `useMemo` : m\u00e9morise une valeur calcul\u00e9e. La valeur n'est recalcul\u00e9e que si ses d\u00e9pendances changent.\n- `useCallback` : m\u00e9morise une fonction. La fonction est recr\u00e9\u00e9e uniquement si ses d\u00e9pendances changent.\nLes outils de profiling comme React DevTools aident \u00e0 identifier les composants qui se re-rendent trop souvent [citation:7][citation:8]."
+        },
+        {
+          "question": "2) Expliquez l'importance de typer les composants React avec TypeScript. Donnez un exemple de typage pour un \u00e9v\u00e9nement `onChange`.",
+          "reponse": "R\u00e9ponse : Le typage avec TypeScript permet de :\n- D\u00e9tecter les erreurs plus t\u00f4t.\n- Am\u00e9liorer la documentation et la maintenabilit\u00e9 du code.\n- B\u00e9n\u00e9ficier d'une meilleure autocompl\u00e9tion dans l'IDE.\n\nPour un \u00e9v\u00e9nement `onChange` :<br><div style='background-color:#2d3748;color:#e2e8f0;padding:10px;border-radius:5px;font-family:monospace;'>const handleChange = (event: React.ChangeEvent&lt;HTMLInputElement&gt;) => {<br>&nbsp;&nbsp;setValue(event.target.value);<br>};</div>"
+        },
+        {
+          "question": "3) Comment structureriez-vous un projet React pour qu'il soit facile \u00e0 maintenir et \u00e0 \u00e9voluer ? Mentionnez quelques dossiers.",
+          "reponse": "R\u00e9ponse : Une architecture modulaire et claire est essentielle pour la maintenance. Une structure de projet typique inclut :\n- `src/components/` : pour les composants r\u00e9utilisables (boutons, cartes, modals).\n- `src/pages/` : pour les composants associ\u00e9s aux routes (page d'accueil, page de contact).\n- `src/hooks/` : pour les hooks personnalis\u00e9s.\n- `src/context/` : pour les fichiers de contexte.\n- `src/services/` : pour la logique d'appel API.\n- `src/utils/` : pour les fonctions utilitaires.\nCette s\u00e9paration permet de trouver facilement le code et de le r\u00e9utiliser [citation:5][citation:10]."
+        }
+      ]
+    }
+  ]
+};
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,107 @@
+[
+  {
+    "intitule": "Installation et configuration de Socket.IO",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous devez configurer la communication en temps réel pour l'application SawaMart. Le chat est une fonctionnalité clé qui permet aux acheteurs et aux vendeurs de négocier en direct. Répondez aux questions suivantes concernant l'installation et la configuration de Socket.IO.</p>",
+      "images": [
+        "Capture d'écran du terminal montrant l'installation du package socket.io-client avec npm.",
+        "Structure des dossiers du projet avec le fichier websocket.service.ts."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Quelle est la commande d'installation pour ajouter Socket.IO client à un projet React Native Expo ?",
+        "niveau": "easy",
+        "reponse": "La commande est : <code>npm install socket.io-client</code>. Contrairement à la version serveur, le client ne nécessite pas de packages supplémentaires comme <code>@nestjs/websockets</code>. Le package <code>socket.io-client</code> est compatible avec React Native et Expo.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez la différence entre <code>socket.io</code> (côté serveur) et <code>socket.io-client</code> (côté client).",
+            "niveau": "medium",
+            "reponse": "<code>socket.io</code> est la bibliothèque serveur utilisée pour créer un serveur WebSocket (ex: avec NestJS). Elle gère les connexions entrantes, les rooms et l'émission d'événements vers les clients. <code>socket.io-client</code> est la bibliothèque cliente utilisée dans l'application mobile pour se connecter au serveur, émettre des événements et écouter les événements du serveur. Les deux bibliothèques utilisent le même protocole pour la communication bidirectionnelle."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Comparez deux approches pour gérer la connexion WebSocket dans une application React Native : 1) Créer un hook personnalisé, 2) Créer un service singleton. Quels sont les avantages de chaque approche ?",
+        "niveau": "hard",
+        "reponse": "**1. Hook personnalisé (ex: useSocket)**<br/>Avantages : - Plus idiomatique pour React, - Facile à utiliser dans les composants, - Permet de gérer les effets de bord avec useEffect.<br/>Inconvénients : - Plus difficile à partager l'état entre composants sans contexte, - Risque de multiples connexions si mal utilisé.<br/><br/>**2. Service singleton**<br/>Avantages : - Une seule connexion partagée dans toute l'application, - Plus facile pour la gestion de l'état global (avec Zustand), - Meilleure séparation des responsabilités.<br/>Inconvénients : - Moins idiomatique pour React, - Nécessite une gestion manuelle de la réactivité.<br/><br/>**Recommandation** : Utiliser un service singleton avec un store Zustand pour l'état, combiné avec des hooks pour l'utilisation dans les composants.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Authentification WebSocket et gestion des événements",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous développez la couche WebSocket de SawaMart. L'API backend NestJS utilise une authentification JWT pour les WebSockets. Vous devez configurer le client pour s'authentifier et gérer les événements en temps réel comme les nouveaux messages et les statuts de frappe.</p>",
+      "images": [
+        "Diagramme de séquence montrant la connexion WebSocket avec échange du token JWT et des événements.",
+        "Exemple de code du websocket.service.ts avec les méthodes de connexion et d'écoute."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le code du service <code>websocketService</code> qui :<br/>- Se connecte au serveur WebSocket en utilisant l'URL de l'API.<br/>- Envoie le token JWT dans l'objet <code>auth</code> lors de la handshake.<br/>- Gère la reconnexion automatique en cas de déconnexion.<br/>- Émet un événement <code>join_room</code> après la connexion.",
+        "niveau": "hard",
+        "reponse": "```typescript\n// services/websocket.service.ts\nimport { io, Socket } from 'socket.io-client';\nimport Constants from 'expo-constants';\nimport { authStore } from '../stores/authStore';\n\nconst WS_URL = Constants.expoConfig?.extra?.wsUrl || 'wss://api.sawamart.com';\n\nexport class WebSocketService {\n  private socket: Socket | null = null;\n  private reconnectAttempts = 0;\n  private maxReconnectAttempts = 5;\n\n  connect() {\n    const token = authStore.getState().accessToken;\n    if (!token) {\n      console.log('Pas de token JWT disponible');\n      return;\n    }\n\n    if (this.socket?.connected) {\n      console.log('Déjà connecté');\n      return;\n    }\n\n    this.socket = io(WS_URL, {\n      path: '/socket.io/',\n      transports: ['websocket'],\n      auth: { token },\n      reconnection: true,\n      reconnectionAttempts: this.maxReconnectAttempts,\n      reconnectionDelay: 1000,\n      reconnectionDelayMax: 5000,\n    });\n\n    this.socket.on('connect', () => {\n      console.log('Connecté au serveur WebSocket');\n      this.reconnectAttempts = 0;\n      // Rejoindre la room de l'utilisateur\n      const userId = authStore.getState().user?.id;\n      if (userId) {\n        this.socket?.emit('join_user_room', { userId });\n      }\n    });\n\n    this.socket.on('disconnect', (reason) => {\n      console.log('Déconnecté:', reason);\n    });\n\n    this.socket.on('connect_error', (error) => {\n      console.log('Erreur de connexion:', error.message);\n      if (error.message.includes('Authentication')) {\n        authStore.getState().logout();\n      }\n    });\n  }\n\n  disconnect() {\n    if (this.socket) {\n      this.socket.disconnect();\n      this.socket = null;\n    }\n  }\n\n  emit(event: string, data: any) {\n    if (this.socket?.connected) {\n      this.socket.emit(event, data);\n    } else {\n      console.log('Socket non connecté, impossible d\'émettre', event);\n    }\n  }\n\n  on(event: string, callback: (data: any) => void) {\n    this.socket?.on(event, callback);\n  }\n\n  off(event: string, callback?: (data: any) => void) {\n    this.socket?.off(event, callback);\n  }\n\n  isConnected(): boolean {\n    return this.socket?.connected || false;\n  }\n}\n\nexport const websocketService = new WebSocketService();\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez pourquoi le token JWT est envoyé dans l'objet <code>auth</code> plutôt que dans un header ou un paramètre de requête.",
+            "niveau": "medium",
+            "reponse": "L'objet <code>auth</code> fait partie de la handshake WebSocket et est transmis lors de la négociation initiale. Contrairement aux requêtes HTTP, les WebSockets n'ont pas de headers personnalisables de la même manière. L'utilisation de <code>auth</code> est la méthode standard recommandée par Socket.IO pour l'authentification. Le serveur peut accéder à ces données via <code>socket.handshake.auth</code> dans le middleware d'authentification. Cela permet une validation avant même que la connexion ne soit établie."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Comment écouter les événements <code>new_message</code> et <code>typing_status</code> dans un composant React Native ? Écrivez le code pour mettre à jour le store de chat en conséquence.",
+        "niveau": "hard",
+        "reponse": "```typescript\n// components/ChatScreen.tsx\nimport { useEffect } from 'react';\nimport { useChatStore } from '../stores/chatStore';\nimport { websocketService } from '../services/websocket.service';\n\nexport const ChatScreen = ({ route }) => {\n  const { chatId } = route.params;\n  const { addMessage, setTypingStatus } = useChatStore();\n\n  useEffect(() => {\n    // Écouter les nouveaux messages\n    const onNewMessage = (data) => {\n      if (data.chatId === chatId) {\n        addMessage(data.message);\n      }\n    };\n\n    // Écouter les statuts de frappe\n    const onTyping = (data) => {\n      if (data.chatId === chatId) {\n        setTypingStatus(data.userId, data.isTyping);\n      }\n    };\n\n    websocketService.on('new_message', onNewMessage);\n    websocketService.on('typing_status', onTyping);\n\n    // Rejoindre la room du chat\n    websocketService.emit('join_room', { roomId: chatId });\n\n    // Nettoyage\n    return () => {\n      websocketService.off('new_message', onNewMessage);\n      websocketService.off('typing_status', onTyping);\n      websocketService.emit('leave_room', { roomId: chatId });\n    };\n  }, [chatId]);\n\n  // ... reste du composant\n};\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion des déconnexions et reconnexions pour une application de e-commerce",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>L'application SawaMart doit être résiliente aux problèmes de réseau. Au Cameroun, les connexions mobiles peuvent être instables. Vous devez implémenter une stratégie robuste pour gérer les déconnexions WebSocket et les reconnexions automatiques, tout en informant l'utilisateur de l'état de la connexion.</p>",
+      "images": [
+        "Interface mobile montrant un indicateur de connexion (vert pour connecté, rouge pour déconnecté) dans l'en-tête.",
+        "Schéma de la stratégie de reconnexion avec backoff exponentiel."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez une stratégie de reconnexion pour l'application. Définissez :<br/>- Le nombre maximal de tentatives.<br/>- Le délai entre les tentatives (backoff exponentiel).<br/>- La gestion de l'état de connexion dans l'interface utilisateur.",
+        "niveau": "hard",
+        "reponse": "**Stratégie proposée :**<br/><br/>1. **Nombre de tentatives** : 5 tentatives maximum avec backoff exponentiel (1s, 2s, 4s, 8s, 16s).<br/>2. **Backoff exponentiel** : Délai = baseDelay * 2^n où n est le nombre de tentatives.<br/>3. **Gestion de l'état UI** :<br/>   - <strong>connecté</strong> : indicateur vert, pas de message.<br/>   - <strong>reconnexion</strong> : indicateur jaune/animé, message \"Reconnexion en cours...\".<br/>   - <strong>déconnecté</strong> : indicateur rouge, message \"Hors ligne. Vérifiez votre connexion.\" avec bouton de reconnexion manuelle.<br/>4. **Actions critiques** : Pour les messages envoyés hors ligne, les ajouter à une file d'attente pour les renvoyer automatiquement après reconnexion.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Écrivez le code du service <code>connectionStatusStore</code> qui gère l'état de connexion et notifie les composants.",
+            "niveau": "very hard",
+            "reponse": "```typescript\n// stores/connectionStatusStore.ts\nimport { create } from 'zustand';\n\nexport type ConnectionStatus = 'connected' | 'connecting' | 'disconnected' | 'reconnecting';\n\ninterface ConnectionStatusState {\n  status: ConnectionStatus;\n  reconnectAttempts: number;\n  maxAttempts: number;\n  setStatus: (status: ConnectionStatus) => void;\n  incrementAttempts: () => void;\n  resetAttempts: () => void;\n  getBackoffDelay: () => number;\n}\n\nexport const useConnectionStatusStore = create<ConnectionStatusState>((set, get) => ({\n  status: 'disconnected',\n  reconnectAttempts: 0,\n  maxAttempts: 5,\n\n  setStatus: (status) => set({ status }),\n\n  incrementAttempts: () => {\n    const { reconnectAttempts } = get();\n    set({ reconnectAttempts: reconnectAttempts + 1 });\n  },\n\n  resetAttempts: () => set({ reconnectAttempts: 0 }),\n\n  getBackoffDelay: () => {\n    const { reconnectAttempts } = get();\n    const baseDelay = 1000; // 1 seconde\n    return Math.min(baseDelay * Math.pow(2, reconnectAttempts), 30000); // max 30s\n  },\n}));\n```\n\n```typescript\n// components/ConnectionIndicator.tsx\nimport { useConnectionStatusStore } from '../stores/connectionStatusStore';\n\nexport const ConnectionIndicator = () => {\n  const status = useConnectionStatusStore(s => s.status);\n\n  const statusConfig = {\n    connected: { color: '#27ae60', label: 'Connecté', icon: 'wifi' },\n    connecting: { color: '#f39c12', label: 'Connexion...', icon: 'wifi' },\n    reconnecting: { color: '#f39c12', label: 'Reconnexion...', icon: 'sync' },\n    disconnected: { color: '#e74c3c', label: 'Hors ligne', icon: 'wifi-off' },\n  };\n\n  const config = statusConfig[status];\n  return (\n    <View style={styles.container}>\n      <Icon name={config.icon} size={16} color={config.color} />\n      <Text style={{ color: config.color, marginLeft: 4 }}>{config.label}</Text>\n    </View>\n  );\n};\n```"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Comment gérer les messages envoyés pendant une déconnexion ? Proposez une solution avec une file d'attente et expliquez comment elle est vidée après reconnexion.",
+        "niveau": "very hard",
+        "reponse": "**Solution avec file d'attente :**<br/><br/>1. **Structure de la file d'attente** : Un tableau stocké dans le store Zustand contenant les messages à envoyer avec leurs métadonnées (contenu, chatId, timestamp).<br/>2. **Ajout à la file** : Lorsque l'utilisateur envoie un message et que le socket est déconnecté, le message est ajouté à la file avec un statut 'pending'.<br/>3. **Affichage** : Les messages en attente sont affichés avec un indicateur de chargement (spinner) et un badge 'En attente'.<br/>4. **Vidage automatique** : Lorsque la connexion est rétablie (événement 'connect'), on parcourt la file et on envoie chaque message. On passe en 'sending' puis 'sent' ou 'error'.<br/><br/>```typescript\n// stores/offlineQueueStore.ts\ninterface QueuedMessage {\n  id: string;\n  chatId: string;\n  content: string;\n  timestamp: number;\n  status: 'pending' | 'sending' | 'sent' | 'error';\n  retryCount: number;\n}\n\nexport const useOfflineQueueStore = create((set, get) => ({\n  queue: [],\n  \n  addMessage: (message) => set((state) => ({\n    queue: [...state.queue, { ...message, status: 'pending', retryCount: 0 }]\n  })),\n\n  processQueue: async () => {\n    const { queue } = get();\n    const pending = queue.filter(m => m.status === 'pending' || m.status === 'error');\n    for (const msg of pending) {\n      try {\n        set((state) => ({\n          queue: state.queue.map(m => \n            m.id === msg.id ? { ...m, status: 'sending' } : m\n          )\n        }));\n        await websocketService.emit('send_message', msg);\n        set((state) => ({\n          queue: state.queue.filter(m => m.id !== msg.id)\n        }));\n      } catch (error) {\n        set((state) => ({\n          queue: state.queue.map(m =>\n            m.id === msg.id ? { ...m, status: 'error', retryCount: m.retryCount + 1 } : m\n          )\n        }));\n      }\n    }\n  },\n  \n  clearQueue: () => set({ queue: [] }),\n}));\n```",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

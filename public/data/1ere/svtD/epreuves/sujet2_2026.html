@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+  "matiere": "SVT 1ère D",
+  "classe": "Première D",
+  "sequence": "Séquence 2",
+  "anneeScolaire": "2025-2026",
+  "exercices": [
+    {
+      "titre": "Exercice 1 : Structure et fonction des organites",
+      "points": "4 pts",
+      "enonce": "<div style='font-family: Arial, sans-serif; padding: 10px;'><p>Les cellules eucaryotes possèdent des organites spécialisés qui assurent des fonctions spécifiques.</p></div>",
+      "questions": [
+        {
+          "question": "<div style='font-family: Arial, sans-serif; padding: 10px;'><p><strong>1) Citez deux organites présents dans une cellule végétale mais absents dans une cellule animale.</strong></p></div>",
+          "reponse": "<div style='font-family: Arial, sans-serif; padding: 10px;'><p>Deux organites présents dans la cellule végétale et absents dans la cellule animale sont :</p><ul style='list-style-type: disc; color: #333;'><li><strong>La paroi cellulosique</strong> (ou paroi pecto-cellulosique) qui assure la rigidité et la protection de la cellule.</li><li><strong>Le chloroplaste</strong> qui permet la photosynthèse.</li></ul><p>On peut également citer <strong>la vacuole</strong> qui est généralement de grande taille dans les cellules végétales.</p></div>"
+        },
+        {
+          "question": "<div style='font-family: Arial, sans-serif; padding: 10px;'><p><strong>2) Établissez la relation entre l'ultrastructure de la mitochondrie et sa fonction.</strong></p></div>",
+          "reponse": "<div style='font-family: Arial, sans-serif; padding: 10px;'><p>La mitochondrie est le siège de la <strong>respiration cellulaire</strong>. Son ultrastructure est adaptée à cette fonction :</p><ul style='list-style-type: disc; color: #333;'><li>La <strong>membrane interne</strong> est repliée en <strong>crêtes</strong> qui augmentent la surface d'échange.</li><li>Les crêtes portent les <strong>enzymes de la chaîne respiratoire</strong> (complexes protéiques) qui permettent la production d'ATP.</li><li>La <strong>matrice</strong> contient les enzymes du cycle de Krebs.</li></ul><div style='background-color: #d5f5e3; padding: 8px; border-radius: 4px; margin-top: 5px;'><p style='margin: 0; color: #1e8449;'><strong>Conclusion :</strong> La structure de la mitochondrie est optimisée pour produire de l'énergie sous forme d'ATP.</p></div></div>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 2 : La mitose",
+      "points": "6 pts",
+      "enonce": "<div style='font-family: Arial, sans-serif; padding: 10px;'><p>La mitose est un processus fondamental de division cellulaire qui assure la conservation du patrimoine génétique.</p></div>",
+      "questions": [
+        {
+          "question": "<div style='font-family: Arial, sans-serif; padding: 10px;'><p><strong>1) Donnez la définition du cycle cellulaire et citez ses différentes phases.</strong></p></div>",
+          "reponse": "<div style='font-family: Arial, sans-serif; padding: 10px;'><p>Le <strong>cycle cellulaire</strong> est l'ensemble des étapes qui conduisent une cellule de sa formation à sa division en deux cellules filles.</p><p>Il comprend :</p><ul style='list-style-type: disc; color: #333;'><li><strong>L'interphase</strong> (période entre deux divisions) qui se décompose en :<ul><li><strong>G1</strong> : croissance cellulaire et synthèse de protéines.</li><li><strong>S</strong> : réplication de l'ADN (synthèse).</li><li><strong>G2</strong> : préparation à la division.</li></ul></li><li><strong>La mitose</strong> (division du noyau) qui comprend : prophase, métaphase, anaphase, télophase.</li><li><strong>La cytodiérèse</strong> (division du cytoplasme).</li></ul></div>"
+        },
+        {
+          "question": "<div style='font-family: Arial, sans-serif; padding: 10px;'><p><strong>2) Décrivez brièvement les événements qui se déroulent lors de la métaphase et de l'anaphase de la mitose.</strong></p></div>",
+          "reponse": "<div style='font-family: Arial, sans-serif; padding: 10px;'><p><strong>La métaphase :</strong></p><ul style='list-style-type: disc; color: #333;'><li>Les chromosomes, composés de deux chromatides, se placent sur le <strong>plan équatorial</strong> de la cellule.</li><li>Les fibres du fuseau sont attachées aux <strong>centromères</strong> des chromosomes.</li></ul><p><strong>L'anaphase :</strong></p><ul style='list-style-type: disc; color: #333;'><li>Les <strong>centromères</strong> se divisent.</li><li>Les <strong>chromatides</strong> (devenues des chromosomes-filles) sont séparées et migrent vers les pôles opposés de la cellule.</li><li>Chaque pôle reçoit un jeu complet de chromosomes identiques.</li></ul><div style='background-color: #fef9e7; padding: 8px; border-radius: 4px; margin-top: 5px; border: 1px solid #f1c40f;'><p style='margin: 0; color: #7d6608;'><strong>À retenir :</strong> La mitose assure une répartition équitable du patrimoine génétique entre les deux cellules filles.</p></div></div>"
+        },
+        {
+          "question": "<div style='font-family: Arial, sans-serif; padding: 10px;'><p><strong>3) Expliquez le rôle de la mitose dans la croissance d'un organisme.</strong></p></div>",
+          "reponse": "<div style='font-family: Arial, sans-serif; padding: 10px;'><p>La mitose joue un rôle essentiel dans la croissance des organismes :</p><ul style='list-style-type: disc; color: #333;'><li>Elle permet l'<strong>augmentation du nombre de cellules</strong> à partir d'une cellule initiale.</li><li>Elle participe au <strong>renouvellement cellulaire</strong> (remplacement des cellules mortes).</li><li>Elle assure la <strong>régénération</strong> des tissus lésés.</li></ul><div style='background-color: #ebf5fb; padding: 8px; border-radius: 4px; margin-top: 5px;'><p style='margin: 0; color: #2c3e50;'><strong>Principe :</strong> La mitose produit deux cellules génétiquement identiques à la cellule-mère, ce qui conserve le patrimoine génétique.</p></div></div>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 3 : La biosynthèse des protéines",
+      "points": "6 pts",
+      "enonce": "<div style='font-family: Arial, sans-serif; padding: 10px;'><p>La biosynthèse des protéines est un processus complexe qui se déroule en deux étapes principales : la transcription et la traduction.</p></div>",
+      "questions": [
+        {
+          "question": "<div style='font-family: Arial, sans-serif; padding: 10px;'><p><strong>1) Définissez la transcription et précisez où elle se déroule dans la cellule.</strong></p></div>",
+          "reponse": "<div style='font-family: Arial, sans-serif; padding: 10px;'><p>La <strong>transcription</strong> est le processus de synthèse d'un <strong>ARN messager (ARNm)</strong> à partir d'un fragment d'ADN (le gène) dans le noyau de la cellule.</p><p>Étapes :</p><ul style='list-style-type: disc; color: #333;'><li>L'<strong>ARN polymérase</strong> se fixe sur le promoteur du gène.</li><li>Les deux brins d'ADN s'écartent.</li><li>L'un des brins sert de <strong>brin matrice</strong> pour la synthèse de l'ARNm.</li><li>L'ARN polymérase assemble les nucléotides (A, U, C, G) selon le principe de complémentarité.</li><li>L'ARNm formé sort du noyau par les pores nucléaires pour rejoindre le cytoplasme.</li></ul><div style='background-color: #d5f5e3; padding: 8px; border-radius: 4px; margin-top: 5px;'><p style='margin: 0; color: #1e8449;'><strong>Résultat :</strong> Un ARNm est une copie du message génétique contenu dans l'ADN.</p></div></div>"
+        },
+        {
+          "question": "<div style='font-family: Arial, sans-serif; padding: 10px;'><p><strong>2) Expliquez le mécanisme de la traduction en précisant le rôle des ribosomes et des ARNt.</strong></p></div>",
+          "reponse": "<div style='font-family: Arial, sans-serif; padding: 10px;'><p>La <strong>traduction</strong> est la synthèse d'une protéine à partir de l'ARNm.</p><ul style='list-style-type: disc; color: #333;'><li><strong>Les ribosomes</strong> (constitués d'ARNr) sont le lieu de la synthèse protéique. Ils se fixent sur l'ARNm et décodent le message.</li><li><strong>Les ARNt (ARN de transfert)</strong> transportent les acides aminés jusqu'au ribosome. Chaque ARNt possède un <strong>anticodon</strong> qui reconnaît un codon spécifique sur l'ARNm.</li><li>Les acides aminés sont assemblés les uns après les autres dans l'ordre défini par la séquence des codons de l'ARNm.</li></ul><div style='background-color: #fef9e7; padding: 8px; border-radius: 4px; margin-top: 5px; border: 1px solid #f1c40f;'><p style='margin: 0; color: #7d6608;'><strong>Code génétique :</strong> La correspondance entre un triplet de nucléotides (codon) sur l'ARNm et un acide aminé.</p></div></div>"
+        },
+        {
+          "question": "<div style='font-family: Arial, sans-serif; padding: 10px;'><p><strong>3) Citez trois exemples de fonctions assurées par les protéines dans l'organisme.</strong></p></div>",
+          "reponse": "<div style='font-family: Arial, sans-serif; padding: 10px;'><p>Les protéines assurent de nombreuses fonctions dans l'organisme :</p><ul style='list-style-type: disc; color: #333;'><li><strong>Fonction structurale :</strong> Elles entrent dans la constitution des tissus (collagène, kératine, actine, myosine).</li><li><strong>Fonction enzymatique :</strong> Elles catalysent les réactions métaboliques (enzymes digestives, enzymes de la respiration).</li><li><strong>Fonction de transport :</strong> Elles transportent des molécules (hémoglobine transporte l'O₂, lipoprotéines transportent les lipides).</li><li><strong>Fonction de défense :</strong> Anticorps (immunoglobulines).</li><li><strong>Fonction de communication :</strong> Hormones (insuline, hormones de croissance).</li></ul></div>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 4 : Le génie génétique et les plantes transgéniques",
+      "points": "4 pts",
+      "enonce": "<div style='font-family: Arial, sans-serif; padding: 10px;'><p>Le génie génétique permet aujourd'hui de modifier le patrimoine génétique des organismes pour leur conférer de nouvelles caractéristiques.</p></div>",
+      "questions": [
+        {
+          "question": "<div style='font-family: Arial, sans-serif; padding: 10px;'><p><strong>1) Définissez une plante transgénique et citez deux caractéristiques recherchées chez ces plantes.</strong></p></div>",
+          "reponse": "<div style='font-family: Arial, sans-serif; padding: 10px;'><p>Une <strong>plante transgénique</strong> est une plante dont le patrimoine génétique a été modifié par l'introduction d'un ou plusieurs <strong>gènes étrangers</strong> provenant d'un autre organisme.</p><p>Deux caractéristiques couramment recherchées :</p><ul style='list-style-type: disc; color: #333;'><li><strong>Résistance aux insectes</strong> (introduction du gène Bt de la bactérie Bacillus thuringiensis qui produit une toxine contre les insectes ravageurs).</li><li><strong>Résistance aux herbicides</strong> (plantes modifiées pour résister à des herbicides comme le glyphosate, ce qui facilite le désherbage).</li></ul></div>"
+        },
+        {
+          "question": "<div style='font-family: Arial, sans-serif; padding: 10px;'><p><strong>2) Expliquez brièvement le principe d'obtention d'une plante transgénique.</strong></p></div>",
+          "reponse": "<div style='font-family: Arial, sans-serif; padding: 10px;'><p>Le principe d'obtention d'une plante transgénique comprend plusieurs étapes :</p><ol style='color: #333;'><li><strong>Identification</strong> et <strong>isolement</strong> du gène d'intérêt.</li><li><strong>Insertion</strong> du gène dans un <strong>vecteur</strong> (souvent une bactérie Agrobacterium tumefaciens ou un virus) qui permet de l'introduire dans les cellules végétales.</li><li><strong>Transformation</strong> des cellules végétales (transfert du gène).</li><li><strong>Sélection</strong> des cellules ayant intégré le gène (utilisation de marqueurs de sélection).</li><li><strong>Régénération</strong> de la plante entière à partir des cellules transformées.</li></ol><div style='background-color: #d5f5e3; padding: 8px; border-radius: 4px; margin-top: 5px;'><p style='margin: 0; color: #1e8449;'><strong>Exemple :</strong> Le maïs Bt, le coton Bt, le soja résistant aux herbicides.</p></div></div>"
+        },
+        {
+          "question": "<div style='font-family: Arial, sans-serif; padding: 10px;'><p><strong>3) Citez deux avantages et deux risques potentiels liés à l'utilisation des plantes transgéniques.</strong></p></div>",
+          "reponse": "<div style='font-family: Arial, sans-serif; padding: 10px;'><p><strong>Avantages :</strong></p><ul style='list-style-type: disc; color: #333;'><li>Augmentation des <strong>rendements agricoles</strong>.</li><li>Réduction de l'utilisation des <strong>pesticides</strong> (protection de l'environnement).</li><li>Amélioration de la <strong>valeur nutritionnelle</strong> des aliments (ex: riz doré enrichi en vitamine A).</li></ul><p><strong>Risques potentiels :</strong></p><ul style='list-style-type: disc; color: #333;'><li>Risques <strong>environnementaux</strong> : dissémination des gènes dans la nature (contamination des espèces sauvages).</li><li>Risques <strong>pour la santé</strong> : allergénicité, résistance aux antibiotiques (via les marqueurs de sélection).</li><li>Risques <strong>économiques</strong> : dépendance des agriculteurs aux semences des firmes de biotechnologie.</li></ul><div style='background-color: #fadbd8; padding: 8px; border-radius: 4px; margin-top: 5px; border-left: 4px solid #e74c3c;'><p style='margin: 0; color: #922b21;'><strong>Conclusion :</strong> Les OGM suscitent un débat important entre leurs promoteurs et leurs détracteurs.</p></div></div>"
+        }
+      ]
+    }
+  ]
+};
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

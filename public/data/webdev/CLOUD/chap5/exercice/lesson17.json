@@ -1,0 +1,104 @@
+[
+  {
+    "intitule": "Architecture d’un load balancer multi-AZ",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous êtes consultant cloud pour une startup camerounaise (Douala). Leur application web reçoit 10 000 requêtes/minute, avec des pics à 30 000 pendant les campagnes marketing. Ils utilisent 4 serveurs web (VM) répartis sur 2 zones de disponibilité (AZ1 et AZ2) dans AWS. Ils souhaitent installer un <strong>Application Load Balancer (ALB)</strong> pour répartir la charge, gérer la terminaison SSL et assurer la haute disponibilité.</p><p>Le schéma prévoit :<br>- ALB public exposé sur Internet, avec un listener HTTPS (port 443)<br>- Target group contenant les 4 instances EC2 sur le port 80<br>- Health checks sur <code>/health</code> toutes les 30s<br>- Sticky sessions activées (durée 1 heure) pour le panier d’achat</p>",
+      "images": [
+        "schéma d’un Application Load Balancer AWS avec deux zones de disponibilité, des instances EC2 derrière, et un utilisateur se connectant en HTTPS"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer pourquoi le choix d’un ALB est plus adapté qu’un Network Load Balancer (NLB) pour cette application.",
+        "niveau": "medium",
+        "reponse": "Un ALB opère au niveau applicatif (couche 7 OSI) et permet le routage basé sur le chemin URL, les en-têtes HTTP, la terminaison SSL, et les sticky sessions (session persistence) — nécessaires pour un panier d’achat. Un NLB (couche 4) ne gère pas ces fonctionnalités avancées.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Identifier deux risques de conception dans la configuration proposée, justifier, et proposer une correction.",
+        "niveau": "hard",
+        "reponse": "Risque 1 : Les health checks toutes les 30s sur /health peuvent ne pas détecter rapidement une panne applicative. Correction : Réduire l’intervalle à 10s avec seuil d’échec à 2.\nRisque 2 : Les sticky sessions sur 1h peuvent déséquilibrer la charge si un serveur tombe (perte de session). Correction : Utiliser une session state externalisée (Redis ElastiCache) et désactiver les sticky sessions au niveau LB.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Calculer le débit entrant maximal en Gbit/s si chaque requête fait 50 KB et que le pic est à 30 000 req/min. Justifier.",
+        "niveau": "medium",
+        "reponse": "Débit = (30 000 requêtes / 60 s) × 50 Ko = 500 requêtes/s × 50 Ko = 25 000 Ko/s = 25 Mo/s = 200 Mb/s = 0,2 Gbit/s. Formule : $\\frac{30000}{60} \\times 50 \\times 8 \\times 10^{-9}$ en Gbit/s.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation des coûts CDN pour une entreprise de e-learning au Cameroun",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>EduCloud SARL (Yaoundé) diffuse des vidéos de cours en ligne à 5000 étudiants répartis sur tout le territoire. Actuellement, leurs vidéos (stockées dans un bucket S3 en région eu-west-3 (Paris)) sont servies directement depuis S3, ce qui génère des coûts de transfert de données élevés et une latence élevée pour les utilisateurs de Garoua, Maroua, Limbé.</p><p>Ils décident d’utiliser <strong>Amazon CloudFront</strong> avec des edge locations. Les vidéos pèsent en moyenne 300 Mo. 80% du trafic concerne les 20% de vidéos les plus populaires (loi de Pareto).</p>",
+      "images": [
+        "carte du Cameroun avec les villes (Douala, Yaoundé, Garoua) et points de présence CDN imaginaires"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire deux avantages concrets que CloudFront apporterait à EduCloud en termes de qualité d’expérience (QoE) et de coûts.",
+        "niveau": "easy",
+        "reponse": "Avantage QoE : Réduction de la latence grâce à la mise en cache au plus proche des utilisateurs (edge locations). Avantage coût : Réduction des requêtes directes vers S3 (moins de coûts GET et de transfert sortant), surtout avec le caching des objets populaires.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Justifier pourquoi la configuration d’une politique de cache TTL différenciée selon le contenu (vidéos populaires vs. non populaires) est pertinente.",
+        "niveau": "hard",
+        "reponse": "Les vidéos populaires (20% du catalogue, 80% des requêtes) doivent avoir un TTL long (ex: 1 an) pour maximiser le cache hit ratio et minimiser les origines fetch. Les vidéos non populaires (80% du catalogue) peuvent avoir un TTL court (ex: 5 minutes) pour éviter de polluer le cache avec du contenu rare, réduisant ainsi l’éviction prématurée des objets populaires.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Évaluer le gain mensuel en volume de transfert si le cache hit ratio passe de 0% (sans CDN) à 85% (avec CDN), sachant que le volume total sortant mensuel d’EduCloud est de 150 To. Calculer en To économisé.",
+        "niveau": "medium",
+        "reponse": "Volume économisé = Volume total × Cache hit ratio = $150 \\times 0,85 = 127,5$ To. Les données servies depuis les edge locations ne génèrent pas de coût de transfert sortant depuis S3 (hors coût CDN propre).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Configuration sécurisée de la terminaison SSL sur un ALB",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Une banque numérique (Orange Bank Cameroun) déploie son API de transactions sur AWS. Un Application Load Balancer termine le SSL (certificat délivré par AWS Certificate Manager) puis réachemine le trafic en HTTP vers les instances backend. Un auditor exige le respect des critères suivants :</p><ul><li>Interdiction des protocoles TLS 1.0 et 1.1</li><li>HSTS (HTTP Strict Transport Security) activé</li><li>Ciphers strong (ECDHE avec clé ≥ 256 bits)</li><li>Désactivation de la reprise de session TLS non sécurisée</li></ul>",
+      "images": [
+        "schéma d’un ALB avec ACM, backend HTTP, et un client HTTPS"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier où se configurent les politiques de sécurité TLS dans AWS ALB et citer deux politiques pré-définies conformes aux exigences.",
+        "niveau": "medium",
+        "reponse": "Dans le Listener HTTPS du ALB, via la section « SSL Policy ». Deux politiques conformes : ELBSecurityPolicy-TLS-1-2-2017-01 (TLS 1.2 uniquement, ciphers strong) ou ELBSecurityPolicy-FS-1-2-Res-2019-08 (Forward Secrecy, résolution pour les navigations modernes).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Développer la procédure pour implémenter HSTS au niveau du ALB, sachant qu’il ne supporte pas nativement les en-têtes HSTS.",
+        "niveau": "very hard",
+        "reponse": "L’ALB ne peut pas ajouter/modifier l’en-tête HSTS automatiquement. Solution : Placer une instance Nginx ou un Lambda@Edge derrière l’ALB (ou devant) qui inspecte la réponse et ajoute l’en-tête 'Strict-Transport-Security: max-age=31536000; includeSubDomains; preload'. Alternative : Configurer les applications backend pour envoyer cet en-tête.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Critiquer l’architecture consistant à terminer SSL au niveau du ALB puis envoyer le trafic en HTTP interne. La banque a-t-elle raison ?",
+        "niveau": "hard",
+        "reponse": "Non, sur le plan de la sécurité profonde (defense in depth). Même si le ALB termine le SSL, le trafic interne HTTP en clair dans le VPC peut être intercepté par un acteur malveillant ayant compromis une autre ressource. Meilleure pratique : Terminer SSL au niveau du ALB et maintenir HTTPS interne (avec certificats auto-signés ou ACM Private CA) entre ALB et backends, ou utiliser un Network Load Balancer + TLS mutualisé.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

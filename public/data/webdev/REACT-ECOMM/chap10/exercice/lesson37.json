@@ -1,0 +1,163 @@
+[
+  {
+    "intitule": "Exercice 1 : Identifier les fonctionnalités clés de la gestion des commandes admin",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Dans l'interface d'administration d'un e-commerce, la section \"Commandes\" permet au gestionnaire de suivre et traiter les commandes passées par les clients.</p><p><strong>Consigne :</strong> À partir de vos connaissances, listez les fonctionnalités indispensables que doit offrir un tableau de bord de gestion des commandes.</p>",
+      "images": [
+        "tableau de bord admin avec liste des commandes et colonnes (id, client, montant, statut)",
+        "schéma de workflow des statuts de commande (pending, paid, shipped, delivered, cancelled)"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Énumérez au moins 6 fonctionnalités essentielles pour un module de gestion des commandes (admin).",
+        "niveau": "easy",
+        "reponse": "1. Liste paginée et filtrable des commandes (par statut, date, client). 2. Recherche par numéro de commande ou email client. 3. Visualisation du détail d'une commande (produits, adresse, total). 4. Changement de statut de commande (ex: pending → paid → shipped → delivered). 5. Génération de facture PDF. 6. Ajout de notes internes. 7. Annulation de commande avec remboursement (optionnel).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez pourquoi la modification du statut d'une commande doit être tracée (historique).",
+        "niveau": "easy",
+        "reponse": "Le suivi des changements de statut permet : 1) d'assurer la traçabilité en cas de litige client, 2) d'analyser les délais de traitement, 3) de détecter des erreurs humaines, 4) de fournir un historique transparent au client dans son espace compte.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 2 : Implémenter un tableau des commandes avec filtres (React)",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous devez développer un composant <code>OrderList</code> pour l'admin. Il affiche les commandes sous forme de tableau (ID, client, montant, statut, date). L'utilisateur peut filtrer par statut (select) et rechercher par email client.</p><p><strong>Consigne :</strong> Écrivez le code React (avec useState, useEffect) qui récupère les commandes depuis une API (mock) et applique les filtres côté client ou via requête API.</p>",
+      "images": [
+        "tableau de commandes avec filtre déroulant (statut) et champ de recherche",
+        "exemple de données de commandes : { id, customerEmail, total, status, createdAt }"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créez un composant fonctionnel <code>OrderList</code> qui : 1) utilise <code>useState</code> pour orders, filterStatus, searchEmail, 2) charge les commandes depuis une API mock, 3) filtre les résultats selon les critères.",
+        "niveau": "medium",
+        "reponse": "```jsx\nconst OrderList = () => {\n  const [orders, setOrders] = useState([]);\n  const [filterStatus, setFilterStatus] = useState('all');\n  const [searchEmail, setSearchEmail] = useState('');\n  useEffect(() => {\n    fetchOrders().then(data => setOrders(data));\n  }, []);\n  const filteredOrders = orders.filter(order => \n    (filterStatus === 'all' || order.status === filterStatus) &&\n    order.customerEmail.includes(searchEmail)\n  );\n  return (\n    <div>\n      <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>\n        <option value=\"all\">Tous</option>\n        <option value=\"pending\">En attente</option>\n        <option value=\"paid\">Payée</option>\n        <option value=\"shipped\">Expédiée</option>\n      </select>\n      <input type=\"text\" placeholder=\"Email client\" value={searchEmail} onChange={e => setSearchEmail(e.target.value)} />\n      <table>{/* affichage de filteredOrders */}</table>\n    </div>\n  );\n};\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment optimiser le filtrage si le nombre de commandes est très grand (> 10 000) ?",
+            "niveau": "hard",
+            "reponse": "Il ne faut pas filtrer côté client. On doit envoyer les critères (status, email) au backend via des paramètres de requête (ex: `/api/orders?status=paid&email=client@example.com`) et utiliser la pagination (offset/limit) pour ne charger que les données nécessaires."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Ajoutez un bouton \"Voir détail\" pour chaque commande qui navigue vers une page `/admin/orders/:id` (React Router).",
+        "niveau": "easy",
+        "reponse": "Importer `useNavigate` ou `<Link>` : `<Link to={`/admin/orders/${order.id}`}>Voir</Link>`. Dans le routeur, déclarer `<Route path=\"/admin/orders/:id\" element={<OrderDetail />} />`.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 3 : Changer le statut d'une commande (mutation)",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>L'administrateur doit pouvoir changer le statut d'une commande (ex: de \"paid\" à \"shipped\"). Cette action doit mettre à jour l'affichage et envoyer un email de confirmation au client (via backend).</p><p><strong>Consigne :</strong> Écrivez la logique (React Query mutation + mise à jour optimiste) pour changer le statut et revalider la liste des commandes.</p>",
+      "images": [
+        "menu déroulant de changement de statut dans la ligne d'une commande",
+        "notification toast après mise à jour réussie du statut"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémentez une mutation avec `@tanstack/react-query` qui appelle l'API PATCH `/api/orders/:id/status` et invalide la requête des commandes après succès.",
+        "niveau": "hard",
+        "reponse": "```jsx\nconst updateStatusMutation = useMutation({\n  mutationFn: ({ orderId, status }) => orderService.updateStatus(orderId, status),\n  onSuccess: () => {\n    queryClient.invalidateQueries(['orders']);\n    toast.success('Statut mis à jour');\n  },\n  onError: () => toast.error('Erreur lors de la mise à jour')\n});\n// usage : updateStatusMutation.mutate({ orderId, status: 'shipped' })\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Qu'est-ce qu'une mise à jour optimiste et comment l'implémenter ici ?",
+            "niveau": "very hard",
+            "reponse": "La mise à jour optimiste met à jour l'UI immédiatement avant la réponse serveur. Dans `onMutate`, on annule les requêtes en cours, on sauvegarde l'état précédent, on met à jour le cache, puis on retourne le contexte pour rollback en cas d'erreur. Exemple : `const previousOrders = queryClient.getQueryData(['orders']); queryClient.setQueryData(['orders'], old => ...); return { previousOrders };` et `onError` restaure."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez pourquoi le backend doit valider la transition de statut (ex: ne pas passer de 'pending' à 'delivered' directement).",
+        "niveau": "medium",
+        "reponse": "Pour garantir l'intégrité du processus métier. Une commande ne peut pas être livrée avant d'être expédiée. Le backend doit implémenter une machine à états qui n'autorise que les transitions valides (ex: pending → paid → shipped → delivered). Cela évite les erreurs et les fraudes.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 4 : Générer des factures PDF côté frontend ou backend",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>L'administrateur doit pouvoir télécharger une facture PDF pour chaque commande. Deux approches sont possibles : génération côté frontend (avec une librairie comme jsPDF) ou côté backend (génération sur le serveur).</p><p><strong>Consigne :</strong> Comparez les deux approches (avantages, inconvénients, sécurité) et recommandez celle adaptée à un e-commerce à fort volume.</p>",
+      "images": [
+        "icône de téléchargement PDF à côté de chaque commande",
+        "aperçu d'une facture PDF avec logo, détails commande et total"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Citez deux avantages et deux inconvénients de la génération PDF côté frontend (jsPDF, react-pdf).",
+        "niveau": "medium",
+        "reponse": "Avantages : 1) Décharge le serveur, 2) Pas de dépendance serveur supplémentaire. Inconvénients : 1) Résultats non identiques selon le navigateur, 2) Impossible de générer des PDF en arrière-plan (ex: par email), 3) Sécurité : les données sont manipulées côté client.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Justifiez pourquoi la génération côté backend (ex: avec Puppeteer, PDFKit) est généralement préférée pour un e-commerce professionnel.",
+        "niveau": "hard",
+        "reponse": "La génération backend garantit : 1) uniformité des PDF (indépendante du navigateur), 2) possibilité d'envoyer la facture par email automatiquement (après paiement), 3) stockage des PDF pour conformité légale, 4) meilleure sécurité (les données ne transitent pas côté client pour génération). On peut aussi utiliser un service externe comme API PDF.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 5 : Analyser les besoins d'export CSV des commandes",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Le responsable marketing souhaite exporter les commandes (avec filtres : date, statut) en CSV pour analyser les ventes dans Excel. Le volume peut atteindre 50 000 commandes.</p><p><strong>Consigne :</strong> Proposez une architecture technique pour l'export CSV (frontend + backend) en évitant les timeouts et la surcharge mémoire.</p>",
+      "images": [
+        "bouton \"Exporter CSV\" dans l'interface admin commandes",
+        "exemple de fichier CSV contenant colonnes : commande_id, client, date, montant, statut"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez pourquoi l'export direct depuis le frontend (génération CSV avec les données déjà chargées) n'est pas viable pour 50 000 commandes.",
+        "niveau": "medium",
+        "reponse": "Charger 50 000 commandes en une seule requête cause : 1) temps de réponse trop long (timeout), 2) consommation mémoire élevée dans le navigateur, 3) risque de freeze de l'interface. Il faut une solution asynchrone côté serveur.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quelles solutions proposez-vous ? Décrivez le flux complet.",
+            "niveau": "hard",
+            "reponse": "Solution 1 : Export via tâche asynchrone (Bull/Redis). L'utilisateur clique sur \"Exporter\", le backend lance un job qui génère le CSV en streaming et stocke le fichier temporairement. Une notification (toast, email) avertit l'utilisateur quand le CSV est prêt à télécharger. Solution 2 : Export paginé avec génération progressive côté backend et téléchargement direct (stream) si le volume est raisonnable, mais 50k nécessite plutôt du traitement asynchrone."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Quelles informations sensibles ne doivent jamais apparaître dans un CSV exportable par un admin non super-admin ?",
+        "niveau": "easy",
+        "reponse": "Les mots de passe (même hashés), les tokens de paiement, les données bancaires, les identifiants internes. On doit également anonymiser partiellement les emails si règlementation RGPD. Seules les données strictement nécessaires à l'analyse doivent être exportées.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

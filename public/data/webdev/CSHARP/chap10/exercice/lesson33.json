@@ -1,0 +1,106 @@
+[
+  {
+    "intitule": "Annulation intelligente d'une tâche longue",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous développez une application console qui doit télécharger des données depuis une API externe. Le téléchargement peut prendre plusieurs secondes. L'utilisateur doit pouvoir annuler l'opération en appuyant sur la touche 'C'.</p><p>Écrivez le code C# qui :</p><ul><li>Simule un téléchargement avec <code>Task.Delay(5000, token)</code></li><li>Utilise un <code>CancellationTokenSource</code> et surveille la touche 'C'</li><li>Affiche 'Téléchargement annulé' si l'utilisateur annule</li><li>Affiche 'Téléchargement terminé' sinon</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémentez la logique complète dans la méthode `Main` en utilisant la taxonomie de Bloom (appliquer, créer).",
+        "niveau": "medium",
+        "reponse": "```csharp\nusing System;\nusing System.Threading;\nusing System.Threading.Tasks;\n\nclass Program\n{\n    static async Task Main(string[] args)\n    {\n        using var cts = new CancellationTokenSource();\n        \n        _ = Task.Run(() =>\n        {\n            if (Console.ReadKey(true).Key == ConsoleKey.C)\n            {\n                Console.WriteLine(\"\\nAnnulation demandée...\");\n                cts.Cancel();\n            }\n        });\n        \n        try\n        {\n            await SimulerTelechargement(cts.Token);\n            Console.WriteLine(\"Téléchargement terminé\");\n        }\n        catch (OperationCanceledException)\n        {\n            Console.WriteLine(\"Téléchargement annulé\");\n        }\n    }\n    \n    static async Task SimulerTelechargement(CancellationToken token)\n    {\n        Console.WriteLine(\"Téléchargement en cours... Appuyez sur C pour annuler\");\n        await Task.Delay(5000, token);\n    }\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Différence entre ThrowIfCancellationRequested et IsCancellationRequested",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>En C# asynchrone, deux approches permettent de réagir à une demande d'annulation via <code>CancellationToken</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez la différence fondamentale entre `token.ThrowIfCancellationRequested()` et `if (token.IsCancellationRequested) return;`.",
+        "niveau": "easy",
+        "reponse": "`ThrowIfCancellationRequested()` lève immédiatement une `OperationCanceledException` si l'annulation est demandée, ce qui permet une sortie contrôlée via `catch`. `IsCancellationRequested` est une simple vérification booléenne qui ne lève pas d'exception ; elle permet un retour propre sans exception, mais ne remonte pas la pile d'appels de manière exceptionnelle.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Dans quel cas préféreriez-vous utiliser `IsCancellationRequested` plutôt que `ThrowIfCancellationRequested` ?",
+            "niveau": "easy",
+            "reponse": "Quand on veut éviter la surcharge des exceptions pour une annulation prévisible et fréquente (exemple : boucle utilisateur annulable sans erreur critique), ou quand on doit effectuer un nettoyage spécifique avant de quitter la méthode sans propager d'exception."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Téléchargement parallèle annulable",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous devez télécharger 5 fichiers depuis des URLs différentes. Les téléchargements sont indépendants. Si l'utilisateur annule, tous les téléchargements encore en cours doivent être arrêtés immédiatement et aucun résultat ne doit être retourné.</p><p>Implémentez une méthode <code>Task<string[]> TelechargerTousAsync(string[] urls, CancellationToken token)</code> qui lance tous les téléchargements en parallèle et les annule proprement.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez l'implémentation complète en utilisant `Task.WhenAll` et en passant le `CancellationToken` à chaque tâche.",
+        "niveau": "hard",
+        "reponse": "```csharp\npublic async Task<string[]> TelechargerTousAsync(string[] urls, CancellationToken token)\n{\n    var tasks = urls.Select(url => TelechargerFichierAsync(url, token));\n    try\n    {\n        return await Task.WhenAll(tasks);\n    }\n    catch (OperationCanceledException)\n    {\n        Console.WriteLine(\"Tous les téléchargements ont été annulés.\");\n        throw;\n    }\n}\n\nprivate async Task<string> TelechargerFichierAsync(string url, CancellationToken token)\n{\n    token.ThrowIfCancellationRequested();\n    await Task.Delay(1000, token); // Simulation téléchargement\n    return $\"Contenu de {url}\";\n}\n```\nExplication : `Task.WhenAll` propage la première exception d'annulation. Chaque sous-tâche reçoit le token et lève si annulation. Ainsi, l'annulation d'une seule tâche annule tout le lot si on utilise le même token.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Timeout avec CancellationTokenSource",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>On souhaite limiter la durée d'une opération asynchrone à 3 secondes maximum. Au-delà, l'opération doit être automatiquement annulée.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créez un `CancellationTokenSource` avec un délai automatique et utilisez-le pour exécuter une tâche asynchrone de durée variable.",
+        "niveau": "medium",
+        "reponse": "```csharp\nusing var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));\n\ntry\n{\n    await OperationLongueAsync(cts.Token);\n    Console.WriteLine(\"Succès\");\n}\ncatch (OperationCanceledException)\n{\n    Console.WriteLine(\"Timeout : opération annulée après 3 secondes\");\n}\n\nasync Task OperationLongueAsync(CancellationToken token)\n{\n    for (int i = 0; i < 10; i++)\n    {\n        token.ThrowIfCancellationRequested();\n        await Task.Delay(500, token); // 500ms par itération\n    }\n}\n```\nLe constructeur `CancellationTokenSource(TimeSpan)` déclenche automatiquement l'annulation après le délai.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Annulation dans une boucle intensive",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Soit une méthode qui calcule la somme des nombres premiers jusqu'à $10^7$. Cette méthode peut prendre plusieurs secondes. Implémentez un mécanisme d'annulation réactive qui vérifie le token à chaque itération de la boucle.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez la méthode `long SommeNombresPremiers(long limite, CancellationToken token)` qui vérifie l'annulation après chaque nombre testé. La méthode doit retourner la somme partielle si annulation, ou la somme totale si terminée normalement.",
+        "niveau": "hard",
+        "reponse": "```csharp\nlong SommeNombresPremiers(long limite, CancellationToken token)\n{\n    long somme = 0;\n    for (long i = 2; i <= limite; i++)\n    {\n        if (token.IsCancellationRequested)\n        {\n            Console.WriteLine($\"Annulation à {i}, somme partielle = {somme}\");\n            return somme;\n        }\n        if (EstPremier(i))\n            somme += i;\n    }\n    return somme;\n}\n\nbool EstPremier(long n)\n{\n    if (n < 2) return false;\n    for (long i = 2; i * i <= n; i++)\n        if (n % i == 0) return false;\n    return true;\n}\n```\nExplication : `IsCancellationRequested` permet un retour propre sans exception, ce qui est préférable pour une tâche CPU-bound sans `Task.Delay`.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi utilise-t-on `IsCancellationRequested` plutôt que `ThrowIfCancellationRequested` ici ?",
+            "niveau": "hard",
+            "reponse": "Parce que la méthode n'est pas `async` et ne contient pas d'`await`. Lever une exception ici forcerait l'appelant à gérer une exception coûteuse alors qu'on peut simplement retourner proprement la somme partielle. C'est plus efficace et évite la surcharge des exceptions pour une annulation prévisible."
+          }
+        ]
+      }
+    ]
+  }
+]

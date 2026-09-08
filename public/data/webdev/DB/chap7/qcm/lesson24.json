@@ -1,0 +1,74 @@
+[
+  {
+    "questionText": "En environnement multi-utilisateur, vous avez une table `comptes_bancaires` avec les colonnes `id`, `titulaire`, `solde`. Deux transactions s'exécutent simultanément :\n\n**Transaction A** :\n```sql\nBEGIN;\nSELECT solde FROM comptes_bancaires WHERE id = 1; -- Lecture seule\n```\n\n**Transaction B** :\n```sql\nBEGIN;\nUPDATE comptes_bancaires SET solde = solde - 100 WHERE id = 1;\n```\n\nQuel type de verrou la transaction A doit-elle placer par défaut sur la ligne `id = 1` pour ne pas bloquer la transaction B (selon le niveau d'isolation READ COMMITTED classique) ?",
+    "options": [
+      "Verrou exclusif (EXCLUSIVE LOCK)",
+      "Verrou partagé (SHARED LOCK)",
+      "Aucun verrou, car SELECT est une opération non bloquante",
+      "Verrou d'intention d'écriture (INTENT EXCLUSIVE)"
+    ],
+    "correctAnswer": 2,
+    "difficulty": "medium",
+    "explanation": "Dans la plupart des SGBD (PostgreSQL, MySQL/InnoDB) au niveau READ COMMITTED, un simple `SELECT` ne place **aucun verrou** (lecture cohérente via MVCC). Cela permet à la transaction B de placer un verrou exclusif et de modifier la ligne sans être bloquée par la lecture. Si on voulait un verrou partagé, il faudrait utiliser `SELECT ... FOR SHARE`."
+  },
+  {
+    "questionText": "Soit le scénario suivant (deadlock classique) :\n\n**Transaction T1** :\n```sql\nBEGIN;\nUPDATE A SET val = 10 WHERE id = 1;\nUPDATE B SET val = 20 WHERE id = 2;\nCOMMIT;\n```\n\n**Transaction T2** :\n```sql\nBEGIN;\nUPDATE B SET val = 30 WHERE id = 2;\nUPDATE A SET val = 40 WHERE id = 1;\nCOMMIT;\n```\n\nSi T1 et T2 s'exécutent simultanément, quel mécanisme le SGBD utilise-t-il pour résoudre l'interblocage ?",
+    "options": [
+      "Il attend indéfiniment que l'une des transactions libère les ressources",
+      "Il annule automatiquement les deux transactions et vide les tables concernées",
+      "Il choisit une transaction victime, annule celle-ci (ROLLBACK) et permet à l'autre de continuer",
+      "Il transforme automatiquement tous les verrous exclusifs en verrous partagés"
+    ],
+    "correctAnswer": 2,
+    "difficulty": "medium",
+    "explanation": "Le SGBD détecte le cycle d'attente (deadlock) et choisit une **transaction victime** (généralement celle qui a le moins de travail ou la plus ancienne), annule celle-ci en exécutant un `ROLLBACK`, libérant ainsi les verrous. L'autre transaction peut alors terminer son travail. On peut voir cela avec la commande `SHOW ENGINE INNODB STATUS` dans MySQL."
+  },
+  {
+    "questionText": "Vous souhaitez lire une ligne de la table `commandes` ET empêcher toute autre transaction de modifier cette ligne jusqu'à la fin de votre transaction (mais vous autorisez la lecture par d'autres). Quelle指令 SQL devez-vous utiliser ?",
+    "options": [
+      "`SELECT * FROM commandes WHERE id = 5 FOR UPDATE;`",
+      "`SELECT * FROM commandes WHERE id = 5 LOCK IN SHARE MODE;` (ou `FOR SHARE`)",
+      "`SELECT * FROM commandes WHERE id = 5 FOR NO KEY UPDATE;`",
+      "`LOCK TABLE commandes IN EXCLUSIVE MODE;`"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "hard",
+    "explanation": "`FOR SHARE` (anciennement `LOCK IN SHARE MODE`) place un **verrou partagé (SHARED LOCK)**. Cela permet à d'autres transactions de lire la ligne (verrou partagé), mais toute tentative d'écriture (`UPDATE`, `DELETE`, ou `SELECT ... FOR UPDATE`) sera bloquée jusqu'à ce que votre transaction se termine (COMMIT ou ROLLBACK). `FOR UPDATE` serait un verrou exclusif, bloquant même la lecture simple dans certains SGBD."
+  },
+  {
+    "questionText": "Un développeur exécute la requête suivante pour gérer un stock critique :\n```sql\nBEGIN;\nSELECT quantite FROM stock WHERE produit_id = 42 FOR UPDATE;\n-- Ici, le code applicatif vérifie si quantite &gt; 0\nUPDATE stock SET quantite = quantite - 1 WHERE produit_id = 42;\nCOMMIT;\n```\n\nQuel problème ce `FOR UPDATE` résout-il ?",
+    "options": [
+      "Il évite une division par zéro dans l'application",
+      "Il empêche une condition de course (race condition) entre deux achats simultanés sur le même produit",
+      "Il accélère la requête en créant un index temporaire",
+      "Il permet de lire des données non validées (dirty read)"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium",
+    "explanation": "Sans `FOR UPDATE`, deux transactions pourraient lire la même quantité (ex: 1), voir qu'elle est &gt; 0, puis toutes les deux décrémenter, passant le stock à -1. Avec `FOR UPDATE`, la première transaction qui lit la ligne place un **verrou exclusif** ; la seconde transaction devra attendre que la première termine (COMMIT) pour lire la ligne, garantissant ainsi l'intégrité du stock."
+  },
+  {
+    "questionText": "Vous êtes DBA et vous constatez des deadlocks fréquents sur la table `log_erreurs` (une table d'audit où l'on insère beaucoup de lignes, rarement mise à jour). Les transactions sont de la forme :\n```sql\nBEGIN;\n-- Mise à jour du statut d'une commande\nUPDATE commandes SET statut = 'payee' WHERE id = 10;\n-- Insertion dans la table d'audit\nINSERT INTO log_erreurs (message, date) VALUES ('paiement ok', NOW());\nCOMMIT;\n```\n\nQuel conseil simple donneriez-vous pour réduire les deadlocks ?",
+    "options": [
+      "Ajouter un index sur `log_erreurs.date`",
+      "Remplacer toutes les transactions par des procédures stockées",
+      "Accéder toujours aux tables dans le même ordre (ex: d'abord `commandes`, puis `log_erreurs`) dans **toutes** les transactions",
+      "Désactiver le journal des transactions (binary log)"
+    ],
+    "correctAnswer": 2,
+    "difficulty": "hard",
+    "explanation": "Une cause majeure de deadlock est l'accès aux ressources dans un ordre différent selon les transactions. Ici, si une autre transaction fait d'abord `INSERT INTO log_erreurs` puis `UPDATE commandes`, on peut créer un cycle. En imposant un **ordre global d'accès** (ex: toujours `commandes` puis `log_erreurs`), on élimine la possibilité d'un cycle d'attente. C'est une bonne pratique de conception."
+  },
+  {
+    "questionText": "Quelle commande SQL standard permet de **libérer immédiatement tous les verrous** pris par la transaction courante, sans annuler les modifications déjà validées ?",
+    "options": [
+      "`UNLOCK TABLES;`",
+      "`RELEASE LOCKS;`",
+      "`COMMIT;` ou `ROLLBACK;`",
+      "`FLUSH LOCKS;`"
+    ],
+    "correctAnswer": 2,
+    "difficulty": "easy",
+    "explanation": "Il n'existe pas de commande `UNLOCK` pour une transaction en cours. Les verrous sont automatiquement libérés à la fin de la transaction, soit par `COMMIT` (validation des modifications et libération) soit par `ROLLBACK` (annulation et libération). On ne peut pas libérer un verrou spécifique en cours de transaction sans terminer celle-ci (principe ACID)."
+  }
+]

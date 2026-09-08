@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+  "matiere": "Initiation aux Systèmes d'exploitation",
+  "classe": "Développement Web",
+  "sequence": "Séquence 6",
+  "anneeScolaire": "2025-2026",
+  "exercices": [
+    {
+      "titre": "Gestion des processus et signaux",
+      "points": "6 pts",
+      "enonce": "<div style='font-size: 0.95rem; line-height: 1.6; background-color: #f0f4f8; padding: 20px; border-radius: 12px; color: #1a202c;'><p style='font-weight: bold; font-size: 1.1rem; margin-top: 0;'>📝 Exercice 1</p><p>Un administrateur système doit gérer des processus sur un serveur Linux. Répondez aux questions suivantes en justifiant vos choix.</p></div>",
+      "questions": [
+        {
+          "question": "<div style='background-color: #f0f4f8; padding: 12px; border-radius: 8px; color: #1a202c;'><p><strong>1)</strong> Un programme <code>long_calcul</code> s'exécute et semble bloquer le terminal. Quelle commande permet de lancer ce programme en arrière-plan et de libérer le terminal ?</p></div>",
+          "reponse": "<div style='background-color: #f0fff4; padding: 12px; border-radius: 8px; color: #22543d;'><p>La commande est <code>long_calcul &</code>. L'utilisation de l'esperluette (<code>&</code>) place le processus en arrière-plan, libérant ainsi le terminal pour d'autres commandes. [citation:2]</p></div>"
+        },
+        {
+          "question": "<div style='background-color: #f0f4f8; padding: 12px; border-radius: 8px; color: #1a202c;'><p><strong>2)</strong> Après avoir lancé plusieurs processus en arrière-plan, comment lister toutes les tâches en cours dans le shell actuel ?</p></div>",
+          "reponse": "<div style='background-color: #f0fff4; padding: 12px; border-radius: 8px; color: #22543d;'><p>La commande <code>jobs</code> permet de lister toutes les tâches en cours (en arrière-plan ou suspendues) dans le shell actuel.</p></div>"
+        },
+        {
+          "question": "<div style='background-color: #f0f4f8; padding: 12px; border-radius: 8px; color: #1a202c;'><p><strong>3)</strong> Le processus <code>long_calcul</code> (PID 1234) ne répond plus. Vous souhaitez d'abord tenter un arrêt propre, puis un arrêt forcé si nécessaire. Quelles commandes utiliser et dans quel ordre ?</p></div>",
+          "reponse": "<div style='background-color: #f0fff4; padding: 12px; border-radius: 8px; color: #22543d;'><p>Il faut d'abord utiliser <code>kill 1234</code> (envoie SIGTERM) pour demander un arrêt propre au processus. Si le processus ne se termine pas après quelques secondes, utiliser <code>kill -9 1234</code> (envoie SIGKILL) pour un arrêt forcé immédiat. SIGTERM est la méthode polie, SIGKILL est la méthode brutale utilisée en dernier recours.</p></div>"
+        },
+        {
+          "question": "<div style='background-color: #f0f4f8; padding: 12px; border-radius: 8px; color: #1a202c;'><p><strong>4)</strong> Un script <code>backup.sh</code> doit s'exécuter même après la fermeture du terminal. Comment le lancer pour garantir son exécution en cas de déconnexion ?</p></div>",
+          "reponse": "<div style='background-color: #f0fff4; padding: 12px; border-radius: 8px; color: #22543d;'><p>Il faut utiliser la commande <code>nohup backup.sh &</code>. Le préfixe <code>nohup</code> protège le processus contre la fermeture du terminal, et l'esperluette le place en arrière-plan.</p></div>"
+        }
+      ]
+    },
+    {
+      "titre": "Observation et analyse du système",
+      "points": "4 pts",
+      "enonce": "<div style='font-size: 0.95rem; line-height: 1.6; background-color: #f0f4f8; padding: 20px; border-radius: 12px; color: #1a202c;'><p style='font-weight: bold; font-size: 1.1rem; margin-top: 0;'>🔍 Exercice 2</p><p>Un développeur web utilise des outils d'observation pour analyser les performances de son serveur. Répondez aux questions suivantes.</p></div>",
+      "questions": [
+        {
+          "question": "<div style='background-color: #f0f4f8; padding: 12px; border-radius: 8px; color: #1a202c;'><p><strong>1)</strong> Quelle commande permet d'obtenir un instantané détaillé de tous les processus en cours, avec des informations comme l'utilisateur, l'utilisation CPU et la mémoire ?</p></div>",
+          "reponse": "<div style='background-color: #f0fff4; padding: 12px; border-radius: 8px; color: #22543d;'><p>La commande <code>ps aux</code> (version BSD) ou <code>ps -ef</code> (version UNIX System V) permet d'obtenir un instantané détaillé de tous les processus en cours. [citation:2]</p></div>"
+        },
+        {
+          "question": "<div style='background-color: #f0f4f8; padding: 12px; border-radius: 8px; color: #1a202c;'><p><strong>2)</strong> Pour une surveillance en temps réel et interactive, quels outils sont recommandés ? Quelle est la différence entre ces deux outils ?</p></div>",
+          "reponse": "<div style='background-color: #f0fff4; padding: 12px; border-radius: 8px; color: #22543d;'><p>Les outils recommandés sont <code>top</code> et <code>htop</code>. <code>top</code> est un outil standard présent sur tous les systèmes Linux, il affiche en temps réel les processus et l'utilisation des ressources. <code>htop</code> est une version améliorée avec une interface colorée, plus intuitive, permettant de naviguer avec les flèches, de rechercher des processus, et même de les tuer directement (F9) sans taper de commande. [citation:2]</p></div>"
+        },
+        {
+          "question": "<div style='background-color: #f0f4f8; padding: 12px; border-radius: 8px; color: #1a202c;'><p><strong>3)</strong> Vous remarquez qu'un processus nommé <code>apache2</code> consomme trop de ressources. Comment afficher uniquement les processus liés à <code>apache2</code> avec <code>ps</code> et <code>top</code> ?</p></div>",
+          "reponse": "<div style='background-color: #f0fff4; padding: 12px; border-radius: 8px; color: #22543d;'><p>Avec <code>ps</code> : <code>ps aux | grep apache2</code>. Avec <code>top</code> : <code>top -u www-data</code> (l'utilisateur par défaut d'Apache) ou appuyer sur <code>u</code> et taper le nom d'utilisateur, puis rechercher <code>apache2</code>.</p></div>"
+        }
+      ]
+    },
+    {
+      "titre": "Commande pratique : gestion des signaux",
+      "points": "4 pts",
+      "enonce": "<div style='font-size: 0.95rem; line-height: 1.6; background-color: #f0f4f8; padding: 20px; border-radius: 12px; color: #1a202c;'><p style='font-weight: bold; font-size: 1.1rem; margin-top: 0;'>⚙️ Exercice 3</p><p>Complétez les commandes suivantes avec le bon paramètre ou signal.</p></div>",
+      "questions": [
+        {
+          "question": "<div style='background-color: #f0f4f8; padding: 12px; border-radius: 8px; color: #1a202c;'><p><strong>1)</strong> <code>kill _______ 5678</code> pour envoyer un signal d'arrêt immédiat et brutal au processus 5678.</p></div>",
+          "reponse": "<div style='background-color: #f0fff4; padding: 12px; border-radius: 8px; color: #22543d;'><p><code>-9</code>. La commande complète est <code>kill -9 5678</code>, qui envoie le signal SIGKILL.</p></div>"
+        },
+        {
+          "question": "<div style='background-color: #f0f4f8; padding: 12px; border-radius: 8px; color: #1a202c;'><p><strong>2)</strong> <code>kill _______ 5678</code> pour envoyer un signal d'arrêt demandant un nettoyage avant de terminer.</p></div>",
+          "reponse": "<div style='background-color: #f0fff4; padding: 12px; border-radius: 8px; color: #22543d;'><p>Pas de paramètre ou <code>-15</code>. La commande <code>kill 5678</code> ou <code>kill -15 5678</code> envoie le signal SIGTERM.</p></div>"
+        },
+        {
+          "question": "<div style='background-color: #f0f4f8; padding: 12px; border-radius: 8px; color: #1a202c;'><p><strong>3)</strong> <code>killall _______</code> pour envoyer un signal SIGHUP à tous les processus <code>nginx</code>.</p></div>",
+          "reponse": "<div style='background-color: #f0fff4; padding: 12px; border-radius: 8px; color: #22543d;'><p><code>-1</code> ou <code>-HUP</code>. La commande complète est <code>killall -1 nginx</code> ou <code>killall -HUP nginx</code>, qui envoie SIGHUP à tous les processus nginx. Ce signal est souvent utilisé pour recharger la configuration.</p></div>"
+        }
+      ]
+    },
+    {
+      "titre": "Question de synthèse",
+      "points": "6 pts",
+      "enonce": "<div style='font-size: 0.95rem; line-height: 1.6; background-color: #f0f4f8; padding: 20px; border-radius: 12px; color: #1a202c;'><p style='font-weight: bold; font-size: 1.1rem; margin-top: 0;'>🧠 Exercice 4</p><p>Un serveur web est en surcharge. Vous devez analyser la situation et proposer des solutions. [citation:2][citation:3]</p></div>",
+      "questions": [
+        {
+          "question": "<div style='background-color: #f0f4f8; padding: 12px; border-radius: 8px; color: #1a202c;'><p><strong>1)</strong> Quelles commandes utilisez-vous pour identifier le processus consommateur de CPU et le processus consommateur de mémoire ? Expliquez votre démarche.</p></div>",
+          "reponse": "<div style='background-color: #f0fff4; padding: 12px; border-radius: 8px; color: #22543d;'><p>J'utiliserai <code>top</code> ou <code>htop</code> pour une vue en temps réel. Dans <code>top</code>, appuyer sur <code>P</code> pour trier par CPU (le plus élevé en premier) et sur <code>M</code> pour trier par mémoire. Cela permet d'identifier immédiatement les processus problématiques. [citation:2]</p></div>"
+        },
+        {
+          "question": "<div style='background-color: #f0f4f8; padding: 12px; border-radius: 8px; color: #1a202c;'><p><strong>2)</strong> Une fois le processus identifié (PID 9876), vous souhaitez l'arrêter. Quelles commandes utiliser selon les scénarios suivants : (a) le processus doit s'arrêter après avoir terminé son travail en cours, (b) le processus doit être arrêté immédiatement.</p></div>",
+          "reponse": "<div style='background-color: #f0fff4; padding: 12px; border-radius: 8px; color: #22543d;'><p>(a) <code>kill 9876</code> (SIGTERM) pour un arrêt propre si le processus permet une terminaison gracieuse. (b) <code>kill -9 9876</code> (SIGKILL) pour une terminaison immédiate et forcée. La méthode (a) doit être privilégiée pour éviter une corruption de données.</p></div>"
+        },
+        {
+          "question": "<div style='background-color: #f0f4f8; padding: 12px; border-radius: 8px; color: #1a202c;'><p><strong>3)</strong> Un développeur vous signale que ses processus sont souvent tués lorsqu'il ferme son terminal. Quelle commande ou méthode lui conseillez-vous pour lancer des scripts longs en toute sécurité ?</p></div>",
+          "reponse": "<div style='background-color: #f0fff4; padding: 12px; border-radius: 8px; color: #22543d;'><p>Il faut utiliser <code>nohup</code> devant la commande, par exemple <code>nohup mon_script.sh &</code>. Cela permet au script de continuer à s'exécuter même après la fermeture du terminal. Une alternative est d'utiliser <code>screen</code> ou <code>tmux</code>.</p></div>"
+        }
+      ]
+    }
+  ]
+};
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

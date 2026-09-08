@@ -1,0 +1,133 @@
+[
+  {
+    "intitule": "Fondements de CatBoost",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Cet exercice porte sur les concepts fondamentaux de CatBoost, une bibliothèque de boosting par gradient qui se distingue par sa gestion des variables catégorielles.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez comment CatBoost gère les variables catégorielles. En quoi l'encodage ordonné (ordered encoding) diffère-t-il des méthodes traditionnelles comme l'one-hot encoding ou le label encoding ?",
+        "niveau": "medium",
+        "reponse": "CatBoost utilise une méthode appelée 'ordered encoding' ou 'target-based encoding' qui remplace chaque valeur catégorielle par une statistique de la cible calculée sur les observations précédentes dans une permutation aléatoire des données. Cela contraste avec l'one-hot encoding qui crée des colonnes binaires (problématique pour les catégories à cardinalité élevée) et le label encoding qui assigne des entiers arbitraires (introduit un ordre non existant). L'ordered encoding évite le data leakage en ne tenant pas compte de la valeur cible de l'observation courante et permet de capturer la relation entre la catégorie et la cible de manière plus efficace.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Décrivez le principe de l'encodage ordonné (ordered encoding) utilisé par CatBoost. Illustrez avec un exemple concret.",
+        "niveau": "hard",
+        "reponse": "L'encodage ordonné fonctionne comme suit : 1) On génère une permutation aléatoire des données d'entraînement. 2) Pour chaque observation, la valeur d'une variable catégorielle est remplacée par une statistique (moyenne de la cible) calculée sur les observations précédentes dans cette permutation, qui partagent la même catégorie. Par exemple, pour une variable 'Ville' avec les catégories 'Yaoundé', 'Douala', 'Garoua' et une cible binaire 'Achat', pour l'observation 5 (Yaoundé), on calcule la moyenne des 'Achat'=1 pour les observations précédentes (1 à 4) où Ville=Yaoundé. Une régularisation (paramètre 'prior') est ajoutée pour lisser les estimations. Ce mécanisme évite le biais de cible (target leakage) et permet de traiter les catégories avec très peu d'observations.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Identifiez et expliquez les principaux hyperparamètres de CatBoost qui permettent d'éviter le surapprentissage.",
+        "niveau": "medium",
+        "reponse": "Les principaux hyperparamètres de régularisation de CatBoost incluent : 'depth' (profondeur des arbres, valeurs typiques 4-10), 'learning_rate' (taux d'apprentissage, généralement entre 0.01 et 0.3), 'l2_leaf_reg' (régularisation L2 sur les feuilles, pour pénaliser les grandes valeurs), 'iterations' (nombre d'arbres, avec un early stopping), 'subsample' (fraction des données utilisée pour chaque arbre, évite l'overfitting), et 'colsample_bylevel' (sélection aléatoire des caractéristiques). CatBoost intègre également une régularisation automatique via la gestion des catégories et l'encodage ordonné qui réduit le surapprentissage.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 4,
+        "texte": "Comparez CatBoost avec d'autres bibliothèques de gradient boosting comme XGBoost et LightGBM en termes de : a) Gestion des données catégorielles, b) Vitesse d'entraînement, c) Robustesse au surapprentissage.",
+        "niveau": "hard",
+        "reponse": "a) Gestion des données catégorielles : CatBoost est le plus avancé avec son encodage ordonné, gérant nativement les catégories sans prétraitement. XGBoost nécessite un encodage one-hot ou label encoding (avec paramètre 'enable_categorical'). LightGBM utilise le 'categorical_feature' avec un encodage basé sur les gradients. b) Vitesse d'entraînement : LightGBM est généralement le plus rapide grâce à GOSS et EFB, suivi de CatBoost (optimisé mais plus lent sur grandes données), puis XGBoost (plus lent, surtout avec l'histogramme). c) Robustesse : CatBoost est très robuste avec peu d'hyperparamètres à régler, moins sensible au surapprentissage. XGBoost et LightGBM sont plus sensibles mais offrent plus de contrôle avec des hyperparamètres comme gamma, lambda, alpha pour XGBoost et num_leaves, min_data_in_leaf pour LightGBM.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 5,
+        "texte": "Quels sont les avantages de l'utilisation de CatBoost pour les problèmes de classification avec des données tabulaires contenant des variables catégorielles ? Donnez un exemple concret dans le contexte camerounais.",
+        "niveau": "medium",
+        "reponse": "Les avantages de CatBoost sont : 1) Gestion native et efficace des catégories, 2) Moins de prétraitement nécessaire, 3) Robustesse au surapprentissage, 4) Performances élevées même avec des hyperparamètres par défaut, 5) Interprétabilité via l'importance des caractéristiques et les SHAP values. Par exemple, pour prédire le risque de défaut de paiement d'un micro-crédit au Cameroun, avec des variables comme 'Région' (10 régions), 'Secteur d'activité' (agriculture, commerce, etc.), 'Niveau d'éducation' (primaire, secondaire, supérieur), CatBoost peut traiter ces variables catégorielles directement sans encodage, ce qui facilite le développement et améliore la précision par rapport à XGBoost qui nécessite un encodage.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Application de CatBoost à un problème de prédiction",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous travaillez pour le Ministère de l'Agriculture du Cameroun. Vous devez prédire le rendement agricole (en tonnes par hectare) à partir de données historiques. Le jeu de données contient 10 000 observations avec les caractéristiques suivantes :</p><ul><li><strong>Region</strong> : catégorielle (10 régions du Cameroun)</li><li><strong>TypeCulture</strong> : catégorielle (maïs, manioc, cacao, café, riz)</li><li><strong>Superficie</strong> : numérique (hectares)</li><li><strong>Pluviometrie</strong> : numérique (mm/mois)</li><li><strong>Temperature</strong> : numérique (°C)</li><li><strong>TypeSol</strong> : catégorielle (argileux, sableux, limoneux, etc.)</li><li><strong>Engrais</strong> : numérique (kg/ha)</li><li><strong>Irrigation</strong> : numérique (m3/ha)</li></ul><p>La variable cible est le rendement (tonnes/ha).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevez une stratégie de modélisation pour ce problème. Décrivez les étapes de prétraitement, de sélection du modèle et d'évaluation que vous suivrez.",
+        "niveau": "hard",
+        "reponse": "Stratégie de modélisation : 1) Analyse exploratoire : visualisation des distributions, détection des valeurs aberrantes, analyse de corrélation. 2) Prétraitement : pour CatBoost, pas d'encodage nécessaire pour les variables catégorielles ; on peut simplement les déclarer comme 'cat_features'. Il faut gérer les valeurs manquantes (CatBoost les gère nativement). Normalisation non nécessaire pour les arbres. 3) Division des données : 80% entraînement, 20% test (ou validation croisée avec 5 folds). 4) Modèle : CatBoostRegressor avec les hyperparamètres par défaut puis optimisation via GridSearchCV ou Optuna sur learning_rate, depth, l2_leaf_reg, iterations. 5) Évaluation : RMSE, MAE, R² sur le jeu de test, et analyse des résidus. 6) Interprétation : importance des caractéristiques, SHAP values pour expliquer les prédictions.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Justifiez l'utilisation de CatBoost plutôt qu'un autre modèle (comme un modèle linéaire, une forêt aléatoire, ou XGBoost) pour ce problème.",
+        "niveau": "medium",
+        "reponse": "CatBoost est particulièrement adapté car : 1) Il gère nativement les variables catégorielles comme 'Region', 'TypeCulture', 'TypeSol' sans encodage, ce qui simplifie le pipeline et évite la perte d'information. 2) Les relations entre rendement et ces catégories sont probablement non linéaires (ex : le cacao pousse mieux dans certaines régions), et CatBoost (boosting par gradient) capture ces interactions complexes mieux qu'un modèle linéaire. 3) Par rapport à la forêt aléatoire, CatBoost offre généralement de meilleures performances sur les données tabulaires, avec moins de surapprentissage grâce à la régularisation. 4) Par rapport à XGBoost, CatBoost est plus robuste et nécessite moins de réglage des hyperparamètres ; il est aussi plus rapide que XGBoost sur ce type de données. 5) La nature séquentielle du boosting s'adapte bien aux données tabulaires avec relations complexes.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposez une méthode pour évaluer la performance du modèle de manière robuste. Quels indicateurs utiliserez-vous et pourquoi ?",
+        "niveau": "medium",
+        "reponse": "Pour une évaluation robuste, j'utiliserai : 1) Une validation croisée stratifiée (5-folds) sur l'ensemble d'entraînement pour ajuster les hyperparamètres et détecter l'overfitting. 2) Les métriques : RMSE (Root Mean Squared Error) pour pénaliser les grosses erreurs (sensible aux outliers), MAE (Mean Absolute Error) pour une interprétation en tonnes/ha, et R² pour mesurer la proportion de variance expliquée. 3) Un jeu de test séparé (20% des données) avec tirage aléatoire stratifié par région pour évaluer la généralisation. 4) Analyse des résidus : vérifier leur distribution (homoscédasticité, normalité approximative), les erreurs par région/culture pour identifier les biais. 5) Comparaison avec un modèle simple (moyenne par région/culture) pour vérifier l'apport du modèle.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 4,
+        "texte": "Après entraînement du modèle, vous obtenez une importance des caractéristiques. Interprétez les résultats suivants :\n- Pluviometrie : 35%\n- TypeSol : 20%\n- Engrais : 18%\n- Region : 12%\n- TypeCulture : 10%\n- Temperature : 3%\n- Superficie : 1%\n- Irrigation : 1%",
+        "niveau": "medium",
+        "reponse": "L'importance des caractéristiques indique que : 1) La pluviométrie est le facteur le plus important (35%), ce qui est cohérent avec le contexte agricole camerounais où les précipitations influencent fortement les rendements. 2) Le type de sol (20%) est également crucial, confirme l'importance de la qualité du sol. 3) L'engrais (18%) a un impact significatif sur le rendement, ce qui suggère que les politiques de subvention d'engrais pourraient être efficaces. 4) La région (12%) et le type de culture (10%) ont un impact modéré, capturant les spécificités locales et les besoins des cultures. 5) La température (3%) a un faible impact, peut-être parce que les variations sont faibles sur la période. 6) La superficie (1%) et l'irrigation (1%) ont un impact négligeable, suggérant que le rendement par hectare ne dépend pas beaucoup de ces facteurs dans ce jeu de données. Ces informations peuvent orienter les décisions politiques : investir dans l'irrigation pourrait avoir un faible impact comparé à l'amélioration de la pluviométrie (impossible) ou à la fourniture d'engrais.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 5,
+        "texte": "Votre modèle prédit un rendement très faible pour une zone spécifique. Proposez une démarche pour interpréter cette prédiction et identifier les facteurs explicatifs.",
+        "niveau": "very hard",
+        "reponse": "Pour interpréter une prédiction spécifique avec CatBoost : 1) Utiliser SHAP (SHapley Additive exPlanations) pour décomposer la prédiction en contributions de chaque caractéristique. CatBoost intègre nativement le calcul des SHAP values via la méthode TreeSHAP. 2) Pour cette observation, on calcule les SHAP values : contribution positive ou négative de chaque caractéristique par rapport à la prédiction moyenne. 3) Exemple : si le rendement prédit est de 0.5 t/ha (moyenne = 2 t/ha), les SHAP values pourraient être : Pluviometrie = -0.8 (faible pluviométrie), TypeSol = -0.3 (sol argileux défavorable), Region = -0.2 (région semi-aride), etc. 4) On peut aussi utiliser l'outil 'explain' de CatBoost qui génère un rapport d'explication local. 5) Cette analyse permet de fournir des recommandations ciblées : améliorer l'irrigation (si manque d'eau), changer de culture, ou utiliser des engrais adaptés pour pallier le faible rendement. 6) On peut également comparer cette observation aux observations similaires (k plus proches voisins dans l'espace des caractéristiques) pour vérifier si la prédiction est cohérente.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation des hyperparamètres de CatBoost",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Dans cet exercice, vous allez approfondir votre compréhension des hyperparamètres de CatBoost et de leur impact sur les performances du modèle.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Définissez le rôle de chacun des hyperparamètres suivants dans CatBoost et expliquez comment ils influencent le modèle : 'depth', 'learning_rate', 'l2_leaf_reg', 'iterations'.",
+        "niveau": "medium",
+        "reponse": "- 'depth' (profondeur des arbres) : détermine la complexité de chaque arbre. Une profondeur plus élevée (ex: 10) capture des interactions complexes mais risque de surapprendre ; une profondeur faible (ex: 3) donne des arbres simples mais peut sous-apprendre. - 'learning_rate' : taux d'apprentissage, contrôle la contribution de chaque arbre. Un taux faible (0.01) nécessite plus d'arbres mais peut donner de meilleures performances ; un taux élevé (0.3) accélère l'apprentissage mais peut surapprendre. - 'l2_leaf_reg' : régularisation L2 sur les poids des feuilles, pénalise les grandes valeurs pour éviter le surapprentissage. - 'iterations' : nombre d'arbres, similaire à n_estimators. Plus il est élevé, plus le modèle est complexe ; il faut l'ajuster avec l'early stopping.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Qu'est-ce que l'early stopping et comment l'utiliser pour optimiser le nombre d'itérations ?",
+        "niveau": "medium",
+        "reponse": "L'early stopping est une technique de régularisation qui arrête l'entraînement lorsque la performance sur un ensemble de validation ne s'améliore plus pendant un certain nombre d'itérations (paramètre 'patience'). Dans CatBoost, on utilise le paramètre 'early_stopping_rounds'. Par exemple, avec early_stopping_rounds=50, on arrête l'entraînement si la métrique de validation ne s'est pas améliorée pendant 50 itérations. Cela permet d'éviter le surapprentissage et de réduire le temps d'entraînement. On peut aussi utiliser 'eval_set' pour fournir un ensemble de validation. L'early stopping est particulièrement utile quand on fixe un grand nombre d'itérations (ex: 1000) et qu'on laisse l'algorithme s'arrêter automatiquement.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquez l'impact du paramètre 'subsample' sur le modèle. Comment ajuster ce paramètre pour un jeu de données de petite taille (ex: 500 observations) vs un jeu de données de grande taille (ex: 100 000 observations) ?",
+        "niveau": "hard",
+        "reponse": "Le paramètre 'subsample' (dans CatBoost, 'bagging_temperature' ou 'subsample' en fonction de la version) contrôle la fraction des données utilisée pour entraîner chaque arbre. Une valeur < 1.0 (ex: 0.8) introduit du stochasticité, réduit la corrélation entre les arbres, et aide à éviter le surapprentissage. Pour un petit jeu de données (500 obs), on évitera de trop réduire le subsample pour ne pas perdre trop d'information (ex: 0.9-1.0). Pour un grand jeu de données (100 000 obs), on peut utiliser une fraction plus faible (ex: 0.5-0.8) pour accélérer l'entraînement et réduire le surapprentissage. Dans CatBoost, 'bagging_temperature' est un paramètre de la version 0.22+, qui contrôle la température pour l'échantillonnage de Gibbs ; plus la température est élevée, plus les échantillons sont uniformes. Il faut vérifier la documentation selon la version.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 4,
+        "texte": "Proposez une stratégie d'optimisation des hyperparamètres pour CatBoost en utilisant la validation croisée. Quelles sont les bonnes pratiques ?",
+        "niveau": "very hard",
+        "reponse": "Stratégie d'optimisation : 1) Définir une grille de recherche ou un espace de recherche pour les hyperparamètres clés : depth (4-10), learning_rate (0.01-0.3), l2_leaf_reg (1-10), iterations (100-1000 avec early stopping), subsample (0.6-1.0), colsample_bylevel (0.6-1.0). 2) Utiliser une validation croisée (CV) avec 5 folds, ou une recherche bayésienne (Optuna) plus efficace sur de grands espaces. 3) Métrique à optimiser : RMSE ou MAE selon le problème. 4) Utiliser l'early stopping pendant la CV pour limiter les itérations. 5) Bonnes pratiques : ne pas trop ajuster sur le test set, utiliser un ensemble de validation séparé pour l'early stopping, normaliser les données (non nécessaire pour les arbres), et vérifier la stabilité des hyperparamètres sur plusieurs folds. 6) Après optimisation, entraîner le modèle final sur l'ensemble de la base d'entraînement avec les meilleurs paramètres, et évaluer sur le jeu de test.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

@@ -1,0 +1,135 @@
+[
+  {
+    "intitule": "Identifier les bonnes pratiques de sécurité cloud",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous travaillez dans une entreprise qui utilise AWS. Un collègue a laissé des clés d'accès AWS (Access Key ID + Secret Access Key) en clair dans un fichier texte sur le bureau de son poste de travail. Il pense que cela n'est pas grave car ces clés ne permettent que l'accès à la lecture de fichiers dans un bucket S3.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer en quoi cette pratique est risquée, même avec des droits limités.",
+        "niveau": "easy",
+        "reponse": "Même avec des droits limités (lecture seule), les clés compromises peuvent permettre à un attaquant de lire des données sensibles (logs, fichiers contenant des informations personnelles ou confidentielles). De plus, un attaquant pourrait utiliser ces informations pour mener une attaque plus large ou escalader ses privilèges si d'autres services sont mal configurés. Enfin, laisser des clés en clair viole le principe du moindre privilège et les bonnes pratiques de sécurité cloud.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Citer la bonne pratique recommandée pour éviter de stocker des clés statiques.",
+        "niveau": "easy",
+        "reponse": "Utiliser des rôles IAM (AWS IAM roles) pour les services et les utilisateurs. Les rôles fournissent des credentials temporaires via STS (Security Token Service). Ne jamais stocker de clés d'accès en clair, surtout sur un poste de travail. Utiliser AWS Secrets Manager ou AWS Systems Manager Parameter Store pour stocker les secrets.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyser une violation du moindre privilège dans le cloud",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans une équipe DevOps, on vous demande de revoir les politiques IAM suivantes attachées à un rôle utilisé par une application web qui doit uniquement écrire des logs dans un bucket S3 (chemin : <code>s3://app-logs/</code>) et lire des configurations depuis un secret dans AWS Secrets Manager.</p>\n<pre>\n{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [\n    {\n      \"Effect\": \"Allow\",\n      \"Action\": \"s3:*\",\n      \"Resource\": \"*\"\n    },\n    {\n      \"Effect\": \"Allow\",\n      \"Action\": \"secretsmanager:GetSecretValue\",\n      \"Resource\": \"arn:aws:secretsmanager:region:account-id:secret:my-app-config-*\"\n    }\n  ]\n}\n</pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier la violation du principe du moindre privilège dans cette politique.",
+        "niveau": "medium",
+        "reponse": "La première règle autorise 's3:*' (toutes les actions S3) sur toutes les ressources ('*'). L'application n'a besoin que d'écrire (s3:PutObject) dans un bucket spécifique, et non de lire, lister, ou supprimer des objets dans tous les buckets AWS.",
+        "sousQuestions": []
+      },
+      {
+        "numero": "1.a",
+        "numeroStr": "1.a",
+        "texte": "Proposer une correction minimale et sécurisée de cette politique.",
+        "niveau": "medium",
+        "reponse": "Remplacer la première règle par :\n{\n  \"Effect\": \"Allow\",\n  \"Action\": \"s3:PutObject\",\n  \"Resource\": \"arn:aws:s3:::app-logs/*\"\n}\nCela limite strictement à l'écriture dans le bucket spécifique.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Concevoir une stratégie de moindre privilège pour un service serverless",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous devez concevoir un microservice AWS Lambda qui :</p>\n<ul>\n  <li>Lit un fichier depuis un bucket S3 (input-bucket)</li>\n  <li>Traite le fichier (texte)</li>\n  <li>Écrit le résultat dans un autre bucket S3 (output-bucket)</li>\n  <li>Envoie une notification SNS (Simple Notification Service) après traitement</li>\n  <li>N'a pas besoin d'accéder à d'autres ressources</li>\n</ul>\n<p>Le service est invoqué via un déclencheur S3 (upload dans input-bucket).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Énumérer les actions IAM minimales nécessaires pour cette fonction Lambda.",
+        "niveau": "hard",
+        "reponse": "Pour S3 : s3:GetObject (lecture depuis input-bucket), s3:PutObject (écriture dans output-bucket). Pour SNS : sns:Publish (envoyer une notification). Pour Lambda lui-même : si la fonction doit écrire ses logs, ajouter logs:CreateLogGroup, logs:CreateLogStream, logs:PutLogEvents (CloudWatch). Aucune autre action n'est nécessaire.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Rédiger la politique IAM (JSON) respectant le principe du moindre privilège.",
+        "niveau": "very hard",
+        "reponse": "{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [\n    {\n      \"Effect\": \"Allow\",\n      \"Action\": [\"s3:GetObject\"],\n      \"Resource\": \"arn:aws:s3:::input-bucket/*\"\n    },\n    {\n      \"Effect\": \"Allow\",\n      \"Action\": [\"s3:PutObject\"],\n      \"Resource\": \"arn:aws:s3:::output-bucket/*\"\n    },\n    {\n      \"Effect\": \"Allow\",\n      \"Action\": [\"sns:Publish\"],\n      \"Resource\": \"arn:aws:sns:region:account-id:my-topic\"\n    },\n    {\n      \"Effect\": \"Allow\",\n      \"Action\": [\n        \"logs:CreateLogGroup\",\n        \"logs:CreateLogStream\",\n        \"logs:PutLogEvents\"\n      ],\n      \"Resource\": \"arn:aws:logs:*:*:*\"\n    }\n  ]\n}",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Détecter et corriger une mauvaise configuration IAM dans un compte cloud",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un audit de sécurité révèle qu’un utilisateur IAM créé pour une ancienne application n’a jamais été supprimé. Cet utilisateur possède des clés d’accès actives et une politique \"AdministratorAccess\". L’application n’existe plus depuis 6 mois.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer le danger principal de cette situation.",
+        "niveau": "medium",
+        "reponse": "Des clés d'accès avec droits administrateur complet, laissées actives, exposent tout le compte cloud à une compromission totale (suppression de données, création de ressources malveillantes, exfiltration massive, installation de backdoors, etc.). Un attaquant qui découvrirait ces clés aurait un contrôle absolu.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer les actions immédiates à mener.",
+        "niveau": "medium",
+        "reponse": "1. Désactiver (ou supprimer) immédiatement les clés d'accès de cet utilisateur. 2. Désactiver ou supprimer l'utilisateur IAM. 3. Vérifier les logs CloudTrail pour voir si ces clés ont été utilisées récemment (recherche d'activités suspectes). 4. Changer toutes les clés root et administratives si une activité non autorisée est détectée.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Évaluer l’application du moindre privilège dans un déploiement cloud réel",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous êtes consultant en sécurité. Une entreprise a déployé une application web sur AWS avec l'architecture suivante :</p>\n<ul>\n  <li>Un load balancer (ALB) public</li>\n  <li>Des instances EC2 derrière l'ALB, dans un auto-scaling group</li>\n  <li>Chaque instance a un rôle IAM avec la politique \"AmazonS3FullAccess\"</li>\n  <li>L'application stocke des images uploadées par les utilisateurs dans un bucket S3</li>\n  <li>Elle lit aussi des templates HTML depuis le même bucket</li>\n</ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Justifier en quoi la politique \"AmazonS3FullAccess\" viole le principe du moindre privilège.",
+        "niveau": "very hard",
+        "reponse": "AmazonS3FullAccess donne tous les droits S3 (lecture, écriture, suppression, ACL, versioning, etc.) sur tous les buckets. L'application n'a besoin que de s3:PutObject (upload) et s3:GetObject (lecture des templates) sur un seul bucket spécifique. Un attaquant compromettant l'instance pourrait supprimer ou modifier tous les objets, accéder à d'autres buckets de l'entreprise, ou encore changer la configuration du bucket.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Concevoir une politique IAM restreinte (JSON) pour ce besoin.",
+        "niveau": "very hard",
+        "reponse": "{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [\n    {\n      \"Effect\": \"Allow\",\n      \"Action\": [\"s3:PutObject\", \"s3:GetObject\"],\n      \"Resource\": \"arn:aws:s3:::my-app-bucket/*\"\n    }\n  ]\n}",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Décrire une méthode pour détecter automatiquement ce type de violation à l'avenir.",
+        "niveau": "very hard",
+        "reponse": "Mettre en place AWS IAM Access Analyzer pour analyser les politiques et générer des alertes en cas de privilèges excessifs. Utiliser des outils de conformité comme AWS Security Hub avec des contrôles CIS. Intégrer l'analyse des politiques IAM dans le pipeline CI/CD (infrastructure as code) avec des outils comme Checkov, tfsec (pour Terraform), ou cfn-nag (pour CloudFormation) pour bloquer les déploiements violant le moindre privilège.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

@@ -1,0 +1,102 @@
+[
+  {
+    "intitule": "Configuration JWT : analyse d’extrait de code",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un développeur configure l’authentification JWT dans <code>Program.cs</code> d’une API .NET 8. Voici son code :</p><pre><code>builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)\n    .AddJwtBearer(options =>\n    {\n        options.TokenValidationParameters = new TokenValidationParameters\n        {\n            ValidateIssuer = true,\n            ValidIssuer = \"https://monapi.com\",\n            ValidateAudience = true,\n            ValidAudience = \"https://monapp.com\",\n            ValidateLifetime = true,\n            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(\"ma_super_cle_secrete\"))\n        };\n    });</code></pre><p>Analysez cette configuration et répondez aux questions.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier les trois validations obligatoires pour une sécurité minimale d’un JWT.",
+        "niveau": "easy",
+        "reponse": "ValidateIssuer, ValidateAudience, ValidateLifetime (et ValidateIssuerSigningKey est implicite avec IssuerSigningKey).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer pourquoi la clé secrète doit être stockée dans les secrets utilisateur ou dans les variables d’environnement, et non en dur dans le code.",
+        "niveau": "medium",
+        "reponse": "Pour éviter l’exposition de la clé dans le contrôleur de version, et permettre de changer la clé selon l’environnement (dev, staging, prod) sans recompiler.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Justifier l’importance d’avoir un émetteur (issuer) et une audience (audience) différents.",
+        "niveau": "hard",
+        "reponse": "L’émetteur identifie le serveur qui a émis le token (l’API elle-même ou le serveur d’auth). L’audience identifie l’application destinatrice. Cela évite qu’un token émis pour une autre API soit accepté par celle-ci (principe de délimitation des responsabilités et d’isolation des services).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Implémenter la génération d’un token JWT",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Dans un projet ASP.NET Core, vous devez créer un endpoint <code>/api/auth/login</code> qui reçoit un login/mot de passe (simulation, pas de vérification réelle) et retourne un token JWT contenant :</p><ul><li><code>sub</code> : l’identifiant utilisateur (ex: 123)</li><li><code>email</code> : l’email de l’utilisateur</li><li><code>role</code> : \"Admin\" ou \"User\"</li></ul><p>Le token doit expirer dans 2 heures. La clé secrète est stockée dans <code>appsettings.json</code> sous <code>\"JwtSettings:SecretKey\"</code>.</p><p>Rédigez le code complet du contrôleur en respectant la taxonomie de Bloom (synthèse/création).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédiger la méthode Login du contrôleur avec les étapes : récupération de la clé, création des claims, génération du token, retour du token en JSON.",
+        "niveau": "very hard",
+        "reponse": "```csharp\n[HttpPost(\"login\")]\npublic IActionResult Login([FromBody] LoginRequest request)\n{\n    // Simulation validation\n    var userId = 123;\n    var email = \"user@example.com\";\n    var role = \"Admin\";\n\n    var secretKey = Encoding.UTF8.GetBytes(_configuration[\"JwtSettings:SecretKey\"]);\n    var signingKey = new SymmetricSecurityKey(secretKey);\n\n    var claims = new[]\n    {\n        new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),\n        new Claim(JwtRegisteredClaimNames.Email, email),\n        new Claim(ClaimTypes.Role, role),\n        new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())\n    };\n\n    var tokenDescriptor = new SecurityTokenDescriptor\n    {\n        Subject = new ClaimsIdentity(claims),\n        Expires = DateTime.UtcNow.AddHours(2),\n        Issuer = \"monapi.com\",\n        Audience = \"monapp.com\",\n        SigningCredentials = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256)\n    };\n\n    var tokenHandler = new JwtSecurityTokenHandler();\n    var token = tokenHandler.CreateToken(tokenDescriptor);\n    var tokenString = tokenHandler.WriteToken(token);\n\n    return Ok(new { token = tokenString });\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Justifier le choix de l’algorithme HmacSha256.",
+            "niveau": "medium",
+            "reponse": "C’est l’algorithme symétrique le plus courant pour JWT, performant et sécurisé quand la clé est suffisamment longue (≥256 bits). Il est supporté par défaut par AddJwtBearer."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Adapter la configuration JWT aux environnements",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Votre API doit être déployée en production avec des clés distinctes et des émetteurs différents. Expliquez comment modifier la configuration de la lesson18 pour :</p><ul><li>Lire la clé secrète depuis une variable d’environnement en production.</li><li>Définir l’émetteur et l’audience selon l’environnement (dev/prod).</li><li>Éviter les valeurs en dur dans le code.</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposer une architecture utilisant IConfiguration, les profils launchSettings.json, et les variables d’environnement.",
+        "niveau": "very hard",
+        "reponse": "1. Dans appsettings.json : valeurs par défaut (dev).\n2. Dans appsettings.Production.json : surcharge pour la prod (issuer, audience).\n3. La clé secrète : ne jamais la mettre dans un fichier JSON versionné. La lire via Environment.GetEnvironmentVariable(\"JWT_SECRET\") ou via IConfiguration qui la lit depuis les variables d’environnement.\n4. Dans Program.cs : utiliser builder.Configuration.GetValue<string>(\"JwtSettings:SecretKey\") qui peut venir de User Secrets en dev et de env var en prod.\nExemple : \n```csharp\nvar secret = builder.Configuration[\"JwtSettings:SecretKey\"];\nif (string.IsNullOrEmpty(secret)) throw new Exception(\"JWT Secret manquante\");\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Dépannage : token JWT rejeté",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un client envoie un token JWT valide, mais l’API retourne une erreur 401 avec le message : <code>WWW-Authenticate: Bearer error=\"invalid_token\", error_description=\"The signature is invalid\"</code>.</p><p>Le code de configuration est identique à celui de l’exercice 1. La clé secrète utilisée pour générer le token est la même que celle dans Program.cs.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Diagnostiquer les causes probables de cette erreur de signature.",
+        "niveau": "medium",
+        "reponse": "1. La clé secrète sur le serveur de l’API n’est pas identique à celle du serveur d’émission (par ex. encodage différent, espace, ou clé tronquée).\n2. L’algorithme utilisé pour générer le token est différent de celui attendu (ex : HS512 vs HS256).\n3. La clé n’est pas convertie dans le même encodage (UTF8 vs ASCII) des deux côtés.\n4. Un middleware ou un proxy a modifié le token en transit.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposer une méthode de vérification pour confirmer que la clé est bien identique.",
+            "niveau": "easy",
+            "reponse": "Logguer temporairement le hash SHA256 de la clé en emission et en validation (uniquement en développement) pour comparer qu’elles sont strictement identiques."
+          }
+        ]
+      }
+    ]
+  }
+]

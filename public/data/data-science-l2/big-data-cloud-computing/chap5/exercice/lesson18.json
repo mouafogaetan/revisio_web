@@ -1,0 +1,153 @@
+[
+  {
+    "intitule": "Analyse et Correction d'un DAG Non Optimisé",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous reprenez un DAG Airflow existant qui présente plusieurs problèmes d'organisation et de robustesse. Voici le code du DAG :</p><pre>\nfrom datetime import datetime, timedelta\nfrom airflow import DAG\nfrom airflow.operators.python import PythonOperator\nfrom airflow.operators.bash import BashOperator\nfrom airflow.operators.email import EmailOperator\n\ndef task1():\n    print(\"Tâche 1\")\n\ndef task2():\n    print(\"Tâche 2\")\n\ndef task3():\n    print(\"Tâche 3\")\n\ndef task4():\n    print(\"Tâche 4\")\n\ndef task5():\n    print(\"Tâche 5\")\n\ndef task6():\n    print(\"Tâche 6\")\n\nwith DAG(\n    'mon_dag',\n    start_date=datetime(2023, 1, 1),\n    schedule_interval='@daily'\n) as dag:\n    \n    t1 = PythonOperator(task_id='task1', python_callable=task1)\n    t2 = PythonOperator(task_id='task2', python_callable=task2)\n    t3 = PythonOperator(task_id='task3', python_callable=task3)\n    t4 = PythonOperator(task_id='task4', python_callable=task4)\n    t5 = PythonOperator(task_id='task5', python_callable=task5)\n    t6 = PythonOperator(task_id='task6', python_callable=task6)\n    \n    t1 >> t2 >> t3 >> t4 >> t5 >> t6\n</pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier et corriger les problèmes d'organisation et de robustesse dans ce DAG.",
+        "niveau": "medium",
+        "reponse": "Problèmes identifiés :\n1. **Absence de default_args** : Pas de gestion des retries, pas d'owner, pas de politique d'email en cas d'échec.\n2. **Absence de catchup** : Le paramètre catchup n'est pas défini, ce qui peut causer des exécutions rétroactives non souhaitées.\n3. **Séquence linéaire** : Toutes les tâches sont en séquence, ce qui est inefficace si certaines peuvent être parallélisées.\n4. **Tâches sans description** : Les tâches n'ont pas de description, ce qui rend le DAG difficile à comprendre.\n5. **Documentation manquante** : Pas de docstring ni de paramètre doc_md sur le DAG.\n6. **Noms de tâches génériques** : Les noms sont peu explicites (task1, task2, ...).\n\nVersion corrigée :\n```python\nfrom datetime import datetime, timedelta\nfrom airflow import DAG\nfrom airflow.operators.python import PythonOperator\nfrom airflow.operators.dummy import DummyOperator\nfrom airflow.operators.email import EmailOperator\n\ndef extract_data():\n    print(\"Extraction des données depuis l'API\")\n\ndef transform_data():\n    print(\"Transformation des données\")\n\ndef load_data():\n    print(\"Chargement des données dans la base\")\n\ndef validate_data():\n    print(\"Validation des données\")\n\ndef send_report():\n    print(\"Envoi du rapport\")\n\ndefault_args = {\n    'owner': 'data_team',\n    'depends_on_past': False,\n    'start_date': datetime(2023, 1, 1),\n    'email_on_failure': True,\n    'email_on_retry': False,\n    'email': ['admin@company.com'],\n    'retries': 3,\n    'retry_delay': timedelta(minutes=5),\n    'retry_exponential_backoff': True,\n    'max_retry_delay': timedelta(hours=1)\n}\n\nwith DAG(\n    'pipeline_data_optimise',\n    default_args=default_args,\n    description='Pipeline complet de traitement des données avec gestion d\\'erreurs',\n    schedule_interval='@daily',\n    catchup=False,\n    max_active_runs=1,\n    tags=['data_pipeline', 'etl'],\n    doc_md='''\n    ### Pipeline de Données\n    Ce DAG orchestre le traitement quotidien des données.\n    - Extraction depuis l'API externe\n    - Validation des données\n    - Transformation et enrichissement\n    - Chargement en base de données\n    - Envoi d'un rapport final\n    '''\n) as dag:\n    \n    start = DummyOperator(task_id='start', doc='Début du pipeline')\n    \n    extract = PythonOperator(\n        task_id='extract_from_api',\n        python_callable=extract_data,\n        doc='Extraction des données depuis l\\'API externe'\n    )\n    \n    validate = PythonOperator(\n        task_id='validate_data',\n        python_callable=validate_data,\n        doc='Vérification de l\\'intégrité des données'\n    )\n    \n    transform = PythonOperator(\n        task_id='transform_and_enrich',\n        python_callable=transform_data,\n        doc='Transformation et enrichissement des données'\n    )\n    \n    load = PythonOperator(\n        task_id='load_to_database',\n        python_callable=load_data,\n        doc='Chargement des données dans la base'\n    )\n    \n    report = PythonOperator(\n        task_id='send_daily_report',\n        python_callable=send_report,\n        doc='Envoi du rapport quotidien par email'\n    )\n    \n    end = DummyOperator(task_id='end', doc='Fin du pipeline')\n    \n    # Définition des dépendances avec parallélisation\n    start >> extract >> validate\n    validate >> [transform, load]  # Parallélisation possible\n    [transform, load] >> report >> end\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer l'importance de la gestion des retries et de l'exponential backoff dans un DAG de production.",
+            "niveau": "medium",
+            "reponse": "La gestion des retries est cruciale car :\n- Les systèmes distribués sont sujets aux échecs temporaires (timeouts, problèmes réseau).\n- L'exponential backoff permet d'espacer les tentatives pour éviter de surcharger les systèmes.\n- Augmente la résilience du pipeline sans intervention manuelle.\n- Réduit le nombre d'alertes pour les problèmes transitoires.\n- Assure la continuité du service en cas de problèmes temporaires.",
+            "niveau": "medium"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Comment la paramètre `max_active_runs=1` améliore-t-il la stabilité du DAG ?",
+            "niveau": "medium",
+            "reponse": "`max_active_runs=1` empêche plusieurs exécutions du même DAG de s'exécuter simultanément. Cela est important car :\n- Évite les conflits de ressources quand les tâches accèdent aux mêmes fichiers ou bases de données.\n- Empêche les surcharges si les exécutions précédentes prennent plus de temps que prévu.\n- Garantit l'intégrité des données en évitant les écritures concurrentes.\n- Simplifie le debugging car une seule exécution est active à la fois.",
+            "niveau": "medium"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Stratégie de Gestion des Erreurs et Retries",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous gérez un pipeline critique qui traite des données financières. Le pipeline comprend trois étapes principales :</p><ul><li><strong>Étape 1</strong> : Téléchargement de fichiers depuis un serveur FTP externe (sujet à des interruptions réseau).</li><li><strong>Étape 2</strong> : Transformation des données avec Spark (peut échouer pour des problèmes de données).</li><li><strong>Étape 3</strong> : Chargement dans un Data Warehouse (parfois ralenti par des pics de charge).</li></ul><p>Le DAG s'exécute toutes les 2 heures et doit être terminé avant une deadline de 4 heures.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevoir une stratégie de gestion d'erreurs pour ce DAG en détaillant les paramètres de retry, les alertes et les mécanismes de fallback.",
+        "niveau": "hard",
+        "reponse": "**Stratégie de gestion d'erreurs :**\n\n1. **Paramètres de retry différenciés :**\n```python\ndefault_args = {\n    'retries': 3,\n    'retry_delay': timedelta(minutes=5),\n    'retry_exponential_backoff': True,\n    'max_retry_delay': timedelta(hours=1),\n    'email_on_failure': True,\n    'email_on_retry': False,\n    'email': ['data_team@company.com', 'oncall@company.com']\n}\n\n# Pour les tâches critiques\ncritical_args = {\n    'retries': 5,\n    'retry_delay': timedelta(minutes=10),\n    'email_on_failure': True,\n    'sla': timedelta(hours=2)  # Alerte si la tâche prend plus de 2h\n}\n```\n\n2. **Tâches de vérification préalable :**\n```python\ncheck_ftp = FileSensor(\n    task_id='check_ftp_file',\n    filepath='/path/to/financial_data.csv',\n    fs_conn_id='ftp_conn',\n    poke_interval=60,  # Vérifie toutes les minutes\n    timeout=600,  # Timeout après 10 minutes\n    mode='reschedule'\n)\n```\n\n3. **Gestion des échecs avec Branching :**\n```python\ndef check_retry_count(**context):\n    task_instance = context['task_instance']\n    retry_count = task_instance.try_number - 1\n    if retry_count >= 3:\n        return 'send_escalation_alert'\n    return 'retry_task'\n\nbranch_on_retry = BranchPythonOperator(\n    task_id='branch_on_retry',\n    python_callable=check_retry_count,\n    provide_context=True\n)\n```\n\n4. **Mécanismes de fallback :**\n```python\ndef process_with_fallback(**context):\n    try:\n        # Tenter le traitement principal\n        process_main_data()\n    except Exception as e:\n        # Utiliser les données de backup\n        if context['task_instance'].try_number > 2:\n            log_error(e)\n            process_backup_data()\n            send_warning(\"Fallback activated\")\n```\n\n5. **Alertes et monitoring :**\n```python\nsend_slack_alert = SlackAPIPostOperator(\n    task_id='send_slack_alert',\n    token='slack_token',\n    text='Échec du pipeline financier - Intervention requise',\n    channel='#alerts'\n)\n\nsend_pagerduty = PagerDutyOperator(\n    task_id='send_pagerduty_alert',\n    service_id='service_id',\n    message='Pipeline financier critique en échec'\n)\n```\n\n6. **Tâche de contrôle finale :**\n```python\ndef validate_completion(**context):\n    # Vérifie que toutes les données ont été correctement chargées\n    if not all_data_loaded():\n        raise ValueError(\"Données manquantes dans le Data Warehouse\")\n\nvalidate = PythonOperator(\n    task_id='validate_completion',\n    python_callable=validate_completion,\n    trigger_rule='all_success',\n    provide_context=True\n)\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Déterminer comment configurer les SLA (Service Level Agreements) pour ce DAG et interpréter les alertes correspondantes.",
+            "niveau": "hard",
+            "reponse": "Configuration des SLA :\n```python\nwith DAG(\n    'financial_pipeline',\n    default_args=default_args,\n    sla_miss_callback=send_sla_alert,\n    # SLA global du DAG\n    sla=timedelta(hours=3)  # Le DAG doit être terminé en 3h\n) as dag:\n    \n    # SLA par tâche\n    download = PythonOperator(\n        task_id='download_data',\n        python_callable=download_ftp,\n        sla=timedelta(minutes=30)  # La tâche doit être faite en 30 min\n    )\n```\n\n**Interprétation des alertes :**\n- SLA miss : La tâche/dag a dépassé le temps imparti → Problème de performance, à investiguer.\n- Task failure : La tâche a échoué → Problème fonctionnel à corriger.\n- Retry exceeded : La tâche a échoué après toutes les tentatives → Problème persistant nécessitant intervention.\n- Timeout : Le temps d'attente est dépassé → Problème de disponibilité du service externe.",
+            "niveau": "hard"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Implémentation d'un Système de Monitoring avec Alertes",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous devez mettre en place un système de monitoring pour un pipeline de données qui doit être opérationnel 24/7. Le pipeline traite des données de transactions bancaires et nécessite :</p><ul><li>Une détection automatique des échecs</li><li>Des alertes aux équipes appropriées selon la gravité</li><li>Des rapports de performance quotidiens</li><li>Une supervision de la santé des tâches</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevoir un système complet de monitoring pour ce pipeline en détaillant les métriques à surveiller, les alertes à configurer et les outils à utiliser.",
+        "niveau": "hard",
+        "reponse": "**Système de Monitoring Complet :**\n\n1. **Métriques à surveiller :**\n```python\n# Métriques de performance\ndef log_metrics(**context):\n    task_instance = context['task_instance']\n    start_time = task_instance.start_date\n    end_time = datetime.utcnow()\n    duration = (end_time - start_time).total_seconds()\n    \n    # Log des métriques\n    print(f\"Task: {task_instance.task_id}\")\n    print(f\"Duration: {duration}s\")\n    print(f\"Retries: {task_instance.try_number - 1}\")\n    print(f\"Status: {task_instance.state}\")\n```\n\n2. **Système d'alertes multi-niveaux :**\n```python\ndef send_alert(**context):\n    severity = determine_severity(context)\n    if severity == 'critical':\n        send_slack_notification('#critical-alerts')\n        send_pagerduty()\n        send_email('devops@company.com')\n    elif severity == 'high':\n        send_slack_notification('#data-alerts')\n        send_email('data-team@company.com')\n    else:\n        send_slack_notification('#data-logs')\n```\n\n3. **Monitoring de la santé des tâches :**\n```python\ndef check_dag_health():\n    dag_runs = get_dag_runs('bank_transactions_dag')\n    success_rate = calculate_success_rate(dag_runs)\n    if success_rate < 0.95:\n        send_alert(f\"DAG success rate is {success_rate*100}%\")\n\nhealth_check = PythonOperator(\n    task_id='check_health',\n    python_callable=check_dag_health,\n    schedule_interval='@hourly'\n)\n```\n\n4. **Interface de monitoring :**\n```python\n# Utilisation de l'interface web Airflow avec des configurations avancées\nwith DAG('monitoring_dag') as dag:\n    # Configuration des onglets\n    web_ui_config = {\n        'dag_orientation': 'TB',\n        'default_view': 'graph',\n        'grid_view': True\n    }\n```\n\n5. **Dashboard de performance :**\n```python\n# Code pour exporter les métriques vers un système de monitoring\ndef export_to_prometheus(**context):\n    from prometheus_client import Counter, Histogram\n    \n    task_duration = Histogram('task_duration_seconds', \n                             'Task duration', \n                             ['task_name'])\n    task_failures = Counter('task_failures_total', \n                           'Task failures', \n                           ['task_name'])\n    \n    # Envoyer les métriques\n    send_to_prometheus(task_duration, task_failures)\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Définir des KPIs (Indicateurs Clés de Performance) pour évaluer la santé du pipeline.",
+            "niveau": "hard",
+            "reponse": "**KPIs pour le pipeline :**\n\n1. **Taux de succès** : Pourcentage de tâches qui réussissent du premier coup > 95%\n2. **Temps moyen d'exécution** : Durée moyenne des tâches (avec seuils d'alerte)\n3. **Temps de résolution** : Temps moyen pour résoudre un échec < 30 min\n4. **Disponibilité du pipeline** : Pourcentage de temps où le pipeline est opérationnel > 99.9%\n5. **Délai de traitement** : Temps entre la planification et la fin de l'exécution\n6. **Taux d'alerte** : Nombre d'alertes par jour (avec tendance)\n7. **Taux de retry** : Pourcentage de tâches qui nécessitent des retries < 5%\n8. **Temps de détection** : Temps pour détecter un problème < 5 min",
+            "niveau": "hard"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Expliquer comment configurer un callback d'échec dans Airflow pour automatiser la notification.",
+            "niveau": "hard",
+            "reponse": "Configuration d'un callback d'échec :\n```python\nfrom airflow.utils.email import send_email\n\ndef failure_callback(context):\n    \"\"\"Callback exécuté en cas d'échec d'une tâche\"\"\"\n    dag_run = context.get('dag_run')\n    task_instance = context.get('task_instance')\n    \n    subject = f\"[ALERTE] Échec de {task_instance.task_id}\"\n    message = f\"\"\"\n    DAG: {dag_run.dag_id}\n    Tâche: {task_instance.task_id}\n    Date d'exécution: {context.get('execution_date')}\n    Erreur: {context.get('exception')}\n    \n    Logs: {task_instance.log_url}\n    \"\"\"\n    \n    # Envoyer email\n    send_email('ops@company.com', subject, message)\n    \n    # Envoyer Slack\n    send_slack_notification(message, '#alerts')\n\n# Utilisation dans le DAG\nwith DAG(\n    'mon_dag',\n    default_args=default_args,\n    on_failure_callback=failure_callback\n) as dag:\n    # Définition des tâches\n    task = PythonOperator(\n        task_id='critical_task',\n        python_callable=my_function,\n        on_failure_callback=failure_callback  # Callback spécifique à la tâche\n    )\n```",
+            "niveau": "hard"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Organisation des DAGs et Bonnes Pratiques de Structuration",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Votre équipe de Data Engineering souhaite standardiser l'organisation des DAGs Airflow. Voici les besoins :</p><ul><li>40+ DAGs différents</li><li>5 équipes utilisatrices</li><li>Environnements de développement, test et production</li><li>Configuration partagée</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire une structure d'organisation des DAGs et des fichiers adaptée à ce contexte.",
+        "niveau": "easy",
+        "reponse": "**Structure recommandée :**\n```\nairflow/\n├── dags/\n│   ├── common/\n│   │   ├── config/\n│   │   │   ├── default_args.py\n│   │   │   └── variables.py\n│   │   ├── operators/\n│   │   │   └── custom_operators.py\n│   │   └── utils/\n│   │       ├── helpers.py\n│   │       └── notifications.py\n│   ├── teams/\n│   │   ├── data_science/\n│   │   │   ├── ml_training_dag.py\n│   │   │   └── model_validation_dag.py\n│   │   ├── data_engineering/\n│   │   │   ├── etl_pipeline_dag.py\n│   │   │   └── data_quality_dag.py\n│   │   └── analytics/\n│   │       ├── reports_dag.py\n│   │       └── dashboards_dag.py\n│   └── shared_dags/\n│       ├── cleanup_dag.py\n│       └── monitoring_dag.py\n├── plugins/\n│   └── custom_plugins.py\n└── config/\n    └── airflow.cfg\n```\n\n**Conventions de nommage :**\n- DAGs : `[team]_[project]_[function]_dag`\n- Tâches : `[action]_[subject]_[detail]`\n- Variables : `[scope]_[name]_[environment]`\n\n**Séparation des environnements :**\n```python\n# config/environments.py\nENV = os.environ.get('AIRFLOW_ENV', 'dev')\n\nif ENV == 'prod':\n    CONNECTION = 'prod_conn'\n    RETRY_COUNT = 3\nelse:\n    CONNECTION = 'dev_conn'\n    RETRY_COUNT = 1\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer l'importance de la documentation dans les DAGs et donner des exemples de bonnes pratiques.",
+            "niveau": "easy",
+            "reponse": "**Importance de la documentation :**\n- Facilite la maintenance et les évolutions\n- Aide les nouveaux membres de l'équipe à comprendre rapidement\n- Réduit les risques d'erreurs\n- Permet le partage de connaissances\n\n**Exemples de bonnes pratiques :**\n```python\nwith DAG(\n    'sales_pipeline_dag',\n    doc_md='''\n    ### Pipeline des Ventes\n    **Objectif** : Traiter les données de ventes quotidiennes\n    \n    **Source** : API SalesForce\n    **Destination** : Data Warehouse (Redshift)\n    \n    **Propriétaire** : Équipe Data Engineering\n    **Support** : #data-eng-support\n    \n    **Dépendances** :\n    - Les données doivent être disponibles avant 8h\n    - Le reporting est généré à 9h\n    \n    **Historique** :\n    - 2024-01-15 : Ajout de la validation des données\n    - 2023-12-01 : Création initiale\n    '''\n) as dag:\n    \n    task = PythonOperator(\n        task_id='process_sales_data',\n        python_callable=process_sales,\n        doc='''Processus de traitement des données de ventes.\n        - Extrait les données de l'API SalesForce\n        - Transforme et nettoie les données\n        - Charge les données dans Redshift\n        '''\n    )\n```",
+            "niveau": "easy"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Déterminer comment gérer les configurations partagées entre plusieurs DAGs.",
+            "niveau": "easy",
+            "reponse": "**Gestion des configurations partagées :**\n\n1. **Variables Airflow :**\n```python\nfrom airflow.models import Variable\n\n# Définition dans l'UI ou via commande\n# airflow variables set DB_CONNECTION '{\"host\":\"localhost\",\"port\":5432}'\n\n# Utilisation dans les DAGs\ndb_config = Variable.get('DB_CONNECTION', deserialize_json=True)\n```\n\n2. **Fichiers de configuration partagés :**\n```python\n# dags/common/config/default_args.py\ndef get_default_args(owner='default'):\n    return {\n        'owner': owner,\n        'start_date': datetime(2024, 1, 1),\n        'retries': 3,\n        'retry_delay': timedelta(minutes=5),\n        'depends_on_past': False,\n        'email_on_failure': True,\n        'email': ['data-team@company.com']\n    }\n\n# Utilisation\nfrom common.config.default_args import get_default_args\n\nwith DAG(\n    'my_dag',\n    default_args=get_default_args('data_team')\n) as dag:\n    # Définition des tâches\n```\n\n3. **Variables d'environnement :**\n```python\nimport os\n\nENV = os.environ.get('AIRFLOW_ENV', 'dev')\nS3_BUCKET = os.environ.get('S3_BUCKET', 'dev-bucket')\n```",
+            "niveau": "easy"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse des Logs et Détection d'Anomalies",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous êtes l'administrateur d'un cluster Airflow. Vous recevez des rapports d'échecs récurrents sur un DAG critique. En analysant les logs de plusieurs exécutions, vous observez les patterns suivants :</p><pre>\n2024-01-15 08:00:00 - Task 'load_data' started\n2024-01-15 08:00:30 - ERROR - Connection timeout to database\n2024-01-15 08:01:00 - Task 'load_data' retrying (retry 1/3)\n2024-01-15 08:01:30 - INFO - Task 'load_data' succeeded\n\n2024-01-16 08:00:00 - Task 'load_data' started\n2024-01-16 08:01:00 - ERROR - Connection timeout to database\n2024-01-16 08:01:30 - Task 'load_data' retrying (retry 1/3)\n2024-01-16 08:02:00 - ERROR - Connection timeout to database\n2024-01-16 08:02:30 - Task 'load_data' retrying (retry 2/3)\n2024-01-16 08:03:00 - ERROR - Connection timeout to database\n2024-01-16 08:03:30 - Task 'load_data' retrying (retry 3/3)\n2024-01-16 08:04:00 - ERROR - Connection timeout to database\n2024-01-16 08:04:30 - Task 'load_data' failed (exceeded max retries)\n\n2024-01-17 08:00:00 - Task 'load_data' started\n2024-01-17 08:00:30 - INFO - Task 'load_data' succeeded\n</pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analyser ces logs pour identifier les problèmes et proposer des solutions.",
+        "niveau": "hard",
+        "reponse": "**Analyse des logs :**\n\n1. **Problème identifié** : Échecs intermittents de connexion à la base de données\n   - Le 15 janvier : 1 retry nécessaire\n   - Le 16 janvier : 3 retries échouent → le DAG échoue\n   - Le 17 janvier : Succès direct\n\n2. **Causes probables :**\n   - Problèmes réseau intermittents\n   - Base de données saturée (pics de charge)\n   - Timeout mal configuré\n   - Maintenance de la base de données à certaines heures\n\n3. **Solutions proposées :**\n```python\n# Augmenter le nombre de retries\n'retries': 5,\n\n# Augmenter le délai entre les retries\n'retry_delay': timedelta(minutes=10),\n\n# Activer l'exponential backoff\n'retry_exponential_backoff': True,\n\n# Augmenter le timeout de connexion dans la tâche\ndef load_with_timeout():\n    try:\n        # Connexion avec timeout plus long\n        connection = get_connection(timeout=60)\n        # Traitement\n    except TimeoutError:\n        # Log détaillé\n        print(\"Timeout - tentative de reconnexion\")\n        raise\n\n# Ajouter une tâche de vérification préalable\ndef check_database_health():\n    # Vérifier que la base est disponible\n    try:\n        connection_test()\n        return True\n    except:\n        return False\n\ncheck_db = PythonOperator(\n    task_id='check_db_health',\n    python_callable=check_database_health\n)\n\nload_task = PythonOperator(\n    task_id='load_data',\n    python_callable=load_data,\n    trigger_rule='all_success'\n)\n\ncheck_db >> load_task\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Élaborer un plan de monitoring pour détecter ce type de problèmes avant qu'ils n'impactent le pipeline.",
+            "niveau": "hard",
+            "reponse": "**Plan de monitoring préventif :**\n\n1. **Métriques de santé :**\n```python\ndef monitor_db_health():\n    # Vérifier les temps de réponse\n    response_times = []\n    for _ in range(10):\n        start = time.time()\n        try:\n            execute_test_query()\n            response_times.append(time.time() - start)\n        except:\n            response_times.append(None)\n    \n    # Analyser les tendances\n    avg_time = sum(t for t in response_times if t is not None) / len([t for t in response_times if t is not None])\n    if avg_time > 5:  # Seuil de 5 secondes\n        send_warning(\"Database response time increasing\")\n    \n    if response_times.count(None) > 2:\n        send_critical_alert(\"Database connection failures detected\")\n```\n\n2. **Alertes de performance :**\n```python\n# Seuils SLA\nsla_config = {\n    'load_data': timedelta(minutes=15),  # Si plus de 15 min → alerte\n    'transform_data': timedelta(minutes=30),\n    'validate_data': timedelta(minutes=5)\n}\n```\n\n3. **Dashboard de suivi :**\n- Temps moyen d'exécution par tâche\n- Taux de succès/échec par jour\n- Nombre de retries par tâche\n- Pattern des erreurs temporelles (pics à certaines heures)",
+            "niveau": "hard"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Comparer l'utilisation des paramètres 'retries' vs 'timeout' dans le contexte de ce problème.",
+            "niveau": "hard",
+            "reponse": "**Comparaison retries vs timeout :**\n\n**Retries :**\n- Avantages : Permet de réessayer plusieurs fois, idéal pour les problèmes temporaires\n- Inconvénients : Peut masquer des problèmes persistants, augmente le temps total\n- Dans ce cas : Les échecs de connexion sont temporaires → augmenter les retries est pertinent\n\n**Timeout :**\n- Avantages : Évite les blocages indéfinis, permet de détecter les problèmes de performance\n- Inconvénients : Trop court peut causer des échecs prématurés, trop long peut cacher des problèmes\n- Dans ce cas : Le timeout actuel (30s) est peut-être trop court\n\n**Stratégie optimale :**\n```python\n# Combinaison des deux\nwith DAG('optimized_dag', default_args={\n    'retries': 5,\n    'retry_delay': timedelta(minutes=5),\n    'retry_exponential_backoff': True,\n    'sla': timedelta(hours=1),  # Alerte si

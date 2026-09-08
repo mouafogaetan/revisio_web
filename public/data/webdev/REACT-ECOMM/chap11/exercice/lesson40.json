@@ -1,0 +1,137 @@
+[
+  {
+    "intitule": "Mise en place du lazy loading pour les pages principales",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans une application e-commerce React, on souhaite optimiser le chargement initial en utilisant le lazy loading et Suspense pour les routes principales :</p><ul><li><code>/catalogue</code> (CatalogPage)</li><li><code>/produit/:id</code> (ProductPage)</li><li><code>/panier</code> (CartPage)</li><li><code>/compte</code> (AccountPage)</li></ul><p>Le bundle principal contient actuellement 1.2 Mo. La page d'accueil est <code>HomePage</code> (chargée normalement).</p>",
+      "images": [
+        "Diagramme de découpe du bundle par route avec React.lazy"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire le code de lazy loading pour les quatre pages et les intégrer dans la configuration du routeur (createBrowserRouter) en utilisant Suspense avec un fallback.",
+        "niveau": "medium",
+        "reponse": "```jsx\nimport { lazy, Suspense } from 'react';\nimport { createBrowserRouter } from 'react-router-dom';\nimport RootLayout from './layouts/RootLayout';\nimport HomePage from './pages/HomePage';\n\nconst CatalogPage = lazy(() => import('./pages/CatalogPage'));\nconst ProductPage = lazy(() => import('./pages/ProductPage'));\nconst CartPage = lazy(() => import('./pages/CartPage'));\nconst AccountPage = lazy(() => import('./pages/AccountPage'));\n\nconst router = createBrowserRouter([\n  {\n    path: '/',\n    element: <RootLayout />,\n    children: [\n      { index: true, element: <HomePage /> },\n      { path: 'catalogue', element: <Suspense fallback={<div>Chargement du catalogue...</div>}><CatalogPage /></Suspense> },\n      { path: 'produit/:id', element: <Suspense fallback={<ProductSkeleton />}><ProductPage /></Suspense> },\n      { path: 'panier', element: <Suspense fallback={<CartSkeleton />}><CartPage /></Suspense> },\n      { path: 'compte', element: <Suspense fallback={<div>Chargement...</div>}><AccountPage /></Suspense> },\n    ],\n  },\n]);\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": "1.a",
+        "texte": "Expliquer pourquoi HomePage n'est pas lazy-loadée et quel est l'avantage principal de cette optimisation.",
+        "niveau": "easy",
+        "reponse": "HomePage est la page d'accueil, première vue chargée. La mettre en lazy augmenterait le temps d'affichage initial. L'avantage du lazy loading est de réduire la taille du bundle initial (JavaScript téléchargé au premier chargement) en ne chargeant que le code nécessaire à la route visitée. Les autres routes sont chargées à la demande, ce qui améliore le First Contentful Paint (FCP).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Implémentation du prefetch au survol des liens",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Pour améliorer l'expérience utilisateur, on souhaite précharger les composants et les données lorsqu'un utilisateur survole un lien, avant même qu'il ne clique. La formule du temps de chargement perçu est $T_{perçu} = T_{download} + T_{render}$.</p><p>Le composant <code>ProductCard</code> contient un lien <code>Link to={`/produit/${product.id}`}</code>. On veut précharger la page du produit au survol.</p>",
+      "images": [
+        "Schéma du prefetch React Router avec onMouseEnter"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créer un composant <code>PrefetchLink</code> qui enveloppe <code>Link</code> de react-router-dom et déclenche le prefetch de la route au survol de la souris (onMouseEnter). Utiliser la fonction <code>prefetchRoute</code> de React Router.",
+        "niveau": "hard",
+        "reponse": "```jsx\nimport { Link, useNavigate } from 'react-router-dom';\n\nconst PrefetchLink = ({ to, children, ...props }) => {\n  const navigate = useNavigate();\n  \n  const handlePrefetch = () => {\n    // Préchargement du composant via React.lazy\n    const Component = lazy(() => import(`../pages${to}/index.jsx`));\n    // Déclenche le chargement du bundle\n    Component.preload?.();\n    \n    // Alternative avec React Router (v6.4+) : \n    // navigate(to, { unstable_prefetch: true });\n  };\n  \n  return (\n    <Link to={to} onMouseEnter={handlePrefetch} {...props}>\n      {children}\n    </Link>\n  );\n};\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": "1.a",
+        "texte": "Expliquer comment la réduction du temps de chargement perçu améliore le taux de conversion (formule).",
+        "niveau": "medium",
+        "reponse": "Le prefetch permet de télécharger le code et parfois les données (via React Query) pendant que l'utilisateur lit ou hésite. Quand il clique, le composant est déjà prêt, donc $T_{download} \\approx 0$. Le temps perçu se réduit à $T_{render}$, ce qui donne l'impression d'une navigation instantanée, réduisant le taux de rebond et augmentant les conversions.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Diagnostic et correction d'un problème de chunk splitting",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Un développeur a configuré le lazy loading pour l'application e-commerce. Cependant, après build, il constate que le fichier <code>catalogue.[hash].js</code> pèse 800 Ko et contient non seulement la page catalogue mais aussi la page produit et la page panier. Voici la configuration :</p><pre>const CatalogPage = lazy(() => import('./pages/CatalogPage'));\nconst ProductPage = lazy(() => import('./pages/ProductPage'));\nconst CartPage = lazy(() => import('./pages/CartPage'));</pre><p>Toutes les pages importent un composant partagé <code>ProductCard</code> qui fait 150 Ko (images, logique métier).</p>",
+      "images": [
+        "Rapport d'analyse de bundle avec source-map-explorer montrant des dépendances communes"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier la cause du problème (pourquoi ProductCard est inclus dans chaque chunk alors qu'il est partagé).",
+        "niveau": "hard",
+        "reponse": "Par défaut, Webpack (via Vite) ne sait pas automatiquement extraire les dépendances communes entre les chunks lazy. ProductCard étant importé par plusieurs pages lazy, il est dupliqué dans chaque chunk si aucune configuration de code splitting n'est définie. Cela augmente la taille totale du bundle.",
+        "sousQuestions": []
+      },
+      {
+        "numero": "2",
+        "texte": "Proposer une solution en configurant Vite pour créer un chunk vendor séparé pour les composants partagés (ProductCard, useProducts, etc.).",
+        "niveau": "very hard",
+        "reponse": "```js\n// vite.config.js\nexport default defineConfig({\n  build: {\n    rollupOptions: {\n      output: {\n        manualChunks: {\n          'shared-ui': ['src/components/ProductCard.jsx', 'src/hooks/useProducts.js'],\n          'vendor': ['react', 'react-dom', 'react-router-dom', '@tanstack/react-query']\n        }\n      }\n    }\n  }\n});\n```\nCela crée un chunk 'shared-ui' unique chargé une seule fois, quel que soit le nombre de pages lazy qui l'utilisent. La duplication est éliminée.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse de l'impact du code splitting sur les performances",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Voici les métriques avant optimisation :</p><ul><li>Bundle principal : 850 Ko</li><li>Temps de chargement initial (3G) : 4.2s</li><li>LCP (Largest Contentful Paint) : 3.8s</li><li>TTI (Time to Interactive) : 4.5s</li></ul><p>Après avoir divisé l'application en 5 chunks (Home, Catalogue, Produit, Panier, Compte), les métriques deviennent :</p><ul><li>Bundle principal : 220 Ko</li><li>Temps de chargement initial : 1.4s</li><li>LCP : 1.2s</li><li>TTI : 1.8s</li></ul><p>Le coût d'ajout d'un favori est $C = 500$ FCFA pour l'utilisateur, avec $R = 2000$ FCFA de bénéfice pour la plateforme.</p>",
+      "images": [
+        "Comparaison des performances avant/après code splitting"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Calculer le pourcentage d'amélioration du TTI (Time to Interactive) et expliquer pourquoi cette métrique est cruciale pour un site e-commerce.",
+        "niveau": "easy",
+        "reponse": "TTI avant : 4.5s, après : 1.8s. Amélioration = (4.5 - 1.8) / 4.5 = 2.7 / 4.5 = 0.6 soit 60%. Le TTI mesure le temps avant que l'utilisateur puisse interagir (cliquer sur un produit, ajouter au panier). Un TTI élevé augmente le taux d'abandon. Diviser par deux le TTI peut doubler le taux de conversion.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Estimer le gain financier potentiel pour 1000 visiteurs quotidiens si le taux de conversion augmente de 2% à 4% grâce à l'optimisation.",
+        "niveau": "medium",
+        "reponse": "Avec 1000 visiteurs/jour et un taux de conversion de 2% : 20 conversions/jour, bénéfice = 20 × 2000 = 40000 FCFA/jour. À 4% : 40 conversions/jour, bénéfice = 80000 FCFA/jour. Gain quotidien = 40000 FCFA. Gain annuel = 40000 × 365 = 14,6 millions FCFA.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Implémentation d'un composant Suspense avec fallback personnalisé",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>L'utilisateur se plaint que le fallback 'Chargement...' est trop générique et ne donne pas de feedback visuel. Vous devez créer un composant <code>PageSkeleton</code> qui affiche un squelette (skeleton screen) reproduisant la mise en page de la page cible (ex: pour CataloguePage, afficher 8 blocs gris animés).</p><p>Le temps de chargement perçu est $T_{perçu} = T_{skeleton} + T_{contenu}$. Un bon skeleton réduit $T_{skeleton}$ psychologique.</p>",
+      "images": [
+        "Exemple de skeleton screen pour un catalogue e-commerce"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire le composant <code>CatalogueSkeleton</code> utilisant TailwindCSS qui affiche 8 cartes avec des animations de pulsation (shimmer effect).",
+        "niveau": "hard",
+        "reponse": "```jsx\nconst CatalogueSkeleton = () => {\n  return (\n    <div className=\"grid grid-cols-2 md:grid-cols-4 gap-4 animate-pulse\">\n      {[...Array(8)].map((_, i) => (\n        <div key={i} className=\"bg-gray-200 rounded-lg p-4\">\n          <div className=\"w-full h-40 bg-gray-300 rounded-md mb-3\"></div>\n          <div className=\"h-4 bg-gray-300 rounded w-3/4 mb-2\"></div>\n          <div className=\"h-4 bg-gray-300 rounded w-1/2\"></div>\n        </div>\n      ))}\n    </div>\n  );\n};\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": "1.a",
+        "texte": "Comment intégrer ce skeleton dans le Suspense pour la route /catalogue ?",
+        "niveau": "easy",
+        "reponse": "```jsx\n{ path: 'catalogue', element: <Suspense fallback={<CatalogueSkeleton />}><CatalogPage /></Suspense> }\n```",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

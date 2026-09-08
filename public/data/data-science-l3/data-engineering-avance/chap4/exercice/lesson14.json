@@ -1,0 +1,115 @@
+[
+  {
+    "intitule": "Contrôle de Qualité des Données : Mise en Pratique",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous êtes Data Engineer dans une entreprise de e-commerce camerounaise, <strong>AfriMarket</strong>. L'entreprise collecte des données de vente dans une base de données transactionnelle. Ces données sont extraites quotidiennement et chargées dans un Data Warehouse (BigQuery) pour l'équipe d'analyse. Vous avez été alerté sur la mauvaise qualité des données chargées : des valeurs manquantes, des doublons, et des formats de dates incohérents impactent les tableaux de bord décisionnels.</p><p>Votre mission est de mettre en place un plan de contrôle de la qualité des données (Data Quality) sur la table des ventes avant son chargement final.</p>",
+      "images": [
+        "Schéma d'un pipeline de données ETL simple avec les étapes: Extraction (Base de données), Contrôle Qualité (avec un symbole de vérification), Transformation, et Chargement (Data Warehouse). Le contrôle qualité doit être mis en évidence comme une étape clé entre l'extraction et la transformation."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier les risques liés à la mauvaise qualité des données pour l'entreprise AfriMarket. Justifiez l'importance de la mise en place de contrôles de qualité.",
+        "niveau": "medium",
+        "reponse": "Les risques liés à la mauvaise qualité des données pour AfriMarket sont multiples :\n- **Décisions stratégiques erronées** : Des rapports de ventes inexacts peuvent conduire à des mauvaises décisions concernant les stocks, les promotions ou les investissements.\n- **Perte de confiance** : Les équipes métier (marketing, finance) perdront confiance dans les données et les analyses, ce qui réduira l'adoption de la data-driven culture.\n- **Inefficacité opérationnelle** : Du temps et des ressources seront gaspillés à nettoyer manuellement les données ou à investiguer des écarts dans les rapports.\n- **Impact financier** : Des erreurs dans la facturation ou les prévisions peuvent avoir un impact direct sur les revenus de l'entreprise.\n\nL'importance des contrôles de qualité est donc cruciale pour assurer la fiabilité des données, permettre des analyses pertinentes et maintenir la confiance des parties prenantes. La mise en place de contrôles automatisés et systématiques permet de détecter et de corriger les problèmes en amont, avant qu'ils n'affectent les utilisateurs finaux.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Définir trois (3) dimensions de la qualité des données (ex: Exactitude, Complétude, Cohérence) applicables à ce contexte. Pour chaque dimension, proposez une métrique concrète pour évaluer la qualité de la table des ventes.",
+        "niveau": "medium",
+        "reponse": "1.  **Complétude** : Cette dimension mesure si toutes les données attendues sont présentes.\n    -   **Métrique** : Pourcentage de lignes dans la table 'ventes' où la colonne 'date_vente' n'est pas nulle. Ou encore, pourcentage de lignes où toutes les colonnes clés ('client_id', 'montant', 'date_vente') sont non nulles. Une valeur proche de 100% est idéale.\n2.  **Exactitude (ou Validité)** : Cette dimension vérifie si les données sont conformes aux règles et formats définis.\n    -   **Métrique** : Pourcentage de lignes où la colonne 'date_vente' est dans un format valide (ex: 'YYYY-MM-DD') et correspond à une date réelle. On peut aussi mesurer le pourcentage de 'client_id' qui existent bien dans la table des clients.\n3.  **Unicité** : Cette dimension s'assure qu'il n'y a pas de doublons dans les données.\n    -   **Métrique** : Nombre de lignes en double (ou taux de doublons). On identifiera les doublons en se basant sur un identifiant unique comme 'transaction_id' ou une combinaison de colonnes ('client_id', 'date_vente', 'montant', 'produit_id'). L'objectif est d'avoir 0 doublon.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Concevoir un script Python (ou pseudo-code) qui implémente les contrôles de qualité que vous avez proposés. Ce script doit être exécuté en tant qu'étape de vérification dans votre pipeline. Assurez-vous d'inclure une gestion des erreurs permettant de logger les problèmes et, selon leur gravité, d'arrêter ou de continuer le pipeline.",
+        "niveau": "hard",
+        "reponse": "```python\n# Ce script est un exemple de contrôle de qualité pour la table 'ventes'.\n# Il utilise une approche avec logging et lève des exceptions pour les problèmes critiques.\nimport logging\nimport pandas as pd\nfrom datetime import datetime\n\n# Configuration du logging\nlogging.basicConfig(filename='data_quality.log', level=logging.INFO,\n                    format='%(asctime)s - %(levelname)s - %(message)s')\n\ndef check_data_quality(df):\n    \"\"\"\n    Effectue des contrôles de qualité sur le DataFrame des ventes.\n\n    Args:\n        df (pd.DataFrame): Le DataFrame contenant les données des ventes.\n\n    Raises:\n        ValueError: Si un problème critique (ex: trop de valeurs nulles) est détecté.\n    \"\"\"\n    is_valid = True\n    total_rows = len(df)\n    logging.info(f\"Début des contrôles de qualité. {total_rows} lignes à vérifier.\")\n\n    # --- 1. Contrôle de Complétude (Valeurs Nulles) ---\n    # On s'assure que les colonnes critiques ne sont pas nulles\n    critical_columns = ['transaction_id', 'client_id', 'date_vente', 'montant']\n    null_counts = df[critical_columns].isnull().sum()\n    for col in critical_columns:\n        null_percent = (null_counts[col] / total_rows) * 100\n        if null_counts[col] > 0:\n            logging.warning(f\"Colonne '{col}' contient {null_counts[col]} valeurs nulles ({null_percent:.2f}%).\")\n            # Si plus de 5% de valeurs nulles, on considère le problème comme critique\n            if null_percent > 5.0:\n                logging.error(f\"Trop de valeurs nulles dans la colonne '{col}'. Arrêt du pipeline.\")\n                raise ValueError(f\"Trop de valeurs nulles dans la colonne '{col}'.\")\n\n    # --- 2. Contrôle d'Exactitude (Validité des dates) ---\n    # Vérifier le format de la date\n    valid_date_format = True\n    for index, row in df.iterrows():\n        try:\n            datetime.strptime(row['date_vente'], '%Y-%m-%d')\n        except (ValueError, TypeError):\n            logging.warning(f\"Format de date invalide pour la ligne {index}: '{row['date_vente']}'. Correction possible.\")\n            # Dans un cas réel, on pourrait corriger ici, mais on logge juste\n            valid_date_format = False\n\n    if not valid_date_format:\n        # On pourrait décider d'arrêter le pipeline si trop de dates invalides\n        # mais on continue en loggant l'erreur\n        logging.error(\"Des dates invalides ont été trouvées.\")\n\n    # --- 3. Contrôle d'Unicité (Doublons) ---\n    # Vérifier les doublons sur l'identifiant de transaction\n    duplicate_count = df.duplicated(subset=['transaction_id']).sum()\n    if duplicate_count > 0:\n        logging.warning(f\"{duplicate_count} transactions en double détectées.\")\n        if duplicate_count > 0.1 * total_rows:\n            logging.error(\"Trop de doublons détectés. Arrêt du pipeline.\")\n            raise ValueError(f\"Trop de doublons détectés ({duplicate_count}).\")\n\n    # --- 4. Autres contrôles (Ex: Montant positif) ---\n    negative_amounts = (df['montant'] < 0).sum()\n    if negative_amounts > 0:\n        logging.warning(f\"{negative_amounts} lignes ont un montant négatif.\")\n        # Si des montants négatifs ne sont pas autorisés, on peut arrêter.\n        # if negative_amounts > 0:\n        #    raise ValueError(\"Des montants négatifs ont été trouvés.\")\n\n    logging.info(\"Contrôles de qualité terminés avec succès.\")\n    return df\n\n# Exemple d'utilisation dans un pipeline\n# df_ventes = extraire_donnees()\n# try:\n#     df_ventes_qualifie = check_data_quality(df_ventes)\n#     charger_donnees(df_ventes_qualifie)\n# except ValueError as e:\n#     print(f\"Erreur lors des contrôles de qualité: {e}\")\n#     # Envoyer une notification, arrêter le pipeline, etc.\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Les Dimensions de la Qualité des Données",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>La qualité des données est un concept multidimensionnel. Chaque dimension représente un aspect spécifique que l'on peut évaluer et améliorer. Lisez les définitions et associez chaque exemple à la dimension de qualité des données correspondante.</p><p>Exemple: <strong>Intégrité</strong>, <strong>Complétude</strong>, <strong>Cohérence</strong>, <strong>Actualité</strong> (ou Fraîcheur).</p>",
+      "images": [
+        "Illustration d'un puzzle ou d'un prisme avec 6 faces, chaque face représentant une dimension de la qualité des données (Complétude, Exactitude, Cohérence, Unicité, Actualité, Validité). Les faces peuvent être colorées ou étiquetées."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier la dimension de qualité des données qui correspond à chacune des situations suivantes. Justifiez votre réponse.",
+        "niveau": "easy",
+        "reponse": "a) **Complétude** : La dimension 'Complétude' mesure si toutes les données requises sont présentes. Un numéro de téléphone manquant dans une fiche client est un manque de complétude.\nb) **Cohérence** : La dimension 'Cohérence' vérifie que les données ne se contredisent pas entre elles ou avec des règles connues. Un client enregistré comme 'Actif' mais avec une date de désinscription est une incohérence.\nc) **Actualité (ou Fraîcheur)** : La dimension 'Actualité' ou 'Fraîcheur' évalue si les données sont à jour et disponibles au moment où elles sont nécessaires. Un article de blog datant de 5 ans n'est plus actuel pour une analyse de tendances.\nd) **Exactitude (ou Validité)** : La dimension 'Exactitude' (ou 'Validité') vérifie si les données sont conformes à un format ou une règle métier définie. Un code postal avec des lettres est invalide.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "a. Un champ 'Numéro de téléphone' est vide dans 15% des fiches clients.",
+            "niveau": "easy",
+            "reponse": "Complétude : Le champ est vide, des informations manquent."
+          },
+          {
+            "numero": "1.b",
+            "texte": "b. Un client a le statut 'Actif' alors que sa date de désinscription est renseignée.",
+            "niveau": "easy",
+            "reponse": "Cohérence : Les données du statut et de la date de désinscription sont contradictoires."
+          },
+          {
+            "numero": "1.c",
+            "texte": "c. Un article de blog sur les tendances du marché a une date de publication de 5 ans.",
+            "niveau": "easy",
+            "reponse": "Actualité (ou Fraîcheur) : L'information n'est plus à jour et est obsolète pour l'analyse actuelle."
+          },
+          {
+            "numero": "1.d",
+            "texte": "d. Un code postal (ex: '7500A') est enregistré dans un champ qui doit contenir un nombre à 5 chiffres.",
+            "niveau": "easy",
+            "reponse": "Exactitude (ou Validité) : Le format de la donnée n'est pas conforme à la règle métier définie."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Mise en Place d'un Pipeline de Data Quality",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Une entreprise de logistique camerounaise, <strong>CamTransit</strong>, centralise les données GPS de sa flotte de camions dans un système de fichiers (Data Lake). Les données sont ingérées en temps réel. L'équipe de Data Science souhaite utiliser ces données pour optimiser les tournées, mais se plaint de la qualité des données : certaines coordonnées GPS sont aberrantes, et des données de capteurs (consommation de carburant) manquent parfois.</p><p>En tant que Data Engineer, vous devez concevoir un pipeline de données qui ingère ces données brutes, exécute des contrôles de qualité automatisés, et ne charge que les données valides dans un Data Warehouse pour l'analyse, tout en isolant les données invalides dans une zone 'quarantaine' pour une inspection manuelle.</p>",
+      "images": [
+        "Diagramme de pipeline de données en trois étapes. Étape 1 : 'Ingestion' (source de données GPS vers un Data Lake). Étape 2 : 'Contrôle de Qualité' avec trois flux sortants : 'Données Valides' (vers Data Warehouse), 'Données Invalides' (vers Quarantaine), et 'Logs/Métriques'. Étape 3 : 'Chargement' dans un Data Warehouse. Les étapes doivent être clairement étiquetées."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire, en les détaillant, les contrôles de qualité que vous mettriez en place pour la table 'trajets' contenant les données GPS. Pensez aux dimensions de la qualité (Complétude, Exactitude, Cohérence, etc.).",
+        "niveau": "hard",
+        "reponse": "Pour la table 'trajets' (colonnes : `id_camion`, `timestamp`, `latitude`, `longitude`, `consommation_carburant`, `vitesse`), voici les contrôles de qualité que je mettrais en place :\n\n1.  **Complétude** :\n    - Vérifier que les colonnes critiques (`id_camion`, `timestamp`, `latitude`, `longitude`) ne sont pas nulles. Si elles le sont, la donnée est marquée comme invalide.\n    - Vérifier que le champ `timestamp` est présent et non nul. Un timestamp est essentiel pour toute analyse temporelle.\n\n2.  **Exactitude / Validité** :\n    - **Contrôle de plage géographique** : Vérifier que les coordonnées (`latitude`, `longitude`) se situent dans une zone géographique plausible (ex: Cameroun et pays limitrophes). On peut définir des bornes min/max (ex: Lat: [2°, 13°], Lon: [8°, 16°]). Si une coordonnée sort de cette plage, la donnée est invalide.\n    - **Contrôle de format** : Vérifier que `timestamp` est au format ISO 8601 (`YYYY-MM-DDTHH:MM:SSZ`).\n    - **Contrôle de vraisemblance** : La `vitesse` doit être comprise entre 0 et 120 km/h, et la `consommation_carburant` doit être positive et cohérente avec la distance parcourue (cela peut nécessiter des calculs plus avancés).\n\n3.  **Cohérence** :\n    - Vérifier la cohérence spatio-temporelle. Par exemple, pour deux points consécutifs d'un même camion, la distance calculée et la vitesse doivent être cohérentes avec l'intervalle de temps. Une vitesse moyenne dérivée de la distance et du temps qui dépasse 120 km/h indique un problème.\n    - Vérifier que l'`id_camion` existe bien dans la table de référence des camions.\n\n4.  **Unicité** :\n    - Bien que non mentionné, il pourrait y avoir des doublons. On peut définir une clé composite (`id_camion`, `timestamp`) et s'assurer qu'elle est unique. Les doublons seraient envoyés en quarantaine.\n\n5.  **Actualité** :\n    - Vérifier le délai entre le `timestamp` de la donnée et l'heure d'ingestion. Si ce délai dépasse un seuil (ex: 1 heure), la donnée pourrait être considérée comme trop tardive pour certaines analyses en temps réel, mais pourrait rester valide pour des analyses batch. Cela peut être une métrique à logger, mais pas forcément un critère de validation.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer comment vous intégreriez ces contrôles dans un pipeline orchestré par Apache Airflow. Décrire les tâches (DAG) que vous créer et comment elles interagissent.",
+        "niveau": "very hard",
+        "reponse": "Dans un pipeline Airflow, j'organiserais le DAG autour de trois tâches principales : `extract_and_check`, `load_valid_data`, et `archive_invalid_data`.\n\n1.  **Tâche `extract_and_check`** :\n    - **Opérateur** : `PythonOperator` ou `SparkSubmitOperator` (si le volume est important).\n    - **Rôle** : Lire les données GPS brutes du Data Lake (ex: fichiers horaires). Puis, exécuter l'ensemble des contrôles de qualité définis (voir question 1).\n    - **Sortie** : Cette tâche produira deux DataFrames ou ensembles de données : un `valid_data` et un `invalid_data`. Le `valid_data` sera passé à la tâche suivante via `XComs`. L'invalide sera écrit dans un fichier ou une table de quarantaine.\n\n2.  **Tâche `load_valid_data`** :\n    - **Opérateur** : `BigQueryInsertJobOperator` (pour charger dans BigQuery) ou `PostgresOperator` / `S3ToRedshiftOperator`.\n    - **Dépendance** : Elle est définie avec `upstream_task_ids=[\"extract_and_check\"]`.\n    - **Rôle** : Prendre les données validées (`valid_data`) et les charger dans la table finale du Data Warehouse pour l'analyse. Elle s'exécute uniquement si la tâche de contrôle a réussi.\n\n3.  **Tâche `archive_invalid_data`** :\n    - **Opérateur** : `PythonOperator` (pour écrire un fichier CSV/Parquet) ou `S3CreateObjectOperator`.\n    - **Dépendance** : Elle aussi dépend de la tâche `extract_and_check`.\n    - **Rôle** : Prendre les données invalides (`invalid_data`), les sauvegarder dans un bucket S3 dédié à la quarantaine (ex: `s3://camtransit-quarantine/gps_bad/YYYY/MM/DD/`), avec un fichier de log associé indiquant la raison de l'invalidation pour chaque ligne. Ces données pourront être inspectées manuellement ultérieurement.\n\n**Gestion des erreurs et retries** :\n- **Erreur dans `extract_and_check`** : Si la tâche échoue (ex: problème de connexion au Data Lake), le DAG est configuré avec des `retries` (ex: 3 tentatives).\n- **Erreur dans `load_valid_data`** : Si le chargement dans le Data Warehouse échoue, la tâche `archive_invalid_data` peut tout de même s'exécuter en parallèle ou en aval, selon la logique. On peut définir un `trigger_rule` pour que `archive_invalid_data` s'exécute même si `load_valid_data` échoue (si on veut archiver les données même si on n'a pas pu les charger).\n- **Alertes** : En cas d'échec répété, un `SlackWebhookOperator` ou `EmailOperator` est utilisé pour notifier l'équipe.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposer une métrique de qualité globale (ex: un score) que vous pourriez calculer quotidiennement pour suivre l'évolution de la qualité des données et partager avec l'équipe métier.",
+        "niveau": "medium",
+        "reponse": "Pour suivre la qualité des données, je propose un **\"Data Quality Score\" (DQS)** quotidien, exprimé en pourcentage de 0 à 100 %. Ce score est une moyenne pondérée des métriques de qualité calculées.\n\n**Exemple de Pondération :**\n- **Complétude (40%)** : Pourcentage de lignes où les champs critiques (`id_camion`, `timestamp`, `latitude`, `longitude`) sont tous non nuls.\n  - *Si 95% des lignes sont complètes, le score de complétude est de 95/100.*\n- **Exactitude / Validité (40%)** : Pourcentage de lignes où toutes les données valides (format de date, plage de coordonnées, etc.) sont respectées.\n  - *Si 90% des lignes sont valides, le score de validité est de 90/100.*\n- **Cohérence (20%)** : Pourcentage de lignes qui respectent les règles de cohérence spatio-temporelle (ex: vitesse cohérente).\n  - *Si 85% des lignes sont cohérentes, le score de cohérence est de 85/100.*\n\n**Calcul du DQS :**\n`DQS = (0.4 * Complétude) + (0.4 * Validité) + (0.2 * Cohérence)`\n**Exemple :** `DQS = (0.4 * 95) + (0.4 * 90) + (0.2 * 85) = 38 + 36 + 17 = 91/100`.\n\nCe score serait calculé dans une tâche Airflow séparée, puis stocké dans une table de métriques et affiché sur un tableau de bord (ex: Grafana). Un DQS supérieur à 90% pourrait être considéré comme excellent, entre 70% et 90% comme acceptable mais nécessitant une attention, et en dessous de 70% comme critique. Cela permet à l'équipe métier de visualiser clairement l'état de la qualité et de prioriser les actions d'amélioration.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

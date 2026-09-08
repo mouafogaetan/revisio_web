@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+ "matiere": "Histoire",
+ "classe": "Sixième",
+ "sequence": "Séquence 3",
+ "anneeScolaire": "2025-2026",
+ "exercices": [
+   {
+     "titre": "Exercice 1 : L'Histoire et ses sources",
+     "points": "4 pts",
+     "enonce": "<div style='margin-bottom: 15px;'><p>L'histoire est une discipline qui permet de mieux comprendre notre monde en étudiant le passé.</p></div>",
+     "questions": [
+       {
+         "question": "<div style='margin-bottom: 10px;'><p> (2 pts) <em>Définis</em> l'histoire en une ou deux phrases.</p></div>",
+         "reponse": "<div style='background-color: #f0f4f8; padding: 12px; border-radius: 8px; color: #1e293b;'><p>L'histoire est la science qui étudie le passé des hommes et des sociétés à partir des traces (sources) qu'ils ont laissées. Elle permet de connaître les événements, les modes de vie et l'évolution des civilisations [citation:2].</p></div>"
+       },
+       {
+         "question": "<div style='margin-bottom: 10px;'><p> (2 pts) <em>Cite</em> deux types de sources utilisées par les historiens pour reconstituer le passé. Donne un exemple pour chaque type.</p></div>",
+         "reponse": "<div style='background-color: #f0f4f8; padding: 12px; border-radius: 8px; color: #1e293b;'><ul style='margin: 0; padding-left: 20px;'><li><strong>Les sources écrites :</strong> par exemple, des manuscrits, des inscriptions ou des livres.</li><li><strong>Les vestiges matériels :</strong> par exemple, des outils, des poteries, des monuments ou des ossements.</li></ul></div>"
+       }
+     ]
+   },
+   {
+     "titre": "Exercice 2 : Les premiers hommes et le Néolithique",
+     "points": "6 pts",
+     "enonce": "<div style='margin-bottom: 15px;'><p>La Préhistoire est une longue période qui a connu des changements majeurs dans le mode de vie des hommes.</p></div>",
+     "questions": [
+       {
+         "question": "<div style='margin-bottom: 10px;'><p> (2 pts) <em>Identifie</em> et <em>décris</em> brièvement le grand changement qui marque le passage du Paléolithique au Néolithique.</p></div>",
+         "reponse": "<div style='background-color: #f0f4f8; padding: 12px; border-radius: 8px; color: #1e293b;'><p>Ce grand changement est appelé la <strong>révolution néolithique</strong>. Les hommes sont passés d'un mode de vie nomade de chasseurs-cueilleurs à un mode de vie sédentaire basé sur l'agriculture et l'élevage. Cette transformation a profondément modifié leur habitat et leur organisation sociale [citation:2].</p></div>"
+       },
+       {
+         "question": "<div style='margin-bottom: 10px;'><p> (2 pts) <em>Compare</em> le mode de vie des hommes au Paléolithique et au Néolithique en complétant le tableau suivant.</p><div style='background-color: #e2e8f0; padding: 12px; border-radius: 8px; margin-top: 10px;'><table style='width:100%; border-collapse: collapse;'><thead><tr><th style='border: 1px solid #cbd5e1; padding: 8px; text-align: left;'>Critères</th><th style='border: 1px solid #cbd5e1; padding: 8px; text-align: left;'>Paléolithique</th><th style='border: 1px solid #cbd5e1; padding: 8px; text-align: left;'>Néolithique</th></tr></thead><tbody><tr><td style='border: 1px solid #cbd5e1; padding: 8px;'>Mode de vie</td><td style='border: 1px solid #cbd5e1; padding: 8px;'></td><td style='border: 1px solid #cbd5e1; padding: 8px;'></td></tr><tr><td style='border: 1px solid #cbd5e1; padding: 8px;'>Activités principales</td><td style='border: 1px solid #cbd5e1; padding: 8px;'></td><td style='border: 1px solid #cbd5e1; padding: 8px;'></td></tr><tr><td style='border: 1px solid #cbd5e1; padding: 8px;'>Type d'habitat</td><td style='border: 1px solid #cbd5e1; padding: 8px;'></td><td style='border: 1px solid #cbd5e1; padding: 8px;'></td></tr></tbody></table></div></div>",
+         "reponse": "<div style='background-color: #f0f4f8; padding: 12px; border-radius: 8px; color: #1e293b;'><table style='width:100%; border-collapse: collapse;'><thead><tr><th style='border: 1px solid #cbd5e1; padding: 8px; text-align: left;'>Critères</th><th style='border: 1px solid #cbd5e1; padding: 8px; text-align: left;'>Paléolithique</th><th style='border: 1px solid #cbd5e1; padding: 8px; text-align: left;'>Néolithique</th></tr></thead><tbody><tr><td style='border: 1px solid #cbd5e1; padding: 8px;'>Mode de vie</td><td style='border: 1px solid #cbd5e1; padding: 8px;'>Nomade</td><td style='border: 1px solid #cbd5e1; padding: 8px;'>Sédentaire</td></tr><tr><td style='border: 1px solid #cbd5e1; padding: 8px;'>Activités principales</td><td style='border: 1px solid #cbd5e1; padding: 8px;'>Chasse, cueillette, pêche</td><td style='border: 1px solid #cbd5e1; padding: 8px;'>Agriculture, élevage, artisanat</td></tr><tr><td style='border: 1px solid #cbd5e1; padding: 8px;'>Type d'habitat</td><td style='border: 1px solid #cbd5e1; padding: 8px;'>Abris sous roche, grottes, tentes</td><td style='border: 1px solid #cbd5e1; padding: 8px;'>Villages avec maisons en pierre ou en terre</td></tr></tbody></table></div>"
+       },
+       {
+         "question": "<div style='margin-bottom: 10px;'><p> (2 pts) <em>Explique</em> l'impact de la sédentarisation sur l'organisation sociale des groupes humains.</p></div>",
+         "reponse": "<div style='background-color: #f0f4f8; padding: 12px; border-radius: 8px; color: #1e293b;'><p>La sédentarisation a entraîné une augmentation de la population et la naissance des premiers villages. Cela a nécessité une meilleure organisation sociale, avec l'apparition de chefs et de règles pour gérer les ressources, les conflits et les échanges. La division du travail s'est également développée (agriculteurs, éleveurs, artisans) [citation:2].</p></div>"
+       }
+     ]
+   },
+   {
+     "titre": "Exercice 3 : Mythes et croyances des sociétés anciennes",
+     "points": "5 pts",
+     "enonce": "<div style='margin-bottom: 15px;'><p>Les sociétés anciennes utilisaient les mythes pour expliquer l'origine du monde et des phénomènes qu'elles ne comprenaient pas.</p></div>",
+     "questions": [
+       {
+         "question": "<div style='margin-bottom: 10px;'><p> (2 pts) <em>Définis</em> ce qu'est un mythe de création.</p></div>",
+         "reponse": "<div style='background-color: #f0f4f8; padding: 12px; border-radius: 8px; color: #1e293b;'><p>Un mythe de création est un récit sacré ou traditionnel qui raconte comment le monde, les êtres humains ou une société spécifique ont été créés. Il a une fonction explicative et transmet des valeurs culturelles.</p></div>"
+       },
+       {
+         "question": "<div style='margin-bottom: 10px;'><p> (3 pts) <em>Raconte</em>, avec tes propres mots, un mythe de création que tu connais (égyptien, dogon, ou autre). Ta réponse doit comporter entre 5 et 8 lignes.</p></div>",
+         "reponse": "<div style='background-color: #f0f4f8; padding: 12px; border-radius: 8px; color: #1e293b;'><p>Le mythe de création égyptien raconte qu'au début, il n'y avait que le chaos, un océan d'eau sombre appelé Noun. Du Noun émergea une colline primitive, le Bénouen. Sur cette colline apparut le dieu soleil Rê ou Atoum. Il créa ensuite les premiers dieux, comme Shou (l'air) et Tefnout (l'humidité), qui donnèrent naissance à Geb (la terre) et Nout (le ciel). L'humanité naquit des larmes de Rê.</p></div>"
+       }
+     ]
+   },
+   {
+     "titre": "Exercice 4 : La métallurgie, une révolution technique",
+     "points": "5 pts",
+     "enonce": "<div style='margin-bottom: 15px;'><p>La découverte du travail des métaux a marqué une nouvelle étape dans l'histoire des sociétés humaines, en remplaçant progressivement la pierre.</p></div>",
+     "questions": [
+       {
+         "question": "<div style='margin-bottom: 10px;'><p> (2 pts) <em>Décris</em> brièvement les deux étapes principales du travail des métaux (métallurgie).</p></div>",
+         "reponse": "<div style='background-color: #f0f4f8; padding: 12px; border-radius: 8px; color: #1e293b;'><ul style='margin: 0; padding-left: 20px;'><li><strong>La fonte :</strong> Le minerai est chauffé à très haute température dans un four pour en extraire le métal (comme le fer ou le bronze).</li><li><strong>La forge :</strong> Le métal fondu est ensuite martelé sur une enclume pour lui donner la forme voulue (outils, armes, objets).</li></ul></div>"
+       },
+       {
+         "question": "<div style='margin-bottom: 10px;'><p> (1,5 pt) <em>Identifie</em> deux domaines de la vie quotidienne qui ont été transformés par l'usage des métaux.</p></div>",
+         "reponse": "<div style='background-color: #f0f4f8; padding: 12px; border-radius: 8px; color: #1e293b;'><ul style='margin: 0; padding-left: 20px;'><li><strong>L'agriculture :</strong> Les outils en fer (houes, charrues) ont permis de défricher et de cultiver la terre plus efficacement.</li><li><strong>La guerre :</strong> Les armes en bronze ou en fer (épées, lances) étaient plus solides que celles en pierre ou en bois.</li></ul></div>"
+       },
+       {
+         "question": "<div style='margin-bottom: 10px;'><p> (1,5 pt) <em>Explique</em> pourquoi la maîtrise du fer a été particulièrement importante pour les sociétés anciennes.</p></div>",
+         "reponse": "<div style='background-color: #f0f4f8; padding: 12px; border-radius: 8px; color: #1e293b;'><p>La maîtrise du fer a été importante car le fer est plus résistant et plus abondant que le bronze. Il a permis de fabriquer des outils et des armes plus solides et plus abordables, ce qui a contribué à augmenter la production agricole, à renforcer les armées et à faciliter les échanges commerciaux.</p></div>"
+       }
+     ]
+   }
+ ]
+};
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

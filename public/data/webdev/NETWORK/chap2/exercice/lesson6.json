@@ -1,0 +1,174 @@
+[
+  {
+    "intitule": "Analyse d'une adresse MAC et décodeur OUI",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Une trame Ethernet est capturée sur le réseau local d'une entreprise à Douala. L'en-tête Ethernet révèle les adresses MAC suivantes :</p><ul><li>MAC source : <code>3C:22:FB:4A:2E:91</code></li><li>MAC destination : <code>FF:FF:FF:FF:FF:FF</code></li></ul><p>On sait que les 3 premiers octets (OUI) identifient le constructeur. La base de données IEEE attribue :</p><ul><li><code>3C:22:FB</code> → Intel Corporation</li><li><code>D4:61:FE</code> → Cisco Systems</li><li><code>B8:27:EB</code> → Raspberry Pi Foundation</li></ul>",
+      "images": ["Tableau des OUI (Organizationally Unique Identifier) des principaux constructeurs réseau", "Structure d'une trame Ethernet avec champs MAC source/destination"]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier le constructeur de l'équipement source et le type d'adresse MAC destination.",
+        "niveau": "easy",
+        "reponse": "Constructeur source : Intel Corporation (car OUI 3C:22:FB). L'adresse MAC destination FF:FF:FF:FF:FF:FF est une adresse de broadcast (diffusion à tous les hôtes du réseau local).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Convertir en binaire le premier octet (3C) de l'adresse MAC source. Justifier pourquoi le bit de broadcast est activé.",
+            "niveau": "medium",
+            "reponse": "3C en hexadécimal = 0011 1100 en binaire. Le bit de poids faible du premier octet (bit I/G) est à 0 pour unicast, mais broadcast est déterminé par l'adresse destination FF:FF:FF:FF:FF:FF, pas par le bit I/G de la source.",
+            "sousQuestions": []
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer la différence entre une adresse MAC unicast, multicast et broadcast. Donner un exemple pour chaque type.",
+        "niveau": "medium",
+        "reponse": "Unicast : adresse unique d'une carte réseau (ex: 3C:22:FB:4A:2E:91). Multicast : adresse de groupe (premier octet impair, ex: 01:00:5E:00:00:01). Broadcast : diffusion à tous (FF:FF:FF:FF:FF:FF). Le bit de poids faible du premier octet indique unicast (0) ou multicast/broadcast (1).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Résolution ARP et analyse de cache",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Une station de travail (IP 192.168.1.10/24, MAC A1:B2:C3:D4:E5:F6) souhaite communiquer avec un serveur d'impression (IP 192.168.1.200/24). Le cache ARP de la station est vide initialement.</p><p>On exécute la commande <code>arp -a</code> après la communication :</p><pre>Interface: 192.168.1.10 --- 0x3\n  Adresse Internet      Adresse physique        Type\n  192.168.1.1           a4:2b:3c:4d:5e:6f      dynamique\n  192.168.1.200         00:11:22:33:44:55      dynamique</pre>",
+      "images": ["Paquet ARP Request (broadcast) et ARP Reply (unicast)", "Table de cache ARP sous Windows (arp -a)"]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire les étapes de la résolution ARP lorsque la station veut joindre le serveur 192.168.1.200.",
+        "niveau": "easy",
+        "reponse": "1. La station vérifie son cache ARP (vide). 2. Elle émet une requête ARP broadcast (FF:FF:FF:FF:FF:FF) demandant 'Qui a 192.168.1.200 ?'. 3. Le serveur 192.168.1.200 reçoit la requête et répond par un ARP Reply unicast avec sa MAC 00:11:22:33:44:55. 4. La station enregistre l'entrée dans son cache et peut encapsuler les paquets IP dans des trames Ethernet destinées à cette MAC.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Analyser l'entrée 192.168.1.1 dans le cache. À quel équipement correspond cette adresse ? Justifier.",
+            "niveau": "medium",
+            "reponse": "192.168.1.1 est la passerelle par défaut (routeur). La station a préalablement résolu l'adresse MAC du routeur pour accéder à Internet ou à d'autres sous-réseaux. Le type 'dynamique' indique que l'entrée a été apprise via ARP et expire après quelques minutes.",
+            "sousQuestions": []
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Calculer le temps maximum de validité d'une entrée ARP dynamique si le timeout standard est de 300 secondes. Que se passe-t-il si le serveur change d'adresse MAC ?",
+        "niveau": "hard",
+        "reponse": "Le timeout standard est 300 secondes (5 minutes). Si le serveur change de MAC (ex: remplacement de carte réseau), la station continuera à envoyer les trames à l'ancienne MAC jusqu'à expiration du cache. La communication sera interrompue pendant 5 minutes maximum. Pour résoudre, on peut vider le cache manuellement (arp -d) ou attendre que la station émette une nouvelle requête ARP après échec.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Simulation d'une panne ARP et diagnostic",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Dans une petite entreprise à Yaoundé, trois ordinateurs sont connectés à un même switch :</p><ul><li>PC1 : IP 192.168.1.2/24, MAC AA:AA:AA:AA:AA:AA</li><li>PC2 : IP 192.168.1.3/24, MAC BB:BB:BB:BB:BB:BB</li><li>PC3 : IP 192.168.1.4/24, MAC CC:CC:CC:CC:CC:CC</li></ul><p>Soudain, PC1 ne parvient plus à communiquer avec PC3 alors que PC2 communique normalement avec les deux. Un technicien exécute <code>arp -a</code> sur PC1 et obtient :</p><pre>Interface: 192.168.1.2\n  192.168.1.3           BB:BB:BB:BB:BB:BB      dynamique\n  192.168.1.4           BB:BB:BB:BB:BB:BB      dynamique  ← ANOMALIE !</pre>",
+      "images": ["Schéma de réseau avec switch et trois PC", "Capture Wireshark d'une attaque ARP spoofing"]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier la nature du problème et expliquer son origine probable.",
+        "niveau": "hard",
+        "reponse": "Il s'agit d'une usurpation ARP (ARP spoofing / ARP poisoning). PC2 (MAC BB:BB:BB:BB:BB:BB) a envoyé des réponses ARP non sollicitées (gratuitous ARP) associant l'IP 192.168.1.4 à sa propre MAC. Ainsi, PC1 envoie les paquets destinés à PC3 vers PC2, qui peut intercepter, modifier ou bloquer le trafic (attaque homme du milieu).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposer une commande pour résoudre temporairement le problème sur PC1 et une solution permanente.",
+            "niveau": "medium",
+            "reponse": "Temporaire : exécuter <code>arp -d 192.168.1.4</code> pour supprimer l'entrée corrompue, puis <code>ping 192.168.1.4</code> pour réapprendre la bonne MAC. Permanente : configurer des entrées ARP statiques sur les postes critiques (<code>arp -s 192.168.1.4 CC:CC:CC:CC:CC:CC</code>) ou utiliser des switches avec protection ARP (DAI - Dynamic ARP Inspection) et des segments VLAN isolés.",
+            "sousQuestions": []
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Dessiner le contenu d'une trame ARP Request et d'une trame ARP Reply (champs : hardware type, protocol type, opcode, adresses MAC/IP source/destination).",
+        "niveau": "hard",
+        "reponse": "ARP Request (broadcast) :\n- Hardware type: 1 (Ethernet)\n- Protocol type: 0x0800 (IPv4)\n- Opcode: 1 (request)\n- Sender MAC: AA:AA:AA:AA:AA:AA\n- Sender IP: 192.168.1.2\n- Target MAC: 00:00:00:00:00:00 (inconnu)\n- Target IP: 192.168.1.4\n\nARP Reply (unicast) :\n- Opcode: 2 (reply)\n- Sender MAC: CC:CC:CC:CC:CC:CC\n- Sender IP: 192.168.1.4\n- Target MAC: AA:AA:AA:AA:AA:AA\n- Target IP: 192.168.1.2",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Calcul du nombre d'adresses MAC et de trames dans un réseau",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un fabricant de cartes réseau possède l'OUI <code>F0:9F:C2</code>. Il souhaite produire des adaptateurs Ethernet pour une grande commande.</p>",
+      "images": ["Schéma d'attribution des 24 bits restants d'une adresse MAC", "Courbe d'épuisement des adresses MAC par OUI"]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Calculer le nombre total d'adresses MAC uniques que ce fabricant peut générer avec son OUI.",
+        "niveau": "easy",
+        "reponse": "L'adresse MAC fait 48 bits. L'OUI occupe les 24 premiers bits. Il reste 24 bits pour la partie spécifique au fabricant (NIC specific). Le nombre d'adresses = $2^{24} = 16\\,777\\,216$ (environ 16,8 millions d'adresses).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Si le fabricant utilise 4 bits pour identifier le type de produit (serveur, poste, IoT), combien d'adresses reste-t-il par catégorie ?",
+            "niveau": "medium",
+            "reponse": "Avec 4 bits pour le type de produit, il reste $24 - 4 = 20$ bits pour les adresses uniques par catégorie. Nombre par catégorie : $2^{20} = 1\\,048\\,576$ adresses. Le nombre total reste $2^4 \\times 2^{20} = 16 \\times 1\\,048\\,576 = 16\\,777\\,216$, inchangé.",
+            "sousQuestions": []
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Estimer combien de trames Ethernet maximum peuvent circuler par seconde sur un lien Gigabit Ethernet (1 Gb/s) si la trame minimale est de 64 octets (hors préambule).",
+        "niveau": "hard",
+        "reponse": "Débit = 1 Gb/s = $10^9$ bits/s. Taille minimale trame = $64 \\text{ octets} = 64 \\times 8 = 512$ bits. Nombre max de trames/s = $10^9 / 512 \\approx 1\\,953\\,125$ trames/s (environ 2 millions de trames par seconde). En pratique, l'en-tête Ethernet (préambule, SFD, IFG) réduit ce débit utile.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Configuration et dépannage d'un réseau local (étude de cas)",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous êtes technicien réseau dans une école à Bafoussam. Un laboratoire informatique de 30 postes est organisé comme suit :</p><ul><li>Un switch central non géré</li><li>Un routeur avec IP 192.168.10.1/24 servant de passerelle</li><li>Les postes reçoivent des IP dynamiques via DHCP (serveur intégré au routeur)</li></ul><p>Depuis ce matin, 5 postes (sur les 30) n'arrivent plus à accéder à Internet, mais ils communiquent entre eux et avec les autres postes du laboratoire. Les tests <code>ping 192.168.10.1</code> échouent depuis ces 5 postes. Les autres postes fonctionnent normalement.</p>",
+      "images": ["Topologie du laboratoire : routeur, switch, 30 PC", "Résultat de commande ipconfig /all sur un poste défaillant"]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Établir un diagnostic différentiel des causes possibles (au moins 3 hypothèses) et proposer une commande de vérification pour chaque hypothèse.",
+        "niveau": "hard",
+        "reponse": "Hypothèse 1 : Cache ARP corrompu pour la passerelle. Vérification : arp -a | findstr 192.168.10.1. Hypothèse 2 : Conflit d'adresses IP (deux postes avec la même IP). Vérification : ipconfig /all puis ping -a de l'IP conflictuelle. Hypothèse 3 : Mauvaise configuration du masque de sous-réseau ou passerelle par défaut. Vérification : ipconfig /all (masque doit être 255.255.255.0, passerelle 192.168.10.1). Hypothèse 4 : Règle de pare-feu local bloquant ICMP. Vérification : netsh advfirewall firewall show rule name=all | findstr ICMP.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Après vérification, on découvre que ces 5 postes ont une adresse IP statique configurée manuellement (192.168.10.201 à 192.168.10.205) alors que le DHCP distribue les adresses de 192.168.10.100 à 192.168.10.199. Décrire la procédure correcte pour remettre les postes en DHCP.",
+            "niveau": "medium",
+            "reponse": "Sur Windows : 1. Ouvrir 'Centre réseau et partage' > 'Modifier les paramètres de la carte'. 2. Clic droit sur la carte réseau > Propriétés. 3. Sélectionner 'Protocole Internet version 4 (TCP/IPv4)' > Propriétés. 4. Cocher 'Obtenir une adresse IP automatiquement' et 'Obtenir l'adresse du serveur DNS automatiquement'. 5. Valider et exécuter 'ipconfig /release' puis 'ipconfig /renew' pour obtenir une IP du DHCP.",
+            "sousQuestions": []
+          },
+          {
+            "numero": "1.b",
+            "texte": "Expliquer pourquoi ces postes communiquaient entre eux mais pas avec la passerelle malgré la configuration statique.",
+            "niveau": "medium",
+            "reponse": "Ils communiquent entre eux car ils sont sur le même sous-réseau (192.168.10.x/24) et le switch les connecte directement. Mais ils ne peuvent pas atteindre la passerelle 192.168.10.1 car soit le masque configuré est incorrect (ex: 255.255.0.0), soit la passerelle par défaut est absente/mal configurée, soit il y a un conflit ARP avec un autre poste ayant l'IP 192.168.10.1.",
+            "sousQuestions": []
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Rédiger une procédure préventive pour éviter que ce problème ne se reproduise à l'avenir.",
+        "niveau": "hard",
+        "reponse": "1. Configurer le serveur DHCP avec des réservations (adresses statiques gérées par DHCP) pour les postes qui nécessitent une IP fixe (imprimantes, serveurs). 2. Définir une plage d'exclusion DHCP (ex: 192.168.10.200-192.168.10.254) réservée aux équipements à IP fixes. 3. Utiliser la fonction 'DHCP Snooping' sur les switches gérés pour bloquer les serveurs DHCP pirates. 4. Former les utilisateurs à ne pas modifier manuellement les paramètres IP. 5. Implémenter des GPO (stratégies de groupe) pour bloquer les modifications des paramètres réseau par les utilisateurs non administrateurs.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

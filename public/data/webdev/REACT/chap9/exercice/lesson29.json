@@ -1,0 +1,172 @@
+[
+  {
+    "intitule": "Découverte de React Hook Form",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Un élève a découvert React Hook Form et souhaite l'utiliser pour un formulaire simple. Voici son code. Analysez-le et répondez aux questions.</p>\n<pre><code>\nimport { useForm } from 'react-hook-form';\n\nfunction SimpleForm() {\n  const { register, handleSubmit } = useForm();\n\n  const onSubmit = (data) => {\n    console.log(data);\n  };\n\n  return (\n    &lt;form onSubmit={handleSubmit(onSubmit)}&gt;\n      &lt;input {...register('nom')} placeholder=\"Nom\" /&gt;\n      &lt;input {...register('email')} placeholder=\"Email\" /&gt;\n      &lt;button type=\"submit\"&gt;Envoyer&lt;/button&gt;\n    &lt;/form&gt;\n  );\n}\n</code></pre>",
+      "images": [
+        "schéma du fonctionnement de React Hook Form avec register",
+        "comparaison des performances entre React Hook Form et useState"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer le rôle de la fonction register() et pourquoi on utilise la syntaxe {...register('nom')}.",
+        "niveau": "easy",
+        "reponse": "register() est une fonction de React Hook Form qui enregistre un champ dans le formulaire. Elle retourne un objet contenant des propriétés (onChange, onBlur, name, ref) qu'on spread sur l'input. Cela permet à RHF de suivre la valeur du champ, sa validation et de gérer les re-rendus sans contrôler manuellement l'état.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comparer cette approche avec un input contrôlé utilisant useState. Quel avantage principal offre React Hook Form ?",
+            "niveau": "medium",
+            "reponse": "Avec useState, chaque frappe déclenche un re-rendu du composant (performance moindre). React Hook Form utilise des références (ref) et ne déclenche des re-rendus que lorsque nécessaire (ex: affichage des erreurs). Cela rend les formulaires plus performants, surtout pour les gros formulaires."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Comment récupérer les valeurs du formulaire en temps réel si nécessaire ?",
+            "niveau": "easy",
+            "reponse": "On peut utiliser watch() de React Hook Form : const watchedValues = watch(); ou const nom = watch('nom'); pour surveiller un champ spécifique. watch() déclenche des re-rendus quand les valeurs changent."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Validation d'un formulaire d'inscription avec Zod",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous créez un formulaire d'inscription pour une plateforme éducative camerounaise. Les règles de validation sont :</p>\n<ul>\n  <li>Nom : obligatoire, au moins 3 caractères</li>\n  <li>Email : obligatoire, format email valide</li>\n  <li>Téléphone : optionnel mais s'il est fourni, doit être un numéro camerounais (commence par 6 ou 7, 8 chiffres)</li>\n  <li>Âge : nombre entre 16 et 99</li>\n  <li>Mot de passe : au moins 8 caractères, incluant une lettre majuscule et un chiffre</li>\n  <li>Confirmation mot de passe : doit correspondre au mot de passe</li>\n</ul>",
+      "images": [
+        "schéma de validation avec Zod et React Hook Form",
+        "exemple d'affichage des messages d'erreur"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire le schéma de validation Zod complet pour ce formulaire, puis l'intégrer dans un composant utilisant React Hook Form avec affichage des erreurs.",
+        "niveau": "hard",
+        "reponse": "```jsx\nimport { useForm } from 'react-hook-form';\nimport { zodResolver } from '@hookform/resolvers/zod';\nimport { z } from 'zod';\n\n// Schéma Zod\nconst inscriptionSchema = z.object({\n  nom: z.string().min(3, 'Le nom doit contenir au moins 3 caractères'),\n  email: z.string().email('Email invalide'),\n  telephone: z.string().optional().refine(\n    (val) => !val || /^[67][0-9]{7}$/.test(val),\n    'Téléphone invalide (ex: 612345678 ou 789012345)'\n  ),\n  age: z.number().min(16, 'Âge minimum 16 ans').max(99, 'Âge maximum 99 ans'),\n  motDePasse: z.string()\n    .min(8, '8 caractères minimum')\n    .regex(/[A-Z]/, 'Doit contenir une majuscule')\n    .regex(/[0-9]/, 'Doit contenir un chiffre'),\n  confirmation: z.string()\n}).refine((data) => data.motDePasse === data.confirmation, {\n  message: 'Les mots de passe ne correspondent pas',\n  path: ['confirmation']\n});\n\nfunction InscriptionForm() {\n  const { register, handleSubmit, formState: { errors } } = useForm({\n    resolver: zodResolver(inscriptionSchema)\n  });\n\n  const onSubmit = (data) => console.log('Inscription:', data);\n\n  return (\n    &lt;form onSubmit={handleSubmit(onSubmit)}&gt;\n      &lt;div&gt;\n        &lt;input {...register('nom')} placeholder=\"Nom\" /&gt;\n        {errors.nom && &lt;span&gt;{errors.nom.message}&lt;/span&gt;}\n      &lt;/div&gt;\n\n      &lt;div&gt;\n        &lt;input {...register('email')} placeholder=\"Email\" /&gt;\n        {errors.email && &lt;span&gt;{errors.email.message}&lt;/span&gt;}\n      &lt;/div&gt;\n\n      &lt;div&gt;\n        &lt;input {...register('telephone')} placeholder=\"Téléphone (optionnel)\" /&gt;\n        {errors.telephone && &lt;span&gt;{errors.telephone.message}&lt;/span&gt;}\n      &lt;/div&gt;\n\n      &lt;div&gt;\n        &lt;input type=\"number\" {...register('age', { valueAsNumber: true })} placeholder=\"Âge\" /&gt;\n        {errors.age && &lt;span&gt;{errors.age.message}&lt;/span&gt;}\n      &lt;/div&gt;\n\n      &lt;div&gt;\n        &lt;input type=\"password\" {...register('motDePasse')} placeholder=\"Mot de passe\" /&gt;\n        {errors.motDePasse && &lt;span&gt;{errors.motDePasse.message}&lt;/span&gt;}\n      &lt;/div&gt;\n\n      &lt;div&gt;\n        &lt;input type=\"password\" {...register('confirmation')} placeholder=\"Confirmer\" /&gt;\n        {errors.confirmation && &lt;span&gt;{errors.confirmation.message}&lt;/span&gt;}\n      &lt;/div&gt;\n\n      &lt;button type=\"submit\"&gt;S'inscrire&lt;/button&gt;\n    &lt;/form&gt;\n  );\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi utilise-t-on 'valueAsNumber: true' pour le champ âge ?",
+            "niveau": "medium",
+            "reponse": "Par défaut, la valeur d'un input est une chaîne de caractères. valueAsNumber: true indique à React Hook Form de convertir automatiquement la valeur en nombre avant la validation. Cela permet à Zod de valider correctement le type number."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Comment afficher les erreurs uniquement après que l'utilisateur a quitté un champ (blur) ?",
+            "niveau": "medium",
+            "reponse": "On peut utiliser formState.touchedFields ou le mode de validation. Configuration : useForm({ mode: 'onBlur', resolver: zodResolver(inscriptionSchema) }). Ou dans le JSX : {...register('nom', { onBlur: () => trigger('nom') })}. L'option mode: 'onBlur' valide le champ quand il perd le focus."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Formulaire de commande multi-étapes",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous développez un formulaire de commande en 3 étapes pour une boutique artisanale camerounaise. Les étapes sont :</p>\n<ul>\n  <li><strong>Étape 1 - Identité</strong> : nom, email, téléphone</li>\n  <li><strong>Étape 2 - Produits</strong> : sélection de produits (quantité, taille/couleur si applicable)</li>\n  <li><strong>Étape 3 - Livraison</strong> : adresse, ville, mode de paiement</li>\n</ul>\n<p>Le formulaire doit :</p>\n<ul>\n  <li>Valider chaque étape avant de passer à la suivante</li>\n  <li>Conserver les données d'une étape à l'autre</li>\n  <li>Permettre de revenir à une étape précédente</li>\n  <li>À la soumission finale, afficher un récapitulatif</li>\n</ul>",
+      "images": [
+        "maquette d'un formulaire multi-étapes avec React Hook Form",
+        "schéma du contexte de formulaire multi-étapes"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémenter un formulaire multi-étapes complet avec React Hook Form, gestion de la validation par étape et navigation.",
+        "niveau": "very hard",
+        "reponse": "```jsx\nimport { useForm, FormProvider } from 'react-hook-form';\nimport { zodResolver } from '@hookform/resolvers/zod';\nimport { z } from 'zod';\nimport { useState } from 'react';\n\n// Schémas par étape\nconst etape1Schema = z.object({\n  nom: z.string().min(3),\n  email: z.string().email(),\n  telephone: z.string().regex(/^[67][0-9]{7}$/)\n});\n\nconst etape2Schema = z.object({\n  produits: z.array(z.object({\n    id: z.string(),\n    nom: z.string(),\n    quantite: z.number().min(1),\n    options: z.object({ taille: z.string().optional(), couleur: z.string().optional() }).optional()\n  })).min(1, 'Sélectionnez au moins un produit')\n});\n\nconst etape3Schema = z.object({\n  adresse: z.string().min(5),\n  ville: z.enum(['Douala', 'Yaoundé', 'Garoua', 'Bafoussam', 'Bamenda']),\n  modePaiement: z.enum(['mtn', 'orange', 'carte', 'livraison'])\n});\n\nconst formulaireCompletSchema = etape1Schema.merge(etape2Schema).merge(etape3Schema);\n\nfunction CommandeMultiEtape() {\n  const [etape, setEtape] = useState(1);\n  const methods = useForm({\n    resolver: zodResolver(formulaireCompletSchema),\n    defaultValues: {\n      produits: [],\n      ville: 'Douala',\n      modePaiement: 'mtn'\n    }\n  });\n\n  const { trigger, getValues, handleSubmit, formState: { errors } } = methods;\n\n  const validerEtape = async (etapeCourante) => {\n    let champsAValider = [];\n    if (etapeCourante === 1) champsAValider = ['nom', 'email', 'telephone'];\n    if (etapeCourante === 2) champsAValider = ['produits'];\n    if (etapeCourante === 3) champsAValider = ['adresse', 'ville', 'modePaiement'];\n    \n    const isValid = await trigger(champsAValider);\n    if (isValid) setEtape(etapeCourante + 1);\n  };\n\n  const onSubmit = (data) => {\n    alert(`Commande validée !\\n${JSON.stringify(data, null, 2)}`);\n  };\n\n  return (\n    &lt;FormProvider {...methods}&gt;\n      &lt;form onSubmit={handleSubmit(onSubmit)}&gt;\n        {etape === 1 && (\n          &lt;div&gt;\n            &lt;h3&gt;Étape 1 : Identité&lt;/h3&gt;\n            &lt;input {...methods.register('nom')} placeholder=\"Nom\" /&gt;\n            &lt;input {...methods.register('email')} placeholder=\"Email\" /&gt;\n            &lt;input {...methods.register('telephone')} placeholder=\"Téléphone\" /&gt;\n            &lt;button type=\"button\" onClick={() => validerEtape(1)}&gt;Suivant&lt;/button&gt;\n          &lt;/div&gt;\n        )}\n\n        {etape === 2 && (\n          &lt;div&gt;\n            &lt;h3&gt;Étape 2 : Produits&lt;/h3&gt;\n            &lt;button type=\"button\" onClick={() => setEtape(1)}&gt;Précédent&lt;/button&gt;\n            &lt;button type=\"button\" onClick={() => validerEtape(2)}&gt;Suivant&lt;/button&gt;\n          &lt;/div&gt;\n        )}\n\n        {etape === 3 && (\n          &lt;div&gt;\n            &lt;h3&gt;Étape 3 : Livraison&lt;/h3&gt;\n            &lt;textarea {...methods.register('adresse')} placeholder=\"Adresse\" /&gt;\n            &lt;select {...methods.register('ville')}&gt;\n              &lt;option&gt;Douala&lt;/option&gt;&lt;option&gt;Yaoundé&lt;/option&gt;\n            &lt;/select&gt;\n            &lt;select {...methods.register('modePaiement')}&gt;\n              &lt;option value=\"mtn\"&gt;MTN Mobile Money&lt;/option&gt;\n              &lt;option value=\"orange\"&gt;Orange Money&lt;/option&gt;\n            &lt;/select&gt;\n            &lt;button type=\"button\" onClick={() => setEtape(2)}&gt;Précédent&lt;/button&gt;\n            &lt;button type=\"submit\"&gt;Valider la commande&lt;/button&gt;\n          &lt;/div&gt;\n        )}\n\n        &lt;div&gt;\n          &lt;pre&gt;{JSON.stringify(getValues(), null, 2)}&lt;/pre&gt;\n        &lt;/div&gt;\n      &lt;/form&gt;\n    &lt;/FormProvider&gt;\n  );\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer l'utilisation de FormProvider et à quoi cela sert.",
+            "niveau": "hard",
+            "reponse": "FormProvider est un composant Context qui permet de rendre les méthodes de useForm disponibles dans toute l'arborescence des composants enfants. Cela évite de passer les méthodes (register, errors, etc.) manuellement à chaque sous-composant. Particulièrement utile pour les formulaires multi-étapes où chaque étape peut être un composant séparé."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Comment valider les champs d'une étape sans valider tout le formulaire ?",
+            "niveau": "hard",
+            "reponse": "trigger() accepte un tableau de noms de champs à valider. Exemple : await trigger(['nom', 'email', 'telephone']) valide uniquement ces trois champs. Cela permet de valider progressivement étape par étape sans déclencher les erreurs des étapes suivantes."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Comparaison des approches de formulaire",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>On souhaite évaluer les performances et la complexité des différentes approches de formulaire en React.</p>\n<p>Soit un formulaire de 15 champs. Comparez :</p>\n<ul>\n  <li>Approche traditionnelle avec useState pour chaque champ</li>\n  <li>Approche avec un seul objet useState</li>\n  <li>Approche avec React Hook Form</li>\n</ul>",
+      "images": [
+        "graphique comparant les re-rendus des différentes approches",
+        "tableau des avantages/inconvénients de React Hook Form"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analyser le nombre de re-rendus pour chaque approche lorsqu'un utilisateur tape dans un champ. Conclure sur l'avantage de React Hook Form.",
+        "niveau": "hard",
+        "reponse": "- useState par champ : chaque frappe déclenche un re-rendu du composant (via setNom). Si 15 champs, chaque frappe re-rend tout le formulaire.\n- Objet useState unique : même comportement, chaque modification d'une propriété via setForm({...form, [name]: value}) déclenche un re-rendu.\n- React Hook Form : utilise des refs pour stocker les valeurs. Par défaut, le composant ne se re-rend PAS pendant la saisie. Les re-rendus ne se produisent que lors de l'affichage des erreurs ou via watch(). Avantage : performances optimales, surtout sur mobile ou appareils moins puissants.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quel est l'inconvénient principal de React Hook Form par rapport à l'approche contrôlée ?",
+            "niveau": "medium",
+            "reponse": "L'inconvénient principal est qu'on ne peut pas facilement réagir à chaque changement de champ sans utiliser watch() (qui déclenche des re-rendus). Pour des cas où on a besoin d'une validation en temps réel avec feedback immédiat (ex: champ 'confirmation mot de passe'), l'approche contrôlée ou watch() est nécessaire. De plus, la configuration initiale (résolveurs Zod/Yup) est plus complexe."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Comment React Hook Form parvient-il à éviter les re-rendus ?",
+            "niveau": "hard",
+            "reponse": "React Hook Form utilise des refs (useRef) pour stocker les valeurs des champs plutôt que l'état React (useState). Les refs ne déclenchent pas de re-rendu lorsqu'elles sont modifiées. Le composant ne se re-rend donc pas pendant la saisie. Les re-rendus ne se produisent que lorsque nécessaire (soumission, validation, appel à watch, erreurs)."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Formulaire de feedback avec validation différée",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous créez un formulaire de feedback pour une application mobile. Pour améliorer l'expérience utilisateur, vous souhaitez :</p>\n<ul>\n  <li>Valider les champs uniquement lorsque l'utilisateur a fini de taper (debounce) pour éviter les messages d'erreur intempestifs</li>\n  <li>Afficher la force du mot de passe en temps réel</li>\n  <li>Désactiver le bouton de soumission tant que le formulaire n'est pas valide</li>\n</ul>",
+      "images": [
+        "schéma d'un champ avec validation debounced",
+        "exemple d'indicateur de force de mot de passe"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémenter un formulaire de feedback avec validation différée (debounce) utilisant React Hook Form et Zod.",
+        "niveau": "very hard",
+        "reponse": "```jsx\nimport { useForm } from 'react-hook-form';\nimport { zodResolver } from '@hookform/resolvers/zod';\nimport { z } from 'zod';\nimport { useState, useEffect } from 'react';\n\nconst feedbackSchema = z.object({\n  nom: z.string().min(2),\n  email: z.string().email(),\n  message: z.string().min(10).max(500),\n  note: z.number().min(1).max(5),\n  motDePasse: z.string().min(6)\n});\n\nfunction FeedbackForm() {\n  const [forceMotDePasse, setForceMotDePasse] = useState(0);\n  const { register, watch, formState: { errors, isValid }, trigger } = useForm({\n    resolver: zodResolver(feedbackSchema),\n    mode: 'onChange' // Revalide à chaque changement\n  });\n\n  const motDePasse = watch('motDePasse', '');\n\n  useEffect(() => {\n    // Calcul de la force du mot de passe (0-100)\n    let force = 0;\n    if (motDePasse.length >= 6) force += 25;\n    if (/[A-Z]/.test(motDePasse)) force += 25;\n    if (/[0-9]/.test(motDePasse)) force += 25;\n    if (/[^A-Za-z0-9]/.test(motDePasse)) force += 25;\n    setForceMotDePasse(force);\n  }, [motDePasse]);\n\n  // Validation debounce sur le message\n  const handleMessageChange = (e) => {\n    const value = e.target.value;\n    clearTimeout(window.messageTimeout);\n    window.messageTimeout = setTimeout(() => {\n      trigger('message');\n    }, 500);\n  };\n\n  const onSubmit = (data) => {\n    alert(`Merci ${data.nom} pour votre retour !`);\n  };\n\n  return (\n    &lt;form onSubmit={handleSubmit(onSubmit)}&gt;\n      &lt;div&gt;\n        &lt;input {...register('nom')} placeholder=\"Nom\" /&gt;\n        {errors.nom && &lt;span&gt;{errors.nom.message}&lt;/span&gt;}\n      &lt;/div&gt;\n\n      &lt;div&gt;\n        &lt;input {...register('email')} placeholder=\"Email\" /&gt;\n        {errors.email && &lt;span&gt;{errors.email.message}&lt;/span&gt;}\n      &lt;/div&gt;\n\n      &lt;div&gt;\n        &lt;input {...register('motDePasse')} type=\"password\" placeholder=\"Mot de passe\" /&gt;\n        &lt;progress value={forceMotDePasse} max=\"100\" /&gt;\n        &lt;span&gt;Force : {forceMotDePasse}%&lt;/span&gt;\n      &lt;/div&gt;\n\n      &lt;div&gt;\n        &lt;select {...register('note', { valueAsNumber: true })}&gt;\n          {[1,2,3,4,5].map(n => &lt;option key={n} value={n}&gt;{n} étoile{n&gt;1?'s':''}&lt;/option&gt;)}\n        &lt;/select&gt;\n      &lt;/div&gt;\n\n      &lt;div&gt;\n        &lt;textarea {...register('message')} onChange={handleMessageChange} placeholder=\"Votre message...\" /&gt;\n        {errors.message && &lt;span&gt;{errors.message.message}&lt;/span&gt;}\n      &lt;/div&gt;\n\n      &lt;button type=\"submit\" disabled={!isValid}&gt;Envoyer&lt;/button&gt;\n    &lt;/form&gt;\n  );\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi utilise-t-on 'mode: onChange' dans useForm ?",
+            "niveau": "medium",
+            "reponse": "mode: 'onChange' fait que la validation se déclenche à chaque changement de champ (plutôt qu'à la soumission uniquement). Cela permet d'afficher les erreurs en temps réel et d'activer/désactiver le bouton de soumission dynamiquement. Sans cela, isValid ne serait mis à jour qu'après la première soumission ou après un blur."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Comment améliorer l'expérience pour que l'erreur du message n'apparaisse qu'après 500ms d'inactivité ?",
+            "niveau": "hard",
+            "reponse": "La solution proposée utilise setTimeout et trigger('message') après 500ms. Il faut faire attention à nettoyer le timeout à chaque nouveau changement (clearTimeout). Une alternative est d'utiliser une bibliothèque comme lodash.debounce ou de créer un hook personnalisé useDebouncedValidation."
+          }
+        ]
+      }
+    ]
+  }
+]

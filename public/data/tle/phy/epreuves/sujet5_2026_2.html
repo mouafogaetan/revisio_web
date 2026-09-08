@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+  "matiere": "Physique",
+  "classe": "Terminale D",
+  "sequence": "Séquence 5",
+  "anneeScolaire": "2025-2026",
+  "exercices": [
+    {
+      "titre": "Exercice 1 : Mesures, incertitudes et champ électrique (Ressources)",
+      "points": "2 points",
+      "enonce": "<div style='display: flex; flex-direction: column; gap: 8px;'>\n  <p>Un élève mesure la tension aux bornes d'un condensateur plan à l'aide d'un voltmètre.</p>\n  <p>La distance entre les armatures du condensateur est \\( d = 2 \\, cm \\).</p>\n  <p>Les mesures de tension (en volts) sont : 99.8 ; 100.2 ; 100.0 ; 99.9 ; 100.1.</p>\n</div>",
+      "questions": [
+        {
+          "question": "<p>1) Calculer la valeur moyenne \\( \\bar{U} \\) des mesures.</p>",
+          "reponse": "<p>\\( \\bar{U} = \\dfrac{99.8 + 100.2 + 100.0 + 99.9 + 100.1}{5} = \\dfrac{500}{5} = 100.0 \\, V \\).</p>"
+        },
+        {
+          "question": "<p>2) En déduire l'intensité du champ électrique \\( E \\) à l'intérieur du condensateur.</p>",
+          "reponse": "<p>\\( E = \\dfrac{U}{d} = \\dfrac{100}{2 \\times 10^{-2}} = 5000 \\, V \\cdot m^{-1} \\).</p><p>Le champ électrique est \\( E = 5 \\times 10^3 \\, V \\cdot m^{-1} \\).</p>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 2 : Force de Lorentz et mouvement circulaire (Ressources)",
+      "points": "2 points",
+      "enonce": "<div style='display: flex; flex-direction: column; gap: 8px;'>\n  <p>Un ion de charge \\( q = +2e \\) et de masse \\( m = 6.64 \\times 10^{-27} \\, kg \\) (noyau d'hélium) pénètre dans un champ magnétique uniforme \\( B = 0.5 \\, T \\) avec une vitesse \\( v = 10^5 \\, m \\cdot s^{-1} \\) perpendiculaire au champ.</p>\n</div>",
+      "questions": [
+        {
+          "question": "<p>1) Calculer la force de Lorentz subie par l'ion.</p>",
+          "reponse": "<p>\\( F = qvB = 2 \\times 1.6 \\times 10^{-19} \\times 10^5 \\times 0.5 = 1.6 \\times 10^{-14} \\, N \\).</p>"
+        },
+        {
+          "question": "<p>2) Calculer le rayon de la trajectoire circulaire de l'ion.</p>",
+          "reponse": "<p>\\( R = \\dfrac{mv}{qB} = \\dfrac{6.64 \\times 10^{-27} \\times 10^5}{3.2 \\times 10^{-19} \\times 0.5} = \\dfrac{6.64 \\times 10^{-22}}{1.6 \\times 10^{-19}} = 4.15 \\times 10^{-3} \\, m = 4.15 \\, mm \\).</p>"
+        },
+        {
+          "question": "<p>3) Calculer la période du mouvement circulaire.</p>",
+          "reponse": "<p>\\( T = \\dfrac{2\\pi m}{qB} = \\dfrac{2\\pi \\times 6.64 \\times 10^{-27}}{3.2 \\times 10^{-19} \\times 0.5} = \\dfrac{4.17 \\times 10^{-26}}{1.6 \\times 10^{-19}} = 2.61 \\times 10^{-7} \\, s \\).</p>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 3 : Pendule élastique et énergie (Ressources)",
+      "points": "2 points",
+      "enonce": "<div style='display: flex; flex-direction: column; gap: 8px;'>\n  <p>Un pendule élastique est constitué d'un ressort de raideur \\( k = 20 \\, N \\cdot m^{-1} \\) et d'une masse \\( m = 0.5 \\, kg \\).</p>\n  <p>On écarte la masse de sa position d'équilibre de \\( x_0 = 5 \\, cm \\) et on la lâche sans vitesse initiale.</p>\n</div>",
+      "questions": [
+        {
+          "question": "<p>1) Établir l'équation différentielle du mouvement.</p>",
+          "reponse": "<p>D'après le PFD : \\( m\\ddot{x} = -kx \\Rightarrow \\ddot{x} + \\dfrac{k}{m}x = 0 \\).</p><p>Avec \\( \\omega_0 = \\sqrt{\\dfrac{k}{m}} = \\sqrt{\\dfrac{20}{0.5}} = \\sqrt{40} = 6.32 \\, rad \\cdot s^{-1} \\).</p>"
+        },
+        {
+          "question": "<p>2) Déterminer la période des oscillations.</p>",
+          "reponse": "<p>\\( T = 2\\pi \\sqrt{\\dfrac{m}{k}} = 2\\pi \\sqrt{\\dfrac{0.5}{20}} = 2\\pi \\sqrt{0.025} = 2\\pi \\times 0.158 = 0.993 \\, s \\).</p>"
+        },
+        {
+          "question": "<p>3) Calculer l'énergie mécanique totale du pendule.</p>",
+          "reponse": "<p>\\( E = \\dfrac{1}{2} k x_0^2 = \\dfrac{1}{2} \\times 20 \\times (0.05)^2 = 10 \\times 0.0025 = 0.025 \\, J \\).</p>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 4 : Circuit RLC et résonance (Ressources)",
+      "points": "2 points",
+      "enonce": "<div style='display: flex; flex-direction: column; gap: 8px;'>\n  <p>Un circuit RLC série est composé de \\( R = 50 \\, \\Omega \\), \\( L = 0.2 \\, H \\) et \\( C = 10 \\, \\mu F \\).</p>\n  <p>Il est alimenté par une tension sinusoïdale de fréquence variable.</p>\n</div>",
+      "questions": [
+        {
+          "question": "<p>1) Calculer la fréquence de résonance du circuit.</p>",
+          "reponse": "<p>\\( f_0 = \\dfrac{1}{2\\pi \\sqrt{LC}} = \\dfrac{1}{2\\pi \\sqrt{0.2 \\times 10 \\times 10^{-6}}} = \\dfrac{1}{2\\pi \\sqrt{2 \\times 10^{-6}}} = \\dfrac{1}{2\\pi \\times 1.41 \\times 10^{-3}} = \\dfrac{1}{8.88 \\times 10^{-3}} = 112.6 \\, Hz \\).</p>"
+        },
+        {
+          "question": "<p>2) Calculer le facteur de qualité \\( Q \\) du circuit.</p>",
+          "reponse": "<p>\\( Q = \\dfrac{1}{R} \\sqrt{\\dfrac{L}{C}} = \\dfrac{1}{50} \\sqrt{\\dfrac{0.2}{10^{-5}}} = \\dfrac{1}{50} \\sqrt{2 \\times 10^4} = \\dfrac{1}{50} \\times 141.4 = 2.83 \\).</p>"
+        },
+        {
+          "question": "<p>3) Déterminer la bande passante du circuit.</p>",
+          "reponse": "<p>\\( \\Delta f = \\dfrac{f_0}{Q} = \\dfrac{112.6}{2.83} = 39.8 \\, Hz \\).</p>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 5 : Problème de synthèse - Radiographie et physique nucléaire (Compétences)",
+      "points": "5 points",
+      "enonce": "<div style='display: flex; flex-direction: column; gap: 12px;'>\n  <p>Un service de radiologie utilise un tube à rayons X. Les électrons sont accélérés par une tension \\( U = 60 \\, kV \\) et viennent frapper une cible en tungstène.</p>\n  <p>Le rendement du tube est de 1% (seulement 1% de l'énergie électrique est convertie en rayons X).</p>\n  <p>Par ailleurs, un patient doit subir un examen scintigraphique au technétium 99m. La demi-vie du \\( ^{99m}_{43}Tc \\) est de 6 heures.</p>\n  <p>La dose administrée est de \\( 5 \\, mCi \\) (1 Ci = \\( 3.7 \\times 10^{10} \\, Bq \\)).</p>\n  <p>On donne : \\( h = 6.63 \\times 10^{-34} \\, J \\cdot s \\), \\( c = 3 \\times 10^8 \\, m \\cdot s^{-1} \\), \\( e = 1.6 \\times 10^{-19} \\, C \\).</p>\n</div>",
+      "questions": [
+        {
+          "question": "<p>1) Calculer l'énergie cinétique maximale des électrons arrivant sur la cible.</p>",
+          "reponse": "<p>\\( E_c = eU = 1.6 \\times 10^{-19} \\times 60 \\times 10^3 = 9.6 \\times 10^{-15} \\, J \\)</p><p>Soit \\( 60 \\, keV \\).</p>"
+        },
+        {
+          "question": "<p>2) En déduire la longueur d'onde minimale des rayons X produits.</p>",
+          "reponse": "<p>\\( \\lambda_{min} = \\dfrac{hc}{E_c} = \\dfrac{6.63 \\times 10^{-34} \\times 3 \\times 10^8}{9.6 \\times 10^{-15}} = \\dfrac{1.989 \\times 10^{-25}}{9.6 \\times 10^{-15}} = 2.07 \\times 10^{-11} \\, m \\)</p><p>Soit \\( \\lambda_{min} \\approx 0.0207 \\, nm \\).</p>"
+        },
+        {
+          "question": "<p>3) Calculer la puissance des rayons X émis si le courant du tube est \\( I = 10 \\, mA \\).</p>",
+          "reponse": "<p>La puissance électrique est \\( P_e = UI = 60 \\times 10^3 \\times 10 \\times 10^{-3} = 600 \\, W \\).</p><p>La puissance des rayons X est \\( P_X = 1\\% \\times 600 = 6 \\, W \\).</p>"
+        },
+        {
+          "question": "<p>4) Calculer l'activité initiale de la dose administrée au patient en becquerels.</p>",
+          "reponse": "<p>\\( A_0 = 5 \\times 10^{-3} \\times 3.7 \\times 10^{10} = 1.85 \\times 10^8 \\, Bq \\).</p>"
+        },
+        {
+          "question": "<p>5) Quelle sera l'activité résiduelle après 12 heures ?</p>",
+          "reponse": "<p>12 heures correspondent à 2 demi-vies.</p><p>\\( A(12) = A_0 \\times \\left(\\dfrac{1}{2}\\right)^2 = 1.85 \\times 10^8 \\times \\dfrac{1}{4} = 4.625 \\times 10^7 \\, Bq \\).</p>"
+        },
+        {
+          "question": "<p>6) Combien de noyaux de technétium 99m ont été administrés initialement ?</p>",
+          "reponse": "<p>\\( \\lambda = \\dfrac{\\ln 2}{t_{1/2}} = \\dfrac{0.693}{6 \\times 3600} = \\dfrac{0.693}{21600} = 3.21 \\times 10^{-5} \\, s^{-1} \\)</p><p>\\( A_0 = \\lambda N_0 \\Rightarrow N_0 = \\dfrac{A_0}{\\lambda} = \\dfrac{1.85 \\times 10^8}{3.21 \\times 10^{-5}} = 5.76 \\times 10^{12} \\) noyaux.</p>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 6 : Problème de synthèse - Mouvements et ondes (Compétences)",
+      "points": "5 points",
+      "enonce": "<div style='display: flex; flex-direction: column; gap: 12px;'>\n  <p>Un satellite artificiel de masse \\( m = 1000 \\, kg \\) est en orbite circulaire autour de la Terre à une altitude \\( h = 600 \\, km \\).</p>\n  <p>Le satellite est équipé d'un émetteur qui envoie des ondes électromagnétiques de fréquence \\( f_0 = 100 \\, MHz \\) vers la Terre.</p>\n  <p>La Terre reçoit ces ondes avec une fréquence légèrement différente à cause de l'effet Doppler.</p>\n  <p>Par ailleurs, un pendule simple de longueur \\( L = 2 \\, m \\) est installé à l'intérieur du satellite. On néglige les effets de l'apesanteur dans le satellite.</p>\n  <p>On donne : \\( R_T = 6400 \\, km \\), \\( M_T = 6 \\times 10^{24} \\, kg \\), \\( G = 6.67 \\times 10^{-11} \\, N \\cdot m^2 \\cdot kg^{-2} \\), \\( c = 3 \\times 10^8 \\, m \\cdot s^{-1} \\).</p>\n</div>",
+      "questions": [
+        {
+          "question": "<p>1) Calculer la vitesse du satellite sur son orbite.</p>",
+          "reponse": "<p>\\( r = R_T + h = 6400 + 600 = 7000 \\, km = 7 \\times 10^6 \\, m \\)</p><p>\\( v = \\sqrt{\\dfrac{GM_T}{r}} = \\sqrt{\\dfrac{6.67 \\times 10^{-11} \\times 6 \\times 10^{24}}{7 \\times 10^6}} = \\sqrt{\\dfrac{4.002 \\times 10^{14}}{7 \\times 10^6}} = \\sqrt{5.717 \\times 10^7} = 7.56 \\times 10^3 \\, m \\cdot s^{-1} \\).</p>"
+        },
+        {
+          "question": "<p>2) Calculer la période de révolution du satellite.</p>",
+          "reponse": "<p>\\( T = 2\\pi \\sqrt{\\dfrac{r^3}{GM_T}} = 2\\pi \\sqrt{\\dfrac{(7 \\times 10^6)^3}{4.002 \\times 10^{14}}} = 2\\pi \\sqrt{\\dfrac{3.43 \\times 10^{20}}{4.002 \\times 10^{14}}} = 2\\pi \\sqrt{8.571 \\times 10^5} = 2\\pi \\times 925.8 = 5816 \\, s \\approx 96.9 \\, min \\).</p>"
+        },
+        {
+          "question": "<p>3) Calculer le décalage de fréquence dû à l'effet Doppler pour un observateur terrestre situé sur la ligne de visée (la fréquence reçue est \\( f = f_0 \\dfrac{c}{c - v} \\) ou \\( f = f_0 \\dfrac{c}{c + v} \\) selon l'orientation du mouvement).</p>",
+          "reponse": "<p>Le satellite s'éloigne ou se rapproche selon sa position. Supposons qu'il s'éloigne :</p><p>\\( f = f_0 \\dfrac{c}{c + v} = 100 \\times 10^6 \\times \\dfrac{3 \\times 10^8}{3 \\times 10^8 + 7.56 \\times 10^3} = 100 \\times 10^6 \\times \\dfrac{3 \\times 10^8}{3.0000756 \\times 10^8} = 100 \\times 10^6 \\times 0.99999748 = 99.999748 \\, MHz \\).</p><p>Le décalage est \\( \\Delta f = f_0 - f = 100 \\times 10^6 - 99.999748 \\times 10^6 = 252 \\, Hz \\).</p>"
+        },
+        {
+          "question": "<p>4) Le pendule simple dans le satellite oscille-t-il ? Justifier.</p>",
+          "reponse": "<p>Dans le satellite en orbite, les astronautes sont en état d'apesanteur (le satellite est en chute libre).</p><p>Le pendule simple n'oscille pas car il n'y a pas de force de rappel due à la pesanteur dans le référentiel du satellite.</p><p>La période du pendule serait infinie (ou le pendule resterait dans n'importe quelle position d'équilibre indifférent).</p>"
+        }
+      ]
+    }
+  ]
+};
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

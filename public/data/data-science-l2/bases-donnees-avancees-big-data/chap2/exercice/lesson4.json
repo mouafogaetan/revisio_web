@@ -1,0 +1,199 @@
+[
+  {
+    "intitule": "Exercice 1 : Types d'Index",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Les bases de données relationnelles utilisent différents types d'index pour accélérer les requêtes. Les trois principaux types sont :</p><ul><li><strong>B-Tree</strong> (arbre équilibré)</li><li><strong>Hash</strong> (table de hachage)</li><li><strong>Bitmap</strong> (index bitmap)</li></ul><p>Pour chacun des scénarios suivants, identifiez le type d'index le plus approprié :</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Une table de 10 millions de clients. On fait souvent des recherches par nom exact (WHERE nom = 'Dupont') et des recherches par plage (WHERE nom BETWEEN 'A' AND 'M').",
+        "niveau": "easy",
+        "reponse": "<strong>B-Tree</strong> est le plus approprié car il supporte à la fois les recherches par égalité ET par plage. L'index Hash ne supporte que les recherches par égalité exacte.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer pourquoi l'index Hash ne serait pas adapté pour les recherches par plage.",
+            "niveau": "medium",
+            "reponse": "L'index Hash utilise une fonction de hachage qui distribue les valeurs de manière aléatoire. Les valeurs qui se suivent dans l'ordre alphabétique (comme 'A' et 'B') ne sont pas nécessairement proches dans la table de hachage. Il est donc impossible d'effectuer une recherche par plage efficacement avec un index Hash, car il faudrait parcourir toutes les entrées pour trouver celles qui correspondent à la plage."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Un tableau contenant 100 000 lignes avec une colonne 'statut' qui ne prend que 3 valeurs possibles : 'ACTIF', 'INACTIF', 'SUSPENDU'. Les requêtes filtrent souvent sur cette colonne.",
+        "niveau": "easy",
+        "reponse": "<strong>Bitmap</strong> est le plus approprié car c'est un index efficace pour les colonnes avec un faible nombre de valeurs distinctes (faible cardinalité). L'index Bitmap utilise une chaîne de bits pour représenter les valeurs, ce qui est très compact et rapide pour ce type de colonne.",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Pourquoi un index B-Tree serait-il moins efficace dans ce cas ?",
+            "niveau": "medium",
+            "reponse": "Un index B-Tree sur une colonne à faible cardinalité serait moins efficace car il y aurait beaucoup de doublons dans l'index. La sélectivité serait faible, ce qui signifie que l'index ne réduirait pas suffisamment le nombre de lignes à examiner. De plus, l'index B-Tree prendrait plus de place que l'index Bitmap et les opérations de recherche seraient moins rapides."
+          }
+        ]
+      },
+      {
+        "numero": 3,
+        "texte": "Une table de sessions utilisateurs avec une colonne 'session_id' qui est une clé unique. Les requêtes sont uniquement des recherches par égalité (WHERE session_id = 'abc123')",
+        "niveau": "easy",
+        "reponse": "<strong>Hash</strong> est le plus approprié car il offre la meilleure performance pour les recherches par égalité exacte sur des valeurs uniques. La complexité d'une recherche par Hash est O(1) en moyenne, ce qui est plus rapide que le B-Tree qui est en O(log n)."
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 2 : Index Composites",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Une entreprise de e-commerce gère une table <code>commandes</code> avec les colonnes suivantes :</p><ul><li><code>id_commande</code> (INT, clé primaire)</li><li><code>id_client</code> (INT)</li><li><code>date_commande</code> (DATE)</li><li><code>statut</code> (VARCHAR: 'EN_ATTENTE', 'PAYEE', 'EXPEDIEE', 'LIVREE')</li><li><code>montant</code> (DECIMAL)</li></ul><p>Les requêtes les plus fréquentes sont :</p><ol><li><code>SELECT * FROM commandes WHERE id_client = 123 AND date_commande > '2024-01-01'</code></li><li><code>SELECT * FROM commandes WHERE id_client = 123</code></li><li><code>SELECT * FROM commandes WHERE date_commande > '2024-01-01'</code></li></ol>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposer un index composite optimal pour ce cas d'usage. Justifier votre choix.",
+        "niveau": "medium",
+        "reponse": "<strong>Index composite sur (id_client, date_commande)</strong> est le plus approprié. Cet index couvre la requête 1 (recherche par id_client ET date_commande) et la requête 2 (recherche par id_client uniquement) grâce au principe de l'index left-most (le premier champ de l'index peut être utilisé seul). La requête 3 (recherche uniquement par date) sera moins bien servie mais on ne peut pas tout couvrir avec un seul index.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi ne pas créer un index sur (date_commande, id_client) à la place ?",
+            "niveau": "hard",
+            "reponse": "Un index sur (date_commande, id_client) ne serait pas optimal car :<br/>- La requête 2 (<code>WHERE id_client = 123</code>) ne pourrait pas utiliser efficacement cet index car <code>id_client</code> n'est pas le premier champ de l'index. Il faudrait un scan complet de l'index.<br/>- La requête 1 pourrait utiliser l'index mais moins efficacement car la date est le premier champ, ce qui n'est pas le filtre le plus sélectif. En général, on met en premier le champ le plus sélectif (celui qui a le plus de valeurs distinctes), ici <code>id_client</code> est plus sélectif que <code>date_commande</code>."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Quelle serait la conséquence de l'ajout d'un index sur (statut, date_commande) pour les requêtes existantes ?",
+            "niveau": "medium",
+            "reponse": "Un index sur (statut, date_commande) ne serait pas utile pour les requêtes existantes car :<br/>- La requête 1 et 2 filtrent sur <code>id_client</code> qui n'est pas dans l'index<br/>- La requête 3 filtre sur <code>date_commande</code> qui est le deuxième champ de l'index ; l'index ne pourrait pas être utilisé efficacement (le premier champ <code>statut</code> n'est pas dans le WHERE)<br/>- L'index utiliserait de l'espace disque supplémentaire et ralentirait les opérations d'écriture (INSERT, UPDATE) sans apporter de bénéfice pour les requêtes."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Un développeur propose de créer des index séparés sur chaque colonne : un index sur (id_client) et un index sur (date_commande). Evaluer l'efficacité de cette approche par rapport à l'index composite.",
+        "niveau": "hard",
+        "reponse": "Cette approche est <strong>moins efficace</strong> que l'index composite car :<br/>- Pour la requête 1, le SGBD pourrait utiliser les deux index séparés via un BITMAP OR/AND ou choisir l'un des deux puis filtrer manuellement, mais cela serait moins efficace qu'un seul index composite.<br/>- Les deux index séparés occupent plus d'espace disque qu'un seul index composite.<br/>- Les opérations d'écriture sont plus lentes car chaque index séparé doit être mis à jour individuellement.<br/>Un index composite est généralement plus performant pour les requêtes qui combinent plusieurs colonnes."
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 3 : Index Partiels et Fonctionnels",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Une application de gestion de bibliothèque utilise une table <code>livres</code> avec 500 000 enregistrements. La table contient :</p><ul><li><code>id_livre</code> (INT)</li><li><code>titre</code> (VARCHAR)</li><li><code>auteur</code> (VARCHAR)</li><li><code>annee_publication</code> (INT)</li><li><code>est_disponible</code> (BOOLEAN)</li><li><code>note_moyenne</code> (DECIMAL)</li></ul><p>Les requêtes suivantes sont fréquentes :</p><ol><li><code>SELECT * FROM livres WHERE est_disponible = TRUE AND note_moyenne > 4.0</code></li><li><code>SELECT * FROM livres WHERE LOWER(titre) = 'le petit prince'</code></li><li><code>SELECT * FROM livres WHERE est_disponible = TRUE AND annee_publication > 2010</code></li></ol>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposer un index partiel pour optimiser la requête 1 (livres disponibles avec note > 4.0). Justifier.",
+        "niveau": "medium",
+        "reponse": "<strong>Index partiel :</strong> <code>CREATE INDEX idx_livres_dispo_note ON livres(note_moyenne) WHERE est_disponible = TRUE;</code><br/><br/>Cet index ne contient que les livres disponibles, ce qui réduit sa taille (seulement les livres non empruntés). La recherche sur <code>note_moyenne</code> se fera uniquement sur les livres disponibles, ce qui est très efficace. L'index est plus petit donc plus rapide à parcourir et occupe moins d'espace disque.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Écrire la requête SQL pour créer cet index.",
+            "niveau": "easy",
+            "reponse": "```sql\nCREATE INDEX idx_livres_dispo_note \nON livres(note_moyenne) \nWHERE est_disponible = TRUE;\n```"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer un index fonctionnel pour optimiser la requête 2 (recherche par titre insensible à la casse). Expliquer son fonctionnement.",
+        "niveau": "medium",
+        "reponse": "<strong>Index fonctionnel :</strong> <code>CREATE INDEX idx_livres_titre_lower ON livres(LOWER(titre));</code><br/><br/>Cet index stocke le résultat de la fonction <code>LOWER(titre)</code> pour chaque ligne. Ainsi, la requête <code>WHERE LOWER(titre) = 'le petit prince'</code> peut utiliser directement l'index sans avoir à appliquer la fonction à chaque ligne. L'index est mis à jour automatiquement quand le titre est modifié.",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Quel serait l'impact de cet index sur les opérations d'insertion et de mise à jour ?",
+            "niveau": "medium",
+            "reponse": "L'index fonctionnel doit être mis à jour à chaque insertion ou modification de la colonne <code>titre</code>. Cela ajoute un coût supplémentaire aux opérations d'écriture (INSERT, UPDATE). Cependant, pour une table de 500 000 lignes où les lectures sont beaucoup plus fréquentes que les écritures, le bénéfice pour les requêtes de recherche compense largement ce coût."
+          }
+        ]
+      },
+      {
+        "numero": 3,
+        "texte": "Analyser l'opportunité de créer un index partiel sur (est_disponible, annee_publication) pour la requête 3. Comparer avec un index classique.",
+        "niveau": "hard",
+        "reponse": "Un index partiel serait intéressant : <code>CREATE INDEX idx_livres_dispo_annee ON livres(annee_publication) WHERE est_disponible = TRUE;</code><br/><br/><strong>Avantages :</strong><br/>- Index plus petit que la table (seulement les livres disponibles)<br/>- Recherche plus rapide car moins de lignes à parcourir<br/>- Moins d'espace disque<br/><br/><strong>Comparé à un index classique :</strong><br/>- Un index classique sur (est_disponible, annee_publication) contiendrait toutes les lignes, même les livres indisponibles, donc plus grand et plus lent<br/>- L'index partiel est préférable si on sait que la grande majorité des requêtes portent sur les livres disponibles"
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 4 : Analyse de Performance - Application Bancaire",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Une banque gère une table <code>transactions</code> avec 50 millions d'enregistrements. La table a la structure suivante :</p><ul><li><code>id_transaction</code> (INT, clé primaire)</li><li><code>id_client</code> (INT)</li><li><code>id_compte</code> (INT)</li><li><code>date_transaction</code> (DATETIME)</li><li><code>montant</code> (DECIMAL)</li><li><code>type_transaction</code> (VARCHAR: 'DEPOT', 'RETRAIT', 'VIREMENT', 'FRAIS')</li><li><code>statut</code> (VARCHAR: 'EN_ATTENTE', 'VALIDE', 'REJETE')</li></ul><p>Les requêtes les plus fréquentes sont :</p><ol><li><code>SELECT SUM(montant) FROM transactions WHERE id_client = ? AND date_transaction BETWEEN '2024-01-01' AND '2024-01-31'</code></li><li><code>SELECT * FROM transactions WHERE id_compte = ? AND statut = 'VALIDE' ORDER BY date_transaction DESC LIMIT 10</code></li><li><code>SELECT COUNT(*) FROM transactions WHERE type_transaction = 'VIREMENT' AND statut = 'REJETE'</code></li></ol>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposer une stratégie d'indexation optimale pour les requêtes 1 et 2. Justifier votre choix en termes de performance.",
+        "niveau": "hard",
+        "reponse": "<strong>Pour la requête 1 :</strong><br/>Index composite sur <code>(id_client, date_transaction)</code> avec <code>montant</code> inclus comme colonne incluse (INCLUDE) :<br/>```sql\nCREATE INDEX idx_client_date ON transactions(id_client, date_transaction) INCLUDE (montant);\n```<br/>Cela permet un index-only scan : l'index contient déjà le montant, donc pas besoin d'aller chercher la ligne dans la table.<br/><br/><strong>Pour la requête 2 :</strong><br/>Index composite sur <code>(id_compte, statut, date_transaction DESC)</code> :<br/>```sql\nCREATE INDEX idx_compte_statut_date ON transactions(id_compte, statut, date_transaction DESC);\n```<br/>Cet index permet de filtrer rapidement sur <code>id_compte</code> et <code>statut</code>, puis de récupérer les 10 dernières transactions dans l'ordre demandé sans tri supplémentaire.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Estimer l'espace disque supplémentaire nécessaire pour ces index si chaque ligne fait 200 octets et l'index 50 octets par ligne.",
+            "niveau": "medium",
+            "reponse": "Pour 50 millions de lignes :<br/>- Taille de l'index 1 : 50M × 50 octets = 2,5 Go<br/>- Taille de l'index 2 : 50M × 50 octets = 2,5 Go<br/>- Total supplémentaire : environ 5 Go<br/>C'est un investissement acceptable pour une base de données de cette taille, surtout si les performances sont critiques."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Pour la requête 3, proposer une stratégie d'indexation adaptée. Si l'index n'est pas justifié, expliquer pourquoi.",
+        "niveau": "hard",
+        "reponse": "La requête 3 filtre sur <code>type_transaction</code> et <code>statut</code>. Ces deux colonnes ont une faible cardinalité (quelques valeurs distinctes). Un index B-Tree classique serait peu efficace car peu sélectif.<br/><br/><strong>Solution alternative :</strong><br/>- Utiliser un <strong>index bitmap</strong> sur <code>(type_transaction, statut)</code> si le SGBD le supporte (Oracle, PostgreSQL)<br/>- Ou créer une <strong>vue matérialisée</strong> avec des agrégats pré-calculés :<br/>```sql\nCREATE MATERIALIZED VIEW mv_stats_transactions AS\nSELECT type_transaction, statut, COUNT(*) as nb\nFROM transactions\nGROUP BY type_transaction, statut;\n```<br/>Cette vue contient seulement les statistiques et peut être rafraîchie périodiquement. La requête 3 devient alors une simple lecture de la vue.",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Discuter des avantages et inconvénients de l'approche par vue matérialisée.",
+            "niveau": "hard",
+            "reponse": "<strong>Avantages :</strong><br/>- Requête ultra-rapide : lecture directe des résultats pré-calculés<br/>- Très efficace pour les requêtes d'agrégation sur de grandes tables<br/>- Réduit la charge sur la table principale<br/><br/><strong>Inconvénients :</strong><br/>- La vue doit être rafraîchie régulièrement (peut être coûteux)<br/>- Les résultats peuvent être obsolètes si la table change entre deux rafraîchissements<br/>- Occupation d'espace disque supplémentaire<br/><br/>Cette approche est idéale si les données ne changent pas trop fréquemment (par exemple, un rafraîchissement quotidien est suffisant)."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 5 : Évaluation de l'Impact des Index",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous êtes consultant en optimisation de bases de données. Un client vous demande d'analyser la performance d'une table <code>produits</code> qui contient 1 million d'enregistrements.</p><p>La table a la structure suivante :</p><ul><li><code>id_produit</code> (INT, clé primaire)</li><li><code>nom</code> (VARCHAR)</li><li><code>categorie</code> (VARCHAR) - 20 catégories possibles</li><li><code>prix</code> (DECIMAL)</li><li><code>stock</code> (INT)</li><li><code>date_ajout</code> (DATE)</li></ul><p>Le client a créé les index suivants :</p><ul><li>Index sur <code>(categorie, prix)</code></li><li>Index sur <code>(prix, stock)</code></li><li>Index sur <code>nom</code></li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Évaluer l'utilité de l'index sur <code>(categorie, prix)</code> pour les requêtes suivantes : <br/>A) <code>SELECT * FROM produits WHERE categorie = 'Electronique' AND prix > 100</code><br/>B) <code>SELECT * FROM produits WHERE prix BETWEEN 50 AND 200</code><br/>C) <code>SELECT * FROM produits WHERE categorie = 'Electronique'</code>",
+        "niveau": "medium",
+        "reponse": "<strong>Requête A :</strong> L'index est <strong>très utile</strong> car il filtre sur les deux colonnes dans l'ordre de l'index. L'index permet de trouver rapidement les produits électroniques avec prix > 100.<br/><br/><strong>Requête B :</strong> L'index est <strong>peu utile</strong> car le premier champ de l'index (categorie) n'est pas utilisé dans le WHERE. Le SGBD ne pourra pas utiliser l'index efficacement.<br/><br/><strong>Requête C :</strong> L'index est <strong>utile</strong> car le premier champ de l'index (categorie) est utilisé. Le principe de l'index left-most s'applique : on peut utiliser un index même si on n'utilise pas tous les champs, à condition d'utiliser le premier champ.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Identifier les index redondants ou inutiles dans la configuration actuelle.",
+            "niveau": "medium",
+            "reponse": "L'index sur <code>(prix, stock)</code> est probablement <strong>peu utile</strong> car :<br/>- Les requêtes qui filtrent sur <code>prix</code> seul pourraient utiliser cet index, mais si elles filtrent sur <code>prix</code> ET <code>stock</code>, l'index est efficace. Mais est-ce une requête fréquente ?<br/>- Si les requêtes sur <code>stock</code> sont rares, cet index peut être supprimé.<br/><br/>L'index sur <code>nom</code> est utile pour les recherches textuelles (ex: LIKE 'iphone%') mais pas pour les recherches exactes (nom = 'iPhone') si c'est peu fréquent."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer une nouvelle stratégie d'indexation pour optimiser les requêtes suivantes qui sont les plus fréquentes :<br/>- <code>SELECT * FROM produits WHERE categorie = 'Electronique' AND prix BETWEEN 50 AND 200</code><br/>- <code>SELECT COUNT(*) FROM produits WHERE categorie = 'Electronique'</code><br/>- <code>SELECT * FROM produits WHERE nom LIKE 'Mac%'</code>",
+        "niveau": "hard",
+        "reponse": "<strong>Nouvelle stratégie :</strong><br/><br/>1. <strong>Index sur (categorie, prix)</strong> pour la première requête.<br/>```sql\nCREATE INDEX idx_categorie_prix ON produits(categorie, prix);\n```<br/><br/>2. <strong>Index partiel sur categorie</strong> pour la deuxième requête (COUNT).<br/>```sql\nCREATE INDEX idx_categorie_electronique ON produits(categorie) WHERE categorie = 'Electronique';\n```<br/>Cet index est très petit et rend le COUNT ultra-rapide.<br/><br/>3. <strong>Index sur (nom)</strong> avec une extension comme un index texte (trigram ou full-text) pour la troisième requête.<br/>```sql\nCREATE INDEX idx_nom_trgm ON produits USING GIN (nom gin_trgm_ops);\n```<br/>Cela permet de faire des recherches par préfixe (LIKE 'Mac%') très rapidement.<br/><br/><strong>Résultat :</strong> 3 index au lieu de 3, mais mieux ciblés pour les cas d'usage."
+      }
+    ]
+  }
+]

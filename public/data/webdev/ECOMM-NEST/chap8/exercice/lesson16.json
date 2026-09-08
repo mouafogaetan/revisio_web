@@ -1,0 +1,246 @@
+[
+  {
+    "intitule": "Mise en place de la sécurité des en-têtes HTTP avec Helmet",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Dans le cadre de la sécurisation de l'API Sawamart, vous devez configurer le middleware Helmet pour protéger l'application contre les vulnérabilités courantes liées aux en-têtes HTTP.</p><p>Helmet est une collection de 12 middlewares qui définissent des en-têtes HTTP sécurisés. Voici quelques-uns des en-têtes qu'il configure :</p><ul><li><code>X-DNS-Prefetch-Control</code></li><li><code>X-Frame-Options</code></li><li><code>X-Content-Type-Options</code></li><li><code>X-Permitted-Cross-Domain-Policies</code></li><li><code>Referrer-Policy</code></li></ul>",
+      "images": [
+        "Schéma représentant un navigateur envoyant une requête à un serveur NestJS, avec Helmet agissant comme un middleware entre les deux, ajoutant des en-têtes de sécurité dans la réponse HTTP."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez le rôle de l'en-tête <code>X-Content-Type-Options</code> et pourquoi il est important pour la sécurité d'une API.",
+        "niveau": "easy",
+        "reponse": "L'en-tête <code>X-Content-Type-Options</code> avec la valeur <code>nosniff</code> empêche le navigateur d'effectuer du MIME sniffing, c'est-à-dire d'interpréter les fichiers avec un type MIME différent de celui déclaré. Cela prévient les attaques de type Cross-Site Scripting (XSS) basées sur le chargement de fichiers malveillants (ex: un fichier image contenant du code JavaScript).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Identifiez deux autres en-têtes configurés par Helmet et décrivez leur fonction de sécurité.",
+        "niveau": "easy",
+        "reponse": "1) <code>X-Frame-Options</code> : empêche le site d'être intégré dans une iframe (valeur <code>DENY</code> ou <code>SAMEORIGIN</code>), protégeant contre le clickjacking. 2) <code>Strict-Transport-Security</code> : force le navigateur à utiliser HTTPS pour toutes les communications avec le domaine, empêchant les attaques de type man-in-the-middle et le protocole HTTP non sécurisé.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Décrivez la procédure d'installation et de configuration de Helmet dans une application NestJS en utilisant <code>app.use(helmet())</code>.",
+        "niveau": "medium",
+        "reponse": "Installer le package : <code>npm install helmet</code> (ou <code>yarn add helmet</code>). Dans <code>main.ts</code>, importer helmet et l'ajouter comme middleware global avec <code>app.use(helmet())</code>. Pour une configuration personnalisée, on peut passer des options : <code>app.use(helmet({ frameguard: { action: 'deny' }, ... }))</code>. Helmet s'applique à toutes les routes.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Implémentation du Rate Limiting avec ThrottlerModule",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Pour protéger l'API Sawamart contre les attaques par déni de service (DoS) et le scraping abusif, vous devez mettre en place un système de rate limiting. NestJS fournit le module <code>ThrottlerModule</code> pour gérer cela.</p><p>Vous devez configurer une limite de 100 requêtes par minute pour toutes les routes, et une limite de 5 requêtes par minute pour l'endpoint <code>/auth/login</code> (plus sensible).</p><p>La variable d'environnement <code>THROTTLE_TTL</code> (en secondes) et <code>THROTTLE_LIMIT</code> seront utilisées pour la configuration globale.</p>",
+      "images": [
+        "Diagramme montrant un client effectuant de nombreuses requêtes vers l'API, qui sont interceptées par ThrottlerModule. Les requêtes en excès reçoivent une réponse HTTP 429 Too Many Requests."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Configurez le <code>ThrottlerModule</code> dans <code>app.module.ts</code> pour utiliser les variables d'environnement comme configuration globale.",
+        "niveau": "medium",
+        "reponse": "Importer ThrottlerModule depuis @nestjs/throttler. Dans le module : <code>ThrottlerModule.forRootAsync({ useFactory: (config: ConfigService) => ({ ttl: config.get('THROTTLE_TTL'), limit: config.get('THROTTLE_LIMIT') }), inject: [ConfigService] })</code>. Cela permet une configuration flexible selon l'environnement.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez l'utilité de <code>forRootAsync</code> par rapport à <code>forRoot</code> dans ce contexte.",
+            "niveau": "medium",
+            "reponse": "<code>forRootAsync</code> permet une configuration asynchrone, notamment pour injecter des services (comme ConfigService) et charger des variables d'environnement. Cela rend la configuration dynamique et adaptable. <code>forRoot</code> prend des valeurs statiques, moins flexibles.",
+            "reponse": "forRootAsync permet une configuration asynchrone, ce qui est idéal pour utiliser le ConfigService et les variables d'environnement, rendant la configuration dynamique selon l'environnement (dev, prod)."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Appliquez un rate limiting spécifique de 5 requêtes par minute sur le contrôleur <code>AuthController</code> (uniquement pour la méthode <code>login</code>) en utilisant le décorateur <code>@Throttle()</code>.",
+        "niveau": "medium",
+        "reponse": "Importer <code>@Throttle</code> depuis <code>@nestjs/throttler</code>. Dans <code>AuthController</code>, sur la méthode <code>@Post('login')</code>, ajouter <code>@Throttle({ default: { limit: 5, ttl: 60 } })</code> (ou <code>@Throttle(5, 60)</code> selon la version). Les valeurs par défaut globales sont remplacées pour cette route.",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Que se passe-t-il si un client dépasse la limite sur <code>/auth/login</code> ? Quel statut HTTP est renvoyé et comment le personnaliser ?",
+            "niveau": "medium",
+            "reponse": "Le statut HTTP 429 (Too Many Requests) est renvoyé. On peut personnaliser le message en utilisant un filtre d'exception ou en configurant un message dans le ThrottlerModule (via <code>errorMessage</code>). On peut aussi enregistrer les tentatives dans les logs pour détecter des attaques.",
+            "reponse": "Le statut HTTP 429 (Too Many Requests) est renvoyé. On peut personnaliser le message et le comportement via un <code>ThrottlerException</code> ou un filtre global, et logger ces événements pour détecter des attaques potentielles."
+          }
+        ]
+      },
+      {
+        "numero": 3,
+        "texte": "Évaluez les avantages et les inconvénients de l'implémentation du rate limiting pour une API e-commerce comme Sawamart.",
+        "niveau": "hard",
+        "reponse": "Avantages : protection contre les attaques DoS, limitation du scraping, répartition équitable des ressources, prévention des abus (ex: force brute sur login). Inconvénients : peut impacter les utilisateurs légitimes (si la limite est trop basse), nécessite un ajustement fin des seuils, ajoute une légère latence (check en mémoire/Redis), peut complexifier la mise à l'échelle (si plusieurs instances, utiliser un store distribué comme Redis).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Protection contre les injections SQL avec TypeORM",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>TypeORM fournit une protection de base contre les injections SQL via l'utilisation de <code>QueryBuilder</code> et des paramètres. Cependant, certaines pratiques peuvent exposer l'application.</p><p>Voici un extrait de code potentiellement vulnérable :</p><pre><code>// Service de recherche de produits\nasync searchProducts(searchTerm: string) {\n  return await this.productRepository.query(\n    `SELECT * FROM product WHERE name LIKE '%${searchTerm}%'`\n  );\n}\n</code></pre><p>Le code utilise <code>query()</code> avec une concaténation de chaînes, ce qui est dangereux.</p>",
+      "images": [
+        "Schéma illustrant une attaque par injection SQL : un attaquant insère une chaîne malveillante dans le paramètre searchTerm, modifiant la requête SQL pour extraire des données sensibles (ex: ' OR '1'='1)."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifiez la vulnérabilité dans le code ci-dessus et expliquez comment un attaquant pourrait l'exploiter.",
+        "niveau": "medium",
+        "reponse": "Le code est vulnérable à l'injection SQL car il concatène directement la variable searchTerm dans la requête. Un attaquant peut fournir une valeur comme <code>'; DROP TABLE product; --</code> pour exécuter des commandes SQL arbitraires. Même un simple <code>' OR '1'='1</code> pourrait contourner l'authentification ou récupérer toutes les données.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Réécrivez la méthode <code>searchProducts</code> en utilisant <code>QueryBuilder</code> de TypeORM pour éviter l'injection SQL.",
+        "niveau": "medium",
+        "reponse": "Utiliser <code>this.productRepository.createQueryBuilder('p').where('p.name LIKE :searchTerm', { searchTerm: `%${searchTerm}%` }).getMany()</code>. Les paramètres sont automatiquement échappés par TypeORM, empêchant l'injection. On peut aussi utiliser <code>Repository.find({ where: { name: Like(`%${searchTerm}%`) } })</code> avec le helper <code>Like</code>.",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Expliquez pourquoi l'utilisation de <code>QueryBuilder</code> est plus sûre que <code>query()</code>.",
+            "niveau": "easy",
+            "reponse": "<code>QueryBuilder</code> utilise des paramètres nommés (ou positionnels) qui sont automatiquement échappés par le driver de base de données, séparant la structure de la requête des données utilisateur. <code>query()</code> exécute une chaîne brute qui peut être manipulée par l'attaquant.",
+            "reponse": "QueryBuilder utilise des paramètres (placeholders) qui sont échappés automatiquement par le driver de la base de données, garantissant que les entrées utilisateur sont traitées comme des données, pas comme du code SQL exécutable."
+          }
+        ]
+      },
+      {
+        "numero": 3,
+        "texte": "Proposez une mesure supplémentaire (outil ou pratique) pour détecter automatiquement les vulnérabilités d'injection SQL dans le code de l'API.",
+        "niveau": "medium",
+        "reponse": "Utiliser des outils d'analyse statique (SAST) comme SonarQube ou ESLint avec des plugins de sécurité pour détecter les concaténations de requêtes SQL. Intégrer des tests de sécurité dynamiques (DAST) ou des tests d'intrusion réguliers. Mettre en place une revue de code systématique avec un focus sur la sécurité.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Configuration des CORS pour une application e-commerce multi-clients",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Sawamart dispose de plusieurs clients front-end : une application web (React) hébergée sur <code>https://sawamart.com</code>, une application mobile (React Native) et un back-office administratif sur <code>https://admin.sawamart.com</code>.</p><p>L'API NestJS est déployée sur <code>https://api.sawamart.com</code>. Vous devez configurer les CORS (Cross-Origin Resource Sharing) pour autoriser ces domaines à accéder à l'API.</p>",
+      "images": [
+        "Schéma montrant les différents clients front-end (web, mobile, admin) envoyant des requêtes à l'API NestJS. Les CORS sont configurés sur le serveur pour autoriser les domaines spécifiés, avec des flèches vertes pour les autorisations et rouges pour les refus."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Configurez les CORS dans <code>main.ts</code> pour autoriser les domaines <code>https://sawamart.com</code>, <code>https://admin.sawamart.com</code> et toutes les origines pour l'environnement de développement.",
+        "niveau": "medium",
+        "reponse": "<code>const corsOptions = { origin: ['https://sawamart.com', 'https://admin.sawamart.com'], methods: 'GET,HEAD,PUT,PATCH,POST,DELETE', credentials: true, optionsSuccessStatus: 204 };</code> Puis <code>app.enableCors(corsOptions)</code>. Pour le développement, on peut utiliser un tableau contenant <code>'*'</code> ou une fonction dynamique basée sur l'environnement. On peut aussi utiliser <code>origin: true</code> pour refléter l'origine demandée.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi est-il important de spécifier explicitement les domaines autorisés plutôt que d'utiliser <code>'*'</code> en production ?",
+            "niveau": "easy",
+            "reponse": "Utiliser <code>'*'</code> permet à n'importe quel site web d'accéder à l'API, ce qui est risqué (ex: partage de données sensibles, vulnérabilités CSRF). En spécifiant les domaines de confiance, on limite les origines autorisées et on réduit la surface d'attaque. De plus, <code>'*'</code> ne fonctionne pas avec <code>credentials: true</code>.",
+            "reponse": "Utiliser '*' permet à n'importe quel site d'accéder à l'API, ce qui est risqué. En spécifiant les domaines autorisés, on limite les origines, on protège contre les attaques CSRF et on permet l'utilisation de cookies (credentials: true)."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez comment gérer les requêtes préflight (OPTIONS) avec CORS et pourquoi elles sont nécessaires.",
+        "niveau": "hard",
+        "reponse": "Les requêtes préflight sont des requêtes OPTIONS envoyées par le navigateur avant une requête cross-origin non simple (ex: avec des en-têtes personnalisés ou des méthodes autres que GET/POST). Elles permettent au navigateur de demander au serveur quels sont les domaines, méthodes et en-têtes autorisés. Le serveur doit répondre avec les en-têtes appropriés (Access-Control-Allow-Origin, Access-Control-Allow-Methods, etc.). NestJS gère cela automatiquement via <code>enableCors()</code>.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposez une solution pour permettre les requêtes avec des credentials (cookies, en-têtes d'authentification) tout en restreignant les origines.",
+        "niveau": "hard",
+        "reponse": "Configurer <code>credentials: true</code> dans les options CORS. Dans ce cas, l'origine ne peut pas être <code>'*'</code>, elle doit être une liste explicite ou une fonction. Du côté front-end, le client doit ajouter <code>credentials: 'include'</code> dans les requêtes fetch ou axios. Cela permet l'envoi de cookies (ex: refresh token) et de l'en-tête Authorization.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Validation des entrées utilisateur avec class-validator",
+    "type": "competence",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>La validation des données entrantes est cruciale pour la sécurité et l'intégrité des données. Sur Sawamart, un vendeur peut créer un produit via l'endpoint <code>POST /products</code> avec les champs suivants :</p><ul><li><code>name</code> : chaîne de caractères, obligatoire, min 3 caractères, max 100.</li><li><code>price</code> : nombre décimal, obligatoire, supérieur à 0.</li><li><code>description</code> : chaîne optionnelle, max 1000 caractères.</li><li><code>categoryId</code> : UUID valide, obligatoire.</li></ul>",
+      "images": [
+        "Représentation d'un formulaire de création de produit sur le front-end avec des champs name, price, description, categoryId, et des messages d'erreur de validation s'affichant en dessous."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créez le DTO <code>CreateProductDto</code> en utilisant les décorateurs de <code>class-validator</code> et <code>class-transformer</code> pour valider les champs selon les contraintes ci-dessus.",
+        "niveau": "easy",
+        "reponse": "Exemple de DTO : <code>export class CreateProductDto { @IsString() @MinLength(3) @MaxLength(100) name: string; @IsNumber() @Min(0.01) price: number; @IsOptional() @IsString() @MaxLength(1000) description?: string; @IsUUID() categoryId: string; }</code> Utiliser <code>@ApiProperty</code> pour Swagger.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez comment activer la validation globale dans NestJS pour que tous les DTOs soient validés automatiquement.",
+        "niveau": "easy",
+        "reponse": "Dans <code>main.ts</code>, ajouter <code>app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }))</code>. Le <code>ValidationPipe</code> va automatiquement valider les DTOs en fonction des décorateurs. Les options <code>whitelist</code> et <code>forbidNonWhitelisted</code> aident à sécuriser l'API en rejetant les champs non définis dans le DTO.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposez un message d'erreur personnalisé pour la validation du prix (minimum 0.01) et expliquez comment le définir.",
+        "niveau": "easy",
+        "reponse": "Utiliser le paramètre <code>message</code> du décorateur : <code>@Min(0.01, { message: 'Le prix doit être supérieur à 0.' })</code>. Le message sera renvoyé dans la réponse d'erreur, améliorant l'expérience développeur et utilisateur.",
+        "sousQuestions": [
+          {
+            "numero": "3.a",
+            "texte": "Comment gérer la validation d'un champ optionnel comme <code>description</code> ?",
+            "niveau": "easy",
+            "reponse": "Utiliser <code>@IsOptional()</code> combiné avec les autres décorateurs. Par exemple : <code>@IsOptional() @IsString() @MaxLength(1000) description?: string;</code>. Cela permet de ne pas envoyer le champ, mais s'il est présent, il doit respecter les règles.",
+            "reponse": "Utiliser le décorateur @IsOptional() combiné avec les validateurs. Si le champ n'est pas fourni, la validation est ignorée, mais s'il est fourni, il doit respecter les règles (ex: @IsString(), @MaxLength())."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Évaluation de la sécurité globale de l'API Sawamart",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous êtes responsable de la sécurité de l'API Sawamart. Un auditeur externe a réalisé une évaluation et a soulevé plusieurs points d'attention concernant :</p><ul><li>La gestion des CORS</li><li>Les en-têtes de sécurité (Helmet)</li><li>Le rate limiting</li><li>La validation des entrées</li><li>La protection contre les injections SQL</li></ul><p>Vous devez synthétiser les mesures mises en place et justifier leur adéquation avec les risques de l'application.</p>",
+      "images": [
+        "Tableau comparatif des risques (injection SQL, XSS, DoS, vol de données) avec les mesures de sécurité mises en place (TypeORM, Helmet, Throttler, ValidationPipe) et un score de couverture de sécurité."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Synthétisez pour chaque menace identifiée la mesure de sécurité correspondante et évaluez son efficacité dans le contexte de Sawamart.",
+        "niveau": "hard",
+        "reponse": "Menaces et mesures : 1) Injection SQL → TypeORM (QueryBuilder) + revue de code. Efficacité : élevée, mais nécessite une discipline de codage. 2) XSS (Cross-Site Scripting) → validation stricte des entrées et Helmet. Efficacité : élevée (Helmet protège les en-têtes, la validation empêche le stockage de scripts). 3) DoS / Brute force → ThrottlerModule. Efficacité : moyenne (doit être calibrée pour ne pas bloquer les utilisateurs légitimes). 4) Vol de données / interceptions → HTTPS obligatoire, Helmet (HSTS), CORS restreints. Efficacité : élevée. 5) Accès non autorisé → CORS restreints + JWT. Efficacité : bonne.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Identifiez deux risques supplémentaires non couverts par les mesures listées et proposez des solutions.",
+        "niveau": "very hard",
+        "reponse": "Risques : 1) Fuite de données via les logs (logs trop verbeux contenant des données sensibles). Solution : utiliser un logger qui anonymise ou masque les données (ex: ne pas logger les mots de passe, les tokens). 2) Attaques par déni de service applicatif (ex: requêtes très coûteuses). Solution : optimiser les requêtes, utiliser des indices de base de données, limiter la taille des résultats, mettre en place un cache et un monitoring.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Justifiez l'importance de combiner plusieurs couches de sécurité (défense en profondeur) plutôt qu'une seule mesure pour une API e-commerce.",
+        "niveau": "hard",
+        "reponse": "La défense en profondeur assure qu'une seule faille ne compromet pas tout le système. Chaque couche (CORS, validation, rate limiting, Helmet) protège contre des vecteurs d'attaque différents. Si une couche est contournée (ex: un bug dans TypeORM), les autres (validation, Helmet, CORS) peuvent encore bloquer ou limiter l'attaque. C'est indispensable pour un système manipulant de l'argent et des données personnelles.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

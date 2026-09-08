@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+  "matiere": "SVT",
+  "classe": "Terminale D",
+  "sequence": "Séquence 2",
+  "anneeScolaire": "2025-2026",
+  "exercices": [
+    {
+      "titre": "Partie A : Evaluation des ressources",
+      "points": "10 points",
+      "enonce": "<div style='display: flex; flex-direction: column; gap: 8px;'>\n  <p><strong>Exercice 1 : Vérification des savoirs (4 pts)</strong></p>\n</div>",
+      "questions": [
+        {
+          "question": "<p>1) Définir : cellule immunitaire ; lymphocyte. (0.5pt)</p>",
+          "reponse": "<p>Une <strong>cellule immunitaire</strong> est une cellule participant à la défense de l'organisme contre les agents pathogènes (virus, bactéries, parasites).</p><p>Un <strong>lymphocyte</strong> est un type de globule blanc (leucocyte) qui joue un rôle central dans la réponse immunitaire adaptative. Il existe deux principaux types : les lymphocytes B (réponse humorale) et les lymphocytes T (réponse cellulaire).</p>"
+        },
+        {
+          "question": "<p>2) Distinguer la réponse immunitaire humorale de la réponse immunitaire cellulaire. (0.5pt)</p>",
+          "reponse": "<p>La <strong>réponse immunitaire humorale</strong> est médiée par les lymphocytes B qui produisent des anticorps circulant dans le sang et les liquides biologiques.</p><p>La <strong>réponse immunitaire cellulaire</strong> est médiée par les lymphocytes T (T cytotoxiques) qui détruisent directement les cellules infectées ou les cellules cancéreuses.</p>"
+        },
+        {
+          "question": "<p>3) Définir une maladie auto-immune. (0.5pt)</p>",
+          "reponse": "<p>Une <strong>maladie auto-immune</strong> est une maladie dans laquelle le système immunitaire de l'individu attaque ses propres tissus ou cellules, ne faisant plus la distinction entre le soi et le non-soi.</p>"
+        },
+        {
+          "question": "<p>4) Donner la définition du diabète de type 1. (0.5pt)</p>",
+          "reponse": "<p>Le <strong>diabète de type 1</strong> est une maladie auto-immune caractérisée par la destruction des cellules β des îlots de Langerhans du pancréas, entraînant une carence en insuline et une hyperglycémie chronique.</p>"
+        },
+        {
+          "question": "<p>5) Définir l'insuline et le glucagon. (0.5pt)</p>",
+          "reponse": "<p>L'<strong>insuline</strong> est une hormone hypoglycémiante sécrétée par les cellules β des îlots de Langerhans, qui permet l'entrée du glucose dans les cellules et abaisse la glycémie.</p><p>Le <strong>glucagon</strong> est une hormone hyperglycémiante sécrétée par les cellules α des îlots de Langerhans, qui provoque la libération de glucose par le foie et élève la glycémie.</p>"
+        },
+        {
+          "question": "<p>6) Donner la différence entre le diabète de type 1 et le diabète de type 2. (0.5pt)</p>",
+          "reponse": "<p>Le <strong>diabète de type 1</strong> est un diabète auto-immun, insulino-dépendant, touchant généralement les sujets jeunes.</p><p>Le <strong>diabète de type 2</strong> est un diabète insulinorésistant, lié à des facteurs environnementaux (obésité, sédentarité), touchant généralement les sujets adultes.</p>"
+        },
+        {
+          "question": "<p>7) Définir le VIH et expliquer son mode d'action. (0.5pt)</p>",
+          "reponse": "<p>Le <strong>VIH</strong> (Virus de l'Immunodéficience Humaine) est un rétrovirus qui infecte et détruit les lymphocytes T4 (CD4+), cellules clés du système immunitaire. Il se réplique en utilisant son enzyme (transcriptase inverse) pour intégrer son génome dans l'ADN de la cellule hôte.</p>"
+        },
+        {
+          "question": "<p>8) Citer les modes de transmission du VIH et les moyens de prévention. (0.5pt)</p>",
+          "reponse": "<p><strong>Modes de transmission</strong> :</p><ul><li>Transmission sexuelle (rapports non protégés)</li><li>Transmission sanguine (transfusion, partage de matériel contaminé)</li><li>Transmission mère-enfant (pendant la grossesse, l'accouchement ou l'allaitement)</li></ul><p><strong>Moyens de prévention</strong> :</p><ul><li>Utilisation du préservatif</li><li>Dépistage systématique</li><li>Traitement antirétroviral chez les personnes infectées</li><li>Prévention de la transmission mère-enfant</li></ul>"
+        }
+      ]
+    },
+    {
+      "titre": "Partie A : Evaluation des ressources (suite)",
+      "points": "",
+      "enonce": "<div style='display: flex; flex-direction: column; gap: 8px;'>\n  <p><strong>Exercice 2 : Application des savoirs (6 pts)</strong></p>\n</div>",
+      "questions": [
+        {
+          "question": "<p>1) On place un lymphocyte B et un lymphocyte T en présence d'un antigène X. Le lymphocyte B produit des anticorps spécifiques, tandis que le lymphocyte T ne réagit pas.</p><p>1-1) Expliquer pourquoi le lymphocyte T ne réagit pas. (0.5pt)</p>",
+          "reponse": "<p>Le lymphocyte T ne réagit pas car il n'a pas été préalablement activé par un lymphocyte T auxiliaire (Th) présentant l'antigène via les molécules du CMH. La reconnaissance de l'antigène par le lymphocyte T nécessite une présentation de l'antigène par une cellule présentatrice d'antigène (CPA).</p>"
+        },
+        {
+          "question": "<p>1-2) Nommer les cellules responsables de la mémoire immunitaire. (0.5pt)</p>",
+          "reponse": "<p>Les cellules responsables de la mémoire immunitaire sont les <strong>lymphocytes B mémoires</strong> et les <strong>lymphocytes T mémoires</strong>.</p>"
+        },
+        {
+          "question": "<p>2) Expliquer le mécanisme de la vaccination. (0.5pt)</p>",
+          "reponse": "<p>La vaccination consiste à introduire dans l'organisme un antigène (micro-organisme atténué, inactivé ou fragment) sans provoquer la maladie. Cela permet de déclencher une réponse immunitaire primaire et de former des cellules mémoires. En cas de contact ultérieur avec l'agent pathogène, la réponse secondaire est plus rapide et plus efficace.</p>"
+        },
+        {
+          "question": "<p>3) On réalise une glycémie sur un patient à jeun. La valeur est de 1.8 g/L (normal : 0.7-1.1 g/L). Le test de la courbe d'hyperglycémie provoquée est positif.</p><p>3-1) De quel type de diabète s'agit-il ? Justifier. (0.5pt)</p>",
+          "reponse": "<p>Le patient présente une hyperglycémie à jeun (1.8 g/L) et une courbe d'hyperglycémie provoquée positive. Il s'agit d'un <strong>diabète de type 2</strong> (diabète non insulino-dépendant) car le patient est un adulte (probablement) et présente des facteurs de risque métaboliques.</p>"
+        },
+        {
+          "question": "<p>3-2) Proposer une mesure de prise en charge pour ce patient. (0.5pt)</p>",
+          "reponse": "<p>La prise en charge du diabète de type 2 repose sur :</p><ul><li>Un régime alimentaire équilibré (réduction des sucres rapides)</li><li>Une activité physique régulière</li><li>Une perte de poids si nécessaire</li><li>Un traitement médicamenteux (antidiabétiques oraux) si nécessaire</li></ul>"
+        },
+        {
+          "question": "<p>4) Un patient infecté par le VIH présente une diminution progressive du nombre de lymphocytes T4.</p><p>4-1) Expliquer pourquoi la diminution des lymphocytes T4 entraîne un déficit immunitaire. (0.5pt)</p>",
+          "reponse": "<p>Les lymphocytes T4 (CD4+) sont des cellules auxiliaires essentielles pour la coordination de la réponse immunitaire. Ils activent les lymphocytes B (production d'anticorps) et les lymphocytes T cytotoxiques (destruction des cellules infectées). Leur diminution entraîne une baisse de l'efficacité de la réponse immunitaire et favorise l'apparition d'infections opportunistes.</p>"
+        },
+        {
+          "question": "<p>4-2) Quel est le stade ultime de l'infection par le VIH ? (0.5pt)</p>",
+          "reponse": "<p>Le stade ultime de l'infection par le VIH est le <strong>SIDA</strong> (Syndrome d'Immunodéficience Acquise), caractérisé par un effondrement du système immunitaire avec un taux de lymphocytes T4 inférieur à 200 cellules/μL et l'apparition d'infections opportunistes.</p>"
+        },
+        {
+          "question": "<p>5) La drépanocytose est une maladie génétique autosomique récessive. Un couple sain a un enfant drépanocytaire.</p><p>5-1) Déterminer le génotype des parents. (0.5pt)</p>",
+          "reponse": "<p>Les parents sont sains mais ont un enfant atteint, donc ils sont tous les deux <strong>porteurs sains</strong> (hétérozygotes). Génotype : \\( As \\times As \\) (où \\( A \\) est l'allèle normal et \\( s \\) l'allèle muté).</p>"
+        },
+        {
+          "question": "<p>5-2) Calculer la probabilité que leur prochain enfant soit atteint. (0.5pt)</p>",
+          "reponse": "<p>Croisement \\( As \\times As \\) :</p><ul><li>25% \\( AA \\) (sain non porteur)</li><li>50% \\( As \\) (sain porteur)</li><li>25% \\( ss \\) (drépanocytaire)</li></ul><p>La probabilité que le prochain enfant soit atteint est de <strong>25%</strong> (1/4).</p>"
+        },
+        {
+          "question": "<p>6) Expliquer le rôle du calcium dans la contraction musculaire. (0.5pt)</p>",
+          "reponse": "<p>Le calcium joue un rôle clé dans la contraction musculaire. Lors de la dépolarisation de la membrane du sarcolemme, le calcium est libéré par le réticulum sarcoplasmique. Il se fixe sur la troponine, ce qui provoque un déplacement de la tropomyosine et expose les sites de fixation de la myosine sur l'actine, permettant la formation de ponts actine-myosine et la contraction.</p>"
+        },
+        {
+          "question": "<p>7) Expliquer le mécanisme de la sécrétion de l'insuline. (0.5pt)</p>",
+          "reponse": "<p>L'insuline est sécrétée par les cellules β des îlots de Langerhans du pancréas en réponse à une augmentation de la glycémie. Le glucose pénètre dans les cellules β via le transporteur GLUT2, est métabolisé, ce qui entraîne une augmentation de l'ATP intracellulaire, la fermeture des canaux potassiques, la dépolarisation de la membrane et l'ouverture des canaux calciques voltage-dépendants, permettant la libération d'insuline par exocytose.</p>"
+        }
+      ]
+    },
+    {
+      "titre": "Partie B : Evaluation des compétences",
+      "points": "10 points",
+      "enonce": "<div style='display: flex; flex-direction: column; gap: 12px;'>\n  <p><strong>Exercice 1 : Le système immunitaire et ses dysfonctionnements (5 pts)</strong></p>\n  <p>Un jeune patient de 12 ans présente des épisodes récurrents d'infections (bronchites, otites, angines). Un bilan sanguin montre une diminution marquée des lymphocytes T4 (CD4+) et une hypergammaglobulinémie.</p>\n  <p>Par ailleurs, sa mère est diabétique de type 1 et son père est atteint d'une maladie auto-immune (vitiligo).</p>\n</div>",
+      "questions": [
+        {
+          "question": "<p>1) Identifier les cellules du système immunitaire qui sont déficientes chez ce patient. (0.5pt)</p>",
+          "reponse": "<p>Les cellules déficientes sont les <strong>lymphocytes T auxiliaires (T4 ou CD4+)</strong>, responsables de la coordination de la réponse immunitaire.</p>"
+        },
+        {
+          "question": "<p>2) Expliquer les conséquences de ce déficit sur les défenses immunitaires de l'organisme. (1pt)</p>",
+          "reponse": "<p>La diminution des lymphocytes T4 entraîne :</p><ul><li>Une réduction de l'activation des lymphocytes B (diminution de la production d'anticorps)</li><li>Une réduction de l'activation des lymphocytes T cytotoxiques (diminution de la destruction des cellules infectées)</li><li>Un déficit de la réponse immunitaire adaptative</li><li>Une susceptibilité accrue aux infections opportunistes</li></ul>"
+        },
+        {
+          "question": "<p>3) Discuter du risque de transmission du diabète de type 1 et du vitiligo à la descendance. (1pt)</p>",
+          "reponse": "<p>Le diabète de type 1 et le vitiligo sont des maladies auto-immunes dont la transmission est multifactorielle. Il existe une prédisposition génétique (liée à certains gènes du système HLA) mais des facteurs environnementaux sont également nécessaires au déclenchement de la maladie.</p><p>Le risque pour le patient de développer un diabète de type 1 ou un vitiligo est plus élevé que dans la population générale (en raison de l'hérédité familiale), mais ce n'est pas une transmission mendélienne simple.</p>"
+        },
+        {
+          "question": "<p>4) Proposer des mesures de prévention et de prise en charge adaptées à ce patient. (1.5pts)</p>",
+          "reponse": "<ul><li><strong>Surveillance médicale régulière</strong> : contrôle des infections, bilan immunologique</li><li><strong>Vaccination</strong> : renforcer les défenses immunitaires contre les infections courantes</li><li><strong>Antibiothérapie adaptée</strong> : traitement rapide des infections</li><li><strong>Dépistage précoce</strong> : pour les maladies auto-immunes potentielles (diabète de type 1, vitiligo)</li><li><strong>Conseil génétique</strong> : informer le patient et sa famille sur les risques de transmission des maladies auto-immunes</li></ul>"
+        },
+        {
+          "question": "<p>5) Rédiger un slogan de sensibilisation sur l'importance du dépistage précoce des maladies auto-immunes. (1pt)</p>",
+          "reponse": "<div style='background: #f1f5f9; padding: 10px; border-radius: 6px; text-align: center;'>\n  <p style='font-size: 1.2rem; font-weight: bold;'>\"Dépister tôt, agir vite : votre santé immunitaire compte !\"</p>\n  <p style='font-size: 1rem;'>\"Un bilan immunitaire peut sauver votre vie, parlez-en à votre médecin.\"</p>\n</div>"
+        }
+      ]
+    },
+    {
+      "titre": "Partie B : Evaluation des compétences (suite)",
+      "points": "",
+      "enonce": "<div style='display: flex; flex-direction: column; gap: 12px;'>\n  <p><strong>Exercice 2 : La régulation de la glycémie (5 pts)</strong></p>\n  <p>Un patient de 45 ans, obèse, consulte pour une fatigue chronique et une soif excessive. Le bilan sanguin révèle une glycémie à jeun de 1.5 g/L (normal : 0.7-1.1 g/L) et une insulinémie élevée.</p>\n  <p>Le médecin suspecte un diabète et prescrit un test de la courbe d'hyperglycémie provoquée.</p>\n</div>",
+      "questions": [
+        {
+          "question": "<p>1) Analyser les résultats du bilan sanguin et expliquer le mécanisme de l'hyperglycémie chez ce patient. (1.5pts)</p>",
+          "reponse": "<p>Le patient présente une hyperglycémie à jeun (1.5 g/L) associée à une insulinémie élevée. Cela indique une <strong>insulinorésistance</strong> : les cellules cibles (muscles, foie, tissu adipeux) ne répondent plus correctement à l'insuline.</p><p>Mécanisme : l'obésité entraîne une augmentation des acides gras libres et des adipokines pro-inflammatoires qui perturbent la signalisation de l'insuline. Le pancréas compense en sécrétant davantage d'insuline (hyperinsulinémie), mais à long terme, les cellules β s'épuisent et la glycémie augmente.</p>"
+        },
+        {
+          "question": "<p>2) De quel type de diabète s'agit-il ? Justifier. (0.5pt)</p>",
+          "reponse": "<p>Il s'agit d'un <strong>diabète de type 2</strong> (diabète non insulino-dépendant) car :</p><ul><li>Le patient est un adulte (45 ans)</li><li>Il présente des facteurs de risque (obésité)</li><li>Il a une insulinémie élevée (insulinorésistance)</li><li>Il n'y a pas de carence en insuline</li></ul>"
+        },
+        {
+          "question": "<p>3) Proposer des mesures de prise en charge pour ce patient. (1pt)</p>",
+          "reponse": "<ul><li><strong>Modification du régime alimentaire</strong> : réduction des glucides rapides, augmentation des fibres</li><li><strong>Activité physique régulière</strong> : amélioration de la sensibilité à l'insuline</li><li><strong>Perte de poids</strong> : réduction de l'insulinorésistance</li><li><strong>Traitement médicamenteux</strong> : antidiabétiques oraux (metformine) si nécessaire</li><li><strong>Surveillance glycémique régulière</strong></li></ul>"
+        },
+        {
+          "question": "<p>4) Expliquer l'importance du glucagon dans la régulation de la glycémie. (0.5pt)</p>",
+          "reponse": "<p>Le glucagon est une hormone hyperglycémiante sécrétée par les cellules α des îlots de Langerhans. Il agit sur le foie pour :</p><ul><li>Stimuler la glycogénolyse (libération de glucose à partir du glycogène)</li><li>Stimuler la néoglucogenèse (synthèse de glucose à partir d'acides aminés)</li><li>Augmenter la glycémie</li></ul><p>Le glucagon agit en opposition à l'insuline pour maintenir la glycémie à un taux constant.</p>"
+        },
+        {
+          "question": "<p>5) Établir une relation entre l'hyperglycémie chronique et les complications du diabète. (0.5pt)</p>",
+          "reponse": "<p>L'hyperglycémie chronique entraîne des complications :</p><ul><li><strong>Complications macrovasculaires</strong> : athérosclérose, infarctus, AVC</li><li><strong>Complications microvasculaires</strong> : néphropathie, rétinopathie, neuropathie</li><li><strong>Complications infectieuses</strong> : favorise les infections</li></ul>"
+        },
+        {
+          "question": "<p>6) Rédiger un message de sensibilisation sur les risques du diabète de type 2. (1pt)</p>",
+          "reponse": "<div style='background: #f1f5f9; padding: 10px; border-radius: 6px; text-align: center;'>\n  <p style='font-size: 1.2rem; font-weight: bold;'>\"Le diabète de type 2 : une maladie silencieuse aux lourdes conséquences !\"</p>\n  <p style='font-size: 1rem;'>\"Adoptez une alimentation équilibrée et une activité physique régulière pour prévenir le diabète. Consultez votre médecin pour un dépistage régulier.\"</p>\n</div>"
+        }
+      ]
+    }
+  ]
+};
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

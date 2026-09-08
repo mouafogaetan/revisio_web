@@ -1,0 +1,181 @@
+[
+  {
+    "intitule": "SSO, OAuth2 et OpenID Connect : concepts et mise en œuvre",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Une entreprise souhaite déployer une authentification unique (SSO) pour ses employés afin d'accéder à plusieurs applications internes (CRM, messagerie, portail RH). Les architectes hésitent entre les protocoles SAML, OAuth2 et OpenID Connect. L’un d’eux explique que <strong>OpenID Connect</strong> est une couche d’identité construite sur OAuth2. <br>Rappels : La formule de base d’un jeton JWT (JSON Web Token) utilisé dans OpenID Connect est : $JWT = Header.Payload.Signature$ avec $Signature = HMACSHA256( base64UrlEncode(Header) + \".\" + base64UrlEncode(Payload), Secret )$.</p><p>L’entreprise doit aussi respecter le principe du moindre privilège (RBAC) et gérer la fédération d’identités avec Azure AD.</p>",
+      "images": [
+        "Schéma d'échange de jetons OAuth2 entre un client, le serveur d'autorisation et la ressource",
+        "Comparaison visuelle entre SAML, OAuth2 et OpenID Connect"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer en quoi OpenID Connect étend OAuth2 pour fournir une couche d’authentification. Citer deux cas concrets où l’utilisation de l’un ou l’autre est préférable.",
+        "niveau": "medium",
+        "reponse": "OpenID Connect ajoute l'ID Token (JWT) contenant des claims d'identité (sub, email, etc.) tandis qu'OAuth2 ne gère que l'autorisation déléguée. OpenID Connect est adapté pour des applications grand public (Login with Google), OAuth2 seul pour des API machine-to-machine sans identité utilisateur.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Analyser les avantages d’une solution SSO basée sur OpenID Connect par rapport à des mots de passe locaux distincts pour chaque application. Citer trois bénéfices pour la sécurité et l’expérience utilisateur.",
+        "niveau": "medium",
+        "reponse": "1) Réduction de la fatigue des mots de passe et des réutilisations dangereuses. 2) Centralisation des politiques MFA (double authentification). 3) Audit centralisé des connexions et révocation immédiate des accès en cas de départ. Améliore la productivité (moins de demandes de réinitialisation).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Évaluer le risque si un attaquant parvient à intercepter un jeton d’accès OAuth2 (Bearer token). Quels mécanismes (décrits dans la leçon) permettent de limiter ce risque ?",
+        "niveau": "hard",
+        "reponse": "L’interception permet à l’attaquant d’accéder aux ressources associées (usurpation). Les mitigations : usage de TLS (HTTPS) obligatoire, jetons à courte durée de vie, utilisation de refresh tokens avec révocation, liaison du jeton au client (D PoP - Demonstrating Proof of Possession), et rotation des secrets.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Mise en place d’un fournisseur d’identité avec Keycloak",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous êtes consultant en sécurité. Une PME utilise déjà Keycloak (open source) pour gérer 300 utilisateurs. On vous demande de configurer <strong>l’authentification unique (SSO)</strong> entre une application métier (API REST) et un portail interne. Les utilisateurs doivent s’authentifier via OAuth2 + OpenID Connect.</p><p>L’entreprise exige :<br>- Une authentification multi-facteurs (TOTP via Google Authenticator).<br>- Un mappage des rôles (RBAC) : admin, manager, employé.<br>- Que l’API puisse valider les jetons sans appeler Keycloak à chaque fois (vérification locale de la signature).</p><p>Rappel mathématique (vérification RSA) : $\\text{signature} = \\text{hash}(\\text{payload})^{d} \\mod n$ et la vérification se fait avec l’exposant public $e$.</p>",
+      "images": [
+        "Schéma d’architecture Keycloak avec flux Authorization Code",
+        "Capture d’écran de configuration du fédéré OpenID Connect dans Keycloak"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire les étapes techniques pour configurer Keycloak en tant que fournisseur d’identité (IdP) pour l’application métier. Mentionner les endpoints OAuth2 requis (authorization, token, userinfo, jwks).",
+        "niveau": "hard",
+        "reponse": "1) Créer un realm et un client dans Keycloak (type OpenID Connect). 2) Configurer l’URI de redirection. 3) Activer le flux Authorization Code avec PKCE. 4) Récupérer les endpoints : /auth, /token, /userinfo, /certs (JWKS). 5) Dans l’API, configurer la validation des jetons via la clé publique exposée par JWKS. 6) Implémenter la vérification locale de la signature RSA.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Implémenter la vérification locale d’un jeton JWT (signé RS256) côté API sans appel réseau à Keycloak. Expliquer pourquoi cette méthode est efficace en termes de performance.",
+        "niveau": "very hard",
+        "reponse": "On récupère la clé publique (JWKS) une fois par période via /certs. On décode le JWT, on extrait l’en-tête kid pour choisir la bonne clé, puis on vérifie la signature avec la clé publique (RSA). Cela évite un aller-retour à Keycloak pour chaque requête, réduit la latence et améliore la scalabilité. Exemple en C# ou Node.js avec librairie JWT.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Concevoir une politique RBAC exploitant les claims des jetons. Proposer un extrait de code (pseudo ou réel) qui, dans l’API, vérifie qu’un utilisateur possède le rôle 'manager' avant d’accéder à une route spécifique.",
+        "niveau": "hard",
+        "reponse": "Exemple en pseudo : function hasRole(token, requiredRole) { const payload = decodeJWT(token); return payload.resource_access['my-client'].roles.includes(requiredRole); } // Middleware Express : app.get('/admin', verifyToken, (req,res) => { if(!hasRole(req.token, 'manager')) return res.status(403); ... }); Keycloak injecte les rôles via le claim 'realm_access' ou 'resource_access'.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Étude de cas : migration vers une authentification unique avec OAuth2 et Azure AD",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Une société utilise des mots de passe locaux pour trois applications : <strong>AppRH</strong> (ressources humaines), <strong>AppFacture</strong> et <strong>Intranet</strong>. La politique de sécurité impose désormais la <strong>double authentification (MFA)</strong> et la centralisation des comptes. Vous proposez Azure Active Directory (Azure AD) comme IdP et l’authentification unique via OAuth2 / OpenID Connect.</p><p>On rappelle que le coût de la non-conformité peut être modélisé par $\\text{Risque} = \\text{Probabilité} \\times \\text{Impact}$.</p>",
+      "images": [
+        "Diagramme de flux d’authentification OAuth2 avec Azure AD et consentement",
+        "Interface d’inscription d’une application dans le portail Azure"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier les composants nécessaires dans Azure AD (inscription d’application, permissions, endpoints) pour que les trois applications puissent partager la même authentification. Lister les étapes de configuration.",
+        "niveau": "medium",
+        "reponse": "1) Inscrire chaque application dans Azure AD (App Registrations). 2) Configurer les URI de redirection. 3) Exposer des API scopes si nécessaire. 4) Accorder les permissions (Microsoft Graph). 5) Utiliser les endpoints OAuth2 : /oauth2/v2.0/authorize, /token. 6) Activer le support MFA via les politiques d’accès conditionnel.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Calculer la réduction de risque si la mise en place de l’authentification unique et de la MFA diminue la probabilité de compromission des comptes de 70% (probabilité initiale 0,25) pour un impact évalué à 80 000 €. Détailler le calcul.",
+        "niveau": "medium",
+        "reponse": "Risque initial = 0.25 × 80000 = 20000 €. Après réduction, probabilité = 0.25 × (1 - 0.70) = 0.075. Nouveau risque = 0.075 × 80000 = 6000 €. Gain = 14000 €.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Discuter les défis de l’intégration d’une application héritée (sans support OAuth2 natif) dans ce SSO. Proposer des solutions de contournement (broker / proxy d’authentification).",
+        "niveau": "hard",
+        "reponse": "Les applications legacy peuvent être intégrées via un proxy d’authentification (ex: Azure AD Application Proxy, Authelia, oauth2-proxy) qui gère OAuth2 en frontal et transmet un en-tête HTTP (Remote-User) à l’app. Une autre approche : utiliser un serveur d’autorisation comme middleware avec adaptation SAML2. Inconvénients : gestion de session supplémentaire, latence.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Quiz conceptuel : protocoles SSO, facteurs d’authentification et bonnes pratiques",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Testez vos connaissances sur les mécanismes d’identité et d’accès vus dans la lesson20 : SSO, OAuth2, OpenID Connect, facteurs (MFA), gestion des mots de passe et RBAC.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Définir le terme \"authentification unique\" (SSO) et donner un exemple de protocole standard qui permet de l’implémenter.",
+        "niveau": "easy",
+        "reponse": "SSO (Single Sign-On) permet à un utilisateur de s'authentifier une seule fois et d'accéder à plusieurs applications distinctes sans ressaisir ses identifiants. Exemples : SAML, OAuth2/OpenID Connect, Kerberos.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Distinguer les trois facteurs d’authentification (connaissance, possession, inhérence). Citer un exemple pour chaque catégorie.",
+        "niveau": "easy",
+        "reponse": "Connaissance : mot de passe ou code PIN. Possession : jeton matériel, smartphone (TOTP), clé de sécurité (U2F). Inhérence : empreinte digitale, reconnaissance faciale.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquer pourquoi l’utilisation d’un gestionnaire de mots de passe (Bitwarden, KeePass) améliore la sécurité par rapport à la réutilisation de mots de passe.",
+        "niveau": "medium",
+        "reponse": "Un gestionnaire génère et stocke des mots de passe longs et uniques pour chaque site, évitant la réutilisation et le risque de credential stuffing. Il chiffre le coffre-fort avec une clé maîtresse forte et peut intégrer une 2FA, réduisant l'impact d'une fuite sur un service.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 4,
+        "texte": "Citer trois bonnes pratiques concernant la politique de mots de passe (longueur, rotation, stockage) conformément aux recommandations actuelles (NIST).",
+        "niveau": "medium",
+        "reponse": "1) Longueur minimale de 8 caractères, préférer 12-15 caractères. 2) Ne pas imposer de rotation périodique sauf en cas de compromission suspectée. 3) Stocker avec un algorithme de hachage adapté (bcrypt, Argon2) et salage unique. 4) Vérifier l'absence de mots de passe communs (blacklist).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice d’intégration : mise en place de l’autorisation par rôles (RBAC) avec des jetons JWT",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous développez une API REST pour une plateforme de e-learning. L’authentification est gérée par un serveur OAuth2 / OpenID Connect (Okta). Les jetons JWT contiennent un claim <code>roles</code> (ex: <code>[\"student\", \"instructor\"]</code>).</p><p>La ressource <code>/courses/{id}/grades</code> doit être accessible uniquement aux instructeurs du cours ou à l’étudiant propriétaire. Le jeton inclut également un claim <code>sub</code> (user id).</p><p>Formule de vérification conditionnelle : $access = (role = instructor) \\lor (sub = owner)$.</p>",
+      "images": [
+        "Schéma d’un flux d’autorisation avec JWT et vérification des claims",
+        "Exemple de structure de payload JWT pour RBAC"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire une fonction (pseudo-code ou Python/JavaScript) qui, à partir du token décodé et de l’identifiant du cours, détermine si l’utilisateur a le droit d’accéder à la note.",
+        "niveau": "hard",
+        "reponse": "function canAccessGrade(token, courseId, studentOwnerId) { const roles = token.roles; const userId = token.sub; if(roles.includes('instructor')) return true; if(userId === studentOwnerId) return true; return false; } // L’appel vérifie en base que l’étudiant est bien inscrit au cours si besoin.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer pourquoi il est dangereux de se fier uniquement aux claims du token sans vérifier la correspondance en base de données (par exemple, un étudiant pourrait être retiré du cours après émission du token). Proposer une stratégie de cache.",
+        "niveau": "hard",
+        "reponse": "Un token peut être valide pendant plusieurs heures, même si les droits changent. Pour éviter cela : 1) Vérifier périodiquement l’appartenance au cours via un cache court (ex: Redis avec TTL 5min) ou une base de données. 2) Révoquer les jetons via une blacklist. 3) Mettre en œuvre des jetons de courte durée (15-30 min) avec refresh.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Décrire comment implémenter un middleware d’autorisation générique basé sur des politiques (comme en ABAC) plutôt que des rôles statiques.",
+        "niveau": "very hard",
+        "reponse": "On peut utiliser un moteur de politique (ex: Open Policy Agent - OPA) qui reçoit le jeton, la ressource, l’action et retourne allow/deny selon des règles Rego. Les règles peuvent combiner rôles, attributs de l'utilisateur, métadonnées de la ressource et contexte (heure, IP). Cela rend l’autorisation plus flexible.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

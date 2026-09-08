@@ -1,0 +1,215 @@
+[
+  {
+    "intitule": "Mise en place d'un système de chat en temps réel",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous êtes chargé de développer un système de chat en temps réel pour la plateforme e-commerce <strong>Sawamart</strong>. Ce chat permettra aux acheteurs et aux vendeurs de communiquer directement, et permettra aussi de gérer les litiges. Vous devez utiliser WebSocket avec Socket.IO dans NestJS.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifiez les paquets nécessaires pour implémenter un système WebSocket dans NestJS et expliquez le rôle de chacun.",
+        "niveau": "easy",
+        "reponse": "Les paquets nécessaires sont : @nestjs/websockets (le module NestJS pour les WebSockets), @nestjs/platform-socket.io (l'adaptateur Socket.IO pour NestJS), et socket.io (la bibliothèque Socket.IO elle-même). @nestjs/websockets fournit les décorateurs et les classes de base pour créer des gateways. @nestjs/platform-socket.io permet d'utiliser Socket.IO comme plateforme WebSocket. socket.io est la bibliothèque qui implémente le protocole WebSocket avec des fonctionnalités avancées.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Décrivez comment configurer un WebSocketGateway dans NestJS en utilisant Socket.IO. Incluez les décorateurs à utiliser et leur signification.",
+        "niveau": "medium",
+        "reponse": "On utilise le décorateur @WebSocketGateway() pour définir une classe comme gateway WebSocket. On peut lui passer des options comme le namespace, le port, etc. À l'intérieur, on utilise @SubscribeMessage() pour écouter des événements spécifiques. On implémente handleConnection() pour gérer les connexions et handleDisconnect() pour les déconnexions. Exemple : @WebSocketGateway({ namespace: 'chat', cors: true }) export class ChatGateway { @SubscribeMessage('send_message') handleMessage(...) {} }",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquez comment l'authentification WebSocket est mise en place dans NestJS avec Socket.IO et son importance.",
+        "niveau": "hard",
+        "reponse": "L'authentification WebSocket se fait via un middleware, généralement dans la méthode afterInit ou avec socket.use(). On récupère le token JWT depuis la requête de connexion (socket.handshake.auth.token ou depuis les headers). On valide le token avec le JwtService, et on attache l'utilisateur à l'objet socket (socket.user). Cela permet d'identifier l'utilisateur pour chaque connexion WebSocket et de sécuriser l'accès aux fonctionnalités de chat.",
+        "sousQuestions": [
+          {
+            "numero": "3.a",
+            "texte": "Pourquoi est-il important d'authentifier les connexions WebSocket plutôt que de se fier uniquement aux connexions HTTP ?",
+            "niveau": "medium",
+            "reponse": "L'authentification WebSocket est importante car les WebSockets établissent une connexion persistante qui peut être utilisée pour envoyer des messages sensibles. Si un utilisateur non authentifié peut se connecter au WebSocket, il pourrait accéder à des conversations privées ou à des informations sensibles. L'authentification permet de s'assurer que seuls les utilisateurs authentifiés peuvent participer aux conversations."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion des rooms et des messages en temps réel",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Pour la plateforme e-commerce, vous devez gérer plusieurs conversations simultanées. Chaque conversation (chat) entre un acheteur et un vendeur doit être isolée dans une room. Vous devez aussi permettre aux administrateurs d'intervenir dans les litiges.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créez un plan pour utiliser les rooms dans Socket.IO pour isoler les conversations. Expliquez comment un utilisateur rejoint une room spécifique.",
+        "niveau": "medium",
+        "reponse": "Plan : 1. Chaque chat a un identifiant unique (UUID). 2. Lorsqu'un utilisateur se connecte au WebSocket, il peut rejoindre une room avec socket.join(`chat_${chatId}`). 3. Les messages sont envoyés uniquement à la room correspondante avec socket.to(`chat_${chatId}`).emit('message', data). 4. Les administrateurs peuvent rejoindre plusieurs rooms pour gérer les litiges. 5. Lorsque l'utilisateur se déconnecte, il quitte la room automatiquement.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quelle est la différence entre une room et un namespace dans Socket.IO ?",
+            "niveau": "hard",
+            "reponse": "Un namespace est une séparation au niveau de l'URL (ex: /chat, /admin). Chaque namespace a ses propres rooms et événements. Une room est un groupe de clients à l'intérieur d'un même namespace. Les rooms permettent d'envoyer des messages à des groupes spécifiques de clients sans avoir à les gérer individuellement. Les namespaces sont plus larges et peuvent contenir plusieurs rooms."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Développez le mécanisme d'envoi de messages en temps réel avec @SubscribeMessage('send_message'). Expliquez comment le message est stocké et diffusé.",
+        "niveau": "hard",
+        "reponse": "Mécanisme : 1. Le client envoie un événement 'send_message' avec { chatId, content, senderId }. 2. Le gateway reçoit l'événement avec @SubscribeMessage('send_message'). 3. Il sauvegarde le message en base de données via le MessageService. 4. Il diffuse le message à tous les participants de la room avec server.to(`chat_${chatId}`).emit('new_message', message). 5. Le message inclut le timestamp, l'expéditeur et le contenu. 6. Les participants reçoivent le message en temps réel.",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Comment garantir que seuls les participants autorisés (acheteur et vendeur) peuvent envoyer des messages dans un chat ?",
+            "niveau": "hard",
+            "reponse": "On peut implémenter une vérification dans le gateway avant d'envoyer un message : 1. Récupérer l'utilisateur authentifié depuis socket.user. 2. Vérifier que l'utilisateur est bien participant au chat (en base de données). 3. Si l'utilisateur n'est pas autorisé, renvoyer une erreur. 4. Pour les administrateurs, on peut avoir une vérification séparée qui leur permet d'intervenir sur n'importe quel chat."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Étude de cas : Intégration d'un chat dans une plateforme e-commerce",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>La startup <strong>AfriShop</strong> souhaite intégrer un système de chat en temps réel pour permettre aux acheteurs et vendeurs de négocier directement. Le système doit aussi gérer les litiges en impliquant un administrateur.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Énumérez et décrivez les fonctionnalités minimales que doit offrir un système de chat pour une plateforme e-commerce.",
+        "niveau": "easy",
+        "reponse": "Fonctionnalités minimales : 1. Envoi et réception de messages en temps réel. 2. Historique des messages consultable. 3. Indicateur de frappe (typing). 4. Marquer les messages comme lus. 5. Gestion des conversations (création, fermeture). 6. Notifications en temps réel. 7. Gestion des litiges avec intervention d'un administrateur.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Comparez l'utilisation des WebSockets avec les requêtes HTTP traditionnelles pour un système de chat. Quels sont les avantages et les limites de chaque approche ?",
+        "niveau": "hard",
+        "reponse": "WebSockets : Avantages - communication bidirectionnelle en temps réel, faible latence, pas de surcharge de connexion pour chaque message. Inconvénients - nécessite une connexion persistante, plus complexe à mettre en place, peut consommer plus de ressources. HTTP : Avantages - plus simple à implémenter, cache possible, pas de connexion persistante. Inconvénients - latence plus élevée pour les messages, nécessite de poller pour les mises à jour, plus coûteux en termes de requêtes. Pour un chat, les WebSockets sont clairement supérieurs.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Évaluez comment les rooms Socket.IO peuvent être utilisées pour gérer les litiges avec l'intervention d'un administrateur.",
+        "niveau": "hard",
+        "reponse": "Pour les litiges : 1. Lorsqu'un litige est ouvert, l'administrateur rejoint la room du chat litigieux. 2. L'administrateur peut voir l'historique des messages. 3. L'administrateur peut envoyer des messages qui sont visibles par l'acheteur et le vendeur. 4. Les messages de l'administrateur sont marqués comme 'admin' pour être identifiés. 5. Le litige peut être résolu par l'administrateur, et le chat reste accessible pour consultation.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse d'un système de chat existant",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous reprenez un projet qui a déjà un système de chat en place, mais il présente des problèmes de performance. Les messages arrivent avec un délai de plusieurs secondes, et les utilisateurs se plaignent de la lenteur du système.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analysez les causes possibles des problèmes de performance dans un système de chat WebSocket et proposez des solutions.",
+        "niveau": "hard",
+        "reponse": "Causes possibles : 1. Trop de requêtes à la base de données pour chaque message. Solution : optimiser les requêtes, utiliser des indexes. 2. Le serveur WebSocket est saturé. Solution : utiliser un cluster avec plusieurs instances. 3. Le réseau est lent. Solution : utiliser la compression des messages, réduire la taille des données. 4. Les messages sont trop volumineux. Solution : envoyer uniquement les données nécessaires (ID, contenu, timestamp). 5. Les rooms sont mal gérées. Solution : vérifier l'utilisation des rooms et optimiser la diffusion.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment utiliser le rate limiting sur les WebSockets pour éviter les abus ?",
+            "niveau": "hard",
+            "reponse": "On peut implémenter un middleware qui vérifie le nombre de messages envoyés par un utilisateur dans un intervalle de temps donné. Si l'utilisateur dépasse la limite (ex: 30 messages par minute), on bloque temporairement l'envoi de messages. On peut stocker les compteurs en mémoire (Map) ou utiliser Redis pour les applications distribuées."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Proposez un plan d'optimisation pour améliorer les performances du système de chat, incluant la gestion de la base de données et du serveur WebSocket.",
+        "niveau": "very hard",
+        "reponse": "Plan d'optimisation : 1. Phase 1 - Base de données : Ajouter des indexes sur les colonnes de recherche (chatId, timestamp), utiliser des requêtes paginées pour l'historique, archiver les messages anciens. 2. Phase 2 - WebSocket : Utiliser Redis comme adaptateur pour partager les rooms entre plusieurs instances, augmenter le nombre d'instances du serveur. 3. Phase 3 - Client : Envoyer les messages en rafale, utiliser la compression, réduire la taille des payloads. 4. Phase 4 - Monitoring : Mettre en place des logs pour identifier les goulots d'étranglement, surveiller les performances en temps réel.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Quiz sur les WebSockets dans NestJS",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Répondez aux questions suivantes pour vérifier votre compréhension des WebSockets et de leur implémentation dans NestJS.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Quel décorateur utilise-t-on pour définir une classe comme un gateway WebSocket dans NestJS ?",
+        "niveau": "easy",
+        "reponse": "@WebSocketGateway()",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Quel décorateur permet d'écouter un événement WebSocket spécifique ?",
+        "niveau": "easy",
+        "reponse": "@SubscribeMessage()",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Quelle méthode est appelée automatiquement lorsqu'un client se connecte au WebSocket ?",
+        "niveau": "medium",
+        "reponse": "handleConnection(client: Socket, ...args: any[])",
+        "sousQuestions": []
+      },
+      {
+        "numero": 4,
+        "texte": "Comment peut-on envoyer un message à une room spécifique dans Socket.IO ?",
+        "niveau": "medium",
+        "reponse": "server.to('nom_de_la_room').emit('event', data)",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Développement d'un chat avec gestion des litiges",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous devez développer un système de chat complet pour une plateforme e-commerce avec les fonctionnalités suivantes : messages en temps réel, historique des messages, gestion des rooms, et intervention des administrateurs pour les litiges.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevez l'architecture complète d'un système de chat avec NestJS, incluant les entités, les services et les gateways.",
+        "niveau": "very hard",
+        "reponse": "Architecture : 1. Entités : Chat (id, participants, status, createdAt), Message (id, chatId, senderId, content, timestamp, isRead), Dispute (id, chatId, status, assignedAdminId, resolvedAt). 2. Services : ChatService (créer, fermer, lister), MessageService (envoyer, marquer comme lu), DisputeService (ouvrir, assigner, résoudre). 3. Gateways : ChatGateway (authentification, connexion, déconnexion, gestion des rooms, envoi de messages, indicateurs de frappe). 4. Contrôleurs REST : pour l'historique, la création de chat, la gestion des litiges.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Justifiez le choix d'utiliser à la fois WebSocket pour les messages en temps réel et REST pour les autres opérations.",
+            "niveau": "hard",
+            "reponse": "WebSocket est idéal pour les messages en temps réel car il permet une communication bidirectionnelle et instantanée. REST est utilisé pour les opérations CRUD comme l'historique, la création de chat, ou la gestion des litiges car ces opérations ne nécessitent pas de temps réel et sont plus faciles à implémenter et à documenter avec REST. Cette séparation permet d'utiliser le meilleur outil pour chaque tâche."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Développez le mécanisme de gestion des litiges dans le chat, incluant comment un administrateur peut rejoindre une conversation et intervenir.",
+        "niveau": "very hard",
+        "reponse": "Mécanisme : 1. Un litige est ouvert par un utilisateur (acheteur ou vendeur) via un endpoint REST /disputes. 2. Le litige est assigné à un administrateur disponible (ou mis en file d'attente). 3. L'administrateur rejoint la room du chat via WebSocket (socket.join(`chat_${chatId}`)). 4. L'administrateur peut voir l'historique complet et envoyer des messages (marqués comme 'admin'). 5. Les messages de l'administrateur sont visibles par l'acheteur et le vendeur. 6. Le litige est résolu par l'administrateur, qui peut prendre une décision (remboursement, annulation, etc.).",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

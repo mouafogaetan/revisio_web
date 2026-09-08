@@ -1,0 +1,124 @@
+[
+  {
+    "intitule": "Identifier le rôle du Context API",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Dans une application React, on souhaite partager le thème (couleur primaire, mode sombre/clair) entre de nombreux composants situés à différents niveaux de l'arborescence. Sans Context API, il faudrait passer la donnée via les props à chaque niveau intermédiaire (props drilling).</p><p>Expliquez en quoi le Context API résout ce problème et décrivez les trois éléments principaux qui le composent.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez le rôle de chacun des trois éléments suivants du Context API : `createContext()`, `Provider`, `useContext()`.",
+        "niveau": "easy",
+        "reponse": "- `createContext()` : crée un objet Context qui permet de définir une donnée à partager. Il prend optionnellement une valeur par défaut.\n- `Provider` : composant (ex: `ThemeContext.Provider`) qui enveloppe une partie de l'arborescence et fournit une valeur concrète à tous les composants enfants.\n- `useContext()` : hook qui permet à un composant de consommer la valeur fournie par le Provider le plus proche. Il reçoit l'objet Context (ex: `ThemeContext`) et retourne la valeur actuelle.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Créer un thème global avec Context",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous développez une application de gestion de tâches. Vous souhaitez implémenter un <strong>mode sombre (dark mode)</strong> que l'utilisateur peut activer/désactiver via un bouton. Le thème doit être accessible dans tous les composants (en-tête, liste des tâches, formulaire).</p><p>Rédigez le code complet pour :</p><ul><li>Créer un contexte <code>ThemeContext</code> avec une valeur par défaut <code>'light'</code></li><li>Créer un composant <code>ThemeProvider</code> qui gère l'état du thème avec <code>useState</code> et fournit à la fois le thème actuel et une fonction <code>toggleTheme</code></li><li>Créer un composant <code>ThemedButton</code> qui utilise <code>useContext</code> pour afficher \"Activer mode sombre\" ou \"Activer mode clair\" selon le thème actuel, et appelle <code>toggleTheme</code> au clic</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le code complet des fichiers <code>ThemeContext.jsx</code> et <code>ThemedButton.jsx</code>. Expliquez comment vous évitez le props drilling.",
+        "niveau": "medium",
+        "reponse": "```javascript\n// ThemeContext.jsx\nimport { createContext, useState, useContext } from 'react';\n\nconst ThemeContext = createContext('light');\n\nexport function ThemeProvider({ children }) {\n  const [theme, setTheme] = useState('light');\n  const toggleTheme = () => {\n    setTheme(prev => prev === 'light' ? 'dark' : 'light');\n  };\n  return (\n    <ThemeContext.Provider value={{ theme, toggleTheme }}>\n      {children}\n    </ThemeContext.Provider>\n  );\n}\n\nexport function useTheme() {\n  return useContext(ThemeContext);\n}\n\n// ThemedButton.jsx\nimport { useTheme } from './ThemeContext';\n\nexport function ThemedButton() {\n  const { theme, toggleTheme } = useTheme();\n  return (\n    <button onClick={toggleTheme}>\n      Activer mode {theme === 'light' ? 'sombre' : 'clair'}\n    </button>\n  );\n}\n\n// App.jsx (extrait)\nfunction App() {\n  return (\n    <ThemeProvider>\n      <ThemedButton />\n      <TaskList />\n    </ThemeProvider>\n  );\n}\n```\nLe Context API évite le props drilling car `ThemedButton` consomme directement le thème sans que les composants intermédiaires n'aient à passer la prop manuellement.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi est-il judicieux de fournir à la fois le thème ET la fonction `toggleTheme` dans la valeur du Provider ? Quel principe de conception cela respecte-t-il ?",
+            "niveau": "medium",
+            "reponse": "Cela respecte le principe de <strong>responsabilité unique</strong> et de <strong>cohésion</strong> : tous les composants qui ont besoin du thème peuvent à la fois lire sa valeur et le modifier sans avoir à importer d'autres dépendances. Cela centralise la logique de gestion du thème dans le Provider et la rend disponible de manière homogène."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Analyser une erreur courante avec Context",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Un développeur a écrit le code suivant pour gérer l'authentification :</p><pre><code>import { createContext, useContext } from 'react';\n\nconst AuthContext = createContext();\n\nexport function AuthProvider({ children, user }) {\n  return (\n    &lt;AuthContext.Provider value={{ user }}&gt;\n      {children}\n    &lt;/AuthContext.Provider&gt;\n  );\n}\n\nexport function useAuth() {\n  return useContext(AuthContext);\n}\n\n// Utilisation\nfunction Profile() {\n  const { user } = useAuth();\n  return &lt;p&gt;Bonjour {user.name}&lt;/p&gt;;\n}\n\nfunction App() {\n  return (\n    &lt;AuthProvider user={{ name: 'Alice' }}&gt;\n      &lt;Profile /&gt;\n    &lt;/AuthProvider&gt;\n  );\n}</code></pre><p>Cependant, <code>Profile</code> affiche une erreur : \"Cannot read property 'name' of undefined\". Pourquoi et comment corriger ?</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifiez la cause de l'erreur et proposez deux corrections possibles (une simple et une plus robuste).",
+        "niveau": "hard",
+        "reponse": "La cause : lorsque `useContext(AuthContext)` est appelé en dehors d'un `AuthProvider`, `useAuth()` retourne `undefined` (valeur par défaut implicite car `createContext()` a été appelé sans argument). Tenter d'accéder à `user.name` sur `undefined` provoque l'erreur.\n\nCorrection simple : fournir une valeur par défaut cohérente : `const AuthContext = createContext({ user: null });`\n\nCorrection robuste : vérifier dans `useAuth()` que le contexte n'est pas undefined et lever une erreur explicite :\n```javascript\nexport function useAuth() {\n  const context = useContext(AuthContext);\n  if (context === undefined) {\n    throw new Error('useAuth must be used within an AuthProvider');\n  }\n  return context;\n}\n```\nCela rend l'erreur plus claire et évite des bugs silencieux.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Optimiser un contexte avec séparation",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous remarquez que votre application React devient lente. Vous avez un contexte <code>AppContext</code> qui contient à la fois les données utilisateur, les préférences d'affichage et l'état du panier d'achat. Chaque fois qu'une petite donnée change (ex: un champ de formulaire dans le panier), tous les composants consommateurs du contexte se re-rendent.</p><p>Proposez une solution d'optimisation utilisant la séparation des contextes. Illustrez avec des extraits de code.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez la stratégie de séparation des contextes et montrez comment réorganiser le code pour éviter les re-rendus inutiles. Vous devez identifier quelles données changent fréquemment et lesquelles sont relativement stables.",
+        "niveau": "very hard",
+        "reponse": "La stratégie consiste à <strong>séparer les contextes par domaine fonctionnel et par fréquence de changement</strong> :\n- Un contexte pour les données stables ou rarement modifiées (ex: utilisateur connecté, thème)\n- Un contexte pour les données qui changent fréquemment (ex: panier)\n- Éventuellement un troisième pour les préférences utilisateur\n\n```javascript\n// UserContext.jsx (données stables)\nconst UserContext = createContext();\n\n// CartContext.jsx (données fréquentes)\nconst CartContext = createContext();\n\n// Dans CartContext, on utilise useReducer pour les actions fréquentes\nfunction CartProvider({ children }) {\n  const [state, dispatch] = useReducer(cartReducer, []);\n  // seuls les composants qui consomment CartContext re-rendent\n  return <CartContext.Provider value={{ state, dispatch }}>{children}</CartContext.Provider>;\n}\n\n// App.jsx\nfunction App() {\n  return (\n    <UserProvider>\n      <CartProvider>\n        <ThemeProvider>\n          <MainApp />\n        </ThemeProvider>\n      </CartProvider>\n    </UserProvider>\n  );\n}\n```\nChaque composant ne consomme que les contextes dont il a besoin. Ainsi, une mise à jour du panier ne re-rend pas les composants qui ne lisent que l'utilisateur ou le thème.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quel outil de React DevTools utiliseriez-vous pour confirmer que les re-rendus sont réduits après cette refactorisation ?",
+            "niveau": "medium",
+            "reponse": "L'onglet <strong>Profiler</strong> de React DevTools permet d'enregistrer des interactions et de visualiser quels composants se sont re-rendus, pourquoi (props, hooks, contexte) et combien de temps a pris chaque rendu. On peut également activer le surlignage des re-rendus dans l'onglet \"Components\" pour un débogage visuel en direct."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Migrer d'une prop drilling vers Context",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Voici une architecture d'application avec props drilling :</p><pre><code>function App() {\n  const [language, setLanguage] = useState('fr');\n  return &lt;Header language={language} setLanguage={setLanguage} /&gt;;\n}\n\nfunction Header({ language, setLanguage }) {\n  return &lt;NavBar language={language} setLanguage={setLanguage} /&gt;;\n}\n\nfunction NavBar({ language, setLanguage }) {\n  return &lt;LanguageSwitcher language={language} setLanguage={setLanguage} /&gt;;\n}\n\nfunction LanguageSwitcher({ language, setLanguage }) {\n  return (\n    &lt;select value={language} onChange={(e) => setLanguage(e.target.value)}&gt;\n      &lt;option value=\"fr\"&gt;Français&lt;/option&gt;\n      &lt;option value=\"en\"&gt;English&lt;/option&gt;\n    &lt;/select&gt;\n  );\n}</code></pre><p>Refactorisez ce code en utilisant le Context API pour éliminer le props drilling. Ajoutez également un composant <code>WelcomeMessage</code> qui affiche \"Bonjour\" ou \"Hello\" selon la langue, sans recevoir la langue via ses props.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le code refactorisé complet. Expliquez comment chaque composant accède désormais à la langue sans que les composants intermédiaires n'aient à la transmettre.",
+        "niveau": "hard",
+        "reponse": "```javascript\n// LanguageContext.jsx\nimport { createContext, useState, useContext } from 'react';\n\nconst LanguageContext = createContext();\n\nexport function LanguageProvider({ children }) {\n  const [language, setLanguage] = useState('fr');\n  return (\n    <LanguageContext.Provider value={{ language, setLanguage }}>\n      {children}\n    </LanguageContext.Provider>\n  );\n}\n\nexport function useLanguage() {\n  return useContext(LanguageContext);\n}\n\n// App.jsx\nimport { LanguageProvider } from './LanguageContext';\nimport Header from './Header';\nimport WelcomeMessage from './WelcomeMessage';\n\nfunction App() {\n  return (\n    <LanguageProvider>\n      <Header />\n      <WelcomeMessage />\n    </LanguageProvider>\n  );\n}\n\n// Header.jsx (plus aucune prop)\nimport NavBar from './NavBar';\n\nexport default function Header() {\n  return <NavBar />;\n}\n\n// NavBar.jsx (plus aucune prop)\nimport LanguageSwitcher from './LanguageSwitcher';\n\nexport default function NavBar() {\n  return <LanguageSwitcher />;\n}\n\n// LanguageSwitcher.jsx\nimport { useLanguage } from './LanguageContext';\n\nexport default function LanguageSwitcher() {\n  const { language, setLanguage } = useLanguage();\n  return (\n    <select value={language} onChange={(e) => setLanguage(e.target.value)}>\n      <option value=\"fr\">Français</option>\n      <option value=\"en\">English</option>\n    </select>\n  );\n}\n\n// WelcomeMessage.jsx\nimport { useLanguage } from './LanguageContext';\n\nexport default function WelcomeMessage() {\n  const { language } = useLanguage();\n  return <h1>{language === 'fr' ? 'Bonjour' : 'Hello'} !</h1>;\n}\n```\nLe Provider enveloppe toute l'application. `LanguageSwitcher` et `WelcomeMessage` consomment directement le contexte via `useLanguage()`. `Header` et `NavBar` ne font plus que composer des composants sans connaître la langue.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Créer un hook personnalisé autour du contexte",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans le code suivant, vous avez un contexte `NotificationContext` qui gère l'affichage de notifications toast. Le Provider expose une fonction `addNotification` et une liste de notifications.</p><pre><code>const NotificationContext = createContext();\n\nexport function NotificationProvider({ children }) {\n  const [notifications, setNotifications] = useState([]);\n  const addNotification = (msg) => {\n    setNotifications(prev => [...prev, { id: Date.now(), msg }]);\n  };\n  return (\n    &lt;NotificationContext.Provider value={{ notifications, addNotification }}&gt;\n      {children}\n    &lt;/NotificationContext.Provider&gt;\n  );\n}</code></pre><p>Créez un hook personnalisé <code>useNotification</code> qui encapsule <code>useContext(NotificationContext)</code> et ajoute une vérification d'erreur si le hook est utilisé en dehors d'un Provider.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le code du hook personnalisé `useNotification`. Expliquez pourquoi cette pratique est recommandée.",
+        "niveau": "medium",
+        "reponse": "```javascript\nexport function useNotification() {\n  const context = useContext(NotificationContext);\n  if (context === undefined) {\n    throw new Error('useNotification must be used within a NotificationProvider');\n  }\n  return context;\n}\n```\nCette pratique est recommandée pour plusieurs raisons :\n1. **Lisibilité** : `useNotification()` est plus clair que `useContext(NotificationContext)`.\n2. **Sécurité** : la vérification d'erreur donne un message explicite plutôt qu'un \"undefined is not an object\" cryptique.\n3. **Encapsulation** : si jamais l'implémentation du contexte change (ex: renommage), seul le hook doit être modifié, pas tous les consommateurs.\n4. **Réutilisabilité** : on peut ajouter des helpers supplémentaires dans le hook (ex: nettoyage automatique).",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

@@ -1,0 +1,110 @@
+[
+  {
+    "questionText": "Dans ASP.NET Core, quel est l'objectif principal du &lt;em&gt;rate limiting&lt;/em&gt; (limitation de débit) ?",
+    "options": [
+      "Accélérer le traitement des requêtes HTTP",
+      "Limiter le nombre de requêtes qu'un client peut envoyer sur une période donnée",
+      "Augmenter automatiquement la mémoire allouée à l'API",
+      "Désactiver la mise en cache des réponses"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "easy",
+    "explanation": "Le rate limiting contrôle le flux des requêtes entrantes en limitant le nombre de requêtes autorisées par client sur une fenêtre de temps spécifique (ex: 100 requêtes par minute). Cela protège l'API contre les abus (DoS, brute force) et assure une répartition équitable des ressources."
+  },
+  {
+    "questionText": "À partir de quelle version de .NET la fonctionnalité native de &lt;em&gt;rate limiting&lt;/em&gt; est-elle intégrée dans ASP.NET Core ?",
+    "options": [
+      ".NET Core 3.1",
+      ".NET 5",
+      ".NET 6",
+      ".NET 7"
+    ],
+    "correctAnswer": 3,
+    "difficulty": "easy",
+    "explanation": "Le rate limiting intégré (namespace <code>Microsoft.AspNetCore.RateLimiting</code>) a été introduit dans ASP.NET Core 7.0. Avant cela, il fallait utiliser des bibliothèques tierces comme &lt;em&gt;AspNetCoreRateLimit&lt;/em&gt;."
+  },
+  {
+    "questionText": "Parmi ces algorithmes de &lt;em&gt;rate limiting&lt;/em&gt; disponibles dans ASP.NET Core, lequel répartit les requêtes dans des intervalles fixes et permet des &lt;em&gt;bursts&lt;/em&gt; contrôlés via des jetons réapprovisionnés progressivement ?",
+    "options": [
+      "Fixed Window Limiter",
+      "Sliding Window Limiter",
+      "Token Bucket Limiter",
+      "Concurrency Limiter"
+    ],
+    "correctAnswer": 2,
+    "difficulty": "hard",
+    "explanation": "Le <strong>Token Bucket Limiter</strong> utilise un seau contenant un nombre maximum de jetons. Chaque requête consomme un jeton. Les jetons sont réajoutés périodiquement. Contrairement aux fenêtres fixes, cela permet des rafales (bursts) temporaires tout en limitant le débit moyen sur la durée."
+  },
+  {
+    "questionText": "Pour configurer une politique de &lt;em&gt;rate limiting&lt;/em&gt; nommée <code>\"fixed\"</code> avec une limite de 50 requêtes par minute dans &lt;em&gt;Program.cs&lt;/em&gt;, quelle est la bonne syntaxe ?",
+    "options": [
+      "<code>builder.Services.AddRateLimiter(options =&gt; { options.GlobalLimiter = PartitionedRateLimiter.Create&lt;HttpContext, string&gt;(httpContext =&gt; RateLimitPartition.GetFixedWindowLimiter(\"fixed\", _ =&gt; new FixedWindowRateLimiterOptions { PermitLimit = 50, Window = TimeSpan.FromMinutes(1) })); });</code>",
+      "<code>app.UseRateLimiter(builder =&gt; builder.AddFixedWindowLimiter(\"fixed\", options =&gt; { options.PermitLimit = 50; options.Window = TimeSpan.FromMinutes(1); }));</code>",
+      "<code>builder.Services.AddRateLimiter(options =&gt; options.AddFixedWindowLimiter(\"fixed\", opt =&gt; { opt.PermitLimit = 50; opt.Window = TimeSpan.FromMinutes(1); }));</code>",
+      "<code>app.UseRateLimiter(\"fixed\", new FixedWindowOptions { PermitLimit = 50, Period = \"1m\" });</code>"
+    ],
+    "correctAnswer": 2,
+    "difficulty": "very hard",
+    "explanation": "La bonne méthode est <code>AddRateLimiter()</code> sur <code>IServiceCollection</code>, puis <code>AddFixedWindowLimiter()</code> pour définir la politique nommée. Ensuite, on applique le middleware avec <code>app.UseRateLimiter()</code>. L'option 1 définit un limiteur global (mais c'est une autre approche), l'option 2 est fausse car <code>UseRateLimiter</code> ne prend pas de builder, et l'option 4 a une syntaxe inexistante."
+  },
+  {
+    "questionText": "Quel attribut utiliser sur un contrôleur ou une action pour appliquer une politique de &lt;em&gt;rate limiting&lt;/em&gt; nommée <code>\"StrictPolicy\"</code> ?",
+    "options": [
+      "<code>[EnableRateLimiting(\"StrictPolicy\")]</code>",
+      "<code>[RateLimit(\"StrictPolicy\")]</code>",
+      "<code>[Throttle(\"StrictPolicy\")]</code>",
+      "<code>[LimitRequest(\"StrictPolicy\")]</code>"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "medium",
+    "explanation": "L'attribut <code>[EnableRateLimiting(\"NomPolitique\")]</code> est utilisé pour appliquer une politique spécifique à un endpoint. L'attribut <code>[DisableRateLimiting]</code> existe aussi pour désactiver le rate limiting sur certaines actions."
+  },
+  {
+    "questionText": "Avec le &lt;em&gt;Sliding Window Limiter&lt;/em&gt;, comment se comporte la limite de requêtes par rapport au &lt;em&gt;Fixed Window Limiter&lt;/em&gt; ?",
+    "options": [
+      "Il divise la fenêtre en plusieurs segments pour lisser le débit et éviter les pics en fin/fin de fenêtre",
+      "Il autorise deux fois plus de requêtes que le Fixed Window",
+      "Il bloque toutes les requêtes après la première minute",
+      "Il ne fonctionne qu'avec des authentifications par JWT"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "hard",
+    "explanation": "Le <strong>Sliding Window Limiter</strong> segmente la fenêtre de temps (ex: 1 minute découpée en 6 segments de 10s). Il recalcule le nombre de requêtes glissantes en temps réel. Cela évite le défaut du &lt;em&gt;Fixed Window&lt;/em&gt; où un client peut envoyer <code>PermitLimit</code> requêtes à la fin d'une fenêtre et immédiatement <code>PermitLimit</code> au début de la suivante (double débit sur un court intervalle)."
+  },
+  {
+    "questionText": "Que se passe-t-il par défaut lorsqu'un client dépasse la limite autorisée par une politique de rate limiting ?",
+    "options": [
+      "Le serveur retourne un status code <code>429 Too Many Requests</code>",
+      "Le serveur retourne un status code <code>500 Internal Server Error</code>",
+      "Le serveur ignore la requête sans réponse",
+      "Le serveur redirige vers une page d'erreur personnalisée"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "easy",
+    "explanation": "Lorsque le quota est dépassé, le middleware de rate limiting interrompt le pipeline et retourne automatiquement la réponse <strong>HTTP 429 Too Many Requests</strong>. L'en-tête <code>Retry-After</code> peut être ajouté pour indiquer au client le temps d'attente recommandé."
+  },
+  {
+    "questionText": "Pour partitionner le rate limiting par <strong>utilisateur authentifié</strong> (et non par IP), quelle clé utiliser dans <code>PartitionedRateLimiter.Create</code> ?",
+    "options": [
+      "<code>httpContext.Connection.RemoteIpAddress.ToString()</code>",
+      "<code>httpContext.User.Identity.Name</code> ou <code>httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)</code>",
+      "<code>httpContext.Request.Headers[\"User-Agent\"].ToString()</code>",
+      "<code>httpContext.TraceIdentifier</code>"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium",
+    "explanation": "Pour limiter par utilisateur connecté, on utilise son identifiant unique (nom ou ID) depuis <code>httpContext.User</code>. Ainsi chaque utilisateur a son propre compteur, indépendamment de son adresse IP. Cela évite qu'un utilisateur malveillant sur IP partagée (ex: entreprise, lycée) bloque les autres."
+  },
+  {
+    "questionText": "Le &lt;em&gt;Concurrency Limiter&lt;/em&gt; dans ASP.NET Core limite quoi exactement ?",
+    "options": [
+      "Le nombre de requêtes par seconde",
+      "Le nombre de traitements simultanés (requêtes actives non terminées)",
+      "La taille maximale des payloads JSON",
+      "La bande passante utilisée par l'API"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "hard",
+    "explanation": "Contrairement aux autres limiteurs qui agissent sur le débit (requêtes par fenêtre), le <strong>Concurrency Limiter</strong> restreint le nombre de requêtes pouvant être &lt;em&gt;exécutées en même temps&lt;/em&gt;. Si le seuil est atteint, les requêtes supplémentaires sont rejetées avec 429. Utile pour protéger des opérations lourdes ou des bases de données avec un nombre limité de connexions simultanées."
+  }
+]

@@ -1,0 +1,141 @@
+[
+  {
+    "intitule": "Tests unitaires d'un service avec mock du repository",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous avez développé un service <code>ProductsService</code> qui utilise TypeORM pour gérer les produits. Voici le code du service :</p><pre><code>// products.service.ts\nimport { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Product } from './product.entity';\nimport { CreateProductDto } from './dto/create-product.dto';\n\n@Injectable()\nexport class ProductsService {\n  constructor(\n    @InjectRepository(Product)\n    private productRepository: Repository&lt;Product&gt;,\n  ) {}\n\n  async findAll(): Promise&lt;Product[]&gt; {\n    return this.productRepository.find();\n  }\n\n  async findOne(id: number): Promise&lt;Product&gt; {\n    const product = await this.productRepository.findOne({ where: { id } });\n    if (!product) {\n      throw new NotFoundException(`Produit avec l'id ${id} non trouvé`);\n    }\n    return product;\n  }\n\n  async create(createProductDto: CreateProductDto): Promise&lt;Product&gt; {\n    const product = this.productRepository.create(createProductDto);\n    return this.productRepository.save(product);\n  }\n\n  async update(id: number, updateData: Partial&lt;Product&gt;): Promise&lt;Product&gt; {\n    await this.productRepository.update(id, updateData);\n    return this.findOne(id);\n  }\n\n  async remove(id: number): Promise&lt;void&gt; {\n    await this.productRepository.delete(id);\n  }\n}</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer pourquoi il est nécessaire de mocker le repository lors des tests unitaires du service.",
+        "niveau": "easy",
+        "reponse": "Il est nécessaire de mocker le repository pour :<ul><li>Isoler le service de la vraie base de données (tests plus rapides et déterministes)</li><li>Éviter d'avoir une base de données de test en mémoire ou réelle</li><li>Contrôler les valeurs retournées par le repository pour tester tous les scénarios (succès, erreurs)</li><li>Tester uniquement la logique métier du service, pas l'intégration avec TypeORM</li></ul>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Rédiger un test unitaire pour la méthode <code>findOne(id)</code> qui vérifie :<br/>- Qu'un produit est retourné correctement quand il existe<br/>- Qu'une exception <code>NotFoundException</code> est levée quand le produit n'existe pas",
+        "niveau": "hard",
+        "reponse": "<pre><code>// products.service.spec.ts\nimport { Test, TestingModule } from '@nestjs/testing';\nimport { getRepositoryToken } from '@nestjs/typeorm';\nimport { ProductsService } from './products.service';\nimport { Product } from './product.entity';\nimport { NotFoundException } from '@nestjs/common';\n\ndescribe('ProductsService', () => {\n  let service: ProductsService;\n  let mockProductRepository: jest.Mocked&lt;any&gt;;\n\n  beforeEach(async () => {\n    mockProductRepository = {\n      findOne: jest.fn(),\n      find: jest.fn(),\n      create: jest.fn(),\n      save: jest.fn(),\n      update: jest.fn(),\n      delete: jest.fn(),\n    };\n\n    const module: TestingModule = await Test.createTestingModule({\n      providers: [\n        ProductsService,\n        {\n          provide: getRepositoryToken(Product),\n          useValue: mockProductRepository,\n        },\n      ],\n    }).compile();\n\n    service = module.get&lt;ProductsService&gt;(ProductsService);\n  });\n\n  describe('findOne', () => {\n    it('devrait retourner un produit quand il existe', async () => {\n      const mockProduct = { id: 1, name: 'Laptop', price: 999 };\n      mockProductRepository.findOne.mockResolvedValue(mockProduct);\n\n      const result = await service.findOne(1);\n\n      expect(result).toEqual(mockProduct);\n      expect(mockProductRepository.findOne).toHaveBeenCalledWith({\n        where: { id: 1 },\n      });\n    });\n\n    it('devrait lever NotFoundException quand le produit n\\'existe pas', async () => {\n      mockProductRepository.findOne.mockResolvedValue(null);\n\n      await expect(service.findOne(999)).rejects.toThrow(NotFoundException);\n      expect(mockProductRepository.findOne).toHaveBeenCalledWith({\n        where: { id: 999 },\n      });\n    });\n  });\n});</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Ajouter un test pour la méthode <code>create(createProductDto)</code> en vérifiant que <code>repository.create()</code> et <code>repository.save()</code> sont appelés correctement.",
+        "niveau": "medium",
+        "reponse": "<pre><code>describe('create', () => {\n  it('devrait créer et sauvegarder un nouveau produit', async () => {\n    const createProductDto = { name: 'Smartphone', price: 599, description: 'Nouveau modèle' };\n    const createdProduct = { id: 1, ...createProductDto };\n    \n    mockProductRepository.create.mockReturnValue(createProductDto);\n    mockProductRepository.save.mockResolvedValue(createdProduct);\n\n    const result = await service.create(createProductDto);\n\n    expect(mockProductRepository.create).toHaveBeenCalledWith(createProductDto);\n    expect(mockProductRepository.save).toHaveBeenCalledWith(createProductDto);\n    expect(result).toEqual(createdProduct);\n  });\n});</code></pre>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Tests e2e d'un contrôleur avec Supertest",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous devez écrire des tests end-to-end (e2e) pour l'API REST de gestion des utilisateurs. Les endpoints sont :</p><ul><li><code>POST /auth/register</code> : inscription d'un nouvel utilisateur</li><li><code>POST /auth/login</code> : connexion et récupération d'un token JWT</li><li><code>GET /users/profile</code> : récupération du profil (protégé par JWT)</li></ul><p>L'application utilise une base de données PostgreSQL en développement, mais pour les tests vous devez utiliser une base de données de test isolée.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer la différence entre un test unitaire et un test e2e dans le contexte d'une API NestJS.",
+        "niveau": "medium",
+        "reponse": "<ul><li><strong>Tests unitaires</strong> : testent une composante isolée (service, contrôleur, pipe) en mockant ses dépendances. Rapides, nombreux, ne nécessitent pas de base de données réelle.</li><li><strong>Tests e2e (end-to-end)</strong> : testent l'application dans son ensemble, de la requête HTTP à la réponse. Ils utilisent une vraie base de données (souvent en mémoire ou de test), vérifient les routes, l'authentification, la validation, et l'intégration complète.</li></ul>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Rédiger un test e2e complet qui :<br/>- Crée un utilisateur via POST /auth/register<br/>- Se connecte via POST /auth/login pour récupérer un token<br/>- Utilise le token pour accéder à GET /users/profile<br/>- Vérifie les codes HTTP et les données retournées",
+        "niveau": "very hard",
+        "reponse": "<pre><code>// test/auth.e2e-spec.ts\nimport { Test, TestingModule } from '@nestjs/testing';\nimport { INestApplication, ValidationPipe } from '@nestjs/common';\nimport * as request from 'supertest';\nimport { AppModule } from '../src/app.module';\nimport { DataSource } from 'typeorm';\n\ndescribe('AuthController (e2e)', () => {\n  let app: INestApplication;\n  let dataSource: DataSource;\n\n  beforeAll(async () => {\n    const moduleFixture: TestingModule = await Test.createTestingModule({\n      imports: [AppModule],\n    }).compile();\n\n    app = moduleFixture.createNestApplication();\n    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));\n    await app.init();\n\n    dataSource = app.get(DataSource);\n    // Nettoyer la base avant les tests\n    await dataSource.query('DELETE FROM users;');\n  });\n\n  afterAll(async () => {\n    await dataSource.query('DELETE FROM users;');\n    await app.close();\n  });\n\n  describe('POST /auth/register', () => {\n    it('devrait créer un nouvel utilisateur', async () => {\n      const newUser = {\n        email: 'test@example.com',\n        password: 'password123',\n        username: 'testuser',\n      };\n\n      const response = await request(app.getHttpServer())\n        .post('/auth/register')\n        .send(newUser)\n        .expect(201);\n\n      expect(response.body).toHaveProperty('id');\n      expect(response.body.email).toBe(newUser.email);\n      expect(response.body).not.toHaveProperty('password'); // mot de passe non retourné\n    });\n\n    it('devrait retourner 400 si l\\'email existe déjà', async () => {\n      const existingUser = {\n        email: 'test@example.com',\n        password: 'password123',\n        username: 'anotheruser',\n      };\n\n      await request(app.getHttpServer())\n        .post('/auth/register')\n        .send(existingUser)\n        .expect(400);\n    });\n  });\n\n  describe('POST /auth/login', () => {\n    it('devrait retourner un token JWT valide', async () => {\n      const credentials = {\n        email: 'test@example.com',\n        password: 'password123',\n      };\n\n      const response = await request(app.getHttpServer())\n        .post('/auth/login')\n        .send(credentials)\n        .expect(200);\n\n      expect(response.body).toHaveProperty('access_token');\n      expect(typeof response.body.access_token).toBe('string');\n    });\n\n    it('devrait retourner 401 avec des identifiants invalides', async () => {\n      const invalidCredentials = {\n        email: 'test@example.com',\n        password: 'wrongpassword',\n      };\n\n      await request(app.getHttpServer())\n        .post('/auth/login')\n        .send(invalidCredentials)\n        .expect(401);\n    });\n  });\n\n  describe('GET /users/profile', () => {\n    let authToken: string;\n\n    beforeAll(async () => {\n      const credentials = { email: 'test@example.com', password: 'password123' };\n      const loginResponse = await request(app.getHttpServer())\n        .post('/auth/login')\n        .send(credentials);\n      authToken = loginResponse.body.access_token;\n    });\n\n    it('devrait retourner le profil utilisateur avec un token valide', async () => {\n      const response = await request(app.getHttpServer())\n        .get('/users/profile')\n        .set('Authorization', `Bearer ${authToken}`)\n        .expect(200);\n\n      expect(response.body.email).toBe('test@example.com');\n      expect(response.body.username).toBe('testuser');\n    });\n\n    it('devrait retourner 401 sans token', async () => {\n      await request(app.getHttpServer())\n        .get('/users/profile')\n        .expect(401);\n    });\n\n    it('devrait retourner 401 avec un token invalide', async () => {\n      await request(app.getHttpServer())\n        .get('/users/profile')\n        .set('Authorization', 'Bearer invalid_token_123')\n        .expect(401);\n    });\n  });\n});</code></pre>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Documentation Swagger d'une API REST",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous avez développé une API de blog avec les endpoints suivants :</p><pre><code>// articles.controller.ts\n@Controller('articles')\nexport class ArticlesController {\n  @Get()\n  findAll(@Query('page') page: number, @Query('limit') limit: number) {}\n\n  @Get(':slug')\n  findOne(@Param('slug') slug: string) {}\n\n  @Post()\n  @UseGuards(AuthGuard('jwt'))\n  create(@Body() createArticleDto: CreateArticleDto) {}\n\n  @Patch(':id')\n  @UseGuards(AuthGuard('jwt'))\n  update(@Param('id') id: number, @Body() updateArticleDto: UpdateArticleDto) {}\n\n  @Delete(':id')\n  @UseGuards(AuthGuard('jwt'))\n  remove(@Param('id') id: number) {}\n}</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Ajouter les décorateurs Swagger nécessaires pour documenter :<br/>- Le tag 'articles' pour tout le contrôleur<br/>- La description de chaque endpoint avec @ApiOperation",
+        "niveau": "easy",
+        "reponse": "<pre><code>import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';\n\n@ApiTags('articles')\n@Controller('articles')\nexport class ArticlesController {\n  @Get()\n  @ApiOperation({ summary: 'Récupérer la liste des articles', description: 'Retourne une liste paginée d\\'articles' })\n  findAll(@Query('page') page: number, @Query('limit') limit: number) {}\n\n  @Get(':slug')\n  @ApiOperation({ summary: 'Récupérer un article par son slug' })\n  findOne(@Param('slug') slug: string) {}\n\n  @Post()\n  @ApiBearerAuth()\n  @ApiOperation({ summary: 'Créer un nouvel article', description: 'Nécessite une authentification JWT' })\n  @UseGuards(AuthGuard('jwt'))\n  create(@Body() createArticleDto: CreateArticleDto) {}\n\n  @Patch(':id')\n  @ApiBearerAuth()\n  @ApiOperation({ summary: 'Modifier un article existant' })\n  update(@Param('id') id: number, @Body() updateArticleDto: UpdateArticleDto) {}\n\n  @Delete(':id')\n  @ApiBearerAuth()\n  @ApiOperation({ summary: 'Supprimer un article' })\n  remove(@Param('id') id: number) {}\n}</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Documenter les paramètres avec @ApiParam et @ApiQuery, ainsi que les réponses possibles avec @ApiResponse.",
+        "niveau": "medium",
+        "reponse": "<pre><code>import { ApiParam, ApiQuery, ApiResponse } from '@nestjs/swagger';\n\n@Get()\n@ApiQuery({ name: 'page', required: false, type: Number, example: 1, description: 'Numéro de page' })\n@ApiQuery({ name: 'limit', required: false, type: Number, example: 10, description: 'Nombre d\\'articles par page' })\n@ApiResponse({ status: 200, description: 'Liste des articles récupérée avec succès' })\nfindAll(@Query('page') page: number, @Query('limit') limit: number) {}\n\n@Get(':slug')\n@ApiParam({ name: 'slug', type: String, description: 'Slug unique de l\\'article (ex: mon-premier-article)' })\n@ApiResponse({ status: 200, description: 'Article trouvé' })\n@ApiResponse({ status: 404, description: 'Article non trouvé' })\nfindOne(@Param('slug') slug: string) {}\n\n@Post()\n@ApiBearerAuth()\n@ApiResponse({ status: 201, description: 'Article créé avec succès' })\n@ApiResponse({ status: 400, description: 'Données invalides' })\n@ApiResponse({ status: 401, description: 'Non authentifié' })\ncreate(@Body() createArticleDto: CreateArticleDto) {}\n\n@Delete(':id')\n@ApiParam({ name: 'id', type: Number, description: 'Identifiant numérique de l\\'article' })\n@ApiResponse({ status: 204, description: 'Article supprimé' })\n@ApiResponse({ status: 401, description: 'Non authentifié' })\n@ApiResponse({ status: 404, description: 'Article non trouvé' })\nremove(@Param('id') id: number) {}</code></pre>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Déploiement d'une API NestJS sur Railway/Render",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Votre API NestJS est prête pour la mise en production. Vous devez la déployer sur une plateforme cloud comme Railway, Render ou Heroku. L'application utilise une base de données PostgreSQL et des variables d'environnement pour la configuration.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Citer les fichiers de configuration nécessaires pour déployer sur Railway (fichier <code>railway.json</code> ou configuration dans le dashboard).",
+        "niveau": "easy",
+        "reponse": "Pour déployer sur Railway :<ul><li>Connecter le dépôt GitHub à Railway</li><li>Railway détecte automatiquement Node.js et installe les dépendances</li><li>Variables d'environnement à définir dans le dashboard : <code>DATABASE_URL</code>, <code>JWT_SECRET</code>, <code>NODE_ENV=production</code></li><li>Optionnel : fichier <code>railway.json</code> pour configurer les commandes de build et start :</li></ul><pre><code>{\n  \"build\": {\n    \"builder\": \"NIXPACKS\",\n    \"buildCommand\": \"npm run build\"\n  },\n  \"deploy\": {\n    \"startCommand\": \"node dist/main\",\n    \"healthcheckPath\": \"/health\",\n    \"restartPolicyType\": \"ON_FAILURE\"\n  }\n}</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer les modifications à apporter dans le fichier <code>main.ts</code> pour que l'application écoute sur le port fourni par la plateforme (variable d'environnement PORT).",
+        "niveau": "easy",
+        "reponse": "<pre><code>// main.ts\nimport { NestFactory } from '@nestjs/core';\nimport { AppModule } from './app.module';\nimport { ValidationPipe } from '@nestjs/common';\n\nasync function bootstrap() {\n  const app = await NestFactory.create(AppModule);\n  \n  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));\n  app.enableCors(); // Important pour les appels depuis le frontend\n  \n  const port = process.env.PORT || 3000;\n  await app.listen(port, '0.0.0.0'); // Écouter sur toutes les interfaces\n  console.log(`Application running on port ${port}`);\n}\nbootstrap();</code></pre><p>L'option <code>'0.0.0.0'</code> est essentielle pour que l'application soit accessible depuis l'extérieur sur Railway/Render.</p>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Rédiger le script <code>start</code> dans <code>package.json</code> pour la production.",
+        "niveau": "easy",
+        "reponse": "<pre><code>{\n  \"scripts\": {\n    \"build\": \"nest build\",\n    \"start:prod\": \"node dist/main\",\n    \"start\": \"npm run start:prod\",\n    \"migration:run\": \"typeorm migration:run -d dist/typeorm.config.js\"\n  }\n}</code></pre><p>Sur Railway/Render, on configure la commande de démarrage comme <code>npm run start:prod</code> ou <code>node dist/main</code>.</p>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 4,
+        "texte": "Décrire les bonnes pratiques pour les migrations de base de données lors du déploiement (exécution automatique, rollback).",
+        "niveau": "hard",
+        "reponse": "Bonnes pratiques pour les migrations :<ul><li><strong>Ne pas utiliser synchronize: true en production</strong> : risque de perte de données</li><li><strong>Exécuter les migrations au démarrage</strong> : dans <code>main.ts</code> ou via un script séparé</li><li><strong>Commande dans package.json</strong> : <code>\"migrate:deploy\": \"typeorm migration:run -d dist/typeorm.config.js\"</code></li><li><strong>Exécution avant le démarrage de l'application</strong> : </li></ul><pre><code>// main.ts\nasync function bootstrap() {\n  const app = await NestFactory.create(AppModule);\n  \n  // Exécuter les migrations avant de démarrer\n  const dataSource = app.get(DataSource);\n  await dataSource.runMigrations();\n  \n  await app.listen(port);\n}</code></pre><ul><li><strong>Rollback</strong> : prévoir un script <code>\"migrate:rollback\": \"typeorm migration:revert -d dist/typeorm.config.js\"</code></li><li>Pour Railway/Render, on peut aussi exécuter les migrations via une commande séparée dans le dashboard ou un GitHub Action.</li></ul>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Pipeline CI/CD pour déploiement continu",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous souhaitez automatiser les tests et le déploiement à chaque push sur la branche <code>main</code>. Vous utiliserez GitHub Actions pour :</p><ul><li>Installer les dépendances</li><li>Exécuter les tests unitaires et e2e</li><li>Build l'application</li><li>Déployer sur Railway/Render</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédiger un fichier <code>.github/workflows/deploy.yml</code> complet qui réalise ces étapes.",
+        "niveau": "very hard",
+        "reponse": "<pre><code>name: CI/CD Pipeline\n\non:\n  push:\n    branches: [ main ]\n  pull_request:\n    branches: [ main ]\n\nenv:\n  NODE_VERSION: '20'\n\njobs:\n  test-and-build:\n    runs-on: ubuntu-latest\n    \n    services:\n      postgres:\n        image: postgres:15\n        env:\n          POSTGRES_USER: testuser\n          POSTGRES_PASSWORD: testpass\n          POSTGRES_DB: testdb\n        ports:\n          - 5432:5432\n        options: >-\n          --health-cmd pg_isready\n          --health-interval 10s\n          --health-timeout 5s\n          --health-retries 5\n\n    steps:\n      - name: Checkout code\n        uses: actions/checkout@v4\n\n      - name: Setup Node.js\n        uses: actions/setup-node@v4\n        with:\n          node-version: ${{ env.NODE_VERSION }}\n          cache: 'npm'\n\n      - name: Install dependencies\n        run: npm ci\n\n      - name: Run linting\n        run: npm run lint\n\n      - name: Run unit tests\n        run: npm run test\n        env:\n          NODE_ENV: test\n          DATABASE_URL: postgresql://testuser:testpass@localhost:5432/testdb\n\n      - name: Build application\n        run: npm run build\n\n      - name: Run e2e tests\n        run: npm run test:e2e\n        env:\n          NODE_ENV: test\n          DATABASE_URL: postgresql://testuser:testpass@localhost:5432/testdb\n          JWT_SECRET: testsecretforgithubactions\n\n      - name: Upload build artifact\n        uses: actions/upload-artifact@v4\n        with:\n          name: dist\n          path: dist/\n\n  deploy:\n    needs: test-and-build\n    if: github.ref == 'refs/heads/main'\n    runs-on: ubuntu-latest\n    \n    steps:\n      - name: Checkout code\n        uses: actions/checkout@v4\n\n      - name: Download build artifact\n        uses: actions/download-artifact@v4\n        with:\n          name: dist\n          path: dist/\n\n      - name: Deploy to Railway\n        uses: railwayhq/action@v3\n        with:\n          railway_token: ${{ secrets.RAILWAY_TOKEN }}\n          service: 'my-nestjs-api'\n        \n      # Alternative pour Render\n      - name: Deploy to Render\n        uses: johnbeynon/render-deploy-action@v0.0.8\n        with:\n          service-id: ${{ secrets.RENDER_SERVICE_ID }}\n          api-key: ${{ secrets.RENDER_API_KEY }}\n</code></pre>",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

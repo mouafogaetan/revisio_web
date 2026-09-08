@@ -1,0 +1,66 @@
+[
+  {
+    "intitule": "Mécanismes de protection mémoire et ASLR",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Cet exercice porte sur les mécanismes matériels et logiciels de protection mémoire vus en cours : bit NX (No eXecute), DEP (Data Execution Prevention), ASLR (Address Space Layout Randomization), canaris (stack cookies) et protection des pages.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer le rôle du bit NX/DEP et son effet sur l’exploitation des buffer overflows.",
+        "niveau": "medium",
+        "reponse": "Le bit NX (ou DEP) marque certaines zones de mémoire (pile, tas) comme non exécutables. Si un attaquant injecte du code shell dans la pile et tente de l’exécuter, le processeur déclenche une exception (page fault) et le processus est terminé. Cela rend inefficace l’injection de code classique.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Décrire le principe de l’ASLR et justifier pourquoi il rend les attaques de type return-to-libc ou ROP plus difficiles.",
+        "niveau": "medium",
+        "reponse": "L’ASLR randomise à chaque exécution les adresses de base de la bibliothèque libc, de la pile, du tas et du programme principal. L’attaquant ne peut donc pas connaître à l’avance l’adresse d’une fonction comme system() ou d’un gadget ROP. Pour réussir, il doit deviner ou contourner l’ASLR (par ex. fuite d’adresse).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Comparer les canaris (stack cookies) et la protection des pages (page protection) dans leur mode de fonctionnement et leur périmètre de protection.",
+        "niveau": "hard",
+        "reponse": "Les canaris sont des valeurs secrètes placées entre les variables locales et l’adresse de retour sur la pile. Avant de retourner, le compilateur vérifie si le canari a été modifié : si oui → arrêt. Ils protègent uniquement le retour de fonction. La protection des pages utilise les bits du processeur (lecture/écriture/exécution) pour chaque page mémoire ; elle empêche par exemple d’écrire dans une page de code (W^X). La protection des pages est plus générale et matérielle, tandis que les canaris sont un mécanisme logiciel spécifique au compilateur.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Situation : déploiement d’un serveur sécurisé",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous êtes administrateur système dans une entreprise. Un développeur vous signale une vulnérabilité de type buffer overflow dans un service critique écrit en C. Il vous demande d’activer <strong>toutes les protections possibles</strong> au niveau du système d’exploitation (Linux) et du compilateur.</p><p>Questions :</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier et justifier trois mécanismes de protection mémoire que vous activerez côté OS (noyau) pour ce service.",
+        "niveau": "medium",
+        "reponse": "1. ASLR au niveau système (kernel.randomize_va_space=2) pour randomiser toutes les régions. 2. Protection NX/DEP via les flags des segments mémoire (désactiver l’exécution sur pile/tas). 3. Protection des pages avec mprotect() interdisant toute page à la fois writable et exécutable (W^X).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Citer deux options de compilation (gcc) que vous ajouterez pour renforcer la sécurité, et expliquer leur effet.",
+        "niveau": "medium",
+        "reponse": "-fstack-protector-strong : active les canaris (stack cookies) pour toutes les fonctions vulnérables. -D_FORTIFY_SOURCE=2 : ajoute des vérifications à l’exécution pour les fonctions sensibles (strcpy, memcpy, etc.) et remplace les appels dangereux.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Malgré toutes ces protections, le service subit une attaque par contournement d’ASLR via une fuite d’adresse mémoire. Proposer une contre-mesure supplémentaire et expliquer son principe.",
+        "niveau": "very hard",
+        "reponse": "On peut activer la re-randomisation périodique des adresses (ou utiliser la technique « Position Independent Executable + re-randomisation dynamique ») ou utiliser des pointeurs sécurisés (SafeStack). Une approche plus radicale est la CFI (Control Flow Integrity) qui interdit les sauts imprévus. En pratique, on combine ASLR avec un rejeu aléatoire après fork (pour les services qui forkent) ou on utilise une mémoire de type « bouclier » (exemple : PaX RANDMMAP).",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

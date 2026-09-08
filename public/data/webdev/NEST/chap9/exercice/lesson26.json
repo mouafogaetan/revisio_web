@@ -1,0 +1,138 @@
+[
+  {
+    "intitule": "Modules statiques vs dynamiques",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Dans NestJS, un module standard utilise le décorateur <code>@Module({ imports, controllers, providers, exports })</code>. Un module dynamique expose des méthodes statiques comme <code>register()</code>, <code>forRoot()</code> ou <code>forFeature()</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer la différence fondamentale entre un module statique et un module dynamique. Citer un exemple de module NestJS qui utilise une configuration dynamique.",
+        "niveau": "easy",
+        "reponse": "Un module statique a une configuration fixe déterminée à la compilation. Un module dynamique permet de passer des options au moment de l'importation, rendant le module configurable selon le contexte. Exemple : TypeOrmModule.forRoot({ ... }) qui accepte des paramètres de connexion à la base de données, ou JwtModule.register({ secret: '...' }).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Créer un module configurable avec register()",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous développez un module <code>LoggerModule</code> qui doit pouvoir être configuré avec un niveau de log (debug, info, error) et une option pour activer/désabler l'écriture dans un fichier.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire la méthode statique register(options: LoggerOptions) qui retourne un DynamicModule. Le module doit fournir un provider LOGGER_OPTIONS contenant les options, et exporter un LoggerService qui les utilise.",
+        "niveau": "medium",
+        "reponse": "```typescript\nimport { DynamicModule, Module, Global, Injectable } from '@nestjs/common';\n\nexport interface LoggerOptions {\n  level: 'debug' | 'info' | 'error';\n  enableFile?: boolean;\n}\n\nexport const LOGGER_OPTIONS = 'LOGGER_OPTIONS';\n\n@Injectable()\nexport class LoggerService {\n  constructor(@Inject(LOGGER_OPTIONS) private options: LoggerOptions) {}\n  \n  log(message: string) {\n    if (this.options.level === 'debug') console.debug(message);\n    // ... implémentation\n  }\n}\n\n@Module({})\nexport class LoggerModule {\n  static register(options: LoggerOptions): DynamicModule {\n    return {\n      module: LoggerModule,\n      providers: [\n        {\n          provide: LOGGER_OPTIONS,\n          useValue: options,\n        },\n        LoggerService,\n      ],\n      exports: [LoggerService],\n    };\n  }\n}\n\n// Utilisation\n@Module({\n  imports: [LoggerModule.register({ level: 'debug', enableFile: true })],\n})\nexport class AppModule {}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi utilise-t-on un token d'injection personnalisé (LOGGER_OPTIONS) plutôt que d'injecter directement l'objet options ?",
+            "niveau": "medium",
+            "reponse": "On ne peut pas injecter directement une valeur primitive ou un objet simple sans token. Le token d'injection personnalisé permet d'enregistrer la valeur dans le conteneur IoC et de l'injecter où c'est nécessaire via @Inject(LOGGER_OPTIONS). Cela rend le module réutilisable avec différentes configurations."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Module global (@Global) vs module dynamique",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>NestJS propose le décorateur <code>@Global()</code> pour rendre un module accessible partout sans avoir à l'importer dans chaque module.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Comparer l'utilisation de @Global() avec celle d'un module dynamique. Dans quel cas préférer l'un plutôt que l'autre ?",
+        "niveau": "easy",
+        "reponse": "@Global() est idéal pour les modules transversaux utilisés partout comme ConfigModule, LoggerModule, DatabaseModule. Il évite de répéter l'import dans chaque module. Un module dynamique est préféré quand la configuration varie par contexte (ex: connexions DB différentes, clés API distinctes). On peut combiner les deux : un module global configurable dynamiquement.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Implémentation de forRoot() avec async",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous créez un module <code>DatabaseModule</code> qui doit se connecter à une base de données de manière asynchrone. La configuration (host, port, credentials) est chargée depuis un service de configuration externe (ConfigService).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémenter une méthode forRootAsync() qui accepte un objet avec useFactory et injects, permettant de créer une connexion asynchrone. Le module doit exporter un DataSource (ou connection pool) utilisable par les autres modules.",
+        "niveau": "hard",
+        "reponse": "```typescript\nimport { DynamicModule, Module, Provider, FactoryProvider } from '@nestjs/common';\nimport { createConnection, Connection } from 'typeorm';\n\nexport interface DatabaseOptions {\n  host: string;\n  port: number;\n  username: string;\n  password: string;\n  database: string;\n}\n\nexport const DATABASE_CONNECTION = 'DATABASE_CONNECTION';\n\nexport class DatabaseModule {\n  static forRootAsync(options: {\n    useFactory: (...args: any[]) => Promise<DatabaseOptions> | DatabaseOptions;\n    injects?: any[];\n  }): DynamicModule {\n    const connectionProvider: FactoryProvider<Promise<Connection>> = {\n      provide: DATABASE_CONNECTION,\n      useFactory: async (...args: any[]) => {\n        const dbOptions = await options.useFactory(...args);\n        return createConnection(dbOptions);\n      },\n      inject: options.injects || [],\n    };\n\n    return {\n      module: DatabaseModule,\n      providers: [connectionProvider],\n      exports: [DATABASE_CONNECTION],\n      global: true, // optionnel\n    };\n  }\n}\n\n// Utilisation dans AppModule\n@Module({\n  imports: [\n    DatabaseModule.forRootAsync({\n      injects: [ConfigService],\n      useFactory: (configService: ConfigService) => ({\n        host: configService.get('DB_HOST'),\n        port: configService.get('DB_PORT'),\n        username: configService.get('DB_USER'),\n        password: configService.get('DB_PASSWORD'),\n        database: configService.get('DB_NAME'),\n      }),\n    }),\n  ],\n})\nexport class AppModule {}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Justifier l'utilisation d'une FactoryProvider plutôt qu'une simple useValue pour la connexion asynchrone.",
+            "niveau": "medium",
+            "reponse": "La connexion à la base de données est une opération asynchrone (createConnection retourne une Promise). useFactory permet d'attendre la résolution de la promesse avant que le provider soit disponible. Cela garantit que les services qui injectent DATABASE_CONNECTION reçoivent une connexion réellement établie, pas une promesse en attente."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Problème de réutilisabilité d'un module",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous développez une application multi-tenant. Chaque client (tenant) a sa propre base de données. Vous souhaitez créer un module <code>TenantDatabaseModule</code> qui doit pouvoir être instancié plusieurs fois avec des configurations différentes.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevoir un module dynamique qui accepte un identifiant de tenant et retourne un module avec une connexion de base de données dédiée. Utiliser un token unique par tenant pour éviter les conflits d'injection.",
+        "niveau": "very hard",
+        "reponse": "```typescript\nimport { DynamicModule, Module, Inject, Injectable } from '@nestjs/common';\n\nexport function getTenantConnectionToken(tenantId: string): string {\n  return `DATABASE_CONNECTION_${tenantId}`;\n}\n\nexport interface TenantDatabaseOptions {\n  tenantId: string;\n  host: string;\n  port: number;\n  database: string;\n}\n\n@Module({})\nexport class TenantDatabaseModule {\n  static register(options: TenantDatabaseOptions): DynamicModule {\n    const connectionToken = getTenantConnectionToken(options.tenantId);\n    \n    const connectionProvider = {\n      provide: connectionToken,\n      useFactory: async () => {\n        const connection = await createConnection({\n          name: options.tenantId, // nom unique pour TypeORM\n          type: 'postgres',\n          host: options.host,\n          port: options.port,\n          database: options.database,\n        });\n        return connection;\n      },\n    };\n\n    return {\n      module: TenantDatabaseModule,\n      providers: [connectionProvider],\n      exports: [connectionToken],\n    };\n  }\n}\n\n// Utilisation dans un module parent\n@Module({\n  imports: [\n    TenantDatabaseModule.register({\n      tenantId: 'clientA',\n      host: 'db-client-a.example.com',\n      port: 5432,\n      database: 'client_a_db',\n    }),\n    TenantDatabaseModule.register({\n      tenantId: 'clientB',\n      host: 'db-client-b.example.com',\n      port: 5432,\n      database: 'client_b_db',\n    }),\n  ],\n})\nexport class MultiTenantModule {}\n\n// Injection dans un service\nexport class UserService {\n  constructor(\n    @Inject(getTenantConnectionToken('clientA'))\n    private clientADb: Connection,\n    @Inject(getTenantConnectionToken('clientB'))\n    private clientBDb: Connection,\n  ) {}\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Identifier un risque de cette approche et proposer une amélioration pour la gestion mémoire.",
+            "niveau": "very hard",
+            "reponse": "Risque : chaque tenant crée une connexion persistante, ce qui peut saturer la base de données si le nombre de tenants est élevé (ex: 1000 connexions simultanées). Amélioration : implémenter un pool de connexions avec connexions partagées et un mécanisme de connexion à la demande (lazy connection), ou utiliser un proxy qui aiguille les requêtes vers la bonne base sans maintenir toutes les connexions ouvertes en permanence. On peut aussi utiliser un connection pooler externe comme PgBouncer."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Module global avec configuration asynchrone",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Le module <code>ConfigModule</code> de NestJS utilise une approche globale avec <code>forRoot()</code>. Vous souhaitez créer une version améliorée qui charge la configuration depuis une API distante avant le démarrage de l'application.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémenter un module ConfigModule avec une méthode forRootAsync() qui appelle une API REST pour récupérer la configuration, puis la rend disponible globalement via ConfigService. Gérer le cas où l'API est indisponible.",
+        "niveau": "hard",
+        "reponse": "```typescript\nimport { DynamicModule, Global, Module, Injectable, Inject, OnApplicationBootstrap } from '@nestjs/common';\nimport axios from 'axios';\n\nexport const CONFIG_TOKEN = 'APP_CONFIG';\n\nexport interface AppConfig {\n  apiUrl: string;\n  maxConnections: number;\n  features: string[];\n}\n\n@Injectable()\nexport class ConfigService {\n  constructor(@Inject(CONFIG_TOKEN) private config: AppConfig) {}\n  \n  get<T = any>(key: keyof AppConfig): T {\n    return this.config[key] as T;\n  }\n}\n\n@Global()\n@Module({})\nexport class ConfigModule {\n  static forRootAsync(options: {\n    remoteUrl: string;\n    fallbackConfig?: AppConfig;\n    retries?: number;\n  }): DynamicModule {\n    const configProvider = {\n      provide: CONFIG_TOKEN,\n      useFactory: async () => {\n        const maxRetries = options.retries || 3;\n        for (let attempt = 1; attempt <= maxRetries; attempt++) {\n          try {\n            const response = await axios.get<AppConfig>(options.remoteUrl, { timeout: 5000 });\n            return response.data;\n          } catch (error) {\n            if (attempt === maxRetries) {\n              if (options.fallbackConfig) {\n                console.warn('API distante indisponible, utilisation de la configuration de secours');\n                return options.fallbackConfig;\n              }\n              throw new Error(`Impossible de charger la configuration depuis ${options.remoteUrl} après ${maxRetries} tentatives`);\n            }\n            await new Promise(resolve => setTimeout(resolve, 1000 * attempt));\n          }\n        }\n      },\n    };\n\n    return {\n      module: ConfigModule,\n      providers: [configProvider, ConfigService],\n      exports: [ConfigService],\n    };\n  }\n}\n\n// Utilisation\n@Module({\n  imports: [\n    ConfigModule.forRootAsync({\n      remoteUrl: 'https://config.api.example.com/v1/settings',\n      fallbackConfig: { apiUrl: 'http://localhost:3000', maxConnections: 10, features: ['logging'] },\n      retries: 5,\n    }),\n  ],\n})\nexport class AppModule {}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quel est l'intérêt de rendre ce module global (@Global) ?",
+            "niveau": "easy",
+            "reponse": "Rendre le module global évite de devoir importer ConfigModule dans chaque module de l'application. Comme la configuration est utilisée quasiment partout (services, contrôleurs, guards), @Global() simplifie considérablement le code et réduit les répétitions."
+          }
+        ]
+      }
+    ]
+  }
+]

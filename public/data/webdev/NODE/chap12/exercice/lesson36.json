@@ -1,0 +1,153 @@
+[
+  {
+    "intitule": "Conception des endpoints et modèles pour une plateforme de cours en ligne",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous devez concevoir le backend d'une plateforme de cours en ligne pour des étudiants camerounais. Les fonctionnalités attendues sont :</p><ul><li>Gestion des utilisateurs (étudiants et professeurs)</li><li>Création et inscription à des cours</li><li>Dépôt et notation de devoirs</li></ul><p>Chaque cours a un titre, une description, un professeur référent et une liste d'étudiants inscrits. Chaque devoir est associé à un cours, a un énoncé, une date limite et des soumissions d'étudiants.</p>",
+      "images": [
+        "diagramme entité-association d'une plateforme LMS (Learning Management System)",
+        "exemple de schéma de base de données relationnelle pour cours, utilisateurs, devoirs"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier les entités principales et leurs attributs, puis définir les relations entre elles (One-to-Many, Many-to-Many).",
+        "niveau": "medium",
+        "reponse": "Entités : Utilisateur (id, nom, email, motDePasse, role: 'etudiant'/'professeur'), Cours (id, titre, description, professeurId), Inscription (coursId, etudiantId, dateInscription), Devoir (id, titre, enonce, dateLimite, coursId), Soumission (id, devoirId, etudiantId, fichierURL, note, dateSoumission). Relations : Un Cours appartient à un Utilisateur (professeur) → Many-to-One. Un Cours a plusieurs Etudiants (Many-to-Many via Inscription). Un Devoir appartient à un Cours (One-to-Many). Une Soumission appartient à un Devoir et à un Etudiant.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Justifier le choix des clés étrangères dans le schéma relationnel.",
+            "niveau": "easy",
+            "reponse": "professeurId dans Cours référence Utilisateur(id). coursId dans Devoir référence Cours(id). devoirId et etudiantId dans Soumission référencent respectivement Devoir(id) et Utilisateur(id). Ces clés étrangères assurent l'intégrité référentielle et permettent les jointures."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Proposer une alternative avec MongoDB (document) pour le même besoin, en justifiant le choix d'embedding ou de référencement.",
+            "niveau": "hard",
+            "reponse": "Avec MongoDB, on peut avoir une collection 'cours' où chaque document contient un tableau 'etudiantsInscrits' (références) et un tableau 'devoirs' (embedding si les devoirs sont peu nombreux). Exemple : { _id, titre, professeurId, etudiants: [ObjectId(...)], devoirs: [{ titre, enonce, dateLimite, soumissions: [...] }] }. L'embedding des devoirs évite une collection séparée mais peut poser problème si la taille dépasse 16 Mo. Le référencement est plus scalable."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Lister les endpoints REST nécessaires pour gérer l'inscription d'un étudiant à un cours et la récupération des cours d'un étudiant.",
+        "niveau": "medium",
+        "reponse": "POST /api/inscriptions → corps: { coursId, etudiantId } (inscrire un étudiant). GET /api/etudiants/{etudiantId}/cours → liste des cours auxquels l'étudiant est inscrit. DELETE /api/inscriptions/{id} → désinscription. GET /api/cours/{coursId}/etudiants → liste des étudiants inscrits (pour professeur).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Choix technologiques pour une API de paiement mobile (MTN Mobile Money, Orange Money)",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous développez une API pour une boutique en ligne au Cameroun qui doit intégrer les paiements via MTN Mobile Money et Orange Money. Les contraintes sont : transactions asynchrones, sécurité élevée, trafic modéré (1000 requêtes/heure), et déploiement sur un VPS avec ressources limitées (1 Go RAM).</p>",
+      "images": [
+        "schéma d'intégration d'API de paiement mobile avec webhooks",
+        "comparaison des architectures synchrone vs asynchrone pour paiement"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Choisir entre Express.js, Fastify ou NestJS pour cette API, puis argumenter le choix en fonction des contraintes.",
+        "niveau": "hard",
+        "reponse": "Express.js est le plus adapté : léger (consommation RAM faible ~30 Mo), écosystème riche pour les webhooks et la gestion des requêtes asynchrones. Fastify serait aussi performant mais moins de ressources sur les intégrations Mobile Money existantes. NestJS est trop lourd pour 1 Go RAM (framework complet avec DI).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposer une stratégie de gestion des webhooks asynchrones des opérateurs Mobile Money pour mettre à jour le statut des transactions.",
+            "niveau": "hard",
+            "reponse": "1) Générer un identifiant unique (UUID) pour chaque transaction avant redirection vers l'opérateur. 2) Enregistrer la transaction en BDD avec statut 'pending'. 3) Exposer un endpoint POST /webhooks/mtn (ou /orange) qui reçoit la confirmation asynchrone. 4) Vérifier la signature HMAC du webhook pour sécuriser. 5) Mettre à jour le statut de la transaction et notifier l'utilisateur via WebSocket/email. 6) Implémenter un job cron pour les transactions restées 'pending' > 15 min (vérification état réel via API opérateur)."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Estimer la charge mémoire et CPU nécessaire pour Node.js avec 1000 req/h. Conclure sur la viabilité du VPS 1 Go RAM.",
+            "niveau": "medium",
+            "reponse": "1000 req/h ≈ 0.28 req/s, très faible charge. Un processus Node.js consomme ~50-100 Mo RAM. Avec 1 Go RAM, on peut faire tourner l'API + base de données légère (SQLite ou PostgreSQL configuré minimal). La viabilité est bonne, mais prévoir du swap si la RAM devient saturée par les logs ou les fuites mémoire."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Documentation d'une API avec Swagger/OpenAPI",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous avez développé une API de gestion d'articles de blog. Les endpoints sont :</p><ul><li><code>GET /articles</code> → retourne la liste des articles (titre, contenu, date, auteur)</li><li><code>POST /articles</code> → crée un article (requiert un token JWT dans l'en-tête Authorization)</li><li><code>GET /articles/{id}</code> → retourne un article spécifique</li><li><code>DELETE /articles/{id}</code> → supprime un article (admin uniquement)</li></ul>",
+      "images": [
+        "capture d'écran de l'interface Swagger UI montrant une documentation d'API",
+        "exemple de fichier openapi.yaml avec définition de schémas"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédiger la section OpenAPI (en YAML ou JSON) pour l'endpoint <code>POST /articles</code> incluant la sécurité (JWT) et le schéma de la requête/réponse.",
+        "niveau": "hard",
+        "reponse": "```yaml\n/articulos:\n  post:\n    summary: Créer un nouvel article\n    security:\n      - bearerAuth: []\n    requestBody:\n      required: true\n      content:\n        application/json:\n          schema:\n            type: object\n            required:\n              - titre\n              - contenu\n            properties:\n              titre:\n                type: string\n                example: \"Mon premier article\"\n              contenu:\n                type: string\n                example: \"Lorem ipsum...\"\n    responses:\n      '201':\n        description: Article créé\n        content:\n          application/json:\n            schema:\n              type: object\n              properties:\n                id:\n                  type: integer\n                titre:\n                  type: string\n                contenu:\n                  type: string\n                date:\n                  type: string\n                  format: date-time\n                auteur:\n                  type: string\n      '401':\n        description: Token manquant ou invalide\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Décrire comment configurer Swagger UI Express pour servir cette documentation interactive dans une application Node.js.",
+            "niveau": "medium",
+            "reponse": "1) Installer swagger-ui-express et yamljs (ou swagger-jsdoc). 2) Créer un fichier swagger.yaml avec la définition OpenAPI. 3) Dans app.js : const swaggerUi = require('swagger-ui-express'); const YAML = require('yamljs'); const swaggerDocument = YAML.load('./swagger.yaml'); app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument)); 4) Accéder à http://localhost:3000/api-docs."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Citer trois avantages de documenter son API avec OpenAPI pour une équipe de développement.",
+            "niveau": "easy",
+            "reponse": "1) Génération automatique de documentation interactive (Swagger UI). 2) Génération de code client (SDK) dans plusieurs langages. 3) Validation automatique des requêtes (via des middlewares comme express-openapi-validator). 4) Facilitation des tests et de l'intégration continue."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Définir le schéma OpenAPI pour le modèle 'Article' réutilisable (composant) et l'utiliser dans la réponse de GET /articles.",
+        "niveau": "hard",
+        "reponse": "```yaml\ncomponents:\n  schemas:\n    Article:\n      type: object\n      properties:\n        id:\n          type: integer\n          example: 42\n        titre:\n          type: string\n          example: \"Node.js en production\"\n        contenu:\n          type: string\n          example: \"...\"\n        date:\n          type: string\n          format: date-time\n        auteur:\n          type: string\n          example: \"Prof. Kamga\"\n      required:\n        - id\n        - titre\n        - contenu\n        - date\n        - auteur\n\n# Utilisation dans GET /articles\npaths:\n  /articles:\n    get:\n      responses:\n        '200':\n          description: Liste des articles\n          content:\n            application/json:\n              schema:\n                type: array\n                items:\n                  $ref: '#/components/schemas/Article'\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Spécification des relations Many-to-Many avec Sequelize et MongoDB",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Une application doit gérer les <strong>projets</strong> et les <strong>technologies</strong> utilisées. Un projet peut utiliser plusieurs technologies, et une technologie peut être utilisée dans plusieurs projets.</p><p>Vous devez implémenter cette relation avec deux technologies différentes : <strong>Sequelize (SQL)</strong> et <strong>Mongoose (MongoDB)</strong>.</p>",
+      "images": [
+        "schéma d'une table de liaison (projets_technologies) en base relationnelle",
+        "exemple de documents MongoDB avec références ou tableaux imbriqués"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire les modèles Sequelize pour Projet, Technologie et leur relation Many-to-Many.",
+        "niveau": "hard",
+        "reponse": "```javascript\nconst Projet = sequelize.define('Projet', {\n  nom: DataTypes.STRING,\n  description: DataTypes.TEXT\n});\nconst Technologie = sequelize.define('Technologie', {\n  nom: DataTypes.STRING,\n  version: DataTypes.STRING\n});\nconst ProjetTechnologie = sequelize.define('ProjetTechnologie', {\n  role: DataTypes.STRING // attribut supplémentaire\n});\n\nProjet.belongsToMany(Technologie, { through: ProjetTechnologie });\nTechnologie.belongsToMany(Projet, { through: ProjetTechnologie });\n\n// Pour ajouter une technologie à un projet\nconst projet = await Projet.findByPk(1);\nconst tech = await Technologie.findByPk(2);\nawait projet.addTechnologie(tech, { through: { role: 'backend' } });\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer le rôle de la table de liaison 'ProjetTechnologie' et pourquoi elle est nécessaire en SQL.",
+            "niveau": "medium",
+            "reponse": "Une table de liaison (aussi appelée table d'association ou table de jointure) est nécessaire pour représenter une relation Many-to-Many en base relationnelle. Elle contient les clés étrangères vers les deux tables principales (projetId, technologieId) et permet éventuellement d'ajouter des attributs spécifiques à la relation (ex: 'dateAjout', 'role')."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer deux façons de modéliser la même relation Many-to-Many avec Mongoose (MongoDB), en comparant leurs avantages.",
+        "niveau": "hard",
+        "reponse": "1) Référencement : chaque Projet contient un tableau 'technologies: [{ type: ObjectId, ref: 'Technologie' }]' et chaque Technologie un tableau 'projets: [{ type: ObjectId, ref: 'Projet' }]'. Avantage : flexibilité, évite la redondance. Inconvénient : nécessite populate() pour récupérer les données liées, deux requêtes. 2) Embedding partiel : chaque Projet contient un tableau d'objets 'technologies' avec { technologieId, nom, version }. Avantage : lecture rapide sans jointure. Inconvénient : redondance si le nom/version d'une technologie change (doit être mis à jour partout). 3) Embedding complet : dénormalisation totale. À éviter car difficile à maintenir.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

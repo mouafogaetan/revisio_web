@@ -1,0 +1,122 @@
+[
+  {
+    "intitule": "Module de messagerie configurable dynamiquement",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous développez une application NestJS qui doit envoyer des emails et des SMS. Les paramètres de connexion aux services externes (Mailgun, Twilio) sont sensibles et doivent être chargés depuis les variables d'environnement. Vous devez créer un module de messagerie configurable de manière asynchrone qui utilise <code>ConfigService</code> pour récupérer ses paramètres.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analyser la structure d'un module configurable asynchrone et implémenter les différentes parties.",
+        "niveau": "hard",
+        "reponse": "Le module doit exposer des méthodes statiques registerAsync, forRootAsync, etc. La configuration asynchrone se fait via useFactory qui injecte ConfigService.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer la différence entre une configuration synchrone (register) et asynchrone (registerAsync) pour un module NestJS. Dans quel cas privilégie-t-on l'approche asynchrone ?",
+            "niveau": "medium",
+            "reponse": "La configuration synchrone (register) prend des options statiques directement. L'approche asynchrone (registerAsync) permet de fournir les options de manière dynamique, par exemple en les lisant depuis ConfigService après que celui-ci soit initialisé. On privilégie l'approche asynchrone lorsque les options dépendent de services externes, de variables d'environnement ou de bases de données."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Créer un module `MessagingModule` avec une méthode statique `forRootAsync()`. Cette méthode doit accepter un objet d'options contenant `useFactory`, `inject` et éventuellement `imports`. Donner le code complet du module.",
+            "niveau": "hard",
+            "reponse": "```typescript\nimport { Module, DynamicModule, Provider } from '@nestjs/common';\nimport { MessagingService } from './messaging.service';\nimport { MessagingOptions } from './messaging-options.interface';\n\n@Module({})\nexport class MessagingModule {\n  static forRootAsync(options: {\n    imports?: any[];\n    useFactory: (...args: any[]) => Promise<MessagingOptions> | MessagingOptions;\n    inject?: any[];\n  }): DynamicModule {\n    const optionsProvider: Provider = {\n      provide: 'MESSAGING_OPTIONS',\n      useFactory: options.useFactory,\n      inject: options.inject || [],\n    };\n\n    return {\n      module: MessagingModule,\n      imports: options.imports || [],\n      providers: [optionsProvider, MessagingService],\n      exports: [MessagingService],\n    };\n  }\n}\n```"
+          },
+          {
+            "numero": "1.c",
+            "texte": "Dans le `AppModule`, utiliser `MessagingModule.forRootAsync()` pour configurer le service de messagerie. La configuration doit lire les variables `MAILGUN_API_KEY` et `TWILIO_SID` depuis le `ConfigService`. Montrer le code.",
+            "niveau": "hard",
+            "reponse": "```typescript\nimport { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { MessagingModule } from './messaging/messaging.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({ isGlobal: true }),\n    MessagingModule.forRootAsync({\n      imports: [ConfigModule],\n      inject: [ConfigService],\n      useFactory: async (configService: ConfigService) => ({\n        mailgunApiKey: configService.get('MAILGUN_API_KEY'),\n        twilioSid: configService.get('TWILIO_SID'),\n        twilioAuthToken: configService.get('TWILIO_AUTH_TOKEN'),\n        defaultFromEmail: configService.get('DEFAULT_FROM_EMAIL', 'noreply@example.com'),\n      }),\n    }),\n  ],\n})\nexport class AppModule {}\n```"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Implémenter le service de messagerie qui utilise la configuration injectée dynamiquement.",
+        "niveau": "hard",
+        "reponse": "Le service MessagingService doit injecter les options via @Inject('MESSAGING_OPTIONS') et proposer des méthodes d'envoi.",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Créer une interface `MessagingOptions` et le service `MessagingService` qui reçoit ces options par injection de dépendance. Expliquer comment NestJS résout cette dépendance.",
+            "niveau": "medium",
+            "reponse": "```typescript\n// messaging-options.interface.ts\nexport interface MessagingOptions {\n  mailgunApiKey: string;\n  twilioSid: string;\n  twilioAuthToken: string;\n  defaultFromEmail: string;\n}\n\n// messaging.service.ts\nimport { Injectable, Inject } from '@nestjs/common';\n\n@Injectable()\nexport class MessagingService {\n  constructor(\n    @Inject('MESSAGING_OPTIONS') private options: MessagingOptions,\n  ) {}\n\n  async sendEmail(to: string, subject: string, body: string) {\n    console.log(`Envoi email via Mailgun avec clé: ${this.options.mailgunApiKey}`);\n    // Implémentation réelle avec Mailgun\n  }\n\n  async sendSms(to: string, message: string) {\n    console.log(`Envoi SMS via Twilio SID: ${this.options.twilioSid}`);\n    // Implémentation réelle avec Twilio\n  }\n}\n```\nNestJS résout cette dépendance grâce au provider créé dans `forRootAsync` qui associe le token `'MESSAGING_OPTIONS'` à la valeur retournée par `useFactory`."
+          },
+          {
+            "numero": "2.b",
+            "texte": "Discuter des avantages de l'utilisation de `useFactory` asynchrone avec `ConfigService` par rapport à l'accès direct à `process.env` dans le service.",
+            "niveau": "medium",
+            "reponse": "Avantages :\n1. Centralisation de la configuration : toutes les variables sont gérées par ConfigModule.\n2. Validation possible avec Joi avant utilisation.\n3. Testabilité : on peut facilement mocker ConfigService ou fournir des options de test.\n4. Séparation des préoccupations : le service ne sait pas d'où viennent les options.\n5. Support de configurations asynchrones (ex: charger depuis une API externe).\n6. Possibilité de recharger la configuration dynamiquement."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Refactorisation sécurisée d'un module de base de données",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Une entreprise dispose d'une application NestJS legacy où les identifiants de connexion à la base de données PostgreSQL sont écrits en dur dans le code source, ce qui pose un risque de sécurité majeur. On vous confie la refactorisation du module de base de données pour utiliser <code>ConfigService</code> avec <code>useFactory</code> et des variables d'environnement.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier les problèmes de sécurité et proposer une architecture utilisant la configuration asynchrone.",
+        "niveau": "medium",
+        "reponse": "Problèmes : secrets dans le code source, impossible d'avoir des configurations différentes selon l'environnement. Solution : variables d'environnement + ConfigModule + forRootAsync.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Lister au moins trois risques liés au stockage des identifiants de base de données en dur dans le code source.",
+            "niveau": "easy",
+            "reponse": "1. Exposition des secrets lors du partage du code (GitHub public ou interne)\n2. Impossibilité de changer les identifiants sans recompiler l'application\n3. Même configuration en développement, test et production (risque de corruption de données)\n4. Non-conformité avec les normes de sécurité (RGPD, PCI-DSS)\n5. Vulnérabilité en cas d'accès au code source par un attaquant"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Écrire le code du `DatabaseModule` refactorisé utilisant `TypeOrmModule.forRootAsync()` avec `ConfigService` et `useFactory`. Le module doit charger les variables : DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME.",
+            "niveau": "medium",
+            "reponse": "```typescript\nimport { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\n\n@Module({\n  imports: [\n    TypeOrmModule.forRootAsync({\n      imports: [ConfigModule],\n      inject: [ConfigService],\n      useFactory: (configService: ConfigService) => ({\n        type: 'postgres',\n        host: configService.get('DB_HOST', 'localhost'),\n        port: configService.get('DB_PORT', 5432),\n        username: configService.get('DB_USER'),\n        password: configService.get('DB_PASSWORD'),\n        database: configService.get('DB_NAME'),\n        entities: [__dirname + '/../**/*.entity{.ts,.js}'],\n        synchronize: configService.get('NODE_ENV') !== 'production',\n        logging: configService.get('NODE_ENV') === 'development',\n      }),\n    }),\n  ],\n})\nexport class DatabaseModule {}\n```"
+          },
+          {
+            "numero": "1.c",
+            "texte": "Créer un fichier `.env.example` documentant toutes les variables nécessaires pour la configuration de la base de données, avec des valeurs fictives et des commentaires explicatifs.",
+            "niveau": "easy",
+            "reponse": "```\n# Environnement (development, production, test)\nNODE_ENV=development\n\n# Configuration PostgreSQL\nDB_HOST=localhost          # Hôte du serveur PostgreSQL\nDB_PORT=5432               # Port du serveur PostgreSQL (défaut: 5432)\nDB_USER=app_user           # Nom d'utilisateur pour la connexion\nDB_PASSWORD=strong_password_here  # Mot de passe (ne jamais committer en clair)\nDB_NAME=app_database       # Nom de la base de données\n\n# Optionnel : réglages de connexion supplémentaires\nDB_SSL=false               # Activer SSL pour la connexion\nDB_MAX_CONNECTIONS=10      # Nombre maximum de connexions dans le pool\n```"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Implémenter une validation des variables d'environnement et gérer la configuration pour différents environnements.",
+        "niveau": "hard",
+        "reponse": "Utiliser Joi pour valider que toutes les variables requises sont présentes avant de démarrer l'application.",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Ajouter une validation Joi dans `ConfigModule.forRoot()` pour exiger DB_USER, DB_PASSWORD, DB_NAME et s'assurer que DB_PORT est un nombre entre 1 et 65535.",
+            "niveau": "medium",
+            "reponse": "```typescript\nimport * as Joi from 'joi';\n\nConfigModule.forRoot({\n  validationSchema: Joi.object({\n    NODE_ENV: Joi.string().valid('development', 'production', 'test').default('development'),\n    DB_HOST: Joi.string().default('localhost'),\n    DB_PORT: Joi.number().port().default(5432),\n    DB_USER: Joi.string().required(),\n    DB_PASSWORD: Joi.string().required(),\n    DB_NAME: Joi.string().required(),\n  }),\n  validationOptions: {\n    abortEarly: false, // Retourne toutes les erreurs, pas seulement la première\n  },\n});\n```"
+          },
+          {
+            "numero": "2.b",
+            "texte": "Proposer une stratégie pour avoir des fichiers de configuration différents en développement, test et production (ex: .env.dev, .env.test, .env.prod) et expliquer comment charger le bon fichier selon NODE_ENV.",
+            "niveau": "medium",
+            "reponse": "Stratégie : utiliser `envFilePath` qui peut être un tableau. NestJS charge les fichiers dans l'ordre, les valeurs des fichiers suivants écrasent les précédentes.\n```typescript\nConfigModule.forRoot({\n  envFilePath: [\n    `.env.${process.env.NODE_ENV || 'development'}`,  // spécifique à l'environnement\n    '.env',  // fallback commun\n  ],\n});\n```\nOu avec une variable d'environnement :\n```typescript\nconst envFile = process.env.NODE_ENV === 'production' ? '.env.prod' : '.env.dev';\nConfigModule.forRoot({ envFilePath: envFile });\n```\nPour les tests e2e, on peut créer un `.env.test` et le charger explicitement dans le fichier de test."
+          },
+          {
+            "numero": "2.c",
+            "texte": "Décrire comment tester unitairement un service qui dépend de `ConfigService` sans avoir de vraies variables d'environnement.",
+            "niveau": "hard",
+            "reponse": "On peut créer un module de test avec `ConfigModule.forRoot()` pointant vers un fichier `.env.test`, ou mocker directement `ConfigService` :\n```typescript\nconst mockConfigService = {\n  get: jest.fn((key: string) => {\n    const config = {\n      DB_HOST: 'localhost_test',\n      DB_USER: 'test_user',\n      DB_PASSWORD: 'test_pass',\n      DB_NAME: 'test_db',\n    };\n    return config[key];\n  }),\n};\n\nconst module = await Test.createTestingModule({\n  providers: [\n    MyService,\n    { provide: ConfigService, useValue: mockConfigService },\n  ],\n}).compile();\n```\nOu utiliser `ConfigModule.forRoot({ ignoreEnvFile: true, load: [() => ({ ... })], isGlobal: true })` pour fournir des valeurs directement dans le test."
+          }
+        ]
+      }
+    ]
+  }
+]

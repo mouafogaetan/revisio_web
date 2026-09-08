@@ -1,0 +1,165 @@
+[
+  {
+    "intitule": "Fondements des Modèles de Diffusion",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Cet exercice porte sur les concepts fondamentaux des modèles de diffusion (Diffusion Models), une classe de modèles génératifs qui ont récemment surpassé les GANs dans la génération d'images de haute qualité.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez le principe général des modèles de diffusion (DDPM - Denoising Diffusion Probabilistic Models). Quelle est la différence entre le processus de diffusion direct et le processus inverse ?",
+        "niveau": "medium",
+        "reponse": "Les modèles de diffusion reposent sur deux processus : 1) Le processus de diffusion direct (forward) : on ajoute progressivement du bruit gaussien à une donnée $x_0$ sur $T$ pas de temps, jusqu'à obtenir un bruit purement gaussien $x_T \\sim \\mathcal{N}(0, I)$. À chaque pas, on a $q(x_t | x_{t-1}) = \\mathcal{N}(x_t; \\sqrt{1-\\beta_t} x_{t-1}, \\beta_t I)$ où $\\beta_t$ est un schedule de bruit. 2) Le processus inverse (reverse) : on apprend un réseau de neurones $p_\\theta(x_{t-1} | x_t)$ pour inverser le processus, c'est-à-dire débruiter progressivement l'image bruitée pour retrouver l'image originale. Le réseau est entraîné à prédire le bruit ajouté à chaque pas, minimisant la perte $\\mathbb{E}_{t, x_0, \\epsilon} [\\|\\epsilon - \\epsilon_\\theta(x_t, t)\\|^2]$ où $\\epsilon$ est le bruit ajouté.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Décrivez en détail le processus de diffusion direct. Quelles sont les propriétés de ce processus qui permettent de calculer $x_t$ directement à partir de $x_0$ sans passer par les étapes intermédiaires ?",
+        "niveau": "hard",
+        "reponse": "Le processus de diffusion direct est défini par $q(x_t | x_{t-1}) = \\mathcal{N}(x_t; \\sqrt{1-\\beta_t} x_{t-1}, \\beta_t I)$. Grâce à la propriété de reparamétrisation et à la composition de Gaussiennes, on peut montrer que $q(x_t | x_0) = \\mathcal{N}(x_t; \\sqrt{\\bar{\\alpha}_t} x_0, (1-\\bar{\\alpha}_t) I)$, où $\\alpha_t = 1 - \\beta_t$ et $\\bar{\\alpha}_t = \\prod_{s=1}^t \\alpha_s$. Ainsi, on peut échantillonner $x_t$ directement : $x_t = \\sqrt{\\bar{\\alpha}_t} x_0 + \\sqrt{1-\\bar{\\alpha}_t} \\epsilon$ avec $\\epsilon \\sim \\mathcal{N}(0, I)$. Cette propriété est essentielle pour l'entraînement car elle permet d'échantillonner $x_t$ à n'importe quel pas $t$ sans avoir à simuler tout le processus, ce qui rend l'entraînement efficace.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquez la fonction de perte utilisée pour entraîner un DDPM. D'où provient-elle et comment est-elle dérivée de la borne inférieure de la vraisemblance (ELBO) ?",
+        "niveau": "very hard",
+        "reponse": "La fonction de perte des DDPM est dérivée de la borne inférieure de la vraisemblance (ELBO) : $\\log p_\\theta(x_0) \\geq \\mathbb{E}_{q(x_{1:T}|x_0)} [\\log p_\\theta(x_T) + \\sum_{t=2}^T \\log p_\\theta(x_{t-1}|x_t) - \\sum_{t=1}^T \\log q(x_t|x_{t-1})]$. En simplifiant et en utilisant la reparamétrisation, on obtient une perte qui prédit le bruit ajouté : $L_{\\text{simple}} = \\mathbb{E}_{t, x_0, \\epsilon} [\\|\\epsilon - \\epsilon_\\theta(\\sqrt{\\bar{\\alpha}_t} x_0 + \\sqrt{1-\\bar{\\alpha}_t} \\epsilon, t)\\|^2]$. Cette perte est similaire à une perte de débruitage (denoising score matching) et est plus facile à optimiser que la perte ELBO complète. Le réseau $\\epsilon_\\theta$ est entraîné à prédire le bruit $\\epsilon$ à partir de $x_t$ et du pas de temps $t$.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 4,
+        "texte": "Comparez les modèles de diffusion avec les GANs et les VAE. Quels sont les avantages et inconvénients de chaque approche pour la génération d'images ?",
+        "niveau": "hard",
+        "reponse": "Comparaison des modèles génératifs : 1) GANs : Avantages - génération rapide, images de haute qualité, bonne diversité. Inconvénients - entraînement instable (mode collapse, gradients qui s'évanouissent), difficile à évaluer, nécessite un discriminateur. 2) VAE : Avantages - inférence probabiliste, bien fondé théoriquement, entraînement stable. Inconvénients - images souvent floues, moins de qualité que GANs et diffusion. 3) Modèles de diffusion : Avantages - très haute qualité d'images, surpassent les GANs sur de nombreux benchmarks, entraînement stable, bien fondé théoriquement, excellente diversité. Inconvénients - génération très lente (100-1000 itérations), coût computationnel élevé, plus complexe à implémenter. En pratique, les modèles de diffusion sont devenus l'état de l'art pour la génération d'images, mais leur lenteur limite leur utilisation en temps réel.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 5,
+        "texte": "Identifiez les différents types de modèles de diffusion (DDPM, DDIM, score-based models). Quelle est la principale différence entre DDPM et DDIM ?",
+        "niveau": "hard",
+        "reponse": "Les modèles de diffusion se déclinent en plusieurs variantes : 1) DDPM (Denoising Diffusion Probabilistic Models) : le modèle original qui définit un processus de Markov avec un nombre fini de pas de temps (ex: 1000). La génération est lente car elle nécessite de parcourir tous les pas. 2) DDIM (Denoising Diffusion Implicit Models) : généralisation de DDPM qui permet une génération plus rapide en sautant des pas de temps (sous-échantillonnage du processus inverse), tout en conservant une bonne qualité. 3) Score-based models (ou NCSN) : modèles basés sur l'estimation du score (gradient du log de la densité), utilisant des équations différentielles stochastiques (SDE). La principale différence entre DDPM et DDIM est que DDIM est déterministe (pas de bruit stochastique dans le processus inverse) et permet une génération en moins de pas (ex: 50 au lieu de 1000) avec une qualité comparable, ce qui le rend plus rapide.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Application des Modèles de Diffusion à la Génération d'Images",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous êtes data scientist dans une agence de communication au Cameroun. Vous devez générer des images publicitaires de produits (chaussures, vêtements, etc.) à partir de descriptions textuelles. Vous décidez d'utiliser un modèle de diffusion conditionné par le texte (comme DALL-E ou Stable Diffusion) pour créer des images de haute qualité. Cependant, votre GPU est limité et vous devez gérer le temps de génération.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez une architecture de modèle de diffusion conditionné par du texte. Comment intégrer le texte comme condition dans le processus de diffusion ?",
+        "niveau": "hard",
+        "reponse": "Pour un modèle de diffusion conditionné par le texte : 1) On utilise un encodeur de texte (comme CLIP ou BERT) pour transformer la description textuelle en un vecteur d'embedding. 2) Le réseau de débruitage $\\epsilon_\\theta$ prend en entrée $x_t$ (l'image bruitée), le pas de temps $t$, et l'embedding de texte $c$. 3) L'embedding de texte est intégré au réseau via des couches d'attention croisée (cross-attention) ou simplement concaténé avec les caractéristiques. 4) L'entraînement se fait avec la même perte que DDPM mais conditionnée : $\\mathbb{E}_{t, x_0, \\epsilon, c} [\\|\\epsilon - \\epsilon_\\theta(\\sqrt{\\bar{\\alpha}_t} x_0 + \\sqrt{1-\\bar{\\alpha}_t} \\epsilon, t, c)\\|^2]$. 5) Le réseau peut utiliser l'architecture U-Net avec des couches d'attention pour capturer les relations entre le texte et l'image. La génération se fait en partant d'un bruit gaussien et en conditionnant avec le texte à chaque pas.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposez une stratégie pour réduire le temps de génération d'images avec votre modèle de diffusion. Quelles techniques utiliserez-vous ?",
+        "niveau": "hard",
+        "reponse": "Stratégies pour réduire le temps de génération : 1) Utiliser DDIM (Denoising Diffusion Implicit Models) qui permet de générer en 50-100 pas au lieu de 1000, avec une qualité comparable. 2) Utiliser des techniques de distillation (progressive distillation) qui entraînent un modèle plus rapide pour générer en moins de pas (ex: 4-8 pas). 3) Réduire la taille de l'image (ex: 256x256 au lieu de 1024x1024) pour diminuer la complexité. 4) Utiliser des modèles pré-entraînés et faire du fine-tuning sur un dataset plus petit. 5) Utiliser le guidage sans classifieur (classifier-free guidance) qui permet de contrôler la qualité du texte mais peut être plus lent ; ajuster le paramètre de guidance pour un bon compromis. 6) Profiter du GPU avec un batch size adapté et des optimisations (mixed precision). 7) Utiliser des schémas de bruit plus efficaces (ex: schedule de variance rapide).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Comment évaluer la qualité des images générées par votre modèle ? Proposez des métriques objectives et subjectives adaptées au contexte publicitaire.",
+        "niveau": "medium",
+        "reponse": "Évaluation de la qualité des images : 1) Métriques objectives : FID (Fréchet Inception Distance) qui mesure la similarité entre la distribution des images générées et réelles ; IS (Inception Score) qui évalue la qualité et la diversité ; LPIPS (Learned Perceptual Image Patch Similarity) pour la similarité perceptuelle. 2) Métriques spécifiques : CLIP score pour mesurer la pertinence entre l'image générée et la description textuelle. 3) Évaluation subjective : faire évaluer par des professionnels du marketing/communication la qualité, la pertinence par rapport au brief, l'attractivité, et le potentiel publicitaire (utilisation de tests A/B, panels). 4) Dans le contexte camerounais, s'assurer que les images reflètent la diversité culturelle et les spécificités locales (peaux, vêtements, contextes) pour éviter les biais. 5) Utiliser un score composite pondéré pour décider de l'adoption du modèle.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 4,
+        "texte": "Votre modèle génère parfois des images avec des artefacts (mains déformées, yeux bizarres). Proposez des techniques pour améliorer la qualité et réduire ces artefacts.",
+        "niveau": "very hard",
+        "reponse": "Techniques pour réduire les artefacts dans les modèles de diffusion : 1) Augmenter le nombre de pas de diffusion (T) pour un débruitage plus progressif, mais cela augmente le temps de génération. 2) Utiliser un schedule de bruit plus adapté (cosine schedule) qui améliore la qualité. 3) Augmenter la taille du modèle (plus de paramètres) pour mieux capturer les détails. 4) Utiliser des architectures améliorées (U-Net avec attention hiérarchique, cascades de modèles). 5) Ajouter des techniques de guidage (classifier-free guidance) avec un poids bien ajusté pour améliorer la cohérence. 6) Utiliser le fine-tuning sur un dataset de haute qualité et spécifique aux produits. 7) Implémenter des techniques d'auto-conditionnement où l'image débruitée précédente est réinjectée dans le modèle. 8) Utiliser des techniques de post-traitement (super-résolution, inpainting) pour corriger les zones défectueuses. 9) Dans certains cas, une approche hybride (diffusion + GAN) peut réduire les artefacts tout en gardant la rapidité.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 5,
+        "texte": "Quelles sont les considérations éthiques et légales liées à l'utilisation de modèles de diffusion pour générer des images publicitaires au Cameroun ? Comment les aborder ?",
+        "niveau": "medium",
+        "reponse": "Considérations éthiques et légales : 1) Propriété intellectuelle : s'assurer que le modèle n'a pas été entraîné sur des images protégées par des droits d'auteur sans autorisation. 2) Biais et représentation : les modèles peuvent reproduire des stéréotypes ou manquer de diversité ; il faut inclure des données représentatives de la population camerounaise (diversité ethnique, culturelle). 3) Transparence : indiquer clairement que les images sont générées par IA (dans un contexte publicitaire, cela peut être exigé par la loi). 4) Utilisation responsable : ne pas générer des images trompeuses ou manipulatrices, respecter la réglementation sur la publicité au Cameroun. 5) Protection des données : s'assurer que les données d'entraînement ne contiennent pas d'informations personnelles. 6) Mettre en place des mécanismes de vérification humaine pour les images avant publication. 7) Sensibiliser les parties prenantes sur les capacités et limites de l'IA générative.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Comparaison des Modèles Génératifs pour un Projet de Génération de Contenu",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Un média camerounais souhaite automatiser la génération d'illustrations pour ses articles de presse. Le jeu de données contient 50 000 paires (texte - image) de qualité variable. Vous devez choisir la meilleure approche parmi les modèles de diffusion, les GANs et les VAE pour ce projet.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analysez les avantages et inconvénients de chaque approche (diffusion, GAN, VAE) pour ce projet de génération d'illustrations. Lequel choisiriez-vous et pourquoi ?",
+        "niveau": "very hard",
+        "reponse": "Analyse comparative : 1) GANs : Avantages - génération très rapide, images de haute qualité. Inconvénients - entraînement instable, difficile à contrôler le texte, mode collapse possible. 2) VAE : Avantages - entraînement stable, bon pour la diversité. Inconvénients - images floues, moins détaillées. 3) Modèles de diffusion : Avantages - meilleure qualité d'image, plus de diversité, contrôle précis via le texte, entraînement stable. Inconvénients - génération lente, coût computationnel élevé. Pour ce projet, je choisirais un modèle de diffusion (Stable Diffusion) car la qualité et le contrôle sont primordiaux pour des illustrations de presse. Bien que lent, on peut optimiser avec DDIM (50-100 pas) ce qui reste acceptable pour une génération non temps réel. De plus, les modèles de diffusion conditionnés par le texte offrent un meilleur contrôle créatif, ce qui est essentiel pour des articles variés.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposez un plan de mise en œuvre de l'approche choisie. Détaillez les étapes de prétraitement, d'entraînement (ou fine-tuning), et de déploiement.",
+        "niveau": "very hard",
+        "reponse": "Plan de mise en œuvre pour un modèle de diffusion : 1) Prétraitement des données : nettoyage des textes (tokenization, normalisation), redimensionnement des images (ex: 256x256), création de paires texte-image, division en ensembles (80% train, 10% val, 10% test). 2) Choix du modèle : utiliser Stable Diffusion pré-entraîné (fine-tuning) plutôt qu'entraîner de zéro pour économiser du temps et des ressources. 3) Fine-tuning : adapter le modèle au dataset spécifique en entraînant sur les paires (texte, image) avec une perte de diffusion conditionnée. Utiliser le LoRA (Low-Rank Adaptation) pour un fine-tuning efficace. 4) Optimisation : utiliser DDIM pour la génération, ajuster le paramètre de guidance. 5) Déploiement : serveur avec GPU (ex: A100), API REST pour recevoir les textes et renvoyer les images, mise en cache des résultats fréquents. 6) Monitoring : suivre la qualité des images générées (FID, CLIP score) et les temps de réponse. 7) Intégration : connecter au CMS du média pour une génération automatique d'illustrations.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Le budget du média ne permet pas un entraînement long sur des GPUs coûteux. Proposez des alternatives pour réduire les coûts tout en maintenant une qualité acceptable.",
+        "niveau": "hard",
+        "reponse": "Alternatives pour réduire les coûts : 1) Utiliser des modèles pré-entraînés open-source (Stable Diffusion, DALL-E mini) et les adapter avec LoRA (fine-tuning léger) nécessitant peu de données et peu de temps. 2) Utiliser des services cloud avec des instances spot (moins chères) ou des GPUs moins puissants (T4). 3) Réduire la taille des images (256x256 ou 512x512) pour diminuer la charge computationnelle. 4) Utiliser la distillation de modèles pour avoir un modèle plus petit et plus rapide. 5) Implémenter une file d'attente asynchrone : les demandes sont traitées par lots pendant les heures creuses. 6) Utiliser des techniques de génération en cascade : d'abord générer une petite image puis la super-résoudre avec un modèle plus simple. 7) Si les coûts sont très limités, utiliser des API de génération d'images (ex: API de Stable Diffusion, Replicate) qui facturent à l'usage plutôt que d'investir dans du matériel.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 4,
+        "texte": "Votre modèle génère parfois des images inappropriées ou biaisées (représentations stéréotypées). Proposez des mesures pour atténuer ces problèmes avant le déploiement.",
+        "niveau": "very hard",
+        "reponse": "Mesures pour atténuer les biais et le contenu inapproprié : 1) Filtrage du dataset d'entraînement : supprimer les images inappropriées ou biaisées, augmenter la diversité des données (inclure des images de personnes de différentes origines, genres, contextes). 2) Utiliser des techniques de débiaisage (reweighting, augmentation de données, ré-entraînement avec des prompts contrôlés). 3) Ajouter un filtre de sécurité sur les prompts : détecter les requêtes potentiellement offensantes ou inappropriées et les rejeter. 4) Implémenter un filtre NSFW sur les images générées (modèle de classification) pour bloquer les contenus indésirables. 5) Mettre en place une validation humaine a posteriori pour les images générées, surtout au début. 6) Établir une charte éthique pour l'utilisation du modèle, avec des lignes directrices claires. 7) Assurer la transparence en indiquant que les images sont générées par IA et que des biais peuvent exister.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation et Évaluation des Modèles de Diffusion",
+    "type": "ressource",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Cet exercice avancé porte sur l'optimisation des paramètres des modèles de diffusion, l'évaluation de leurs performances, et la compréhension des mécanismes sous-jacents.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez l'impact du nombre de pas de diffusion $T$ sur la qualité des images générées et sur le temps de génération. Comment choisir $T$ pour un bon compromis ?",
+        "niveau": "hard",
+        "reponse": "Le nombre de pas de diffusion $T$ est un hyperparamètre crucial. Un $T$ grand (ex: 1000) permet un débruitage plus progressif et donc une meilleure qualité d'image, mais la génération est très lente car il faut parcourir tous les pas. Un $T$ petit (ex: 50) est plus rapide mais la qualité peut se dégrader car chaque étape doit éliminer plus de bruit, ce qui peut introduire des artefacts. Le choix de $T$ dépend du budget computationnel et de la qualité requise. En pratique, on peut utiliser DDIM pour découpler le nombre de pas d'entraînement et de génération : entraîner avec $T=1000$, puis générer avec $T_{\\text{gen}}$ plus petit (ex: 50-100) en utilisant le même modèle. Ainsi, on obtient un bon compromis : qualité élevée avec un temps de génération réduit. Des schémas de bruit comme le cosine schedule peuvent aussi améliorer la qualité pour un $T$ donné.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Qu'est-ce que le guidage sans classifieur (classifier-free guidance) dans les modèles de diffusion ? Comment ajuste-t-on le paramètre de guidance pour contrôler la qualité et la diversité des images ?",
+        "niveau": "very hard",
+        "reponse": "Le guidage sans classifieur est une technique qui permet de contrôler l'influence de la condition (texte) sur la génération. L'idée est d'entraîner un modèle qui peut à la fois générer avec et sans condition (en remplaçant le texte par un token nul). Pendant la génération, on combine les prédictions de bruit avec et sans condition : $\\tilde{\\epsilon}_\\theta(x_t, t, c) = \\epsilon_\\theta(x_t, t, \\emptyset) + w \\cdot (\\epsilon_\\theta(x_t, t, c) - \\epsilon_\\theta(x_t, t, \\emptyset))$, où $w$ est le poids de guidance. Plus $w$ est grand, plus le modèle se concentre sur la condition, ce qui donne des images plus fidèles au texte mais moins diverses. Inversement, un $w$ faible (0-1) donne plus de diversité mais moins de fidélité. En pratique, on utilise $w$ entre 2 et 10 pour un bon compromis. Le guidage sans classifieur est efficace car il ne nécessite pas de classifieur externe et améliore nettement la qualité.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Discutez des défis de l'entraînement des modèles de diffusion sur des jeux de données de grande taille. Proposez des stratégies pour améliorer la stabilité et l'efficacité de l'entraînement.",
+        "niveau": "very hard",
+        "reponse": "Les défis de l'entraînement des modèles de diffusion sont : 1) Coût computationnel élevé : nécessite des GPUs puissants et longs temps d'entraînement. 2) Stabilité : les gradients peuvent être instables, surtout au début. 3) Mémoire : les U-Net avec attention sont gourmands en mémoire. Stratégies pour améliorer l'entraînement : 1) Utiliser le mixed precision (FP16) pour réduire la mémoire et accélérer. 2) Adopter des architectures plus efficaces (U-Net avec group normalization, attention memory-efficient). 3) Utiliser des optimiseurs adaptatifs (AdamW avec warmup). 4) Techniques de régularisation : dropout, weight decay, augmentation de données. 5) Utiliser des schémas de bruit adaptatifs. 6) Entraîner sur des résolutions progressives (d'abord 64x64, puis 256x256). 7) Utiliser le data parallelism et le gradient accumulation pour des batchs plus grands. 8) Surveiller la perte de validation pour détecter le surapprentissage.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

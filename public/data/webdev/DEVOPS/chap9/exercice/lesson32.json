@@ -1,0 +1,176 @@
+[
+  {
+    "intitule": "Centralisation des logs avec ELK",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous êtes administrateur système chez <strong>WebCorp Cameroun</strong>, une entreprise de développement web à Douala. L'équipe technique utilise plusieurs serveurs (application, base de données, reverse proxy). Chaque serveur écrit ses logs dans des fichiers locaux. Lors d'une panne, les développeurs passent des heures à se connecter serveur par serveur pour trouver la cause. Vous proposez de mettre en place la stack <strong>ELK</strong> (Elasticsearch, Logstash, Kibana).</p><p>Expliquez, en quelques lignes, le rôle de chacun des trois composants ELK dans la centralisation des logs.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez la fonction de Logstash dans la stack ELK.",
+        "niveau": "easy",
+        "reponse": "Logstash est responsable de la collecte, la transformation (filtrage, enrichissement, parsing) et l'envoi des logs vers Elasticsearch. Il peut lire les logs depuis des sources variées (fichiers, réseau, bases de données) et appliquer des traitements comme l'ajout de champs ou la conversion de formats.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Quel est le rôle d'Elasticsearch ?",
+        "niveau": "easy",
+        "reponse": "Elasticsearch est un moteur de recherche et d'analyse distribué. Il stocke, indexe et permet d'interroger rapidement de très grands volumes de données de logs. Il offre des capacités de recherche en plein texte et d'agrégations.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "À quoi sert Kibana dans cette architecture ?",
+        "niveau": "easy",
+        "reponse": "Kibana est l'interface web de visualisation. Il permet d'explorer, rechercher, filtrer et créer des tableaux de bord (graphiques, diagrammes) à partir des données stockées dans Elasticsearch. Il rend les logs compréhensibles et exploitables par les humains.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Installation et configuration de Filebeat et Logstash",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous travaillez pour <strong>AfriCloud SARL</strong> à Yaoundé. Votre mission est de centraliser les logs d'une application Node.js tournant sur un serveur Ubuntu 22.04. Les logs applicatifs se trouvent dans <code>/var/log/myapp/app.log</code>. Vous devez utiliser <strong>Filebeat</strong> comme collecteur léger et <strong>Logstash</strong> pour enrichir les logs avec un champ supplémentaire <code>environnement: \"production\"</code> avant de les envoyer à Elasticsearch.</p><p>Rédigez les étapes essentielles et donnez des extraits de configuration.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Citez la commande d'installation de Filebeat sur Ubuntu et le chemin du fichier de configuration principal.",
+        "niveau": "easy",
+        "reponse": "`sudo apt-get install filebeat` (après ajout du dépôt Elastic). Le fichier de configuration principal est `/etc/filebeat/filebeat.yml`.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposez une configuration minimale de Filebeat pour lire le fichier `/var/log/myapp/app.log` et l'envoyer à Logstash (port 5044).",
+        "niveau": "medium",
+        "reponse": "```yaml\nfilebeat.inputs:\n- type: log\n  enabled: true\n  paths:\n    - /var/log/myapp/app.log\noutput.logstash:\n  hosts: [\"localhost:5044\"]\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Donnez un extrait de pipeline Logstash (fichier .conf) qui reçoit les données sur le port 5044, ajoute le champ `environnement: \"production\"` et envoie vers Elasticsearch sur localhost:9200.",
+        "niveau": "medium",
+        "reponse": "```conf\ninput {\n  beats {\n    port => 5044\n  }\n}\nfilter {\n  mutate {\n    add_field => { \"environnement\" => \"production\" }\n  }\n}\noutput {\n  elasticsearch {\n    hosts => [\"localhost:9200\"]\n    index => \"myapp-%{+YYYY.MM.dd}\"\n  }\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Recherche et visualisation de logs dans Kibana",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>L'application de e-commerce <strong>EcoShop</strong> (hébergée à Garoua) utilise la stack ELK. Un client signale qu'il reçoit des erreurs HTTP 500 sporadiquement. Les logs de l'application sont indexés dans Elasticsearch sous l'index <code>ecoshop-*</code>. Ils contiennent les champs : <code>@timestamp</code>, <code>status_code</code>, <code>request_uri</code>, <code>message</code>, <code>client_ip</code>, <code>environnement</code>.</p><p>Répondez aux questions suivantes en décrivant les actions à réaliser dans Kibana (console de découverte, recherche KQL, création de visualisation).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez une requête KQL (Kibana Query Language) pour trouver toutes les erreurs HTTP 500 (status_code:500) survenues depuis 2 heures.",
+        "niveau": "easy",
+        "reponse": "`status_code:500` puis utiliser le sélecteur de temps \"Last 2 hours\" dans Kibana.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Complétez la requête pour ne montrer que les erreurs concernant l'URI `/api/checkout`.",
+        "niveau": "easy",
+        "reponse": "`status_code:500 and request_uri:\"/api/checkout\"`",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquez comment créer un graphique à barres (vertical bar chart) affichant le nombre d'erreurs 500 par adresse IP cliente (client_ip) sur les dernières 24 heures. Quels agrégations utilisez-vous ?",
+        "niveau": "hard",
+        "reponse": "Dans Kibana → Dashboard → Create visualization → Lens ou Vertical Bar. On choisit :\n- Métrique : Count of records\n- Filtrer sur status_code:500\n- Buckets : Terms aggregation sur le champ `client_ip` (ordre décroissant, taille limitée par ex. 10).\n- Intervalle de temps : Last 24 hours.\nCela permet d'identifier les clients ou bots qui génèrent le plus d'erreurs.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Comparaison Filebeat vs Logstash",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans un projet DevOps à l'Université de Dschang, les étudiants doivent choisir les outils de la stack ELK pour collecter des logs. Certains pensent que Logstash peut remplacer Filebeat partout. D'autres proposent d'utiliser les deux ensemble.</p><p>Comparez Filebeat et Logstash en termes de : charge CPU/mémoire, capacités de traitement, cas d'usage typique.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Lequel de ces deux outils est le plus léger et recommandé pour être installé sur chaque serveur applicatif ? Justifiez.",
+        "niveau": "easy",
+        "reponse": "Filebeat. Il est léger (faible consommation CPU/RAM), écrit en Go, et conçu spécifiquement pour la collecte de logs avec reprise après panne (registry).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Dans quelle situation utiliseriez-vous Logstash plutôt que Filebeat seul ?",
+        "niveau": "medium",
+        "reponse": "Lorsqu'on a besoin de transformations complexes : parsing de logs non structurés avec grok, enrichissement (géolocalisation d'IP, lookup base de données), filtres conditionnels avancés, ou agrégations temporelles avant indexation.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposez une architecture type utilisant les deux outils. Indiquez où s'exécute chacun.",
+        "niveau": "easy",
+        "reponse": "Filebeat tourne sur chaque serveur (backend, frontend, DB) envoie les logs à un ou plusieurs Logstash centraux (sur des serveurs dédiés) qui traitent et envoient vers un cluster Elasticsearch. Kibana se connecte à Elasticsearch.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Résolution de problème : logs manquants dans Kibana",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous êtes DevOps dans une startup à Bafoussam. Après avoir configuré Filebeat → Logstash → Elasticsearch → Kibana, vous ne voyez aucun log dans Kibana alors que l'application produit bien des logs. Les services sont tous sur la même machine (localhost) pour le test.</p><p>Listez les vérifications systématiques à effectuer (en ordre logique) pour diagnostiquer le problème. Pour chaque étape, donnez une commande ou une action précise.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Vérification que l'application écrit bien les logs.",
+        "niveau": "easy",
+        "reponse": "`tail -f /var/log/myapp/app.log` ou `cat /var/log/myapp/app.log`",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Vérification que Filebeat lit le fichier et envoie à Logstash.",
+        "niveau": "medium",
+        "reponse": "`sudo filebeat test output` (vérifie la connexion à Logstash) et `sudo filebeat test config` (valide la config). On peut aussi vérifier le registry : `sudo filebeat export registry`.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Vérification que Logstash reçoit les données et les transmet à Elasticsearch.",
+        "niveau": "medium",
+        "reponse": "Regarder les logs de Logstash : `sudo journalctl -u logstash -f`. Vérifier les pipelines avec l'API : `curl -XGET 'localhost:9600/_node/stats/pipelines'`. Si Logstash utilise un filtre grok erroné, les événements peuvent être supprimés (\"_grokparsefailure\").",
+        "sousQuestions": []
+      },
+      {
+        "numero": 4,
+        "texte": "Vérification qu'Elasticsearch a bien créé l'index et reçu les documents.",
+        "niveau": "easy",
+        "reponse": "`curl -XGET 'localhost:9200/_cat/indices?v'` et `curl -XGET 'localhost:9200/mon-index-*/_count'`",
+        "sousQuestions": []
+      },
+      {
+        "numero": 5,
+        "texte": "Vérification que Kibana est correctement configuré (index pattern).",
+        "niveau": "easy",
+        "reponse": "Dans Kibana → Stack Management → Index Patterns, vérifier que l'index pattern (ex: `myapp-*`) existe et que le champ `@timestamp` est correctement mappé comme champ temps.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

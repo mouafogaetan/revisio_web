@@ -1,0 +1,95 @@
+[
+  {
+    "intitule": "Choix de la plateforme de déploiement",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous avez développé une API .NET 8 avec une base de données SQL Server, de l’authentification JWT, et un cache en mémoire. L’application doit être déployée en production pour 500 utilisateurs simultanés. Les contraintes sont : budget limité ($150/mois), équipe technique familière avec Windows, mais souhaitant une architecture moderne.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Comparez le déploiement sur IIS (Windows Server) vs Linux (avec Nginx) vs Azure App Service. Justifiez votre choix final.",
+        "niveau": "medium",
+        "reponse": "IIS : facile pour équipe Windows, mais coût licence Windows + moins performant pour .NET Core (bien que supporté). Linux + Nginx : économique, haute perf, nécessite compétences Linux. Azure App Service : PaaS, scaling auto, monitoring intégré, mais coût mensuel > $150 si on veut bonne scalabilité. Choix final : Linux + Nginx sur une VM low-cost (ex: DigitalOcean $12-$24/mois) + sauvegarde DB gérée. Bon rapport coût/perf, contrôle total, et .NET 8 est excellent sur Linux.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Script de publication et déploiement",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous devez automatiser le déploiement de l’API sur un serveur Ubuntu 22.04. L’API s’appelle <code>EduApi</code> et utilise une base PostgreSQL.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédigez un script bash complet qui : (1) publie l’API en mode Release, (2) l’envoie sur le serveur via scp, (3) redémarre le service systemd correspondant.",
+        "niveau": "hard",
+        "reponse": "#!/bin/bash\ndotnet publish EduApi.csproj -c Release -o ./publish\nscp -r ./publish/* user@server:/var/www/eduapi/\nssh user@server 'sudo systemctl restart eduapi.service'\n",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrivez le fichier service systemd (`/etc/systemd/system/eduapi.service`) permettant de lancer l’API avec dotnet.",
+        "niveau": "medium",
+        "reponse": "[Unit]\nDescription=EduApi .NET Web API\n[Service]\nWorkingDirectory=/var/www/eduapi\nExecStart=/usr/bin/dotnet /var/www/eduapi/EduApi.dll\nRestart=always\nRestartSec=10\nUser=www-data\nEnvironment=ASPNETCORE_ENVIRONMENT=Production\n[Install]\nWantedBy=multi-user.target",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Déploiement Dockerisé",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous devez containeriser l’API pour un déploiement sur Azure Container Instances (ACI).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez un Dockerfile multi-stage pour une API .NET 8, avec optimisation de la taille de l’image finale (utilisation de l’image `aspnet:8.0-jammy` ou `alpine`).",
+        "niveau": "hard",
+        "reponse": "FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build\nWORKDIR /src\nCOPY . .\nRUN dotnet publish \"EduApi.csproj\" -c Release -o /app/publish\n\nFROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine AS runtime\nWORKDIR /app\nCOPY --from=build /app/publish .\nEXPOSE 80\nENTRYPOINT [\"dotnet\", \"EduApi.dll\"]",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez comment vous gérez les secrets (chaîne de connexion SQL, clé JWT) dans un environnement containerisé sur ACI.",
+        "niveau": "medium",
+        "reponse": "Ne pas les hardcoder. Utiliser des variables d’environnement passées au conteneur, ou mieux, Azure Key Vault + CSI driver, ou encore les ‘secure environment variables’ dans ACI. En développement local : `dotnet user-secrets`. En CI/CD : injecter via pipeline depuis Azure Key Vault.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse de stratégie de déploiement",
+    "type": "ressource",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous devez déployer une API critique avec 99,9% de disponibilité. L’équipe utilise GitHub Actions. Comparez et choisissez entre : déploiement blue/green, canary, ou rolling update.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Définissez chaque stratégie et justifiez celle que vous recommandez pour une API REST avec base de données (sans cassure de schéma).",
+        "niveau": "very hard",
+        "reponse": "Blue/green : deux environnements identiques, bascule instantanée. Parfait pour zero downtime, mais coût double. Canary : déploiement progressif à un petit % de users, idéal pour tester en réel. Rolling update : remplacement progressif des instances, économique, mais possible downtime partiel si mal configuré. Choix : Blue/green si budget OK, car rollback immédiat. Si budget serré, Rolling update avec health checks et maxSurge=25%.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposez un workflow GitHub Actions (extraits YAML) pour mettre en œuvre la stratégie choisie sur Azure App Service.",
+        "niveau": "very hard",
+        "reponse": "name: Deploy BlueGreen\non: push\njobs:\n  deploy:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - name: Deploy to staging slot\n        uses: azure/webapps-deploy@v2\n        with:\n          app-name: myapi\n          slot-name: staging\n          publish-profile: ${{ secrets.AZURE_PUBLISH_PROFILE }}\n          package: ./publish\n      - name: Swap slots\n        run: az webapp deployment slot swap --name myapi --resource-group rg --slot staging --target-slot production",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

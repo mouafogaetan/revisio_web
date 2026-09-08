@@ -1,0 +1,170 @@
+[
+  {
+    "intitule": "Comprendre le rôle de l'assistant dans la validation KYC",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>L'assistant joue un rôle clé dans la vérification des documents KYC (Know Your Customer) et la validation des produits sur la plateforme e-commerce.</p><p>En vous basant sur les objectifs de la leçon 18, répondez aux questions suivantes.</p>",
+      "images": [
+        "Interface de l'écran AssistantKycList montrant une liste de demandes KYC avec les statuts : En attente, Approuvé, Rejeté. Chaque élément affiche le nom de l'utilisateur, la date de soumission et le type de document (CNI, Passeport, Selfie)."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Quelles sont les deux principales responsabilités de l'assistant dans l'application selon la leçon ?",
+        "niveau": "easy",
+        "reponse": "1. <strong>Validation des demandes KYC</strong> : Examiner et approuver ou rejeter les documents d'identité soumis par les utilisateurs\n2. <strong>Validation des produits</strong> : Examiner et valider ou rejeter les produits mis en ligne par les vendeurs",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi est-il important que l'assistant valide les documents KYC avant que l'utilisateur puisse accéder à certaines fonctionnalités ?",
+            "niveau": "easy",
+            "reponse": "La validation KYC est essentielle pour :\n1. Assurer la conformité réglementaire (lutte contre le blanchiment d'argent)\n2. Vérifier l'identité des utilisateurs pour éviter les fraudes\n3. Protéger la communauté des utilisateurs contre les comptes malveillants\n4. Permettre des transactions financières sécurisées (dépôts, retraits, paiements)"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Analyser les écrans de validation KYC pour l'assistant",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>L'assistant dispose de deux écrans principaux pour gérer les demandes KYC : une liste des demandes et un écran de détail pour examiner les documents.</p><p>Analyser le fonctionnement de ces écrans à travers les questions suivantes.</p>",
+      "images": [
+        "Schéma montrant le flux de navigation entre AssistantKycList et AssistantKycDetail. La liste affiche les demandes en attente, et le détail montre les documents soumis (photo de la CNI, selfie) avec des boutons Approuver et Rejeter."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 2,
+        "texte": "Comparez les fonctionnalités de l'écran <code>AssistantKycList</code> et de l'écran <code>AssistantKycDetail</code>.",
+        "niveau": "medium",
+        "reponse": "| Fonctionnalité | AssistantKycList | AssistantKycDetail |\n|---------------|------------------|---------------------|\n| **Vue d'ensemble** | Liste de toutes les demandes KYC | Une seule demande spécifique |\n| **Filtrage** | Filtres par statut (en attente, approuvé, rejeté) | Non applicable |\n| **Recherche** | Recherche par nom ou ID utilisateur | Non applicable |\n| **Visualisation** | Aperçu des demandes | Affichage détaillé des documents (images) |\n| **Actions** | Navigation vers le détail | Approuver / Rejeter la demande |\n| **Motif de rejet** | Non applicable | Saisie d'un motif de rejet |",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Quels sont les critères que l'assistant doit vérifier avant d'approuver une demande KYC ?",
+            "niveau": "medium",
+            "reponse": "L'assistant doit vérifier :\n1. La clarté et la lisibilité des documents soumis (CNI, passeport)\n2. La correspondance entre le selfie et la photo d'identité\n3. La validité du document (date d'expiration non dépassée)\n4. La correspondance des informations (nom, prénom, date de naissance)\n5. L'absence de modifications ou falsifications\n6. La cohérence avec les informations saisies par l'utilisateur"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Créer le store et le service pour la gestion KYC de l'assistant",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>L'assistant a besoin d'un store et d'un service pour gérer les demandes KYC de manière efficace et réactive.</p><p>Développer les composants nécessaires pour la gestion KYC.</p>",
+      "images": [
+        "Schéma d'architecture montrant les relations entre le composant AssistantKycList, le store KYC (kycStore), le service API (kycService) et le backend NestJS. Les flèches indiquent les flux de données."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 3,
+        "texte": "Écrivez le store Zustand pour la gestion des demandes KYC avec les actions nécessaires (charger la liste, approuver, rejeter).",
+        "niveau": "medium",
+        "reponse": "```typescript\n// stores/kycStore.ts\nimport { create } from 'zustand';\nimport { persist } from 'zustand/middleware';\nimport { kycService } from '../services/kycService';\n\nexport interface KycRequest {\n  id: string;\n  userId: string;\n  userName: string;\n  userEmail: string;\n  documentType: 'CNI' | 'PASSPORT';\n  documentImage: string;\n  selfieImage: string;\n  status: 'PENDING' | 'APPROVED' | 'REJECTED';\n  submittedAt: Date;\n  reviewedAt?: Date;\n  rejectionReason?: string;\n}\n\ninterface KycStore {\n  requests: KycRequest[];\n  isLoading: boolean;\n  selectedRequest: KycRequest | null;\n  \n  // Actions\n  fetchRequests: (filters?: { status?: string }) => Promise<void>;\n  selectRequest: (id: string) => void;\n  approveRequest: (id: string) => Promise<void>;\n  rejectRequest: (id: string, reason: string) => Promise<void>;\n  clearSelection: () => void;\n}\n\nexport const useKycStore = create<KycStore>((set, get) => ({\n  requests: [],\n  isLoading: false,\n  selectedRequest: null,\n\n  fetchRequests: async (filters) => {\n    set({ isLoading: true });\n    try {\n      const requests = await kycService.getRequests(filters);\n      set({ requests });\n    } catch (error) {\n      console.error('Erreur lors du chargement des demandes KYC', error);\n    } finally {\n      set({ isLoading: false });\n    }\n  },\n\n  selectRequest: (id) => {\n    const request = get().requests.find(r => r.id === id);\n    set({ selectedRequest: request || null });\n  },\n\n  approveRequest: async (id) => {\n    try {\n      await kycService.approveRequest(id);\n      set((state) => ({\n        requests: state.requests.map(req =>\n          req.id === id\n            ? { ...req, status: 'APPROVED', reviewedAt: new Date() }\n            : req\n        ),\n      }));\n    } catch (error) {\n      console.error('Erreur lors de l\\'approbation KYC', error);\n      throw error;\n    }\n  },\n\n  rejectRequest: async (id, reason) => {\n    try {\n      await kycService.rejectRequest(id, reason);\n      set((state) => ({\n        requests: state.requests.map(req =>\n          req.id === id\n            ? { ...req, status: 'REJECTED', reviewedAt: new Date(), rejectionReason: reason }\n            : req\n        ),\n      }));\n    } catch (error) {\n      console.error('Erreur lors du rejet KYC', error);\n      throw error;\n    }\n  },\n\n  clearSelection: () => {\n    set({ selectedRequest: null });\n  },\n}));\n```",
+        "sousQuestions": [
+          {
+            "numero": "3.a",
+            "texte": "Écrivez le service <code>kycService</code> avec les méthodes pour charger, approuver et rejeter les demandes.",
+            "niveau": "hard",
+            "reponse": "```typescript\n// services/kycService.ts\nimport api from './api';\n\nexport interface KycFilters {\n  status?: 'PENDING' | 'APPROVED' | 'REJECTED';\n  search?: string;\n}\n\nclass KycService {\n  // Charger la liste des demandes KYC\n  async getRequests(filters?: KycFilters): Promise<KycRequest[]> {\n    const response = await api.get('/assistant/kyc', { params: filters });\n    return response.data;\n  }\n\n  // Charger une demande KYC spécifique\n  async getRequestById(id: string): Promise<KycRequest> {\n    const response = await api.get(`/assistant/kyc/${id}`);\n    return response.data;\n  }\n\n  // Approuver une demande KYC\n  async approveRequest(id: string): Promise<void> {\n    await api.put(`/assistant/kyc/${id}/approve`);\n  }\n\n  // Rejeter une demande KYC\n  async rejectRequest(id: string, reason: string): Promise<void> {\n    await api.put(`/assistant/kyc/${id}/reject`, { reason });\n  }\n\n  // Obtenir les statistiques KYC\n  async getKycStats(): Promise<{\n    pending: number;\n    approved: number;\n    rejected: number;\n    total: number;\n  }> {\n    const response = await api.get('/assistant/kyc/stats');\n    return response.data;\n  }\n}\n\nexport const kycService = new KycService();\n```"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Développer l'écran AssistantProductList pour la validation des produits",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>L'assistant doit pouvoir visualiser les produits en attente de validation et prendre une décision (valider ou rejeter) avec un motif clair.</p><p>Développer l'écran <code>AssistantProductList</code> avec ses fonctionnalités principales.</p>",
+      "images": [
+        "Maquette de l'écran AssistantProductList avec une liste de produits en attente. Chaque produit affiche une vignette, le nom, le prix, le vendeur, et la date de soumission. Des boutons d'action (Valider/Rejeter) sont disponibles pour chaque élément."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 4,
+        "texte": "Concevez l'écran <code>AssistantProductList</code> avec ses composants, store et gestion des actions.",
+        "niveau": "hard",
+        "reponse": "**Architecture de l'écran AssistantProductList :**\n\n1. **Structure du composant :**\n```typescript\n// screens/assistant/AssistantProductList.tsx\nimport React, { useEffect, useState } from 'react';\nimport { View, FlatList, RefreshControl, TouchableOpacity } from 'react-native';\nimport { useProductStore } from '../../stores/productStore';\nimport { ProductCard } from '../../components/ProductCard';\nimport { FilterBar } from '../../components/assistant/FilterBar';\nimport { EmptyState } from '../../components/EmptyState';\nimport { LoadingSpinner } from '../../components/LoadingSpinner';\n\nexport const AssistantProductList = () => {\n  const [filters, setFilters] = useState({ status: 'PENDING', search: '' });\n  const { \n    pendingProducts, \n    isLoading, \n    fetchPendingProducts, \n    validateProduct, \n    rejectProduct \n  } = useProductStore();\n  \n  useEffect(() => {\n    fetchPendingProducts(filters);\n  }, [filters]);\n\n  const handleValidate = async (productId: string) => {\n    try {\n      await validateProduct(productId);\n      // Afficher une notification de succès\n    } catch (error) {\n      // Afficher une notification d'erreur\n    }\n  };\n\n  const handleReject = async (productId: string) => {\n    // Ouvrir un modal pour saisir le motif de rejet\n    const reason = await showRejectModal();\n    if (reason) {\n      try {\n        await rejectProduct(productId, reason);\n      } catch (error) {\n        // Afficher une notification d'erreur\n      }\n    }\n  };\n\n  const renderItem = ({ item }) => (\n    <AssistantProductItem\n      product={item}\n      onValidate={() => handleValidate(item.id)}\n      onReject={() => handleReject(item.id)}\n    />\n  );\n\n  return (\n    <View style={styles.container}>\n      <FilterBar filters={filters} onFilterChange={setFilters} />\n      <FlatList\n        data={pendingProducts}\n        renderItem={renderItem}\n        keyExtractor={(item) => item.id}\n        refreshControl={\n          <RefreshControl\n            refreshing={isLoading}\n            onRefresh={() => fetchPendingProducts(filters)}\n          />\n        }\n        ListEmptyComponent={<EmptyState message=\"Aucun produit en attente\" />}\n        ListFooterComponent={isLoading && <LoadingSpinner />}\n      />\n    </View>\n  );\n};\n```\n\n2. **Composant AssistantProductItem :**\n```typescript\n// components/assistant/AssistantProductItem.tsx\nconst AssistantProductItem = ({ product, onValidate, onReject }) => (\n  <View style={styles.container}>\n    <Image source={{ uri: product.images[0] }} style={styles.image} />\n    <View style={styles.info}>\n      <Text style={styles.name}>{product.name}</Text>\n      <Text style={styles.price}>{product.price} CFA</Text>\n      <Text style={styles.seller}>Vendeur : {product.seller.name}</Text>\n      <Text style={styles.date}>Soumis le : {product.submittedAt}</Text>\n      <View style={styles.actions}>\n        <TouchableOpacity style={styles.validateButton} onPress={onValidate}>\n          <Text style={styles.buttonText}>Valider</Text>\n        </TouchableOpacity>\n        <TouchableOpacity style={styles.rejectButton} onPress={onReject}>\n          <Text style={styles.buttonText}>Rejeter</Text>\n        </TouchableOpacity>\n      </View>\n    </View>\n  </View>\n);\n```\n\n3. **Store étendu pour les produits en attente :**\n```typescript\n// Extensions du productStore\nconst useProductStore = create((set, get) => ({\n  // ... État existant\n  pendingProducts: [],\n  \n  fetchPendingProducts: async (filters) => {\n    set({ isLoading: true });\n    try {\n      const products = await productService.getPendingProducts(filters);\n      set({ pendingProducts: products });\n    } finally {\n      set({ isLoading: false });\n    }\n  },\n  \n  validateProduct: async (id) => {\n    await productService.validateProduct(id);\n    // Mettre à jour la liste en supprimant le produit validé\n    set((state) => ({\n      pendingProducts: state.pendingProducts.filter(p => p.id !== id),\n    }));\n  },\n  \n  rejectProduct: async (id, reason) => {\n    await productService.rejectProduct(id, reason);\n    set((state) => ({\n      pendingProducts: state.pendingProducts.filter(p => p.id !== id),\n    }));\n  },\n}));\n```",
+        "sousQuestions": [
+          {
+            "numero": "4.a",
+            "texte": "Comment gérer le motif de rejet d'un produit de manière efficace dans l'interface utilisateur ?",
+            "niveau": "hard",
+            "reponse": "Pour gérer le motif de rejet efficacement :\n\n1. **Utiliser un Modal avec un TextInput :**\n```typescript\n// Modal de rejet\nconst RejectModal = ({ visible, onClose, onConfirm }) => {\n  const [reason, setReason] = useState('');\n  const [suggestedReasons] = useState([\n    'Produit contrefait',\n    'Images non conformes',\n    'Prix trop élevé',\n    'Description trompeuse',\n    'Produit interdit',\n    'Autre...',\n  ]);\n  \n  return (\n    <Modal visible={visible}>\n      <Text>Sélectionnez ou saisissez un motif :</Text>\n      {suggestedReasons.map(r => (\n        <TouchableOpacity key={r} onPress={() => setReason(r)}>\n          <Text style={r === reason && styles.selected}>{r}</Text>\n        </TouchableOpacity>\n      ))}\n      <TextInput\n        value={reason}\n        onChangeText={setReason}\n        placeholder=\"Décrivez le motif...\"\n        multiline\n      />\n      <Button title=\"Confirmer le rejet\" onPress={() => onConfirm(reason)} />\n    </Modal>\n  );\n};\n```\n\n2. **Validation du motif :**\n- Le motif est obligatoire pour le rejet\n- Minimum 10 caractères pour les motifs personnalisés\n- Affichage d'un message d'erreur si le champ est vide\n\n3. **Présélection intelligente :**\n- Proposer des motifs prédéfinis pour accélérer le processus\n- Laisser un champ libre pour les cas particuliers\n- Envoyer le motif au backend avec l'action de rejet\n\n4. **Feedback utilisateur :**\n- Afficher un message de confirmation après le rejet\n- Notifier le vendeur automatiquement par notification push"
+          },
+          {
+            "numero": "4.b",
+            "texte": "Quelles informations l'assistant doit-il vérifier avant de valider un produit ?",
+            "niveau": "medium",
+            "reponse": "L'assistant doit vérifier les critères suivants :\n1. **Conformité des images** : qualité, lisibilité, absence de contenu inapproprié\n2. **Description du produit** : précision, absence de mensonge, cohérence avec les images\n3. **Prix** : cohérence avec le marché, absence de prix abusif\n4. **Catégorie** : le produit est-il bien classé dans la bonne catégorie ?\n5. **État du produit** : neuf ou occasion correctement indiqué\n6. **Informations légales** : pas de contrefaçon, pas de produit interdit (drogues, armes, etc.)\n7. **Vendeur** : le vendeur est-il KYC validé ? (si requis)\n8. **Quantité** : cohérence avec la description"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Analyser les impacts de la validation KYC et des produits sur l'expérience utilisateur",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Les processus de validation KYC et de validation des produits ont un impact direct sur l'expérience des utilisateurs de la plateforme.</p><p>Évaluer ces impacts à travers les questions suivantes.</p>",
+      "images": [
+        "Diagramme montrant le parcours utilisateur pour la validation KYC : Soumission des documents, En attente de validation, Approuvé (accès complet), Rejeté (avec possibilité de resoumettre). Les étapes sont colorées selon le statut (vert pour approuvé, rouge pour rejeté, orange pour en attente)."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 5,
+        "texte": "Évaluez l'impact d'un délai de validation KYC trop long sur l'expérience utilisateur.",
+        "niveau": "hard",
+        "reponse": "**Impact d'un délai de validation KYC trop long :**\n\n1. **Frustration utilisateur** :\n   - Les utilisateurs impatients peuvent abandonner le processus\n   - Perte de confiance dans la plateforme\n   - Taux d'abandon élevé lors de l'inscription\n\n2. **Impact économique** :\n   - Perte de vente (les utilisateurs non-KYC ne peuvent pas acheter/ vendre)\n   - Augmentation du taux de désabonnement\n   - Perte de parts de marché face aux concurrents plus rapides\n\n3. **Solutions proposées :**\n   - Automatisation partielle du processus KYC (OCR, reconnaissance faciale)\n   - Mise en place d'une file d'attente prioritaire\n   - Notification en temps réel de l'avancement\n   - Processus de validation en 24h maximum\n\n4. **Bonnes pratiques :**\n   - Afficher un indicateur de progression (étape actuelle)\n   - Envoyer des notifications à chaque étape\n   - Permettre la resoumission rapide en cas de rejet\n   - Mettre en place un système de validation express pour les utilisateurs premium",
+        "sousQuestions": [
+          {
+            "numero": "5.a",
+            "texte": "Proposez une stratégie pour optimiser le processus de validation des produits afin de réduire le délai d'attente pour les vendeurs.",
+            "niveau": "hard",
+            "reponse": "**Stratégie d'optimisation de la validation des produits :**\n\n1. **Validation automatisée :**\n   - Utiliser un système de ML pour détecter les contrefaçons\n   - Analyse automatique des images (qualité, contenu)\n   - Détection des prix aberrants\n\n2. **File d'attente prioritaire :**\n   - Prioriser les vendeurs certifiés (KYC, bonnes notes)\n   - Mettre en place des quotas de validation par session\n\n3. **Processus asynchrone :**\n   - Permettre la mise en ligne avec un statut 'en attente'\n   - Afficher les produits mais avec un bandeau 'en cours de validation'\n   - Permettre au vendeur de modifier le produit en attendant\n\n4. **Formation continue :**\n   - Former les assistants sur les critères de validation\n   - Mettre en place une base de connaissances des motifs de rejet\n   - Standardiser les processus de validation\n\n5. **Analytique et suivi :**\n   - Mesurer le temps moyen de validation\n   - Identifier les goulots d'étranglement\n   - Optimiser les effectifs en fonction du volume\n\n6. **Communication transparente :**\n   - Afficher le temps estimé de validation\n   - Envoyer des notifications de progression\n   - Permettre de suivre le statut du produit en temps réel"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Concevoir une solution de gestion des documents KYC avec stockage sécurisé",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Les documents KYC contiennent des informations sensibles (CNI, passeport, selfies). Leur stockage et leur transmission doivent être sécurisés.</p><p>Concevoir une architecture de gestion des documents KYC respectant les bonnes pratiques de sécurité.</p>",
+      "images": [
+        "Schéma d'architecture de stockage sécurisé des documents KYC : L'utilisateur soumet les documents via l'application (chiffrés en transit). Les documents sont stockés dans un bucket sécurisé avec des URLs signées. Les métadonnées sont stockées dans la base de données. L'assistant accède aux documents via des URLs temporaires."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 6,
+        "texte": "Concevez une architecture complète pour la gestion sécurisée des documents KYC dans l'application.",
+        "niveau": "very hard",
+        "reponse": "**Architecture sécurisée pour la gestion KYC :**\n\n1. **Soumission des documents (Frontend Mobile) :**\n```typescript\nconst uploadKycDocuments = async (documentUri: string, selfieUri: string) => {\n  try {\n    // Compression des images pour réduire la taille\n    const compressedDoc = await ImageManipulator.manipulateAsync(\n      documentUri,\n      [{ resize: { width: 800 } }],\n      { compress: 0.8, format: SaveFormat.JPEG }\n    );\n    \n    // Upload via l'API avec multipart/form-data\n    const formData = new FormData();\n    formData.append('document', {\n      uri: compressedDoc.uri,\n      type: 'image/jpeg',\n      name: `kyc_document_${Date.now()}.jpg`,\n    });\n    formData.append('selfie', {\n      uri: selfieUri,\n      type: 'image/jpeg',\n      name: `kyc_selfie_${Date.now()}.jpg`,\n    });\n    \n    const response = await api.post('/assistant/kyc/upload', formData, {\n      headers: { 'Content-Type': 'multipart/form-data' },\n      onUploadProgress: (progress) => {\n        // Mise à jour de la barre de progression\n      },\n    });\n    \n    return response.data;\n  } catch (error) {\n    throw new Error('Erreur lors de l\\'upload des documents');\n  }\n};\n```\n\n2. **Stockage Backend (NestJS) :**\n- Utiliser un service de stockage sécurisé (ex: AWS S3, Cloudinary) avec des politiques de confidentialité strictes\n- Chiffrer les documents au repos avec SSE-KMS\n- Générer des URLs signées avec expiration (5 minutes) pour l'accès\n- Stocker uniquement les métadonnées dans la base de données (URL, hash, taille, type)\n\n3. **Accès Assistant :**\n```typescript\n// Backend - Générer une URL signée temporaire\n@Get('assistant/kyc/:id/document')\n@UseGuards(RolesGuard)\n@Roles('assistant', 'admin')\nasync getDocumentUrl(@Param('id') id: string) {\n  const kyc = await this.kycService.findOne(id);\n  // Vérifier que l'assistant est autorisé\n  // Générer une URL signée avec expiration de 5 minutes\n  const signedUrl = await this.storageService.getSignedUrl(\n    kyc.documentKey,\n    { expiresIn: 300 }\n  );\n  return { url: signedUrl };\n}\n```\n\n4. **Mesures de sécurité supplémentaires :**\n   - Logs d'accès aux documents (qui, quand, pourquoi)\n   - Chiffrement de bout en bout (HTTPS/TLS)\n   - Watermarking automatique sur les documents consultés\n   - Rétention des données conforme au RGPD (suppression automatique après 1 an)\n   - Audit régulier des accès aux documents sensibles\n   - Isolation des données KYC dans un bucket dédié\n\n5. **Processus de suppression :**\n```typescript\n// Supprimer les documents lorsque l'utilisateur ferme son compte\nasync deleteUserKyc(userId: string) {\n  // 1. Récupérer tous les documents de l'utilisateur\n  const documents = await this.kycRepo.find({ where: { userId } });\n  \n  // 2. Supprimer les fichiers du stockage\n  for (const doc of documents) {\n    await this.storageService.deleteFile(doc.documentKey);\n    await this.storageService.deleteFile(doc.selfieKey);\n  }\n  \n  // 3. Supprimer les métadonnées (ou anonymiser)\n  await this.kycRepo.softDelete({ userId });\n  \n  // 4. Logger la suppression\n  await this.logService.log({\n    action: 'KYC_DELETED',\n    userId,\n    timestamp: new Date(),\n  });\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "6.a",
+            "texte": "Comment garantir la conformité RGPD dans la gestion des documents KYC ?",
+            "niveau": "very hard",
+            "reponse": "**Garantie de conformité RGPD :**\n\n1. **Consentement explicite :**\n   - Obtenir un consentement clair avant la collecte des documents\n   - Permettre le retrait du consentement à tout moment\n   - Enregistrer la preuve du consentement (horodatage, version)\n\n2. **Droit à l'oubli :**\n   - Permettre la suppression des données sur demande\n   - Fournir un processus simple pour la suppression\n   - Supprimer automatiquement les données après 5 ans d'inactivité\n\n3. **Portabilité des données :**\n   - Permettre l'export des données en format standard (JSON, PDF)\n   - Fournir un accès direct aux données via l'API\n\n4. **Sécurité des données :**\n   - Mettre en place des mesures techniques et organisationnelles appropriées\n   - Effectuer des analyses d'impact régulières\n   - Notifier en cas de violation de données dans les 72h\n\n5. **Minimisation des données :**\n   - Collecter uniquement les données nécessaires\n   - Anonymiser les données après la validation\n   - Limiter l'accès aux données strictement nécessaires\n\n6. **Documentation :**\n   - Tenir un registre des traitements KYC\n   - Documenter les bases légales du traitement\n   - Mettre à jour régulièrement la documentation\n\n7. **Processus de suppression :**\n```typescript\n// Implémentation du droit à l'oubli\nasync deleteUserData(userId: string) {\n  // 1. Récupérer les données de l'utilisateur\n  const userData = await this.getUserData(userId);\n  \n  // 2. Supprimer les documents KYC\n  await this.deleteUserKyc(userId);\n  \n  // 3. Anonymiser les données utilisateur\n  await this.anonymizeUser(userId);\n  \n  // 4. Supprimer les logs personnels\n  await this.deletePersonalLogs(userId);\n  \n  // 5. Envoyer une confirmation par email\n  await this.sendDeletionConfirmation(userId);\n  \n  // 6. Logger la demande de suppression\n  await this.logDeletionRequest(userId);\n}\n```"
+          }
+        ]
+      }
+    ]
+  }
+]

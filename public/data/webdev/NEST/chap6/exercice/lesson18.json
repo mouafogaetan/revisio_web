@@ -1,0 +1,152 @@
+[
+  {
+    "intitule": "Rôle et fonctionnement des Interceptors",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Dans NestJS, les interceptors sont des composants puissants qui permettent d'intercepter les requêtes et les réponses.</p><p>Rappel : Un interceptor peut exécuter du code avant et après l'exécution d'une méthode de contrôleur.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire le rôle principal d'un interceptor dans NestJS et citer trois cas d'usage concrets.",
+        "niveau": "easy",
+        "reponse": "Un interceptor permet d'intercepter l'exécution d'une requête pour ajouter une logique transversale (cross-cutting concern). Trois cas d'usage : 1) Transformation des réponses (formatage standardisé), 2) Logging des performances (mesure du temps d'exécution), 3) Gestion de cache (éviter d'exécuter la méthode si déjà en cache).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer la différence entre un interceptor et un middleware.",
+            "niveau": "medium",
+            "reponse": "Le middleware est exécuté avant le route handler mais ne connaît pas le contexte d'exécution (la méthode et les paramètres). L'interceptor peut s'exécuter avant ET après le route handler, a accès au contexte d'exécution (via ExecutionContext), et peut manipuler la réponse (via RxJS Observable). De plus, un interceptor peut modifier le résultat retourné par la méthode, ce qu'un middleware ne peut pas faire."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Intercepteur de transformation des réponses",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous souhaitez standardiser toutes les réponses JSON de votre API avec une structure commune :</p><pre><code>{\n  \"statusCode\": 200,\n  \"message\": \"Succès\",\n  \"data\": { ... },\n  \"timestamp\": \"2024-01-01T00:00:00.000Z\"\n}</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémenter un interceptor global nommé TransformInterceptor qui transforme automatiquement toutes les réponses selon ce format.",
+        "niveau": "medium",
+        "reponse": "```typescript\nimport { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nestjs/common';\nimport { Observable } from 'rxjs';\nimport { map } from 'rxjs/operators';\n\nexport interface Response<T> {\n  statusCode: number;\n  message: string;\n  data: T;\n  timestamp: string;\n}\n\n@Injectable()\nexport class TransformInterceptor<T> implements NestInterceptor<T, Response<T>> {\n  intercept(context: ExecutionContext, next: CallHandler): Observable<Response<T>> {\n    const ctx = context.switchToHttp();\n    const response = ctx.getResponse();\n    const statusCode = response.statusCode;\n\n    return next.handle().pipe(\n      map(data => ({\n        statusCode,\n        message: 'Succès',\n        data,\n        timestamp: new Date().toISOString(),\n      })),\n    );\n  }\n}\n```\n\nPour l'appliquer globalement : `app.useGlobalInterceptors(new TransformInterceptor())`",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Modifier l'interceptor pour permettre un message personnalisable via une métadonnée (décorateur @SetMetadata).",
+            "niveau": "hard",
+            "reponse": "```typescript\n// Décorateur\nimport { SetMetadata } from '@nestjs/common';\nexport const ResponseMessage = (message: string) => SetMetadata('response_message', message);\n\n// Interceptor modifié\n@Injectable()\nexport class TransformInterceptor<T> implements NestInterceptor<T, Response<T>> {\n  intercept(context: ExecutionContext, next: CallHandler): Observable<Response<T>> {\n    const ctx = context.switchToHttp();\n    const response = ctx.getResponse();\n    const statusCode = response.statusCode;\n    const customMessage = this.reflector.get<string>('response_message', context.getHandler());\n\n    return next.handle().pipe(\n      map(data => ({\n        statusCode,\n        message: customMessage || 'Succès',\n        data,\n        timestamp: new Date().toISOString(),\n      })),\n    );\n  }\n}\n\n// Utilisation dans un contrôleur\n@Post()\n@ResponseMessage('Utilisateur créé avec succès')\ncreate(@Body() dto: CreateUserDto) {\n  return this.userService.create(dto);\n}\n```"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Mesure des performances avec un interceptor",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Pour optimiser votre API, vous devez mesurer le temps d'exécution de chaque requête et journaliser les endpoints lents (plus de 500ms).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créer un interceptor LoggingInterceptor qui mesure le temps d'exécution de chaque requête et logge un avertissement si la durée dépasse 500ms. Inclure la méthode HTTP, l'URL et la durée.",
+        "niveau": "medium",
+        "reponse": "```typescript\nimport { Injectable, NestInterceptor, ExecutionContext, CallHandler, Logger } from '@nestjs/common';\nimport { Observable } from 'rxjs';\nimport { tap } from 'rxjs/operators';\n\n@Injectable()\nexport class LoggingInterceptor implements NestInterceptor {\n  private readonly logger = new Logger(LoggingInterceptor.name);\n\n  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {\n    const request = context.switchToHttp().getRequest();\n    const { method, url } = request;\n    const startTime = Date.now();\n\n    return next.handle().pipe(\n      tap(() => {\n        const duration = Date.now() - startTime;\n        if (duration > 500) {\n          this.logger.warn(`Requête lente : ${method} ${url} - ${duration}ms`);\n        } else {\n          this.logger.log(`${method} ${url} - ${duration}ms`);\n        }\n      }),\n    );\n  }\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi utilise-t-on l'opérateur RxJS tap() plutôt que map() dans cet interceptor ?",
+            "niveau": "easy",
+            "reponse": "tap() permet d'exécuter un effet de bord (logging) sans modifier la valeur de la réponse. map() transformerait la réponse, ce qui n'est pas souhaité ici car on veut uniquement logger et laisser la réponse inchangée. tap() est l'opérateur approprié pour les side effects."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Interceptor de mise en cache",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Pour améliorer les performances d'un endpoint d'actualités fréquemment appelé, vous décidez d'implémenter un cache avec une durée de validité de 60 secondes.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevoir un interceptor CacheInterceptor qui stocke les réponses GET dans un cache en mémoire (Map). Si la même requête est refaite avant expiration, retourner la réponse mise en cache sans exécuter le contrôleur.",
+        "niveau": "hard",
+        "reponse": "```typescript\nimport { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nestjs/common';\nimport { Observable, of } from 'rxjs';\nimport { tap } from 'rxjs/operators';\n\ninterface CacheEntry {\n  data: any;\n  timestamp: number;\n}\n\n@Injectable()\nexport class CacheInterceptor implements NestInterceptor {\n  private cache = new Map<string, CacheEntry>();\n  private readonly TTL = 60000; // 60 secondes\n\n  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {\n    const request = context.switchToHttp().getRequest();\n    \n    // Ne cacher que les requêtes GET\n    if (request.method !== 'GET') {\n      return next.handle();\n    }\n\n    const cacheKey = request.url;\n    const cached = this.cache.get(cacheKey);\n\n    // Vérifier si le cache est valide\n    if (cached && (Date.now() - cached.timestamp) < this.TTL) {\n      return of(cached.data);\n    }\n\n    return next.handle().pipe(\n      tap(data => {\n        this.cache.set(cacheKey, {\n          data,\n          timestamp: Date.now(),\n        });\n      }),\n    );\n  }\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Identifier une limite de cette approche en mémoire et proposer une amélioration.",
+            "niveau": "hard",
+            "reponse": "Limite principale : le cache ne persiste pas entre les redémarrages du serveur et n'est pas partagé entre plusieurs instances (si déploiement en cluster). Améliorations possibles : 1) Utiliser Redis comme cache distribué via @nestjs/cache-manager, 2) Ajouter une éviction automatique des entrées expirées (setTimeout ou nettoyage périodique), 3) Limiter la taille du cache avec une stratégie LRU (Least Recently Used) pour éviter la surconsommation mémoire."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion des erreurs avec un interceptor",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Lorsqu'une exception est levée dans votre application, vous souhaitez formater la réponse d'erreur de manière standardisée :</p><pre><code>{\n  \"statusCode\": 404,\n  \"error\": \"Not Found\",\n  \"message\": \"Ressource non trouvée\",\n  \"timestamp\": \"2024-01-01T00:00:00.000Z\",\n  \"path\": \"/users/999\"\n}</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créer un interceptor qui capture les exceptions et reformate la réponse d'erreur selon le format ci-dessus. Utiliser catchError de RxJS.",
+        "niveau": "medium",
+        "reponse": "```typescript\nimport { Injectable, NestInterceptor, ExecutionContext, CallHandler, HttpException, HttpStatus } from '@nestjs/common';\nimport { Observable, throwError } from 'rxjs';\nimport { catchError } from 'rxjs/operators';\n\n@Injectable()\nexport class ErrorsInterceptor implements NestInterceptor {\n  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {\n    const request = context.switchToHttp().getRequest();\n    const { url } = request;\n\n    return next.handle().pipe(\n      catchError(err => {\n        const statusCode = err instanceof HttpException\n          ? err.getStatus()\n          : HttpStatus.INTERNAL_SERVER_ERROR;\n        \n        const errorResponse = {\n          statusCode,\n          error: err.name || 'Internal Server Error',\n          message: err.message || 'Une erreur inattendue est survenue',\n          timestamp: new Date().toISOString(),\n          path: url,\n        };\n        \n        return throwError(() => new HttpException(errorResponse, statusCode));\n      }),\n    );\n  }\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comparer cette approche avec l'utilisation d'un ExceptionFilter. Quand utiliser l'un plutôt que l'autre ?",
+            "niveau": "hard",
+            "reponse": "Les ExceptionFilter sont spécialisés pour la gestion des exceptions HTTP et sont exécutés après que l'exception a été levée. Ils sont plus adaptés pour : 1) La personnalisation fine des réponses d'erreur selon le type d'exception, 2) Le logging spécifique aux erreurs, 3) La transformation des erreurs techniques en erreurs métier. L'interceptor avec catchError peut être utile quand on veut combiner la gestion d'erreurs avec d'autres transformations (ex: ajouter du contexte, nettoyage). En pratique, pour les réponses HTTP, le filtre d'exception est plus idiomatique et recommandé par NestJS."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Chaînage d'interceptors (timing + transformation)",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous souhaitez combiner deux interceptors : un pour mesurer le temps d'exécution (LoggingInterceptor) et un pour formater la réponse (TransformInterceptor). L'ordre d'exécution est important.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer l'ordre d'exécution des interceptors lorsqu'ils sont chaînés. Déterminer dans quel ordre appliquer les deux interceptors pour que le temps mesuré inclue uniquement l'exécution du handler (sans la transformation). Justifier.",
+        "niveau": "very hard",
+        "reponse": "L'ordre d'exécution des interceptors est : le plus proche du handler (celui déclaré en dernier) s'exécute en premier pour le code avant, et en dernier pour le code après (principe de la poupée russe / onion).\n\nPour mesurer uniquement l'exécution du handler sans la transformation, il faut placer LoggingInterceptor après TransformInterceptor dans la chaîne (ou le déclarer plus proche du handler).\n\nExemple avec décorateurs : \n```typescript\n@UseInterceptors(TransformInterceptor) // s'exécute en premier (extérieur)\n@UseInterceptors(LoggingInterceptor)   // s'exécute en second (intérieur, près du handler)\n```\nFlux d'exécution :\n1. TransformInterceptor (before) → LoggingInterceptor (before) → Handler → LoggingInterceptor (after) → TransformInterceptor (after)\n\nLe temps mesuré par LoggingInterceptor ne comprend que le handler (pas la transformation), car le after de LoggingInterceptor s'exécute avant la transformation.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Écrire une version modifiée du LoggingInterceptor qui accepte une option 'includeInterceptorTime' pour choisir d'inclure ou non le temps des autres interceptors.",
+            "niveau": "hard",
+            "reponse": "```typescript\n@Injectable()\nexport class ConfigurableLoggingInterceptor implements NestInterceptor {\n  constructor(private readonly includeInterceptorTime: boolean = false) {}\n  \n  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {\n    const startTime = Date.now();\n    return next.handle().pipe(\n      tap(() => {\n        const duration = Date.now() - startTime;\n        const message = this.includeInterceptorTime\n          ? `Requête + transformations: ${duration}ms`\n          : `Handler uniquement: ${duration}ms`;\n        console.log(message);\n      }),\n    );\n  }\n}\n\n// Utilisation dans un module avec injection\n@Module({\n  providers: [\n    {\n      provide: APP_INTERCEPTOR,\n      useClass: TransformInterceptor,\n    },\n    {\n      provide: APP_INTERCEPTOR,\n      useFactory: () => new ConfigurableLoggingInterceptor(false),\n    },\n  ],\n})\nexport class AppModule {}\n```\nAvec cette configuration, l'interceptor de logging (extérieur) mesurera le temps total incluant la transformation. Placer LoggingInterceptor en premier le fera mesurer handler + transformations."
+          }
+        ]
+      }
+    ]
+  }
+]

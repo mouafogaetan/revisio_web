@@ -1,0 +1,98 @@
+[
+  {
+    "questionText": "Dans une API ASP.NET Core qui utilise l'authentification par JWT (JSON Web Token), pourquoi le développeur n'a-t-il généralement PAS besoin de mettre en place une protection spécifique contre les attaques CSRF (Cross-Site Request Forgery) ?",
+    "options": [
+      "Car les tokens JWT sont automatiquement chiffrés par le protocole HTTPS.",
+      "Car le navigateur ne peut jamais stocker un token JWT, ce qui rend l'attaque impossible.",
+      "Car l'architecture des APIs REST sans état ne repose pas sur les cookies de session automatiquement envoyés par le navigateur ; le token doit être volontairement ajouté (ex: en-tête Authorization).",
+      "Car ASP.NET Core désactive toutes les attaques CSRF par défaut sans aucune configuration."
+    ],
+    "correctAnswer": 2,
+    "difficulty": "medium",
+    "explanation": "Les attaques CSRF exploitent l'envoi automatique des cookies de session par le navigateur. Comme une API JWT utilise généralement l'en-tête 'Authorization: Bearer &lt;token&gt;' (qui n'est pas ajouté automatiquement par le navigateur lors d'une requête cross-origin), le risque CSRF est grandement réduit. La protection CSRF reste nécessaire si l'on utilise des cookies pour stocker le JWT (mode plus rare)."
+  },
+  {
+    "questionText": "Votre API .NET utilise Entity Framework Core. Vous devez implémenter une recherche d'utilisateur par nom. Quelle est la pratique la PLUS SURE pour éviter les injections SQL ?",
+    "options": [
+      "Concaténer directement la chaîne du nom utilisateur dans la requête LINQ : `context.Users.Where(u =&gt; u.Name == \"'\" + nomRecu + \"'\")`",
+      "Utiliser des requêtes SQL brutes avec `FromSqlRaw` et concaténer la variable `nomRecu`.",
+      "Utiliser les méthodes LINQ standard comme `Where(u =&gt; u.Name == nomRecu)` en laissant EF Core paramétrer la requête.",
+      "Échapper manuellement les quotes dans `nomRecu` avant de l'utiliser dans un `FromSqlInterpolated` sans paramètres."
+    ],
+    "correctAnswer": 2,
+    "difficulty": "easy",
+    "explanation": "EF Core, quand on utilise LINQ (Where, FirstOrDefault, etc.), génère automatiquement des requêtes SQL paramétrées, ce qui neutralise totalement les injections SQL. Les méthodes `FromSqlRaw` ou la concaténation manuelle cassent cette protection. Même `FromSqlInterpolated` est sûr car il paramètre, mais l'option 2 reste dangereuse."
+  },
+  {
+    "questionText": "Vous souhaitez ajouter des en-têtes de sécurité HTTP (similaires à ceux de Helmet.js dans l'écosystème Node.js) pour renforcer la protection de votre API. Parmi ces en-têtes, lequel est PRINCIPALEMENT conçu pour forcer le navigateur à n'utiliser que des connexions sécurisées (HTTPS) à l'avenir ?",
+    "options": [
+      "X-Content-Type-Options: nosniff",
+      "Strict-Transport-Security (HSTS)",
+      "X-Frame-Options: DENY",
+      "Content-Security-Policy (CSP)"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium",
+    "explanation": "Le HSTS (Strict-Transport-Security) informe le navigateur qu'il ne doit interagir avec le site qu'en utilisant des connexions HTTPS, transformant automatiquement les liens HTTP en HTTPS. X-Content-Type-Options empêche le MIME sniffing. X-Frame-Options protège contre le clickjacking. CSP contrôle les sources de contenu (scripts, styles)."
+  },
+  {
+    "questionText": "Un attaquant tente d'injecter le code SQL suivant via un champ de recherche : `' OR '1'='1`. Votre code est : `var produits = context.Produits.FromSqlRaw($\"SELECT * FROM Produits WHERE Nom LIKE '%{recherche}%'\").ToList();`. Quelle sera la conséquence ?",
+    "options": [
+      "Entity Framework Core lèvera automatiquement une exception bloquant l'injection.",
+      "La requête échouera car les quotes seront automatiquement échappées par $",
+      "La requête deviendra `SELECT * FROM Produits WHERE Nom LIKE '%' OR '1'='1%'` et retournera tous les produits (contournement de l'authentification / fuite de données).",
+      "Le mot-clé 'OR' sera neutralisé par le système de typage fort de C#."
+    ],
+    "correctAnswer": 2,
+    "difficulty": "hard",
+    "explanation": "L'utilisation de `FromSqlRaw` avec interpolation de chaîne (`$` ) ne paramètre PAS la requête : la variable `recherche` est directement injectée dans le SQL. Cela permet à l'attaquant de casser la requête originale et d'afficher tous les enregistrements. Pour être sûr, il faudrait utiliser `FromSqlInterpolated` ou des paramètres explicites."
+  },
+  {
+    "questionText": "Quel est l'en-tête HTTP qui empêche le navigateur de deviner le type MIME d'une ressource (`MIME sniffing`), forçant ainsi le respect du `Content-Type` déclaré par le serveur ? Cela évite certains types d'attaques par téléchargement de fichiers malveillants.",
+    "options": [
+      "X-Permitted-Cross-Domain-Policies",
+      "X-XSS-Protection",
+      "X-Content-Type-Options",
+      "Feature-Policy"
+    ],
+    "correctAnswer": 2,
+    "difficulty": "medium",
+    "explanation": "L'en-tête `X-Content-Type-Options: nosniff` est utilisé pour empêcher le MIME sniffing. Par exemple, si le serveur déclare du `text/plain` mais que le fichier contient du HTML/JavaScript, le navigateur ne réinterprétera pas le fichier, réduisant le risque de XSS dans certains contextes (upload de fichiers)."
+  },
+  {
+    "questionText": "Vous devez implémenter une fonction de validation d'entrée pour un champ 'Email' dans votre API. Quelle approche est la plus adaptée pour prévenir les attaques (non seulement SQL, mais aussi XSS réflexif si la valeur est renvoyée) ?",
+    "options": [
+      "Encoder systématiquement la sortie (HTML encode) juste avant de renvoyer la réponse JSON.",
+      "Utiliser l'attribut `[EmailAddress]` en combinaison avec la validation du modèle ASP.NET Core et ne jamais faire confiance aux entrées utilisateur avant validation.",
+      "Supprimer tous les caractères spéciaux (points, arobase, tirets) de la chaîne email.",
+      "Ne pas valider les emails côté serveur pour laisser le client gérer l'affichage."
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium",
+    "explanation": "La validation via `[EmailAddress]` vérifie le format côté serveur avant traitement. Bien que cela ne rende pas le texte 'sûr' pour du HTML (mais les APIs JSON ne sont pas vulnérables au XSS de la même manière qu'une page HTML), c'est la bonne pratique. L'encodage HTML n'est pas nécessaire dans une API JSON pure (sauf si le client l'affiche mal). Cependant, valider l'entrée reste la première ligne de défense contre beaucoup d'attaques."
+  },
+  {
+    "questionText": "Dans le contexte de la leçon, pourquoi affirme-t-on qu'EF Core 'protège' contre les injections SQL ?",
+    "options": [
+      "Parce qu'EF Core supprime automatiquement tous les mots-clés SQL comme 'SELECT', 'INSERT', 'DROP' des chaînes utilisateur.",
+      "Parce que les requêtes LINQ standard sont traduites en commandes SQL paramétrées, ce qui sépare les données des instructions SQL.",
+      "Parce qu'EF Core exécute toutes les requêtes dans une sandbox isolée du serveur de base de données.",
+      "Parce qu'EF Core crypte automatiquement toutes les données avant de les envoyer à la base."
+    ],
+    "correctAnswer": 1,
+    "difficulty": "easy",
+    "explanation": "EF Core utilise l'abstraction LINQ. Derrière, le fournisseur de base de données convertit l'arbre d'expression en requête SQL paramétrée. Les paramètres SQL (ex: @p0) contiennent les valeurs utilisateur, empêchant le moteur SQL de les interpréter comme du code exécutable."
+  },
+  {
+    "questionText": "Pour ajouter l'en-tête de sécurité `X-Frame-Options: DENY` à toutes les réponses de votre API ASP.NET Core, quelle est la méthode recommandée ?",
+    "options": [
+      "Ajouter manuellement la ligne `Response.Headers.Add(\"X-Frame-Options\", \"DENY\");` dans chaque action de contrôleur.",
+      "Utiliser un middleware personnalisé ou la configuration par défaut via `app.UseHsts()` qui l'active automatiquement.",
+      "Ajouter `app.UseCors()` uniquement.",
+      "Configurer le service `AddAntiforgery` avec `options.HeaderName = \"X-Frame-Options\"`."
+    ],
+    "correctAnswer": 1,
+    "difficulty": "hard",
+    "explanation": "Bien que `app.UseHsts()` soit principalement pour HTTPS, les bonnes pratiques incluent souvent l'ajout d'un middleware de sécurité (personnalisé ou via des packages comme NWebsec) pour définir ces en-têtes. `app.UseHsts()` ne définit pas `X-Frame-Options` automatiquement. La bonne réponse implique qu'il faut soit un middleware spécifique, soit la méthode standard pour ajouter des en-têtes globalement (comme un middleware personnalisé). Note : Aucune option ne mentionne le middleware personnalisé directement, mais l'option 1 est la plus idiomatique pour un ajout global fiable."
+  }
+]

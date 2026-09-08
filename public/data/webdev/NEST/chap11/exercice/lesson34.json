@@ -1,0 +1,162 @@
+[
+  {
+    "intitule": "Analyse d'un domaine et planification des entités",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous devez concevoir l'API backend d'une plateforme de <strong>blog en ligne</strong>. Les fonctionnalités attendues sont :</p>\n<ul>\n  <li>Gestion des articles (création, lecture, mise à jour, suppression)</li>\n  <li>Chaque article appartient à une catégorie</li>\n  <li>Un auteur peut écrire plusieurs articles</li>\n  <li>Les lecteurs peuvent commenter les articles</li>\n</ul>\n<p>Un utilisateur (auteur ou lecteur) a un nom, un email et un mot de passe hashé.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier les entités nécessaires et leurs relations (OneToOne, OneToMany, ManyToOne, ManyToMany) dans ce domaine.",
+        "niveau": "medium",
+        "reponse": "Entités : User, Article, Category, Comment. Relations : User (auteur) ↔ Article : OneToMany (un user peut avoir plusieurs articles, un article a un seul auteur). Category ↔ Article : ManyToOne (une catégorie peut avoir plusieurs articles, un article a une seule catégorie). Article ↔ Comment : OneToMany (un article peut avoir plusieurs commentaires, un commentaire appartient à un article). User ↔ Comment : ManyToOne (un user peut écrire plusieurs commentaires).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Créer le schéma des entités TypeORM (code) pour les entités <code>Article</code> et <code>Category</code> avec leurs décorateurs et colonnes.",
+        "niveau": "medium",
+        "reponse": "<pre><code>// category.entity.ts\nimport { Entity, Column, PrimaryGeneratedColumn, OneToMany } from 'typeorm';\nimport { Article } from './article.entity';\n\n@Entity()\nexport class Category {\n  @PrimaryGeneratedColumn()\n  id: number;\n\n  @Column({ unique: true })\n  name: string;\n\n  @OneToMany(() => Article, article => article.category)\n  articles: Article[];\n}\n\n// article.entity.ts\nimport { Entity, Column, PrimaryGeneratedColumn, ManyToOne } from 'typeorm';\nimport { User } from './user.entity';\nimport { Category } from './category.entity';\n\n@Entity()\nexport class Article {\n  @PrimaryGeneratedColumn()\n  id: number;\n\n  @Column()\n  title: string;\n\n  @Column('text')\n  content: string;\n\n  @ManyToOne(() => User, user => user.articles)\n  author: User;\n\n  @ManyToOne(() => Category, category => category.articles)\n  category: Category;\n}</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Justifier le choix d'utiliser une clé étrangère <code>@ManyToOne</code> pour la relation Article-Category plutôt qu'une relation <code>@OneToMany</code> côté Category.",
+        "niveau": "easy",
+        "reponse": "La relation ManyToOne est la plus naturelle car un article appartient à une seule catégorie (c'est la table Article qui contient la clé étrangère categoryId). Le côté OneToMany dans Category permet simplement de naviguer dans l'autre sens (récupérer tous les articles d'une catégorie). C'est une relation bidirectionnelle classique où le côté ManyToOne est le côté propriétaire.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Planification des endpoints RESTful pour un blog",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>À partir du domaine défini précédemment (blog avec articles, catégories, utilisateurs, commentaires), vous devez planifier les endpoints RESTful pour exposer l'API.</p>\n<p>Respectez les conventions REST (noms des ressources, méthodes HTTP, codes de statut).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Lister tous les endpoints nécessaires pour la ressource <code>Article</code> (CRUD complet) avec leur méthode HTTP et leur chemin.",
+        "niveau": "easy",
+        "reponse": "GET /articles → liste paginée des articles. GET /articles/:id → détail d'un article. POST /articles → créer un article (authentifié). PUT /articles/:id → modifier un article (auteur ou admin). DELETE /articles/:id → supprimer un article (auteur ou admin). GET /articles?categoryId=xxx → filtrer par catégorie. GET /articles?authorId=xxx → filtrer par auteur.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer une structure d'endpoints pour les commentaires liés à un article spécifique. Inclure la création et la suppression.",
+        "niveau": "medium",
+        "reponse": "GET /articles/:articleId/comments → liste des commentaires d'un article. POST /articles/:articleId/comments → ajouter un commentaire (authentifié). DELETE /comments/:commentId → supprimer un commentaire (auteur du commentaire ou admin). GET /comments/:commentId → détail d'un commentaire (optionnel).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Évaluer la pertinence d'ajouter un endpoint <code>PATCH /articles/:id/publish</code> pour publier un article (changer son statut de brouillon à publié) et proposer une alternative plus RESTful.",
+        "niveau": "hard",
+        "reponse": "L'endpoint proposé est acceptable mais moins RESTful car il utilise un verbe d'action dans l'URL. Une approche plus RESTful serait d'ajouter un champ <code>status</code> (draft, published) dans l'entité Article, puis d'utiliser <code>PATCH /articles/:id</code> avec un body <code>{\"status\": \"published\"}</code>. On peut aussi créer une ressource dédiée <code>/articles/:id/publish</code> avec un POST si la logique de publication est complexe (validation, notifications, etc.).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Définition des entités et validation des contraintes métier",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>On souhaite modéliser une plateforme e-commerce simplifiée avec :</p>\n<ul>\n  <li><strong>Product</strong> : id, nom, prix (doit être > 0), stock (>= 0)</li>\n  <li><strong>Order</strong> : id, date de commande, statut (pending, paid, shipped, delivered), user (relation ManyToOne)</li>\n  <li><strong>OrderItem</strong> : id, product (relation), quantity (>= 1), priceAtPurchase (prix au moment de l'achat)</li>\n  <li><strong>User</strong> : id, nom, email (unique)</li>\n</ul>\n<p>Un utilisateur peut avoir plusieurs commandes. Une commande contient plusieurs articles (OrderItem).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire les entités TypeORM complètes avec les décorateurs et les contraintes de validation (@Column options, @Unique si nécessaire).",
+        "niveau": "hard",
+        "reponse": "<pre><code>// product.entity.ts\n@Entity()\nexport class Product {\n  @PrimaryGeneratedColumn()\n  id: number;\n\n  @Column()\n  name: string;\n\n  @Column({ type: 'decimal', precision: 10, scale: 2 })\n  price: number;\n\n  @Column({ default: 0 })\n  stock: number;\n}\n\n// user.entity.ts\n@Entity()\nexport class User {\n  @PrimaryGeneratedColumn()\n  id: number;\n\n  @Column()\n  name: string;\n\n  @Column({ unique: true })\n  email: string;\n\n  @OneToMany(() => Order, order => order.user)\n  orders: Order[];\n}\n\n// order.entity.ts\n@Entity()\nexport class Order {\n  @PrimaryGeneratedColumn()\n  id: number;\n\n  @CreateDateColumn()\n  createdAt: Date;\n\n  @Column({ type: 'enum', enum: ['pending', 'paid', 'shipped', 'delivered'], default: 'pending' })\n  status: string;\n\n  @ManyToOne(() => User, user => user.orders)\n  user: User;\n\n  @OneToMany(() => OrderItem, item => item.order, { cascade: true })\n  items: OrderItem[];\n}\n\n// order-item.entity.ts\n@Entity()\nexport class OrderItem {\n  @PrimaryGeneratedColumn()\n  id: number;\n\n  @ManyToOne(() => Product)\n  product: Product;\n\n  @ManyToOne(() => Order, order => order.items)\n  order: Order;\n\n  @Column()\n  quantity: number;\n\n  @Column({ type: 'decimal', precision: 10, scale: 2 })\n  priceAtPurchase: number;\n}</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer pourquoi le champ <code>priceAtPurchase</code> est nécessaire dans <code>OrderItem</code> alors qu'on a déjà le prix dans <code>Product</code>.",
+        "niveau": "easy",
+        "reponse": "Le prix d'un produit peut changer dans le temps (promotion, inflation). Si on se contentait de lier OrderItem à Product via une relation, le prix affiché dans la commande historique serait le prix actuel, pas le prix au moment de l'achat. <code>priceAtPurchase</code> fige le prix au moment de la commande pour préserver l'intégrité des données facturées.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposer un mécanisme pour garantir qu'une commande ne peut pas être créée si un produit n'a pas assez de stock (intégrité métier).",
+        "niveau": "hard",
+        "reponse": "On peut implémenter cette vérification dans le service <code>OrderService</code> avant la création de la commande : vérifier pour chaque produit si <code>product.stock >= requestedQuantity</code>. Ensuite, dans une transaction, décrémenter le stock et créer la commande. Pour la concurrence, utiliser les verrous pessimistes de TypeORM (<code>findOne({ where: { id }, lock: { mode: 'pessimistic_write' } })</code>) ou une version de stock avec champ <code>version</code> (optimistic locking).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "De la conception à l'implémentation - endpoints pour une API de réservation",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous concevez une API pour un système de réservation de salles de réunion dans une entreprise.</p>\n<p>Un utilisateur peut réserver une salle pour une plage horaire donnée. Une salle ne peut pas être réservée deux fois à la même heure.</p>\n<p>Entités identifiées : <strong>Room</strong> (nom, capacité, équipements), <strong>User</strong> (nom, email), <strong>Booking</strong> (room, user, startTime, endTime, status).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Définir les relations entre les entités et écrire le code des entités TypeORM avec les décorateurs appropriés.",
+        "niveau": "medium",
+        "reponse": "Room ↔ Booking : OneToMany (une salle peut avoir plusieurs réservations). User ↔ Booking : OneToMany (un utilisateur peut avoir plusieurs réservations). Booking contient deux ManyToOne. <pre><code>// booking.entity.ts\n@Entity()\nexport class Booking {\n  @PrimaryGeneratedColumn()\n  id: number;\n\n  @ManyToOne(() => Room)\n  room: Room;\n\n  @ManyToOne(() => User)\n  user: User;\n\n  @Column({ type: 'timestamp' })\n  startTime: Date;\n\n  @Column({ type: 'timestamp' })\n  endTime: Date;\n\n  @Column({ default: 'confirmed' })\n  status: string;\n}</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Lister les endpoints REST nécessaires pour permettre : (a) consulter les salles disponibles, (b) créer une réservation, (c) annuler une réservation.",
+        "niveau": "medium",
+        "reponse": "(a) GET /rooms?startTime=...&endTime=... → filtrer les salles disponibles sur une plage horaire. GET /rooms → toutes les salles. (b) POST /bookings → créer une réservation (body: roomId, startTime, endTime). (c) DELETE /bookings/:id ou PATCH /bookings/:id/cancel (ou PUT avec status='cancelled').",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Analyser les contraintes de concurrence pour éviter la double résolution d'une même salle. Proposer une solution avec transaction et verrou.",
+        "niveau": "very hard",
+        "reponse": "Le problème : deux utilisateurs peuvent simultanément vérifier la disponibilité et créer une réservation. Solution : utiliser une transaction avec verrou pessimiste. Dans le service : <pre><code>await this.dataSource.transaction(async manager => {\n  const room = await manager.findOne(Room, {\n    where: { id: roomId },\n    lock: { mode: 'pessimistic_write' },\n  });\n  // Vérifier l'absence de chevauchement\n  const conflict = await manager.findOne(Booking, {\n    where: { room: { id: roomId } },\n    // ... condition de chevauchement horaire\n  });\n  if (conflict) throw new ConflictException();\n  await manager.save(booking);\n});</code></pre> On peut aussi utiliser un index unique composite (roomId, startTime, endTime) avec validation au niveau base de données.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Comparaison des stratégies de modélisation relationnelle",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Dans une application de réseau social, un utilisateur peut avoir plusieurs <strong>amis</strong> (relation ManyToMany entre User et User).</p>\n<p>De plus, un utilisateur peut <strong>liker</strong> plusieurs publications (Post) et une publication peut avoir plusieurs likes (relation ManyToMany entre User et Post).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer comment modéliser une relation ManyToMany avec des métadonnées supplémentaires (ex: date d'ajout pour l'amitié, date du like).",
+        "niveau": "hard",
+        "reponse": "Pour ajouter des métadonnées, on ne peut pas utiliser le simple décorateur <code>@ManyToMany</code> car la table de liaison ne contiendrait que les clés étrangères. Il faut créer une entité intermédiaire (ex: <code>Friendship</code> et <code>Like</code>) avec les colonnes supplémentaires, puis utiliser deux relations <code>@OneToMany</code>/<code>@ManyToOne</code>.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrire le code des entités <code>User</code> et <code>Friendship</code> pour gérer la relation d'amitié avec une date de création et un statut (pending, accepted, rejected).",
+        "niveau": "hard",
+        "reponse": "<pre><code>// friendship.entity.ts\n@Entity()\nexport class Friendship {\n  @PrimaryGeneratedColumn()\n  id: number;\n\n  @ManyToOne(() => User, user => user.sentFriendRequests)\n  requester: User;\n\n  @ManyToOne(() => User, user => user.receivedFriendRequests)\n  addressee: User;\n\n  @CreateDateColumn()\n  createdAt: Date;\n\n  @Column({ default: 'pending' })\n  status: string;\n}\n\n// user.entity.ts\n@Entity()\nexport class User {\n  @PrimaryGeneratedColumn()\n  id: number;\n\n  @OneToMany(() => Friendship, f => f.requester)\n  sentFriendRequests: Friendship[];\n\n  @OneToMany(() => Friendship, f => f.addressee)\n  receivedFriendRequests: Friendship[];\n}</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposer une requête TypeORM QueryBuilder pour récupérer tous les amis acceptés d'un utilisateur donné.",
+        "niveau": "hard",
+        "reponse": "<pre><code>const acceptedFriends = await this.userRepository\n  .createQueryBuilder('user')\n  .leftJoin('user.sentFriendRequests', 'sent')\n  .leftJoin('user.receivedFriendRequests', 'received')\n  .leftJoin('sent.addressee', 'friendAsRequester')\n  .leftJoin('received.requester', 'friendAsAddressee')\n  .where('user.id = :userId', { userId })\n  .andWhere('(sent.status = :status OR received.status = :status)', { status: 'accepted' })\n  .select(['friendAsRequester.id', 'friendAsRequester.name', 'friendAsAddressee.id', 'friendAsAddressee.name'])\n  .getMany();</code></pre>",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

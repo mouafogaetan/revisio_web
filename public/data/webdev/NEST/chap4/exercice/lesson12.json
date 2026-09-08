@@ -1,0 +1,87 @@
+[
+  {
+    "intitule": "Injection du repository et opérations CRUD de base",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans une application NestJS utilisant TypeORM avec PostgreSQL, vous devez implémenter un service de gestion des produits. La structure de l'entité <code>Product</code> est la suivante :</p><pre><code>// product.entity.ts\n@Entity('products')\nexport class Product {\n  @PrimaryGeneratedColumn('uuid')\n  id: string;\n\n  @Column({ length: 100 })\n  name: string;\n\n  @Column('decimal', { precision: 10, scale: 2 })\n  price: number;\n\n  @Column({ default: 0 })\n  stock: number;\n}</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez le rôle du décorateur `@InjectRepository(Product)` dans un service NestJS. Pourquoi ne peut-on pas simplement instancier un repository avec `new` ?",
+        "niveau": "medium",
+        "reponse": "`@InjectRepository(Product)` est un décorateur qui permet à NestJS d'injecter automatiquement le repository TypeORM associé à l'entité Product via le système d'injection de dépendances. NestJS utilise le conteneur IoC (Inversion of Control) pour gérer les instances. On ne peut pas instancier le repository avec `new` car TypeORM a besoin de la connexion à la base de données et de la configuration pour fonctionner correctement. L'injection garantit que le repository est correctement configuré et partagé.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Rédigez le code complet du service `ProductsService` qui implémente les méthodes suivantes : `findAll()`, `findOne(id: string)`, `create(createProductDto)`, `update(id: string, updateProductDto)`, `remove(id: string)`. Utilisez les méthodes standards de TypeORM (`find`, `findOneBy`, `save`, `update`, `delete`). Gérez les erreurs avec des exceptions NestJS appropriées.",
+        "niveau": "hard",
+        "reponse": "```typescript\nimport { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Product } from './product.entity';\nimport { CreateProductDto } from './dto/create-product.dto';\nimport { UpdateProductDto } from './dto/update-product.dto';\n\n@Injectable()\nexport class ProductsService {\n  constructor(\n    @InjectRepository(Product)\n    private productRepository: Repository<Product>,\n  ) {}\n\n  async findAll(): Promise<Product[]> {\n    return this.productRepository.find();\n  }\n\n  async findOne(id: string): Promise<Product> {\n    const product = await this.productRepository.findOneBy({ id });\n    if (!product) {\n      throw new NotFoundException(`Produit avec l'ID ${id} non trouvé`);\n    }\n    return product;\n  }\n\n  async create(createProductDto: CreateProductDto): Promise<Product> {\n    try {\n      const product = this.productRepository.create(createProductDto);\n      return await this.productRepository.save(product);\n    } catch (error) {\n      throw new BadRequestException('Erreur lors de la création du produit');\n    }\n  }\n\n  async update(id: string, updateProductDto: UpdateProductDto): Promise<Product> {\n    await this.findOne(id); // Vérifie l'existence\n    await this.productRepository.update(id, updateProductDto);\n    return this.findOne(id);\n  }\n\n  async remove(id: string): Promise<void> {\n    const result = await this.productRepository.delete(id);\n    if (result.affected === 0) {\n      throw new NotFoundException(`Produit avec l'ID ${id} non trouvé`);\n    }\n  }\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Requêtes avancées avec QueryBuilder",
+    "type": "compétence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>AfriMarket, une plateforme e-commerce camerounaise, a besoin d'implémenter des fonctionnalités avancées de recherche et de filtrage des produits. Vous devez utiliser le QueryBuilder de TypeORM pour optimiser les requêtes complexes.</p><p>Voici la structure des entités :</p><pre><code>// product.entity.ts\n@Entity('products')\nexport class Product {\n  @PrimaryGeneratedColumn('uuid')\n  id: string;\n  @Column()\n  name: string;\n  @Column('decimal')\n  price: number;\n  @Column()\n  category: string;\n  @Column({ default: true })\n  isActive: boolean;\n  @CreateDateColumn()\n  createdAt: Date;\n}\n\n// review.entity.ts\n@Entity('reviews')\nexport class Review {\n  @PrimaryGeneratedColumn('uuid')\n  id: string;\n  @Column('int')\n  rating: number; // 1 à 5\n  @Column('text')\n  comment: string;\n  @ManyToOne(() => Product, product => product.reviews)\n  product: Product;\n}</code></pre>",
+      "images": [
+        "Schéma de base de données relationnelle entre les tables products et reviews (relation OneToMany)"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez une méthode `findByFilters(filters)` qui utilise QueryBuilder pour rechercher des produits selon les critères suivants : recherche textuelle sur le nom (insensible à la casse), filtre par catégorie, prix minimum et maximum, et tri par prix croissant ou décroissant. Tous les filtres sont optionnels.",
+        "niveau": "hard",
+        "reponse": "```typescript\nasync findByFilters(filters: {\n  search?: string;\n  category?: string;\n  minPrice?: number;\n  maxPrice?: number;\n  sortBy?: 'price_asc' | 'price_desc';\n}): Promise<Product[]> {\n  const queryBuilder = this.productRepository.createQueryBuilder('product');\n\n  if (filters.search) {\n    queryBuilder.andWhere('LOWER(product.name) LIKE LOWER(:search)', {\n      search: `%${filters.search}%`,\n    });\n  }\n\n  if (filters.category) {\n    queryBuilder.andWhere('product.category = :category', {\n      category: filters.category,\n    });\n  }\n\n  if (filters.minPrice !== undefined) {\n    queryBuilder.andWhere('product.price >= :minPrice', {\n      minPrice: filters.minPrice,\n    });\n  }\n\n  if (filters.maxPrice !== undefined) {\n    queryBuilder.andWhere('product.price <= :maxPrice', {\n      maxPrice: filters.maxPrice,\n    });\n  }\n\n  if (filters.sortBy === 'price_asc') {\n    queryBuilder.orderBy('product.price', 'ASC');\n  } else if (filters.sortBy === 'price_desc') {\n    queryBuilder.orderBy('product.price', 'DESC');\n  }\n\n  return queryBuilder.getMany();\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrivez une méthode `getProductsWithAverageRating()` qui retourne la liste des produits avec leur note moyenne calculée à partir des avis. Utilisez QueryBuilder avec une jointure LEFT JOIN et une fonction d'agrégation (AVG). Incluez uniquement les produits actifs.",
+        "niveau": "very hard",
+        "reponse": "```typescript\nasync getProductsWithAverageRating(): Promise<any[]> {\n  return this.productRepository\n    .createQueryBuilder('product')\n    .leftJoin('product.reviews', 'review')\n    .select([\n      'product.id',\n      'product.name',\n      'product.price',\n      'product.category',\n      'AVG(review.rating) AS averageRating',\n    ])\n    .where('product.isActive = :isActive', { isActive: true })\n    .groupBy('product.id')\n    .orderBy('averageRating', 'DESC')\n    .getRawMany();\n}\n```\n\n**Explication :** `.leftJoin()` permet de conserver les produits sans avis (note moyenne nulle). `.getRawMany()` est utilisé car on récupère des données agrégées, non des entités complètes.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Comparez l'utilisation de `find()` avec les options standard et l'utilisation de QueryBuilder. Dans quel cas recommanderiez-vous QueryBuilder plutôt que les méthodes standard du repository ?",
+        "niveau": "medium",
+        "reponse": "**Méthodes standard (`find`, `findOne`, `save`)** :\n- Plus simples et concises\n- Idéales pour les opérations CRUD basiques\n- Recommandées pour la lecture simple par ID ou conditions simples\n\n**QueryBuilder** :\n- Plus flexible pour les requêtes complexes\n- Utile pour :\n  - Jointures entre plusieurs tables\n  - Requêtes avec agrégations (SUM, AVG, COUNT)\n  - Sous-requêtes\n  - Conditions dynamiques complexes\n  - Optimisation des performances avec sélection de colonnes spécifiques\n  - Pagination avancée avec `skip`/`take`\n\n**Règle générale :** Commencez avec les méthodes standard, passez à QueryBuilder lorsque la complexité augmente.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation des performances avec pagination",
+    "type": "compétence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>L'API produits d'AfriMarket retourne actuellement tous les produits d'un coup, ce qui cause des lenteurs et une surcharge mémoire (plus de 10 000 produits en base). Vous devez implémenter une pagination efficace.</p><p>Le client frontend envoie les paramètres : <code>page</code> (démarre à 1) et <code>limit</code> (par défaut 20, max 100).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédigez une méthode `findPaginated(page: number, limit: number)` qui retourne les produits paginés ainsi que le nombre total d'enregistrements (pour permettre au frontend de calculer le nombre de pages). Utilisez QueryBuilder avec `skip` et `take`. Gérez les valeurs par défaut et les limites.",
+        "niveau": "hard",
+        "reponse": "```typescript\nasync findPaginated(page: number = 1, limit: number = 20): Promise<{\n  data: Product[];\n  total: number;\n  page: number;\n  limit: number;\n  totalPages: number;\n}> {\n  // Validation et bornage des paramètres\n  const validPage = Math.max(1, page);\n  const validLimit = Math.min(100, Math.max(1, limit));\n  const skip = (validPage - 1) * validLimit;\n\n  const queryBuilder = this.productRepository.createQueryBuilder('product');\n\n  const [data, total] = await queryBuilder\n    .skip(skip)\n    .take(validLimit)\n    .orderBy('product.createdAt', 'DESC')\n    .getManyAndCount();\n\n  return {\n    data,\n    total,\n    page: validPage,\n    limit: validLimit,\n    totalPages: Math.ceil(total / validLimit),\n  };\n}\n```\n\n**Calcul du nombre de pages :** $\\text{totalPages} = \\lceil \\frac{\\text{total}}{\\text{limit}} \\rceil$",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Calculez le nombre de pages nécessaires si la base contient 10 000 produits et que le client demande `page=3, limit=25`. Combien de produits sont sautés ?",
+            "niveau": "easy",
+            "reponse": "$\\text{totalPages} = \\lceil \\frac{10000}{25} \\rceil = \\lceil 400 \\rceil = 400$ pages.\n\n$\\text{skip} = (3 - 1) \\times 25 = 50$ produits sautés (2 pages complètes).",
+            "sousQuestions": []
+          }
+        ]
+      }
+    ]
+  }
+]

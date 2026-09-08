@@ -1,0 +1,165 @@
+[
+  {
+    "intitule": "Fondements des RNN et de leurs variantes",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Cet exercice porte sur les concepts fondamentaux des Réseaux de Neurones Récurrents (RNN), des LSTM et des GRU, essentiels pour le traitement des séries temporelles et des données séquentielles.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez le principe de fonctionnement d'un RNN standard et le problème de la disparition du gradient (vanishing gradient) qui affecte son entraînement sur de longues séquences.",
+        "niveau": "medium",
+        "reponse": "Un RNN standard traite les séquences en maintenant un état caché $h_t$ qui est mis à jour à chaque pas de temps : $h_t = f(W_{xh}x_t + W_{hh}h_{t-1} + b)$. Lors de la rétropropagation dans le temps (BPTT), le gradient est multiplié par la matrice $W_{hh}$ à chaque pas. Si les valeurs propres de $W_{hh}$ sont < 1, le gradient s'approche de 0 exponentiellement (vanishing gradient), ce qui rend difficile l'apprentissage des dépendances à long terme. Les RNN ont donc du mal à capturer des relations distantes dans une séquence.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Décrivez l'architecture d'une cellule LSTM. Identifiez ses composants clés et expliquez comment elle résout le problème de disparition du gradient.",
+        "niveau": "hard",
+        "reponse": "La cellule LSTM comprend : 1) Une porte d'oubli $f_t = \\sigma(W_f \\cdot [h_{t-1}, x_t] + b_f)$ qui décide quelles informations de l'état cellulaire $C_{t-1}$ doivent être oubliées. 2) Une porte d'entrée $i_t = \\sigma(W_i \\cdot [h_{t-1}, x_t] + b_i)$ qui décide quelles informations doivent être stockées, avec un vecteur de candidat $\\tilde{C}_t = \\tanh(W_C \\cdot [h_{t-1}, x_t] + b_C)$. 3) Une mise à jour de l'état cellulaire : $C_t = f_t \\odot C_{t-1} + i_t \\odot \\tilde{C}_t$. 4) Une porte de sortie $o_t = \\sigma(W_o \\cdot [h_{t-1}, x_t] + b_o)$ qui détermine la sortie $h_t = o_t \\odot \\tanh(C_t)$. Les portes permettent de préserver les informations sur de longues distances, et le gradient peut circuler à travers la cellule via des opérations additives (plutôt que multiplicatives), ce qui atténue la disparition du gradient.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Comparez les architectures LSTM et GRU en termes de complexité et de performance. Dans quels contextes privilégier l'une par rapport à l'autre ?",
+        "niveau": "hard",
+        "reponse": "Les GRU (Gated Recurrent Units) sont plus simples que les LSTM : ils ont moins de portes (2 : reset et update) et pas d'état cellulaire séparé. Le GRU combine les portes d'entrée et d'oubli en une porte 'update', et utilise une porte 'reset' pour décider comment combiner l'entrée avec l'état caché précédent. Les GRU sont plus rapides à l'entraînement et nécessitent moins de paramètres, donc moins de données. Les LSTM sont plus expressifs et peuvent capturer des dépendances plus complexes, mais ils sont plus lents et plus sujets au surapprentissage. En pratique : privilégier GRU pour des jeux de données de taille moyenne à grande où la rapidité est importante, et LSTM pour des séquences longues où la mémoire à long terme est cruciale. Dans la plupart des cas, les performances sont proches, et le GRU est souvent préféré pour sa simplicité.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 4,
+        "texte": "Qu'est-ce que le BPTT (Backpropagation Through Time) et comment fonctionne-t-il dans les RNN ? Quelles sont ses limites ?",
+        "niveau": "hard",
+        "reponse": "Le BPTT est l'algorithme de rétropropagation utilisé pour entraîner les RNN. Il consiste à \"dérouler\" le RNN dans le temps, c'est-à-dire à créer un graphe de calcul pour chaque pas de temps, puis à appliquer la rétropropagation standard. Les gradients de l'erreur sont propagés à travers tous les pas de temps, ce qui permet de calculer les mises à jour des poids. Les limites du BPTT sont : 1) La complexité en $O(T)$ où $T$ est la longueur de la séquence, ce qui est coûteux pour les longues séquences. 2) Le problème de disparition/explosion du gradient pour les séquences très longues. Pour atténuer cela, on utilise le BPTT tronqué (Truncated BPTT) qui ne propage le gradient que sur un nombre limité de pas de temps, ou des architectures comme LSTM/GRU.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 5,
+        "texte": "Identifiez les avantages des RNN pour le traitement des séries temporelles par rapport aux modèles classiques (ARIMA, réseaux de neurones feedforward).",
+        "niveau": "medium",
+        "reponse": "Les RNN offrent plusieurs avantages : 1) Ils capturent les dépendances temporelles de manière non linéaire, contrairement aux ARIMA qui sont linéaires. 2) Ils peuvent traiter des séquences de longueur variable. 3) Ils mémorisent les informations passées via l'état caché. 4) Les LSTM/GRU peuvent capturer des dépendances à très long terme. 5) Ils peuvent apprendre des représentations hiérarchiques des données. En revanche, les modèles feedforward ne tiennent pas compte de l'ordre temporel (ils traitent chaque point indépendamment), ce qui les rend inadaptés. Les ARIMA sont limités aux données stationnaires et aux relations linéaires, tandis que les RNN sont plus flexibles.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Application des RNN à la prédiction de séries temporelles",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous travaillez pour la société nationale d'électricité du Cameroun (ENEO). Vous devez prédire la consommation électrique horaire pour les 24 prochaines heures à partir des données historiques de consommation. Le jeu de données contient les consommations horaires des 5 dernières années (environ 43 800 observations), ainsi que des variables météorologiques (température, humidité, précipitations) et des indicateurs de jours fériés.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevez une architecture RNN (réseau de neurones récurrent) adaptée à ce problème de prédiction de séries temporelles. Décrivez la structure du modèle (nombre de couches, type de cellules, couches de sortie) et justifiez vos choix.",
+        "niveau": "hard",
+        "reponse": "Architecture proposée : 1) Entrée : séquence de 168 heures (7 jours) avec variables (consommation, température, humidité, précipitations, jour férié). Normalisation des données. 2) Une ou deux couches LSTM ou GRU (selon la complexité) avec 64-128 unités chacune. Je choisis LSTM ou GRU plutôt qu'un RNN simple pour capturer les dépendances à long terme (cycles hebdomadaires, saisonniers). 3) Une couche Dropout (0.2-0.3) pour éviter le surapprentissage. 4) Une couche Dense avec activation ReLU. 5) Une couche de sortie Dense avec activation linéaire pour la prédiction des 24 heures. Alternativement, on peut utiliser un Seq2Seq avec un encodeur-décodeur. Justification : les données sont temporelles avec des motifs journaliers et hebdomadaires ; les LSTM/GRU capturent bien ces motifs ; le dropout régularise.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Définissez la fonction de perte et les métriques d'évaluation que vous utiliserez pour ce problème. Justifiez votre choix.",
+        "niveau": "medium",
+        "reponse": "Fonction de perte : l'erreur quadratique moyenne (MSE) car la cible est continue. On peut aussi utiliser la MAE (Mean Absolute Error) qui est plus robuste aux outliers. Métriques : RMSE (en MW) pour une interprétation en unités de consommation, MAE, et MAPE (Mean Absolute Percentage Error) pour évaluer l'erreur relative. On peut aussi calculer l'erreur aux pics (peak demand) car c'est critique pour la planification. Justification : la MSE pénalise les grandes erreurs, ce qui est important pour éviter les mauvaises prédictions extrêmes qui pourraient causer des coupures de courant.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposez une méthode de préparation des données pour l'entraînement des RNN. Quelles transformations et quel fenêtrage utilisez-vous ?",
+        "niveau": "medium",
+        "reponse": "Préparation des données : 1) Gestion des valeurs manquantes (imputation par interpolation linéaire ou moyenne mobile). 2) Normalisation des variables numériques (StandardScaler ou MinMaxScaler) pour éviter les problèmes d'échelle. 3) Création des séquences : fenêtre glissante de taille $T_{in}$ (ex: 168 heures) pour l'entrée, et $T_{out}$ (ex: 24 heures) pour la cible. Les séquences se chevauchent. 4) Division en ensembles d'entraînement (70%), validation (15%) et test (15%) en respectant l'ordre temporel (pas de mélange aléatoire pour éviter le data leakage). 5) Ajout des variables catégorielles (jour férié, jour de semaine) encodées en one-hot. 6) Si la série est non stationnaire, on peut la différencier ou utiliser les tendances.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 4,
+        "texte": "Après entraînement, vous obtenez une erreur RMSE de 150 MW sur le jeu de test. Interprétez ce résultat dans le contexte de la prédiction de la consommation électrique. Est-ce acceptable ? Proposez des pistes d'amélioration.",
+        "niveau": "hard",
+        "reponse": "Un RMSE de 150 MW signifie qu'en moyenne, la prédiction s'écarte de 150 MW de la consommation réelle. Pour apprécier l'acceptabilité, il faut connaître l'ordre de grandeur de la consommation : si la consommation moyenne est de 1000 MW, alors 150 MW représente 15% d'erreur, ce qui est modéré mais peut être amélioré. Pour un réseau électrique, des erreurs de 150 MW peuvent impacter la planification (risque de surcharge ou de sous-utilisation). Pistes d'amélioration : 1) Augmenter la taille de la fenêtre d'entrée pour capturer plus de contexte. 2) Utiliser un modèle hybride (CNN + LSTM) pour capturer les motifs locaux et globaux. 3) Ajouter plus de variables (météo, jours fériés, événements spéciaux). 4) Optimiser les hyperparamètres (nombre de couches, unités, learning rate). 5) Utiliser l'attention pour se concentrer sur les pas de temps importants. 6) Essayer d'autres architectures (GRU, Transformer).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 5,
+        "texte": "Comparez l'utilisation d'un LSTM par rapport à un GRU pour ce problème. Lequel choisiriez-vous et pourquoi ?",
+        "niveau": "medium",
+        "reponse": "Pour ce problème de prédiction de consommation électrique, je choisirais un GRU pour les raisons suivantes : 1) Les données horaires sur 5 ans sont relativement volumineuses (43 800 points), et le GRU est plus rapide à l'entraînement que le LSTM (moins de paramètres). 2) Les dépendances temporelles sont principalement saisonnières (journalières, hebdomadaires) avec une longueur de séquence de 168 heures, ce qui est bien géré par les deux architectures. 3) Le GRU est moins sujet au surapprentissage et plus facile à régulariser. 4) Les performances sont souvent comparables, le GRU étant plus simple. Cependant, si les données présentent des motifs très complexes et de très longues dépendances, le LSTM pourrait être préféré. Dans ce cas, je commencerais par un GRU pour sa rapidité, puis un LSTM si les performances ne sont pas suffisantes.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "RNN pour la classification de sentiments",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous êtes data scientist dans une entreprise de e-commerce au Cameroun. Vous devez classifier les avis clients (texte en français) en trois catégories : positif, négatif, neutre. Le jeu de données contient 50 000 avis, avec des phrases de longueur variable (de 5 à 200 mots).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez comment les RNN peuvent être utilisés pour la classification de textes. Quelle architecture spécifique proposez-vous (embedding, couches récurrentes, sortie) ?",
+        "niveau": "medium",
+        "reponse": "Pour la classification de textes avec RNN : 1) Tokenization des mots et conversion en indices. 2) Couche d'embedding de taille $d$ (ex: 100 ou 300) qui transforme chaque mot en vecteur dense. 3) Une ou plusieurs couches récurrentes (LSTM, GRU) qui traitent la séquence et produisent un vecteur de contexte. 4) On peut utiliser une couche Bidirectional pour capturer le contexte dans les deux sens. 5) Agrégation : soit utiliser la dernière sortie $h_T$, soit une moyenne/pooling des sorties, ou utiliser l'attention. 6) Couches Dense avec dropout et activation ReLU. 7) Couche de sortie Dense avec softmax (3 classes). L'entraînement se fait avec cross-entropy. Architecture typique : Embedding(10000, 128) -> Bidirectional(LSTM(64)) -> Dropout(0.3) -> Dense(32) -> Dense(3, softmax).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposez une stratégie de prétraitement des textes adaptée au contexte camerounais (langage familier, fautes d'orthographe, abréviations).",
+        "niveau": "hard",
+        "reponse": "Prétraitement pour le français du Cameroun : 1) Normalisation : conversion en minuscules, suppression des caractères spéciaux, correction des fautes courantes (ex: 'je suis' -> 'je suis'). 2) Gestion des abréviations : dictionnaire d'abréviations locales ('tkt' -> 'tranquille', 'stp' -> 's'il te plaît'). 3) Stemming ou lemmatisation (utiliser un stemmer français comme Snowball). 4) Suppression des stopwords (mots vides) si nécessaire, mais attention au contexte. 5) Gestion du langage familier : mapping des expressions courantes. 6) Tokenization adaptée aux mots composés (ex: 'j'aime'). 7) Gestion des emojis (conversion en mots). 8) Pour les fautes d'orthographe, on peut utiliser un correcteur automatique léger (symspell). 9) Création d'un vocabulaire limité aux mots les plus fréquents (10000-50000) pour réduire la dimension.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Comparez l'utilisation d'un RNN (LSTM/GRU) avec une approche classique (Bag of Words + SVM ou Naive Bayes) pour la classification de sentiments. Quels sont les avantages et inconvénients de chaque approche ?",
+        "niveau": "medium",
+        "reponse": "Approche classique (Bag of Words + SVM) : Avantages - rapide à entraîner, interprétable, bonnes performances pour des données simples, peu de données nécessaires. Inconvénients - ne tient pas compte de l'ordre des mots, sac à mots perd le contexte, dimension élevée, sensible à la longueur des textes. RNN (LSTM/GRU) : Avantages - capture le contexte et l'ordre des mots, meilleure précision pour les textes longs, peut apprendre des représentations complexes, adapté aux séquences de longueur variable. Inconvénients - plus lent à l'entraînement, nécessite plus de données, difficile à interpréter, surapprentissage potentiel. En pratique, les RNN surpassent les approches classiques quand on a suffisamment de données. Pour 50 000 avis, un RNN est recommandé.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 4,
+        "texte": "Vous souhaitez améliorer votre modèle. Proposez deux techniques d'augmentation ou de régularisation spécifiques aux RNN pour réduire le surapprentissage.",
+        "niveau": "hard",
+        "reponse": "Techniques de régularisation pour RNN : 1) Dropout sur les couches récurrentes : appliquer un dropout variationnel (le même masque pour tous les pas de temps) comme implémenté dans Keras avec 'recurrent_dropout'. Cela permet de régulariser les connexions récurrentes. 2) Dropout sur les couches Dense. 3) Utiliser des couches Bidirectional pour mieux capturer le contexte. 4) Régularisation L2 sur les poids. 5) Early stopping basé sur la performance de validation. 6) Data augmentation : générer des variations des textes (synonymes, paraphrases) pour augmenter la taille du jeu de données. 7) Utiliser des embeddings pré-entraînés (Word2Vec, FastText) qui sont plus robustes et moins sujets au surapprentissage. 8) Réduire la taille de l'embedding ou le nombre d'unités LSTM.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse comparative des architectures récurrentes",
+    "type": "ressource",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Cet exercice avancé porte sur l'analyse théorique et comparative des architectures récurrentes pour le traitement des séquences.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez en détail le problème de l'explosion du gradient dans les RNN et les techniques utilisées pour le résoudre.",
+        "niveau": "hard",
+        "reponse": "Le problème d'explosion du gradient survient lorsque les valeurs propres de $W_{hh}$ sont > 1, ce qui fait que le gradient croît exponentiellement lors de la rétropropagation, entraînant des mises à jour instables des poids. Techniques pour résoudre ce problème : 1) Gradient clipping : tronquer les gradients à un seuil (ex: norme maximale) pour éviter les grandes valeurs. 2) Utiliser des architectures avec des portes (LSTM, GRU) qui contrôlent le flux d'information. 3) Initialisation soigneuse des poids (ex: initialisation de Glorot). 4) Utiliser des activations saturantes (tanh) qui limitent les sorties. 5) Réduire le nombre de couches ou la longueur de la séquence. Dans la pratique, le gradient clipping est la méthode la plus courante et efficace.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Analysez l'impact de la longueur de la séquence sur les performances des RNN, LSTM et GRU. Proposez des stratégies pour traiter les séquences très longues (plus de 1000 pas de temps).",
+        "niveau": "very hard",
+        "reponse": "Pour les séquences très longues (> 1000 pas), les RNN standards échouent totalement (vanishing gradient). Les LSTM/GRU peuvent capturer jusqu'à ~100-200 pas, mais au-delà, les performances se dégradent. Stratégies pour les séquences longues : 1) BPTT tronqué : propager le gradient sur un sous-ensemble (ex: 100 pas) pour réduire la complexité. 2) Utiliser des architectures avec attention (Transformer) qui captent les dépendances directes. 3) Utiliser des RNN hiérarchiques : d'abord traiter des sous-séquences, puis les combiner. 4) Utiliser des mécanismes de saut de connexion (skip connections) ou des réseaux de mémoire (Neural Turing Machines). 5) Sous-échantillonnage de la séquence ou utilisation de la moyenne sur des fenêtres pour réduire la longueur. 6) Utiliser des architectures avec état (stateful RNN) qui maintiennent l'état caché entre les batchs, mais attention à la cohérence des séquences.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Comparez les architectures suivantes pour une tâche de modélisation de séries temporelles : RNN standard, LSTM, GRU, et Transformer. Quels sont les compromis en termes de performance, de complexité et de temps d'entraînement ?",
+        "niveau": "very hard",
+        "reponse": "1) RNN standard : simple, rapide, mais échoue sur les longues séquences ; performances limitées. 2) LSTM : capte les longues dépendances, performances élevées, mais lent à l'entraînement (beaucoup de paramètres), difficile à paralléliser. 3) GRU : performances proches du LSTM, plus rapide, moins de paramètres, bon compromis. 4) Transformer : architectures basées sur l'attention, captent les dépendances globales directement, excellente parallélisation, adapté aux très longues séquences, mais nécessite beaucoup de données et de calcul ; moins efficace sur les séries temporelles courtes. En pratique : pour des séries temporelles de taille moyenne, GRU ou LSTM selon les ressources ; pour de très longues séquences, Transformer ou des modèles hybrides ; pour des données limitées, GRU.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

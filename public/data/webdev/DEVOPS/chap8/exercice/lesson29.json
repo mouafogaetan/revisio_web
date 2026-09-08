@@ -1,0 +1,106 @@
+[
+  {
+    "intitule": "Installation et découverte de Prometheus",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous êtes un ingénieur DevOps stagiaire dans une entreprise camerounaise de e-commerce. Votre mission est d’installer Prometheus pour superviser l’infrastructure. Répondez aux questions suivantes basées sur la documentation officielle de Prometheus.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rappelez la commande standard pour télécharger et extraire la dernière version de Prometheus sur un serveur Linux (Ubuntu 22.04).",
+        "niveau": "easy",
+        "reponse": "```bash\nwget https://github.com/prometheus/prometheus/releases/download/v2.53.0/prometheus-2.53.0.linux-amd64.tar.gz\ntar xvfz prometheus-2.53.0.linux-amd64.tar.gz\ncd prometheus-2.53.0.linux-amd64\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez pourquoi il est recommandé de créer un utilisateur système dédié `prometheus` pour exécuter le service. (Taxonomie : expliquer)",
+            "niveau": "easy",
+            "reponse": "Créer un utilisateur dédié permet d’isoler le processus Prometheus, de limiter les privilèges (moindre privilège) et d’améliorer la sécurité. Si Prometheus est compromis, l’attaquant n’aura que les droits de cet utilisateur et non ceux d’un compte administrateur."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Quel est le fichier de configuration principal de Prometheus ? Décrivez brièvement deux sections obligatoires de ce fichier. (Taxonomie : décrire)",
+            "niveau": "medium",
+            "reponse": "Le fichier principal est `prometheus.yml`. Deux sections obligatoires :\n- `global` : définit des paramètres globaux comme `scrape_interval` (fréquence de collecte) et `evaluation_interval` (fréquence d’évaluation des règles).\n- `scrape_configs` : liste les cibles (targets) à surveiller, par exemple `job_name: 'node'` avec des `static_configs` spécifiant les adresses IP et ports."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Après avoir téléchargé Prometheus, vous devez le lancer en tant que service systemd. Écrivez le contenu minimal du fichier `/etc/systemd/system/prometheus.service`.",
+        "niveau": "medium",
+        "reponse": "```ini\n[Unit]\nDescription=Prometheus Server\nAfter=network.target\n\n[Service]\nUser=prometheus\nGroup=prometheus\nType=simple\nExecStart=/usr/local/bin/prometheus --config.file=/etc/prometheus/prometheus.yml --storage.tsdb.path=/var/lib/prometheus/\nRestart=always\n\n[Install]\nWantedBy=multi-user.target\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse et interrogation de métriques avec PromQL",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous avez déployé Prometheus et il collecte des métriques sur un serveur web. Une métrique importante est <code>http_requests_total</code> (compteur du nombre total de requêtes HTTP). Les données sont étiquetées avec <code>method</code> (GET, POST, etc.), <code>status</code> (200, 404, 500) et <code>endpoint</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez une requête PromQL qui calcule le taux moyen de requêtes HTTP par seconde (sur les 5 dernières minutes) pour toutes les méthodes et tous les statuts.",
+        "niveau": "medium",
+        "reponse": "```promql\nrate(http_requests_total[5m])\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez la différence entre `rate()` et `irate()` dans PromQL. Dans quel cas utiliseriez-vous `irate()` ? (Taxonomie : comparer)",
+            "niveau": "medium",
+            "reponse": "`rate()` calcule le taux moyen par seconde sur un intervalle de temps (ex: [5m]) et convient pour les courbes lisses. `irate()` calcule le taux instantané basé sur les deux derniers points de données, idéal pour détecter des pics rapides mais plus sensible au bruit. On utilise `irate()` pour des graphes très réactifs (comme l’affichage en temps réel)."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Écrivez une requête PromQL qui retourne le nombre total de requêtes HTTP ayant le statut 500 (erreur serveur) au cours des 24 dernières heures.",
+        "niveau": "medium",
+        "reponse": "```promql\nincrease(http_requests_total{status=\"500\"}[24h])\n```",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Pourquoi utilise-t-on `increase()` plutôt que `rate()` dans ce cas ? (Taxonomie : justifier)",
+            "niveau": "easy",
+            "reponse": "`increase()` retourne l’augmentation brute (la somme des incréments) sur la période, donnant ainsi le nombre total d’événements sur 24h. `rate()` retournerait une valeur par seconde, moins intuitive pour compter le nombre total d’erreurs."
+          }
+        ]
+      },
+      {
+        "numero": 3,
+        "texte": "Vous voulez surveiller le pourcentage de requêtes ayant abouti à une erreur 5xx par rapport au total des requêtes. Écrivez la requête PromQL qui calcule ce ratio pour chaque endpoint, en ignorant les endpoints sans trafic.",
+        "niveau": "hard",
+        "reponse": "```promql\n(\n  sum by (endpoint) (rate(http_requests_total{status=~\"5..\"}[5m]))\n  /\n  sum by (endpoint) (rate(http_requests_total[5m]))\n) * 100\n```",
+        "sousQuestions": [
+          {
+            "numero": "3.a",
+            "texte": "Expliquez le rôle de l’opérateur `=~\"5..\"` dans la requête. (Taxonomie : analyser)",
+            "niveau": "easy",
+            "reponse": "L’opérateur `=~` est une correspondance par expression régulière. `\"5..\"` signifie tout code HTTP commençant par 5 suivi de deux caractères quelconques (500, 501, 502, etc.). Cela capture toutes les erreurs serveur de la classe 5xx."
+          },
+          {
+            "numero": "3.b",
+            "texte": "Que se passe-t-il si un endpoint n’a reçu aucune requête pendant l’intervalle ? Comment la requête se comporte-t-elle ? (Taxonomie : évaluer)",
+            "niveau": "medium",
+            "reponse": "Si aucun taux n’existe pour un endpoint, la division par zéro se produit et Prometheus retournera `NaN` (not a number) pour ce endpoint. Pour éviter cela, on peut utiliser `or` ou filtrer les endpoints ayant un total > 0. Par exemple : ajouter `and (sum by(endpoint) (rate(http_requests_total[5m])) > 0)`."
+          }
+        ]
+      },
+      {
+        "numero": 4,
+        "texte": "D’après le modèle de données Prometheus, expliquez ce que sont les métriques de type `Counter` et `Gauge`. Donnez un exemple concret pour chacun dans le contexte d’un serveur web.",
+        "niveau": "easy",
+        "reponse": "- **Counter** : valeur qui ne peut qu’augmenter (ou être remise à zéro lors d’un redémarrage). Exemple : `http_requests_total` (nombre total de requêtes).\n- **Gauge** : valeur qui peut monter ou descendre. Exemple : `go_goroutines` (nombre de goroutines actives) ou `node_memory_MemFree_bytes` (mémoire libre).",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

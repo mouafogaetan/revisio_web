@@ -1,0 +1,121 @@
+[
+  {
+    "intitule": "Configuration de l'environnement de base de données",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous venez de créer un projet NestJS pour une plateforme e-commerce appelée 'SawaMart'. La première étape est de configurer l'accès à la base de données PostgreSQL. Répondez aux questions suivantes concernant l'installation et la configuration initiale.</p>",
+      "images": [
+        "Capture d'écran du terminal montrant l'installation réussie de PostgreSQL sur un système d'exploitation (ex: Ubuntu ou Windows).",
+        "Logo de PostgreSQL et de TypeORM côte à côte, symbolisant leur intégration."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Quelle est la commande correcte pour installer le package 'pg' (pilote PostgreSQL pour Node.js) dans un projet NestJS ?",
+        "niveau": "easy",
+        "reponse": "La commande est `npm install pg` (ou `yarn add pg`). C'est le pilote qui permet à TypeORM de communiquer avec la base de données PostgreSQL.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi installe-t-on à la fois `@nestjs/typeorm`, `typeorm` et `pg` ? Décrivez le rôle de chaque package.",
+            "niveau": "medium",
+            "reponse": "`@nestjs/typeorm` est le module d'intégration qui permet d'utiliser TypeORM de manière idiomatique avec NestJS (injection de dépendances, configuration). `typeorm` est le cœur de l'ORM (Object-Relational Mapping) qui fournit les fonctionnalités pour interagir avec la base de données. `pg` est le pilote spécifique à PostgreSQL qui permet à TypeORM de se connecter et d'exécuter des requêtes sur cette base de données particulière."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez pourquoi il est recommandé d'utiliser une configuration asynchrone (`forRootAsync`) pour le `TypeOrmModule` plutôt qu'une configuration synchrone (`forRoot`) dans un projet NestJS.",
+        "niveau": "hard",
+        "reponse": "Il est recommandé d'utiliser `forRootAsync` pour permettre l'injection de dépendances et la configuration asynchrone. Cela est crucial pour charger les variables d'environnement depuis le `ConfigService` (qui lui-même peut être chargé de manière asynchrone). De plus, cela facilite les tests en permettant de substituer la configuration de la base de données par une configuration de test (ex: une base de données en mémoire) et rend le code plus modulaire et maintenable.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Mise en place de la base de données pour SawaMart",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>En tant que développeur backend pour 'SawaMart', vous devez mettre en place la connexion à la base de données PostgreSQL en utilisant les variables d'environnement. Vous travaillez sur un projet NestJS déjà initialisé.</p>",
+      "images": [
+        "Schéma d'architecture montrant le fichier `.env` qui alimente le `ConfigModule`, qui à son tour configure le `TypeOrmModule`.",
+        "Interface de PgAdmin montrant une connexion réussie à un serveur PostgreSQL local et la liste des bases de données."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créez un fichier `.env` à la racine du projet avec les variables d'environnement nécessaires pour connecter votre application à une base de données PostgreSQL nommée 'sawamart_db'. Le serveur est en local sur le port 5432, avec l'utilisateur 'sawamart_user' et le mot de passe 'S3cur3P@ss'. Fournissez le contenu de ce fichier.",
+        "niveau": "medium",
+        "reponse": "```env\n# .env\nDB_HOST=localhost\nDB_PORT=5432\nDB_USERNAME=sawamart_user\nDB_PASSWORD=S3cur3P@ss\nDB_DATABASE=sawamart_db\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez comment le `ConfigModule` de NestJS permet de charger ce fichier `.env` et de le rendre disponible dans toute l'application.",
+            "niveau": "medium",
+            "reponse": "Le `ConfigModule` est importé dans le module principal (généralement `AppModule`) avec `ConfigModule.forRoot()`. Cette méthode charge automatiquement le fichier `.env` à la racine du projet. Une fois chargé, les variables d'environnement sont disponibles via le `ConfigService`, qui peut être injecté dans n'importe quel autre service ou module (comme le `TypeOrmModule`) pour récupérer les valeurs de configuration de manière typée et centralisée."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Écrivez le code TypeScript dans le fichier `app.module.ts` pour configurer le `TypeOrmModule` de manière asynchrone en utilisant le `ConfigService` pour lire les variables d'environnement que vous avez définies.",
+            "niveau": "very hard",
+            "reponse": "```typescript\n// app.module.ts\nimport { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({ isGlobal: true }),\n    TypeOrmModule.forRootAsync({\n      imports: [ConfigModule],\n      inject: [ConfigService],\n      useFactory: (configService: ConfigService) => ({\n        type: 'postgres',\n        host: configService.get('DB_HOST'),\n        port: parseInt(configService.get('DB_PORT'), 10),\n        username: configService.get('DB_USERNAME'),\n        password: configService.get('DB_PASSWORD'),\n        database: configService.get('DB_DATABASE'),\n        entities: [__dirname + '/**/*.entity{.ts,.js}'],\n        synchronize: false, // Important: false en production\n        logging: ['error', 'warn'], // Ajustez selon vos besoins\n      }),\n    }),\n  ],\n})\nexport class AppModule {}\n```"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Après avoir configuré votre `AppModule`, vous lancez l'application avec `npm run start:dev`. Comment pouvez-vous vérifier visuellement et dans les logs que la connexion à PostgreSQL a été établie avec succès ?",
+        "niveau": "easy",
+        "reponse": "Visuellement, vous pouvez utiliser un outil comme **PgAdmin** (ou DBeaver) pour vous connecter au serveur PostgreSQL et voir si la base de données 'sawamart_db' existe. Dans les logs du terminal, si la connexion est réussie, NestJS n'affichera pas d'erreur critique. Vous verrez un message indiquant le lancement de l'application (`Nest application successfully started`). En configurant `logging: true` ou `logging: ['query', 'error']`, vous verrez également les requêtes SQL s'exécuter.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Migration de la base de données de l'application de livraison 'QuickDeliver'",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous travaillez sur une application de livraison de repas à Douala appelée 'QuickDeliver'. Le projet utilise NestJS et TypeORM. Vous devez modifier le schéma de la base de données pour ajouter une colonne 'delivery_zone' à la table 'restaurants'. La base de données est en production et contient déjà des données. Vous devez procéder de manière sécurisée.</p>",
+      "images": [
+        "Schéma de la table 'restaurants' avant modification, avec les colonnes 'id', 'name' et 'address'.",
+        "Schéma de la table 'restaurants' après modification, avec la nouvelle colonne 'delivery_zone'."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez pourquoi il est dangereux d'utiliser `synchronize: true` en production. Quelle est l'alternative recommandée pour mettre à jour le schéma de la base de données ?",
+        "niveau": "medium",
+        "reponse": "Il est dangereux d'utiliser `synchronize: true` en production car cette option modifie automatiquement le schéma de la base de données pour le faire correspondre aux entités, sans aucun contrôle. Cela peut entraîner une perte de données (ex: suppression de colonnes, modification de types) ou des temps d'arrêt du service. L'alternative recommandée est d'utiliser le système de **migrations** de TypeORM. Les migrations sont des fichiers JavaScript/TypeScript qui décrivent les modifications à apporter au schéma de manière explicite et versionnée.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quelle est la commande TypeORM pour générer une migration à partir des changements détectés entre les entités et le schéma de la base de données ?",
+            "niveau": "easy",
+            "reponse": "La commande est `npx typeorm migration:generate -d ./ormconfig.ts ./src/migrations/AddDeliveryZoneToRestaurant` (ou une commande similaire via le CLI NestJS après configuration). Cette commande analyse les entités, les compare au schéma actuel et génère un fichier de migration avec les requêtes SQL `ALTER TABLE` nécessaires.",
+            "sousQuestions": [
+              {
+                "numero": "1.a.i",
+                "texte": "Après avoir généré la migration, décrivez les étapes pour l'appliquer à la base de données de production de manière contrôlée.",
+                "niveau": "hard",
+                "reponse": "1.  **Vérification**: Examiner le code SQL généré dans le fichier de migration pour s'assurer qu'il ne contient pas d'erreurs ou d'opérations destructrices. 2.  **Test**: Appliquer la migration sur une base de données de test qui reflète la structure de production. 3.  **Sauvegarde**: Effectuer une sauvegarde complète de la base de données de production. 4.  **Application**: Exécuter la migration sur la base de données de production en dehors des heures de pointe, en utilisant la commande `npx typeorm migration:run -d ./ormconfig.ts`. 5.  **Validation**: Vérifier que la migration s'est bien déroulée et que l'application fonctionne correctement avec le nouveau schéma."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Vous devez ajouter une nouvelle entité `DeliveryZone` avec une relation `OneToMany` vers `Restaurant`. Expliquez comment vous allez structurer vos fichiers et vos migrations pour ajouter cette nouvelle entité sans impacter les données existantes.",
+        "niveau": "hard",
+        "reponse": "1.  **Création de l'entité**: Créer le fichier `delivery-zone.entity.ts` avec les décorateurs TypeORM appropriés (`@Entity()`, `@Column()`, `@OneToMany()`). Définir la relation dans `restaurant.entity.ts` avec `@ManyToOne(() => DeliveryZone)`. 2.  **Génération de migration**: Exécuter la commande de génération de migration. TypeORM détectera la nouvelle table et la nouvelle colonne de clé étrangère. 3.  **Vérification de la migration**: Ouvrir le fichier de migration généré. La migration devrait contenir un `CREATE TABLE` pour `delivery_zone` et un `ALTER TABLE restaurant ADD COLUMN deliveryZoneId ...` pour ajouter la clé étrangère. Vérifier que les contraintes (ex: `ON DELETE SET NULL`) sont appropriées pour ne pas supprimer les restaurants existants. 4.  **Application**: Appliquer la migration avec `migration:run`.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

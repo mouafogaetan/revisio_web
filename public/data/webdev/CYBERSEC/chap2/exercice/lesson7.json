@@ -1,0 +1,194 @@
+[
+  {
+    "intitule": "Créer une politique de mots de passe sécurisés",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous êtes consultant en cybersécurité pour une entreprise camerounaise de 150 employés. Actuellement, les mots de passe sont stockés en clair dans une base de données. Votre mission est de proposer une politique complète de gestion des mots de passe basée sur les principes du hachage salé.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Justifier pourquoi le stockage des mots de passe en clair est une mauvaise pratique, en citant trois risques majeurs.",
+        "niveau": "easy",
+        "reponse": "1. En cas de violation de la base de données, tous les mots de passe sont exposés immédiatement. 2. Les employés réutilisent souvent leurs mots de passe sur d'autres services (risque de credential stuffing). 3. L'administrateur système (ou tout tiers ayant accès) peut voir les mots de passe. 4. Non-conformité aux réglementations comme la loi camerounaise sur la cybersécurité ou le RGPD.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer une architecture de stockage utilisant le hachage salé. Expliquer chaque étape de l'enregistrement d'un nouveau mot de passe et de la vérification lors de la connexion.",
+        "niveau": "medium",
+        "reponse": "Enregistrement : 1. Générer un sel aléatoire unique (ex: 16-32 bytes via CSPRNG). 2. Concaténer le mot de passe en clair avec le sel. 3. Appliquer une fonction de hachage lente (bcrypt, Argon2). 4. Stocker dans la base : (sel, hash). Vérification : 1. Récupérer le sel stocké pour l'utilisateur. 2. Concaténer le mot de passe saisi avec ce sel. 3. Hacher avec la même fonction. 4. Comparer le résultat avec le hash stocké.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Comparer bcrypt, Argon2 et SHA-256 pour le stockage des mots de passe. Justifier le choix d'une fonction lente.",
+        "niveau": "hard",
+        "reponse": "SHA-256 est rapide (pensé pour l'intégrité) → vulnérable aux attaques par brute-force avec GPU/FPGA. bcrypt inclut un facteur de coût (nombre de tours) ajustable et intègre automatiquement un sel. Argon2 (vainqueur Password Hashing Competition) est résistant aux attaques ASIC/GPU (paramètres mémoire, parallélisme, temps). Le choix d'une fonction lente augmente délibérément le temps de calcul (ex: 50-100 ms) pour ralentir les attaques offline sans impacter notablement l'expérience utilisateur.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyser la robustesse d'un hachage",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un développeur a utilisé la fonction <code>md5($mot_de_passe)</code> pour stocker les mots de passe. Un attaquant a obtenu le fichier contenant <code>5f4dcc3b5aa765d61d8327deb882cf99</code> (hash MD5).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier le mot de passe correspondant à ce hash en utilisant vos connaissances (vous pouvez décrire la méthode sans outil réel).",
+        "niveau": "easy",
+        "reponse": "C'est le hash MD5 de 'password'. On le trouve facilement via des tables arc-en-ciel (rainbow tables) ou des bases comme CrackStation. La leçon : MD5 est inapproprié car trop rapide et cassé (collisions).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Décrire trois failles majeures de l'approche 'md5($mot_de_passe)' (sans sel, sans itération).",
+        "niveau": "medium",
+        "reponse": "1. Absence de sel → deux utilisateurs avec même mot de passe auront le même hash (attaque par précalcul/rainbow tables possible). 2. MD5 est très rapide → permet de tester des milliards de combinaisons par seconde (brute-force). 3. MD5 est cryptographiquement cassé (collisions découvertes depuis 2004).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposer une amélioration de ce code en choisissant un algorithme adapté et en expliquant les paramètres de sécurité.",
+        "niveau": "hard",
+        "reponse": "Exemple avec password_hash() en PHP (bcrypt par défaut) ou Argon2 : $hash = password_hash($mot_de_passe, PASSWORD_BCRYPT, ['cost' => 12]); Vérification : password_verify($input, $hash). En Python avec bcrypt : bcrypt.hashpw(mot_de_passe.encode(), bcrypt.gensalt(rounds=12)). Le sel est généré automatiquement et le facteur coût (12) garantit environ 100ms par hachage.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Reconnaître les propriétés d'une fonction de hachage",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Pour chacune des propriétés suivantes, dites si elle est obligatoire pour une fonction de hachage cryptographique utilisée en sécurité (mots de passe, intégrité) : déterministe, réversible, résistance aux collisions, pré-image, pré-image seconde, sortie de taille fixe.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Déterminer quelles propriétés sont obligatoires et lesquelles sont interdites.",
+        "niveau": "easy",
+        "reponse": "Obligatoires : déterministe (même entrée → même sortie), sortie taille fixe, résistance aux collisions (difficile de trouver x≠y avec H(x)=H(y)), résistance à la pré-image (difficile de retrouver x à partir de H(x)), résistance à la pré-image seconde (difficile de trouver x'≠x avec H(x')=H(x)). Interdite : réversible (ce n'est pas du chiffrement).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer pourquoi la propriété 'déterministe' est nécessaire mais peut aussi être un inconvénient pour les mots de passe.",
+        "niveau": "medium",
+        "reponse": "Nécessaire car la vérification doit être reproductible (même mot de passe → même hash pour comparaison). Inconvénient : sans sel, deux mots de passe identiques donnent le même hash → vulnérabilité aux tables arc-en-ciel. D'où l'ajout du sel qui rend le hachage non déterministe d'une exécution à l'autre.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Calculer mentalement ou approximer le nombre de valeurs possibles pour SHA-256 et justifier pourquoi la résistance aux collisions est assurée.",
+        "niveau": "hard",
+        "reponse": "SHA-256 produit 2^256 valeurs possibles, soit environ $1.16 \\times 10^{77}$. Par l'attaque des anniversaires (birthday paradox), une collision peut être trouvée en environ $\\sqrt{2^{256}} = 2^{128}$ opérations, ce qui reste infaisable avec les moyens actuels (nécessiterait des milliards de siècles).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Implémenter une vérification de mot de passe",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous devez sécuriser un script d'authentification existant. Le code actuel est : <br><code>$hash_stocké = 'bd8c7a5f3e2a1b4c6d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c'</code><br> (hash SHA-256 avec sel, mais le développeur a oublié de stocker le sel séparément).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier le problème principal dans cette approche (sel stocké avec le hash, mais non séparé).",
+        "niveau": "medium",
+        "reponse": "Le sel n'est pas stocké séparément, donc on ne peut pas l'extraire pour la vérification. Un sel doit être stocké en clair à côté du hash (non secret), mais il faut connaître sa position/longueur. Ici le hash semble être une concaténation sel+hash sans délimiteur, impossible à séparer.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer un format standard de stockage (ex: PHC String Format) et réécrire l'exemple dans ce format.",
+        "niveau": "hard",
+        "reponse": "Format PHC (Password Hashing Competition) : $algo$paramètres$sel$hash. Exemple bcrypt : $2y$12$R9h/cIPz0gi.URURX1mRjO4gO4gO4gO4gO4gO4gO4gO4gO4gO$. Format moderne : $argon2id$v=19$m=65536,t=2,p=1$c2FsdHlzYWx0$TkdZZ3R5c2FkdA. En pratique on utilise password_hash() qui gère ce format automatiquement.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Écrire le pseudo-code d'une fonction 'verifier_mot_de_passe($input, $format_phc)' qui extrait sel et paramètres.",
+        "niveau": "very hard",
+        "reponse": "Pseudo-code :\n1. Découper la chaîne PHC avec $ comme séparateur : [$algo, $params, $sel_b64, $hash_b64]\n2. Extraire les paramètres (ex: cost, memory, parallelism depuis $params)\n3. Décoder $sel_b64 (base64 → bytes)\n4. Concaténer $input avec sel\n5. Appliquer l'algo avec les paramètres\n6. Comparer le résultat au $hash_b64 décodé (comparaison en temps constant)\n7. Retourner vrai/faux",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Évaluer l'impact du facteur de coût",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Une entreprise utilise bcrypt avec un coût (cost) de 8. Chaque vérification prend 50 ms. Un serveur peut traiter 20 connexions par seconde. L'entreprise veut augmenter le coût à 12 pour améliorer la sécurité.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Calculer le nouveau temps de vérification sachant que le temps double à chaque incrément du coût.",
+        "niveau": "easy",
+        "reponse": "De 8 à 12, on augmente de 4 → facteur $2^4 = 16$. Nouveau temps = 50 ms × 16 = 800 ms = 0,8 seconde.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Estimer le nombre maximal de connexions par seconde après l'augmentation.",
+        "niveau": "medium",
+        "reponse": "1 connexion nécessite 0,8 s → par seconde : $1 / 0,8 = 1,25$ connexions par seconde (contre 20 avant). C'est un problème pour un service à fort trafic.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposer un compromis acceptable pour une application de e-banking camerounaise (2000 connexions simultanées en pic). Justifier.",
+        "niveau": "hard",
+        "reponse": "Il faut un coût qui protège contre le brute-force (≥10) mais permette le trafic. Solution : coût = 10 (200 ms), avec mise en cache des sessions et load balancing. Alternative : utiliser Argon2 avec paramètres mémoire élevés (64 MB) mais temps court (100 ms). On peut aussi déléguer l'authentification à un serveur dédié (HSM ou service OAuth).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Détecter une mauvaise implémentation",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Un stagiaire a écrit ce code Python :<br><code>import hashlib<br>def hash_password(pwd):<br>    salt = 'sel_fixe'<br>    return hashlib.pbkdf2_hmac('sha256', pwd.encode(), salt.encode(), 1)</code><br>L'entreprise a subi une fuite de sa base de données contenant 10 000 hashs.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Lister au moins 5 erreurs ou faiblesses dans ce code.",
+        "niveau": "medium",
+        "reponse": "1. Sel fixe (identique pour tous) → tables arc-en-ciel possibles. 2. Nombre d'itérations = 1 (beaucoup trop faible, devrait être ≥ 100 000). 3. Utilisation de PBKDF2 avec SHA-256 (acceptable mais bcrypt/Argon2 meilleurs). 4. Sel en clair dans le code (durci en dur → aucun moyen de changer si compromis). 5. Pas de validation de la force du mot de passe entrant.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer comment un attaquant peut exploiter l'absence d'itérations pour casser tous les hashs rapidement.",
+        "niveau": "hard",
+        "reponse": "Avec 1 itération, chaque tentative est très rapide (quelques microsecondes). Un attaquant avec un GPU peut tester ~1 milliard de mots de passe par seconde. En quelques heures, il casse la majorité des mots de passe faibles (dictionnaire, dates, prénoms). Il peut aussi utiliser des tables précalculées car le sel est connu et fixe.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Réécrire complètement ce code avec les bonnes pratiques (sel aléatoire par utilisateur, itérations élevées, utilisation d'une librairie moderne).",
+        "niveau": "very hard",
+        "reponse": "```python\nimport bcrypt\n\ndef hash_password(pwd: str) -> str:\n    # génère sel automatiquement et intègre le coût\n    salt = bcrypt.gensalt(rounds=12)\n    hashed = bcrypt.hashpw(pwd.encode(), salt)\n    return hashed.decode()  # chaîne PHC\n\ndef verify_password(pwd: str, hashed: str) -> bool:\n    return bcrypt.checkpw(pwd.encode(), hashed.encode())\n\n# Alternative avec Argon2-CFFI\nfrom argon2 import PasswordHasher\nph = PasswordHasher(time_cost=2, memory_cost=102400, parallelism=8)\nh = ph.hash(\"monMotDePasse\")  # sel inclus\nph.verify(h, \"monMotDePasse\")\n```",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

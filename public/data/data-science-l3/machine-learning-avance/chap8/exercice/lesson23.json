@@ -1,0 +1,130 @@
+[
+  {
+    "intitule": "Fondamentaux de LIME",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Cet exercice aborde les concepts fondamentaux de LIME (Local Interpretable Model-agnostic Explanations), une méthode d'explicabilité locale pour les modèles de machine learning.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Définir LIME et expliquer son objectif principal dans le contexte de l'interprétabilité des modèles de machine learning.",
+        "niveau": "easy",
+        "reponse": "LIME (Local Interpretable Model-agnostic Explanations) est une méthode d'explication locale qui vise à expliquer la prédiction d'un modèle de machine learning pour une instance spécifique. Son objectif principal est de fournir des explications compréhensibles par les humains sur la décision d'un modèle, même si le modèle lui-même est complexe (boîte noire). LIME est 'model-agnostic', ce qui signifie qu'il peut être appliqué à n'importe quel type de modèle (régression, classification, réseaux de neurones, etc.).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer pourquoi LIME est considéré comme une méthode 'model-agnostic' et ce que cela implique.",
+            "niveau": "easy",
+            "reponse": "LIME est considéré comme 'model-agnostic' car il ne dépend pas de l'architecture interne du modèle à expliquer. Il fonctionne en perturbant l'entrée, en observant les prédictions du modèle, et en entraînant un modèle interprétable localement. Cela implique que LIME peut être utilisé avec n'importe quel modèle de machine learning, qu'il s'agisse d'une régression logistique, d'un XGBoost, d'un réseau de neurones ou d'un SVM. L'unique condition est que le modèle soit accessible pour des prédictions sur des entrées perturbées."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Distinguer les explications locales et globales en machine learning. Quel type d'explication LIME fournit-il ?",
+        "niveau": "medium",
+        "reponse": "Les explications globales visent à comprendre le comportement général d'un modèle sur l'ensemble des données (ex: importance globale des caractéristiques). Les explications locales se concentrent sur la compréhension d'une prédiction spécifique pour une instance donnée. LIME fournit des explications locales : il explique pourquoi le modèle a fait une prédiction particulière pour une observation spécifique, en identifiant les caractéristiques les plus influentes pour cette prédiction locale.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Principe de Fonctionnement de LIME",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Cet exercice explore en détail le fonctionnement de LIME et son algorithme d'explication locale.</p>",
+      "images": [
+        "Schéma illustrant le processus de LIME : instance à expliquer, perturbations de l'entrée, prédictions du modèle, entraînement d'un modèle interprétable local, explication finale"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire les étapes principales de l'algorithme LIME pour générer une explication d'une prédiction.",
+        "niveau": "medium",
+        "reponse": "L'algorithme LIME procède en plusieurs étapes :\n\n1) **Instance à expliquer** : On sélectionne l'instance $x$ pour laquelle on veut une explication.\n2) **Perturbation** : On génère un ensemble de perturbations de $x$ en modifiant aléatoirement certaines caractéristiques (pour les données tabulaires, on échantillonne autour de $x$ ; pour les images, on masque des superpixels ; pour le texte, on supprime des mots).\n3) **Prédictions** : On obtient les prédictions du modèle $f$ pour chaque instance perturbée.\n4) **Pondération** : On calcule la similarité entre chaque instance perturbée et $x$ (via une distance, souvent gaussienne).\n5) **Entraînement local** : On entraîne un modèle interprétable $g$ (généralement une régression linéaire ou un arbre de décision) sur les données perturbées pondérées par leur similarité.\n6) **Explication** : Les coefficients du modèle interprétable $g$ donnent l'importance locale de chaque caractéristique.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer le rôle du modèle interprétable (surrogate model) dans LIME. Pourquoi utilise-t-on un modèle simple localement ?",
+        "niveau": "medium",
+        "reponse": "Le modèle interprétable (aussi appelé 'surrogate model' ou modèle de substitution) est le cœur de LIME. Il s'agit d'un modèle simple (régression linéaire, arbre de décision peu profond) entraîné localement sur les données perturbées. Son rôle est d'approximer le comportement du modèle complexe $f$ au voisinage de l'instance $x$.\n\nOn utilise un modèle simple localement pour deux raisons :\n1) **Interprétabilité** : Les modèles simples (linéaires, arbres courts) sont naturellement interprétables par les humains.\n2) **Exactitude locale** : Le modèle simple n'a besoin d'être fidèle qu'au voisinage de $x$, pas globalement. Un modèle linéaire peut approximer une fonction non linéaire sur un petit voisinage.",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Quelle est la fonction de perte optimisée par LIME pour trouver le meilleur modèle interprétable local ?",
+            "niveau": "hard",
+            "reponse": "LIME optimise une fonction de perte qui combine la fidélité locale et la complexité du modèle :\n\n<div class='math-block'><div class='math'>$$\\xi(x) = \\arg\\min_{g \\in G} \\; \\mathcal{L}(f, g, \\pi_x) + \\Omega(g)$$</div></div>\n\nOù :\n- $G$ est l'espace des modèles interprétables (ex: régressions linéaires)\n- $\\mathcal{L}$ mesure la fidélité de $g$ à $f$ sur le voisinage de $x$ (pondéré par $\\pi_x$)\n- $\\pi_x$ est la fonction de similarité (kernel) qui donne plus de poids aux points proches de $x$\n- $\\Omega(g)$ est un terme de régularisation qui pénalise la complexité du modèle $g$\n\nCette optimisation trouve le modèle interprétable qui approxime le mieux le modèle complexe localement, tout en restant simple."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Application de LIME à des Cas Concrets",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous travaillez sur un projet de prédiction du risque de crédit pour une institution financière camerounaise. Vous utilisez un modèle XGBoost complexe, mais vous devez fournir des explications pour chaque demande de crédit refusée. Vous décidez d'utiliser LIME pour générer ces explications.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analyser comment LIME peut être appliqué à ce problème de scoring crédit pour expliquer un refus de prêt. Décrire le processus de perturbation pour des données tabulaires (age, revenu, historique de crédit, etc.).",
+        "niveau": "hard",
+        "reponse": "Pour expliquer un refus de crédit avec LIME sur des données tabulaires :\n\n1) **Instance à expliquer** : Le dossier du client refusé $x$ (age=35, revenu=150000 FCFA, historique=bon, etc.).\n\n2) **Perturbations** : On génère des échantillons perturbés en modifiant aléatoirement les caractéristiques du client. Par exemple :\n   - On échantillonne de nouvelles valeurs pour chaque caractéristique à partir des distributions des données d'entraînement\n   - Pour les variables continues (revenu), on tire de nouvelles valeurs aléatoires\n   - Pour les variables catégorielles (historique de crédit), on tire aléatoirement une autre catégorie\n\n3) **Prédictions** : On fait prédire par le modèle XGBoost le risque pour chaque dossier perturbé.\n\n4) **Pondération** : On calcule la distance de chaque point perturbé par rapport au point original $x$ (généralement via la distance euclidienne ou une distance de Mahalanobis), et on applique un noyau (ex: gaussien).\n\n5) **Entraînement local** : On entraîne une régression logistique pondérée sur les données perturbées pour prédire la probabilité de refus du modèle XGBoost.\n\n6) **Explication** : Les coefficients de la régression logistique indiquent les caractéristiques les plus importantes pour ce refus spécifique.\n\n**Exemple d'explication** : \"Le refus de prêt est principalement dû au faible revenu (150000 FCFA) et à un historique de crédit partiellement défaillant, qui ont un impact négatif significatif sur la décision.\"",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposer une stratégie pour évaluer la qualité des explications LIME dans ce contexte bancaire.",
+            "niveau": "very hard",
+            "reponse": "L'évaluation de la qualité des explications LIME dans un contexte bancaire peut être abordée de plusieurs manières :\n\n1) **Évaluation humaine** : Faire évaluer les explications par des experts en crédit (agents de crédit) selon des critères :\n   - Fidélité : l'explication correspond-elle à la décision réelle du modèle ?\n   - Cohérence : l'explication est-elle cohérente avec la connaissance métier ?\n   - Utilité : l'explication aide-t-elle à comprendre le refus ?\n\n2) **Stabilité** : Vérifier que LIME donne des explications stables quand on perturbe légèrement l'instance ou quand on relance l'algorithme avec différentes graines aléatoires.\n\n3) **Fidélité locale** : Mesurer la fidélité du modèle interprétable local par rapport au modèle complexe sur le voisinage de l'instance :\n   <div class='math-block'><div class='math'>$$\\text{Fidélité} = \\frac{1}{N} \\sum_{i=1}^{N} |f(z_i) - g(z_i)|$$</div></div>\n   où les $z_i$ sont des points perturbés dans le voisinage.\n\n4) **Satisfaction client** : Mesurer si les clients acceptent mieux un refus quand ils reçoivent une explication claire (enquêtes de satisfaction).\n\n5) **Analyse de cas extrêmes** : Examiner les explications pour les cas limites (ex: clients juste en dessous du seuil d'acceptation) pour vérifier la cohérence."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Comparer LIME avec SHAP dans le contexte de l'explication de modèles de crédit. Quels sont les avantages et inconvénients de chaque méthode pour ce cas d'usage ?",
+        "niveau": "very hard",
+        "reponse": "**LIME vs SHAP pour le scoring crédit :**\n\n| Critère | LIME | SHAP |\n|---------|------|------|\n| **Type d'explication** | Locale seulement | Locale + Global |\n| **Vitesse** | Rapide (ne requiert que des perturbations) | Plus lent (calcul des valeurs de Shapley approximées) |\n| **Consistance** | Moins stable (les explications peuvent varier) | Plus stable (propriétés mathématiques garanties) |\n| **Interprétabilité** | Bonne (coefficients d'un modèle linéaire) | Excellente (valeurs de Shapley additives) |\n| **Propriétés théoriques** | Moins de garanties | Satisfait des propriétés comme l'additivité |\n| **Complexité** | Simple à implémenter | Plus complexe (calcul des contributions marginales) |\n\n**Avantages de LIME :**\n- Plus rapide, ce qui est important pour un temps de réponse rapide dans un contexte bancaire\n- Plus simple à expliquer à des non-experts (coefficients de régression)\n- Peut être adapté pour des explications textuelles ou visuelles\n\n**Inconvénients de LIME :**\n- Moins stable : les explications peuvent varier d'une exécution à l'autre\n- Peut être moins fidèle que SHAP pour certaines formes de modèles\n\n**Avantages de SHAP :**\n- Consistance et stabilité des explications\n- Propriétés théoriques solides (additivité, cohérence)\n- Explications globales et locales\n\n**Inconvénients de SHAP :**\n- Plus lent, ce qui peut être problématique pour l'échelle\n- Plus complexe à comprendre pour des non-experts\n\n**Recommandation :** Pour un contexte bancaire, SHAP est souvent préféré pour sa stabilité et ses propriétés théoriques, mais LIME peut être utilisé si la vitesse est critique. Certaines banques utilisent les deux en parallèle."
+      }
+    ]
+  },
+  {
+    "intitule": "Limites et Défis de LIME",
+    "type": "compétence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Cet exercice aborde les limites et les défis de LIME, ainsi que les stratégies pour les atténuer.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analyser les principales limites de LIME en termes de stabilité des explications et de fidélité locale.",
+        "niveau": "hard",
+        "reponse": "**Limites de LIME :**\n\n1) **Instabilité des explications** : Les explications LIME peuvent varier de manière significative d'une exécution à l'autre, surtout quand :\n   - Le nombre de perturbations est faible\n   - La fonction de décision est complexe\n   - Les perturbations sont générées aléatoirement\n\n2) **Sensibilité au choix des paramètres** :\n   - La fonction de noyau (kernel) qui définit le voisinage\n   - Le nombre de perturbations\n   - La régularisation du modèle interprétable\n   - Le choix du modèle interprétable lui-même\n\n3) **Fidélité locale incertaine** : Le modèle interprétable n'est qu'une approximation du modèle complexe. Il peut ne pas être complètement fidèle même localement.\n\n4) **Difficulté pour les variables catégorielles** : La perturbation de variables catégorielles peut être difficile à interpréter.\n\n5) **Discontinuités du modèle** : Si le modèle a des discontinuités (ex: arbres de décision), LIME peut avoir du mal à approximer correctement localement.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposer des stratégies pour atténuer ces limites dans un contexte de production.",
+            "niveau": "very hard",
+            "reponse": "**Stratégies pour atténuer les limites de LIME :**\n\n1) **Pour l'instabilité :**\n   - Augmenter le nombre de perturbations (ex: 1000-5000 au lieu de 500)\n   - Exécuter LIME plusieurs fois et agréger les résultats (moyenne ou médiane des coefficients)\n   - Utiliser une graine aléatoire fixe pour la reproductibilité\n\n2) **Pour le choix des paramètres :**\n   - Effectuer une validation croisée pour choisir la taille du voisinage (largeur du noyau)\n   - Utiliser des critères de sélection de modèle (AIC, BIC) pour le modèle interprétable\n   - Tester différents modèles interprétables (linéaire, arbre, Lasso) et choisir celui qui donne les explications les plus cohérentes\n\n3) **Pour la fidélité :**\n   - Vérifier la fidélité locale en mesurant la corrélation entre les prédictions du modèle complexe et celles du surrogate model\n   - Utiliser des métriques de fidélité comme le $R^2$ local\n   - Ajuster la taille du voisinage pour maximiser la fidélité\n\n4) **Pour les variables catégorielles :**\n   - Utiliser des transformations spécifiques pour les variables catégorielles (ex: one-hot encoding)\n   - Adapter la fonction de distance pour traiter correctement les catégories\n\n5) **Monitoring en production :**\n   - Surveiller la stabilité des explications dans le temps\n   - Mettre en place des alertes quand les explications deviennent instables\n   - Valider périodiquement les explications auprès d'experts métier"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Justifier pourquoi LIME est particulièrement adapté pour des applications nécessitant des explications compréhensibles par des non-experts (ex: secteur bancaire, santé).",
+        "niveau": "hard",
+        "reponse": "LIME est particulièrement adapté pour des applications nécessitant des explications pour des non-experts pour plusieurs raisons :\n\n1) **Explications locales simples** : LIME fournit des explications sous forme de coefficients d'un modèle linéaire. Un non-expert peut comprendre qu'une caractéristique a un 'impact positif' ou 'négatif' sur la décision.\n\n2) **Visualisation intuitive** : Pour les images, LIME peut mettre en évidence les zones de l'image qui ont influencé la décision (via des superpixels). Pour le texte, LIME peut surligner les mots importants.\n\n3) **Explications ciblées** : LIME donne une explication spécifique à chaque instance, ce qui est plus pertinent pour des applications comme le scoring crédit ou le diagnostic médical.\n\n4) **Interprétabilité naturelle** : Une explication de type \"la décision de refus est principalement due à X (impact de -0.5) et Y (impact de -0.3)\" est compréhensible par un agent de crédit ou un médecin.\n\n5) **Agnostique au modèle** : On peut utiliser LIME même si le modèle sous-jacent est un réseau de neurones profond, dont l'interne est incompréhensible.\n\n6) **Conformité réglementaire** : Dans le secteur bancaire (et bientôt dans d'autres secteurs), les régulateurs exigent des explications sur les décisions automatisées. LIME permet de fournir ces explications de manière compréhensible."
+      }
+    ]
+  }
+]

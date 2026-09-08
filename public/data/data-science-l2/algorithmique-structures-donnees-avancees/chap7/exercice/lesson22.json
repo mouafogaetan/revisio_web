@@ -1,0 +1,342 @@
+[
+  {
+    "intitule": "Comprendre le modèle MapReduce",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Le modèle MapReduce est un paradigme de programmation pour le traitement de grandes quantités de données sur des clusters distribués. Il se décompose en trois phases principales : Map, Shuffle et Reduce.</p>",
+      "images": [
+        "Schéma illustrant le flux de données dans MapReduce : entrée -> phase Map (avec plusieurs mappeurs) -> phase Shuffle (regroupement et tri) -> phase Reduce (avec plusieurs réducteurs) -> sortie."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire le rôle de chacune des trois phases (Map, Shuffle, Reduce) dans le modèle MapReduce.",
+        "niveau": "easy",
+        "reponse": "La phase Map lit les données d'entrée et les transforme en paires clé-valeur intermédiaires. La phase Shuffle regroupe les paires par clé et les trie (les valeurs associées à une même clé sont rassemblées). La phase Reduce prend chaque clé et la liste de ses valeurs pour produire un résultat agrégé.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer l'importance de la phase Shuffle dans le traitement distribué.",
+        "niveau": "medium",
+        "reponse": "La phase Shuffle est cruciale car elle assure que toutes les valeurs associées à une même clé sont envoyées au même réducteur. Cela permet de regrouper les informations selon la clé, ce qui est nécessaire pour effectuer des agrégations, des jointures ou des calculs par clé. Elle implique également un tri et un transfert de données sur le réseau.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Identifier un cas d'usage où MapReduce est particulièrement adapté et un autre où il ne l'est pas. Justifier.",
+        "niveau": "hard",
+        "reponse": "MapReduce est adapté pour le traitement par lots de données massives (ex: calcul de statistiques sur des logs, indexation de documents, analyse de graphes). Il est inadapté pour les traitements en temps réel, les requêtes interactives, ou les algorithmes itératifs (comme les algorithmes de machine learning) car chaque job MapReduce est coûteux et implique des lectures/écritures sur disque.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "WordCount avec MapReduce",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Le programme WordCount est l'équivalent du 'Hello World' de MapReduce. Il consiste à compter le nombre d'occurrences de chaque mot dans un ensemble de documents.</p><p>On considère les documents suivants :</p><ul><li>Document 1 : \"Le chat mange une souris\"</li><li>Document 2 : \"Le chien court après le chat\"</li><li>Document 3 : \"La souris court\"</li></ul>",
+      "images": [
+        "Représentation des trois documents avec leurs mots. Flèches montrant le passage par les phases Map (émission de (mot, 1)), Shuffle (regroupement des mots), et Reduce (somme des occurrences)."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire les fonctions Map et Reduce pour l'algorithme WordCount.",
+        "niveau": "medium",
+        "reponse": "Fonction Map(document) : pour chaque mot dans document, émettre (mot, 1). Fonction Reduce(mot, liste_valeurs) : retourner (mot, somme(liste_valeurs)).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Appliquer manuellement les phases Map, Shuffle et Reduce sur les trois documents donnés pour obtenir le compte final des mots.",
+        "niveau": "medium",
+        "reponse": "Phase Map : Doc1 : (Le,1), (chat,1), (mange,1), (une,1), (souris,1) ; Doc2 : (Le,1), (chien,1), (court,1), (après,1), (le,1), (chat,1) ; Doc3 : (La,1), (souris,1), (court,1). Phase Shuffle (regroupement par clé) : Le: [1,1], chat: [1,1], mange: [1], une: [1], souris: [1,1], chien: [1], court: [1,1], après: [1], le: [1], La: [1]. Phase Reduce : (Le,2), (chat,2), (mange,1), (une,1), (souris,2), (chien,1), (court,2), (après,1), (le,1), (La,1).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposer une amélioration de l'algorithme WordCount pour gérer la casse et la ponctuation.",
+        "niveau": "hard",
+        "reponse": "Dans la phase Map, on peut normaliser les mots : passer en minuscules (ou préserver la casse selon le besoin) et supprimer la ponctuation. Par exemple, pour chaque mot, on applique : mot = mot.toLowerCase() ; mot = mot.replaceAll(\"[^a-z]\", \"\") ; puis on émet (mot, 1). On peut aussi utiliser un tokenizer plus avancé pour gérer les contractions ou les mots composés.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Jointure de données avec MapReduce",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>On dispose de deux fichiers :</p><ul><li>Employes.csv : contient les colonnes (id_emp, nom, prenom, id_dept)</li><li>Departements.csv : contient les colonnes (id_dept, nom_dept, localisation)</li></ul><p>On souhaite effectuer une jointure pour obtenir un fichier de sortie contenant (id_emp, nom, prenom, nom_dept).</p>",
+      "images": [
+        "Schéma de deux tables relationnelles : Employes et Departements, avec une flèche indiquant la jointure sur id_dept. Représentation du flux MapReduce pour la jointure."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevoir une stratégie MapReduce pour réaliser cette jointure. Décrire les fonctions Map et Reduce et expliquer comment distinguer les enregistrements des deux fichiers.",
+        "niveau": "hard",
+        "reponse": "On utilise une jointure par le côté (reduce-side join). Map : pour chaque ligne, on émet (id_dept, (type, données)). Pour les employés, type='E' et données=(id_emp, nom, prenom). Pour les départements, type='D' et données=(nom_dept, localisation). Shuffle regroupe par id_dept. Reduce : pour chaque id_dept, on reçoit une liste avec des éléments de type E et D. On extrait les données du département (type D) et on produit une sortie pour chaque employé (type E) avec les données du département.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Discuter des avantages et inconvénients de cette approche par rapport à une jointure en base de données traditionnelle.",
+        "niveau": "hard",
+        "reponse": "Avantages : passage à l'échelle (sur des clusters distribués), traitement de données massives. Inconvénients : latence élevée (traitement par lots), coût de la phase Shuffle (transfert réseau, tri), pas d'index, requête non interactive. La jointure MapReduce n'est pas optimisée pour de petites données ou des requêtes récurrentes.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposer une optimisation pour réduire le coût de la phase Shuffle (jointure côté Map).",
+        "niveau": "very hard",
+        "reponse": "Si un des fichiers est petit (ex: Departements), on peut utiliser une jointure côté Map (map-side join) en distribuant le petit fichier à tous les mappeurs (via le cache distribué). Chaque mappeur charge le fichier Departements dans une table de hachage, puis pour chaque employé, il fait directement la jointure en mémoire et émet le résultat. Cela évite la phase Shuffle. Le petit fichier doit tenir en mémoire.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Calcul de moyenne avec MapReduce",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>On dispose d'un fichier de notes d'étudiants. Chaque ligne contient : <code>id_etudiant, matiere, note</code>. On souhaite calculer la moyenne de chaque étudiant.</p><p>Exemple de données :</p><ul><li>1, Maths, 15</li><li>1, Physique, 12</li><li>2, Maths, 18</li><li>2, Physique, 14</li><li>2, Chimie, 10</li></ul>",
+      "images": [
+        "Schéma illustrant le flux MapReduce pour le calcul de moyenne : Map émet (id_etudiant, (note, 1)), Shuffle regroupe par id_etudiant, Reduce calcule la somme des notes et le nombre de notes puis retourne la moyenne."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevoir un algorithme MapReduce pour calculer la moyenne de chaque étudiant. Décrire les fonctions Map et Reduce.",
+        "niveau": "medium",
+        "reponse": "Fonction Map : pour chaque ligne, émettre (id_etudiant, (note, 1)). Fonction Reduce : pour chaque id_etudiant, on reçoit une liste de (note, 1). On calcule somme_des_notes et nombre_de_notes. On retourne (id_etudiant, somme_des_notes / nombre_de_notes).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Appliquer manuellement l'algorithme sur les données fournies. Montrer les résultats intermédiaires et finaux.",
+        "niveau": "medium",
+        "reponse": "Map : (1, (15,1)), (1, (12,1)), (2, (18,1)), (2, (14,1)), (2, (10,1)). Shuffle : 1: [(15,1), (12,1)], 2: [(18,1), (14,1), (10,1)]. Reduce : pour 1 : somme=27, nb=2, moyenne=13.5 ; pour 2 : somme=42, nb=3, moyenne=14.0. Résultat : (1, 13.5), (2, 14.0).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposer une version de l'algorithme qui n'utilise qu'une seule valeur par clé (sans paire) pour réduire la quantité de données transférées.",
+        "niveau": "hard",
+        "reponse": "On peut utiliser un combiner. La fonction Map émet (id_etudiant, note). Le Combiner (exécuté localement après le Map) calcule pour chaque id_etudiant la somme et le nombre localement, et émet (id_etudiant, (somme_locale, nb_local)). Le Reduce reçoit ces paires (somme, nb) et calcule la moyenne globale. Cela réduit le volume de données pendant le Shuffle.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse de logs avec MapReduce",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Un site web génère des logs d'accès dont chaque ligne a le format : <code>date, heure, ip_client, url, code_reponse, taille</code>.</p><p>On souhaite analyser ces logs pour :</p><ol><li>Compter le nombre de requêtes par code de réponse.</li><li>Identifier les 5 URLs les plus consultées.</li></ol>",
+      "images": [
+        "Schéma montrant des lignes de log avec les colonnes date, heure, ip, url, code, taille. Flèches indiquant les traitements MapReduce pour les deux analyses."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevoir un job MapReduce pour compter le nombre de requêtes par code de réponse.",
+        "niveau": "medium",
+        "reponse": "Map : pour chaque ligne, extraire le code de réponse et émettre (code, 1). Shuffle regroupe par code. Reduce : pour chaque code, sommer les 1 et retourner (code, total).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Concevoir un job MapReduce pour identifier les 5 URLs les plus consultées. Expliquer comment limiter la sortie aux 5 URLs.",
+        "niveau": "hard",
+        "reponse": "Premier job : Map émet (url, 1), Reduce calcule le nombre d'occurrences par URL (comme WordCount). Deuxième job : Map émet (null, (nb, url)) ou (nb, url) avec un seul réducteur qui prend les 5 plus grands nb. On peut aussi utiliser un seul réducteur avec un état interne pour ne garder que les 5 meilleurs.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Discuter des limites de MapReduce pour ce type d'analyse (logs en temps réel, volume de données, etc.) et proposer une alternative.",
+        "niveau": "hard",
+        "reponse": "MapReduce est un système de traitement par lots, il ne convient pas pour les analyses en temps réel. Pour des logs massifs, MapReduce est adapté. Cependant, pour des requêtes interactives, on peut utiliser des solutions comme Spark (qui permet des itérations en mémoire) ou des bases de données spécialisées (Elasticsearch, Druid).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Tri distribu\u00E9 avec MapReduce",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>MapReduce peut être utilisé pour trier de grandes quantités de données. Le principe est de partitionner les données en intervalles (ex: selon la première lettre) et d'utiliser des réducteurs pour trier chaque partition.</p>",
+      "images": [
+        "Schéma du tri distribu\u00E9 : les données d'entrée sont réparties entre les mappeurs, un partitionneur distribue les clés sur les réducteurs selon leur intervalle, chaque réducteur trie sa partition, le résultat global est un fichier trié."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer comment MapReduce peut réaliser un tri global des clés (order by).",
+        "niveau": "medium",
+        "reponse": "MapReduce trie automatiquement les clés dans chaque réducteur (par ordre lexicographique). Pour un tri global, on utilise un partitionneur qui répartit les clés sur les réducteurs selon des intervalles ordonnés (ex: clé < 100 vers réducreur 0, 100 <= clé < 200 vers réducteur 1, etc.). L'ordre global est obtenu en concaténant les sorties des réducteurs triées.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer une stratégie pour trier des clés de type chaîne de caractères en respectant l'ordre alphabétique.",
+        "niveau": "hard",
+        "reponse": "On peut utiliser un partitionneur basé sur les prefixes des chaînes. Par exemple, pour un intervalle de 26 lettres, on peut partitionner par la première lettre. Si les données ne sont pas équilibrées, on peut utiliser un échantillonnage pour déterminer les frontières des partitions (total order partitioner).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Discuter des coûts de cette approche (nombre de réducteurs, transfert réseau) et de son passage à l'échelle.",
+        "niveau": "very hard",
+        "reponse": "Le coût dépend du nombre de réducteurs. Avec R réducteurs, la phase Shuffle transfère les données sur le réseau. Si les partitions sont déséquilibrées, certains réducteurs seront surchargés. Le tri global nécessite que les clés soient bien réparties (sinon un réducteur unique peut devenir un goulot d'étranglement). Le passage à l'échelle est bon si le partitionnement est équilibré.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Simulation d'un job MapReduce",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>On considère un job MapReduce où la fonction Map émet pour chaque paire (clé, valeur) une liste de paires (nouvelle_clé, nouvelle_valeur). La fonction Reduce reçoit une clé et une liste de valeurs et produit une sortie.</p><p>Soit la fonction Map suivante : </p><pre><code>Map (clé, valeur) :\n    pour chaque mot w dans valeur.split() :\n        émettre (w, 1)\n</code></pre><p>Et la fonction Reduce suivante :</p><pre><code>Reduce (clé, valeurs) :\n    somme = 0\n    pour chaque v dans valeurs :\n        somme += v\n    émettre (clé, somme)\n</code></pre>",
+      "images": [
+        "Schéma d'un job MapReduce avec plusieurs mappeurs (M1, M2) et réducteurs (R1, R2). Les flèches montrent l'émission des paires et leur regroupement."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier le type d'opération effectuée par ce job MapReduce.",
+        "niveau": "easy",
+        "reponse": "Il s'agit d'un WordCount : compter le nombre d'occurrences de chaque mot.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Simuler l'exécution de ce job sur l'entrée suivante (distribuée sur deux mappeurs) : <br/>Mappeur 1 : \"Le chat est un chat\"<br/>Mappeur 2 : \"Le chien est un chien\"",
+        "niveau": "medium",
+        "reponse": "Mappeur 1 émet : (Le,1), (chat,1), (est,1), (un,1), (chat,1). Mappeur 2 émet : (Le,1), (chien,1), (est,1), (un,1), (chien,1). Shuffle regroupe : Le: [1,1], chat: [1,1], est: [1,1], un: [1,1], chien: [1,1]. Reduce : (Le,2), (chat,2), (est,2), (un,2), (chien,2).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Modifier la fonction Map pour que le job compte le nombre de mots distincts (et non leurs occurrences).",
+        "niveau": "hard",
+        "reponse": "Map : pour chaque mot w dans valeur.split() : émettre (w, 1). Reduce : la fonction reste la même (somme des 1). Pour compter les mots distincts, on peut utiliser un combiner ou un set dans le Map, mais cela nécessite de regrouper les mots uniques par document. Une autre approche : Map émet (w, 1) et Reduce fait la somme, le nombre de valeurs est le nombre d'occurrences. Pour le nombre de mots distincts, on peut utiliser une fonction qui émet (w, 1) et ensuite un second job qui compte les clés.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation avec Combiner",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans MapReduce, le Combiner est une optimisation qui permet d'effectuer une réduction locale sur les données émises par un mappeur avant la phase Shuffle. Il doit avoir la même signature que la fonction Reduce.</p>",
+      "images": [
+        "Schéma comparant un job avec et sans Combiner. Sans Combiner : les mappeurs émettent toutes les paires vers le Shuffle. Avec Combiner : les mappeurs agrègent localement les paires, réduisant le volume de données transférées."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer le rôle du Combiner et dans quels cas il est bénéfique.",
+        "niveau": "easy",
+        "reponse": "Le Combiner agrège les paires intermédiaires au niveau de chaque mappeur avant la phase Shuffle. Cela réduit la quantité de données transférées sur le réseau. Il est bénéfique pour les opérations commutatives et associatives (somme, compte, max, min).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Donner un exemple de calcul où le Combiner peut être utilisé et un autre où il ne peut pas l'être (expliquer pourquoi).",
+        "niveau": "medium",
+        "reponse": "Exemple où il peut être utilisé : WordCount (somme des 1). Exemple où il ne peut pas être utilisé : calcul de la moyenne, car la moyenne n'est pas associative (somme(n)/nb(n) ne peut pas être agrégée simplement). On peut utiliser un Combiner pour la somme et le compte, mais pas directement la moyenne.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Pour le calcul de la moyenne, proposer une stratégie avec Combiner. Quelles informations le Combiner doit-il transmettre ?",
+        "niveau": "hard",
+        "reponse": "Le Combiner doit transmettre à la fois la somme et le nombre d'éléments. Il émet (clé, (somme_partielle, nb_partiel)). Le Reduce reçoit des paires (somme, nb) et calcule la moyenne globale : somme_totale / nb_total.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "PageRank avec MapReduce",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>L'algorithme PageRank est utilisé pour classer les pages web. Il est basé sur un graphe orienté où les nœuds sont des pages et les arcs des liens. Le PageRank d'une page est défini par une équation récursive : $PR(p) = \\frac{1-d}{N} + d \\sum_{q \\in In(p)} \\frac{PR(q)}{Out(q)}$ où $d$ est un facteur d'amortissement (généralement 0.85), $N$ est le nombre total de pages, $In(p)$ est l'ensemble des pages qui pointent vers $p$, et $Out(q)$ est le nombre de liens sortants de $q$.</p>",
+      "images": [
+        "Graphe orienté représentant des pages web (noeuds) et des liens (arcs). Les PageRank sont affichés près des noeuds."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposer un algorithme MapReduce itératif pour calculer le PageRank.",
+        "niveau": "very hard",
+        "reponse": "À chaque itération : Map : pour chaque page p, on émet (p, (PR(p), liste_des_successeurs)) pour permettre le calcul de la contribution. Pour chaque successeur s de p, on émet (s, PR(p) / Out(p)). Reduce : pour chaque page p, on reçoit la valeur de PR(p) (pour la mise à jour) et les contributions des pages entrantes. On calcule le nouveau PR : somme_contributions = (1-d)/N + d * somme(contributions). On émet (p, nouveau_PR, liste_successeurs). On répète jusqu'à convergence.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer comment gérer le problème des pages sans liens sortants (sinks) dans cette implémentation.",
+        "niveau": "very hard",
+        "reponse": "Les pages sans liens sortants (sinks) ne contribuent pas à la propagation. Dans l'algorithme, on peut soit distribuer leur PR uniformément à toutes les pages (pour éviter la fuite), soit les ignorer en ajoutant un terme de correction. Une solution courante est de redistribuer le PR des sinks à toutes les pages après chaque itération.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Analyser la complexité et le nombre d'itérations nécessaires en fonction de la taille du graphe.",
+        "niveau": "very hard",
+        "reponse": "Chaque itération nécessite un job MapReduce complet (lecture/écriture sur disque, Shuffle). La complexité est $O(I \\times (E + V))$ où I est le nombre d'itérations, E le nombre d'arcs, V le nombre de sommets. Le nombre d'itérations peut être de l'ordre de 20-50 pour un graphe de type web. Le coût est élevé mais adapté aux grandes données.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Détection des paires de mots fréquentes",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>On souhaite trouver, dans un ensemble de documents, les paires de mots qui apparaissent ensemble le plus souvent (co-occurrence). Par exemple, dans la phrase \"Le chat et le chien\", les paires sont (Le, chat), (Le, et), (Le, le), (Le, chien), (chat, et), (chat, le), (chat, chien), (et, le), (et, chien), (le, chien).</p>",
+      "images": [
+        "Schéma de documents avec des mots. Des paires de mots sont mises en évidence avec des flèches pour montrer la co-occurrence. Représentation du traitement MapReduce pour compter les paires."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevoir un algorithme MapReduce pour compter les co-occurrences de paires de mots dans un ensemble de documents.",
+        "niveau": "hard",
+        "reponse": "Map : pour chaque document, pour chaque paire de mots distincts (w1, w2) apparaissant dans le document (par exemple dans une fenêtre de taille fixe ou dans tout le document), émettre ((w1, w2), 1). Reduce : pour chaque paire, sommer les 1.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Optimiser l'algorithme pour éviter les paires redondantes (ex: (chat, chien) et (chien, chat)) et pour ne compter que les paires avec w1 < w2.",
+        "niveau": "medium",
+        "reponse": "Map : pour chaque document, pour chaque paire (w1, w2), on trie les mots pour avoir w1 < w2 (ordre lexicographique) puis on émet ((w1, w2), 1) où w1 < w2. Cela évite les doublons.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Discuter du problème du \"schéma en étoile\" (explosion du nombre de paires) et proposer une solution.",
+        "niveau": "very hard",
+        "reponse": "Le nombre de paires possibles est $O(n^2)$ où $n$ est le nombre de mots distincts dans un document, ce qui peut être très grand. Pour réduire, on peut utiliser une approche par échantillonnage ou ne considérer que les paires de mots fréquents (en utilisant d'abord un WordCount pour filtrer). On peut aussi utiliser des techniques comme le \"MinHash\" pour estimer les co-occurrences.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

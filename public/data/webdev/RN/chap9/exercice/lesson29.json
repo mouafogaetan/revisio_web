@@ -1,0 +1,102 @@
+[
+  {
+    "intitule": "Animation d'un cercle qui grandit et change de couleur",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous devez créer un composant React Native qui affiche un cercle. Au chargement, le cercle doit s'animer :</p><ul><li>Sa taille (width/height) doit passer de $50$ à $150$ pixels en $1.5$ secondes</li><li>Sa couleur de fond doit passer du bleu clair ($\\#3B82F6$) au vert ($\\#10B981$)</li><li>L'animation doit utiliser <code>Animated.timing</code> avec une courbe d'accélération <code>Easing.bounce</code></li><li>Une fois l'animation terminée, un message \"Animation terminée !\" doit s'afficher dans la console</li></ul>",
+      "images": ["animation cercle qui grossit changement couleur react native"]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémenter le composant <code>AnimatedCircle</code> en respectant toutes les spécifications. Utiliser <code>Animated.View</code> et l'API <code>interpolate</code> si nécessaire.",
+        "niveau": "medium",
+        "reponse": "```javascript\nimport React, { useEffect, useRef } from 'react';\nimport { Animated, Easing, StyleSheet, View } from 'react-native';\n\nconst AnimatedCircle = () => {\n  const sizeAnim = useRef(new Animated.Value(50)).current;\n  const colorAnim = useRef(new Animated.Value(0)).current;\n\n  useEffect(() => {\n    // Animation parallèle pour la taille et la couleur\n    Animated.parallel([\n      Animated.timing(sizeAnim, {\n        toValue: 150,\n        duration: 1500,\n        easing: Easing.bounce,\n        useNativeDriver: false, // size affecte layout\n      }),\n      Animated.timing(colorAnim, {\n        toValue: 1,\n        duration: 1500,\n        easing: Easing.bounce,\n        useNativeDriver: false,\n      }),\n    ]).start(({ finished }) => {\n      if (finished) {\n        console.log('Animation terminée !');\n      }\n    });\n  }, []);\n\n  const backgroundColor = colorAnim.interpolate({\n    inputRange: [0, 1],\n    outputRange: ['#3B82F6', '#10B981'],\n  });\n\n  return (\n    <View style={styles.container}>\n      <Animated.View\n        style={[\n          styles.circle,\n          {\n            width: sizeAnim,\n            height: sizeAnim,\n            borderRadius: sizeAnim.interpolate({\n              inputRange: [50, 150],\n              outputRange: [25, 75],\n            }),\n            backgroundColor,\n          },\n        ]}\n      />\n    </View>\n  );\n};\n\nconst styles = StyleSheet.create({\n  container: {\n    flex: 1,\n    justifyContent: 'center',\n    alignItems: 'center',\n  },\n  circle: {\n    // Les styles dynamiques sont gérés ci-dessus\n  },\n});\n\nexport default AnimatedCircle;\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer pourquoi on utilise <code>useRef</code> pour stocker les valeurs d'animation plutôt que <code>useState</code>.",
+        "niveau": "easy",
+        "reponse": "On utilise `useRef` car les valeurs d'animation (`Animated.Value`) doivent persister entre les re-rendus sans déclencher de nouveau rendu lorsqu'elles changent. `useState` provoquerait un re-rendu à chaque mise à jour de la valeur, ce qui dégraderait considérablement les performances. `useRef` fournit une référence mutable qui ne cause pas de re-rendu, ce qui est parfait pour les animations fluides.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Animation en séquence : apparition d'une carte d'information",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Une application mobile affiche une carte d'information lorsqu'un utilisateur clique sur un bouton. La carte doit apparaître selon une <strong>séquence d'animations</strong> :</p><ol><li>La carte glisse depuis le bas de l'écran (translateY de $+200$ à $0$) en $0.5$ secondes</li><li>Simultanément, son opacité passe de $0$ à $1$</li><li>Après la fin de l'apparition, un texte à l'intérieur de la carte doit clignoter (opacité alterne entre $0.3$ et $1$) indéfiniment</li><li>Un bouton \"Fermer\" permet de faire disparaître la carte (animation inverse + nettoyage)</li></ol>",
+      "images": ["carte information apparition glissante react native animation sequence"]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémenter le composant <code>AnimatedCard</code>. Utiliser <code>Animated.sequence</code>, <code>Animated.parallel</code> et <code>Animated.loop</code>.",
+        "niveau": "hard",
+        "reponse": "```javascript\nimport React, { useState, useRef, useEffect } from 'react';\nimport { Animated, TouchableOpacity, Text, StyleSheet, View } from 'react-native';\n\nconst AnimatedCard = () => {\n  const [visible, setVisible] = useState(false);\n  const slideAnim = useRef(new Animated.Value(200)).current;\n  const opacityAnim = useRef(new Animated.Value(0)).current;\n  const blinkAnim = useRef(new Animated.Value(1)).current;\n  const blinkLoop = useRef(null);\n\n  const showCard = () => {\n    setVisible(true);\n    // Réinitialiser les valeurs\n    slideAnim.setValue(200);\n    opacityAnim.setValue(0);\n    \n    // Animation d'apparition : séquence avec parallélisme\n    Animated.sequence([\n      Animated.parallel([\n        Animated.timing(slideAnim, {\n          toValue: 0,\n          duration: 500,\n          useNativeDriver: true,\n        }),\n        Animated.timing(opacityAnim, {\n          toValue: 1,\n          duration: 500,\n          useNativeDriver: true,\n        }),\n      ]),\n      // Après apparition, démarrer le clignotement\n      Animated.delay(100),\n    ]).start(() => {\n      // Boucle de clignotement\n      blinkLoop.current = Animated.loop(\n        Animated.sequence([\n          Animated.timing(blinkAnim, {\n            toValue: 0.3,\n            duration: 500,\n            useNativeDriver: true,\n          }),\n          Animated.timing(blinkAnim, {\n            toValue: 1,\n            duration: 500,\n            useNativeDriver: true,\n          }),\n        ])\n      );\n      blinkLoop.current.start();\n    });\n  };\n\n  const hideCard = () => {\n    // Arrêter le clignotement\n    if (blinkLoop.current) {\n      blinkLoop.current.stop();\n    }\n    \n    // Animation de disparition\n    Animated.parallel([\n      Animated.timing(slideAnim, {\n        toValue: 200,\n        duration: 400,\n        useNativeDriver: true,\n      }),\n      Animated.timing(opacityAnim, {\n        toValue: 0,\n        duration: 400,\n        useNativeDriver: true,\n      }),\n    ]).start(() => {\n      setVisible(false);\n      blinkAnim.setValue(1); // Réinitialiser\n    });\n  };\n\n  if (!visible) {\n    return (\n      <TouchableOpacity style={styles.showButton} onPress={showCard}>\n        <Text style={styles.buttonText}>Afficher la carte</Text>\n      </TouchableOpacity>\n    );\n  }\n\n  return (\n    <View style={styles.container}>\n      <Animated.View\n        style={[\n          styles.card,\n          {\n            transform: [{ translateY: slideAnim }],\n            opacity: opacityAnim,\n          },\n        ]}\n      >\n        <Animated.Text style={[styles.cardText, { opacity: blinkAnim }]}>\n          ✨ Information importante ! ✨\n        </Animated.Text>\n        <TouchableOpacity style={styles.closeButton} onPress={hideCard}>\n          <Text style={styles.closeText}>Fermer</Text>\n        </TouchableOpacity>\n      </Animated.View>\n    </View>\n  );\n};\n\nconst styles = StyleSheet.create({\n  container: {\n    flex: 1,\n    justifyContent: 'center',\n    alignItems: 'center',\n    backgroundColor: '#f0f0f0',\n  },\n  showButton: {\n    backgroundColor: '#3B82F6',\n    padding: 12,\n    borderRadius: 8,\n  },\n  buttonText: { color: 'white', fontWeight: 'bold' },\n  card: {\n    position: 'absolute',\n    bottom: 50,\n    left: 20,\n    right: 20,\n    backgroundColor: 'white',\n    borderRadius: 16,\n    padding: 20,\n    shadowColor: '#000',\n    shadowOffset: { width: 0, height: 2 },\n    shadowOpacity: 0.25,\n    elevation: 5,\n    alignItems: 'center',\n  },\n  cardText: { fontSize: 18, textAlign: 'center', marginBottom: 16 },\n  closeButton: { backgroundColor: '#EF4444', padding: 8, borderRadius: 6 },\n  closeText: { color: 'white' },\n});\n\nexport default AnimatedCard;\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Analyser l'importance de <code>useNativeDriver: true</code> dans les animations. Dans quelles situations ne peut-on pas l'utiliser ?",
+        "niveau": "medium",
+        "reponse": "`useNativeDriver: true` permet à l'animation de s'exécuter directement sur le thread natif (UI thread) plutôt que sur le thread JavaScript. Cela offre des performances bien meilleures et des animations plus fluides (60fps).\n\n**On ne peut PAS utiliser `useNativeDriver: true` dans les cas suivants :**\n1. Animation de propriétés de layout qui affectent la géométrie d'autres composants (width, height, padding, margin, top, left, etc.)\n2. Animation de la propriété `backgroundColor` (nécessite le thread JavaScript)\n3. Animation de `fontSize` ou de propriétés textuelles\n4. Lorsque l'animation dépend de calculs JavaScript complexes\n\nDans notre code, l'animation de `slideAnim` (translateY) peut utiliser le native driver car c'est une transformation. L'opacité le peut aussi. En revanche, la largeur/hauteur d'un élément ne le peut pas.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Animation au défilement : parallax et transformation d'en-tête",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous créez un profil utilisateur défilable avec une <strong>image d'en-tête</strong> qui réagit au défilement :</p><ul><li>L'image de couverture mesure initialement $250$ pixels de hauteur</li><li>Lorsque l'utilisateur fait défiler vers le bas, la hauteur de l'image diminue progressivement jusqu'à $100$ pixels (effet parallaxe)</li><li>Simultanément, l'opacité d'un titre superposé passe de $1$ à $0$</li><li>Lorsque l'utilisateur remonte, l'image retrouve sa taille d'origine</li><li>Utiliser <code>Animated.event</code> avec <code>ScrollView</code> ou <code>FlatList</code> pour lier le défilement aux valeurs d'animation</li></ul><p>Formule pour le calcul du facteur d'échelle : $facteur = 1 - \\frac{scrollY}{200}$ avec un minimum de $0.4$ pour que l'image ne disparaisse pas complètement</p>",
+      "images": ["parallax scrolling header image react native animation scrollview"]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémenter le composant <code>ParallaxHeader</code> qui réalise l'effet décrit. Utiliser <code>Animated.ScrollView</code> et <code>Animated.event</code>.",
+        "niveau": "very hard",
+        "reponse": "```javascript\nimport React, { useRef } from 'react';\nimport { Animated, Text, View, StyleSheet, Dimensions } from 'react-native';\n\nconst { height: screenHeight } = Dimensions.get('window');\nconst HEADER_HEIGHT = 250;\nconst MIN_HEADER_HEIGHT = 100;\n\nconst ParallaxHeader = () => {\n  const scrollY = useRef(new Animated.Value(0)).current;\n\n  // Calcul de la hauteur de l'en-tête en fonction du défilement\n  const headerHeight = scrollY.interpolate({\n    inputRange: [0, HEADER_HEIGHT - MIN_HEADER_HEIGHT],\n    outputRange: [HEADER_HEIGHT, MIN_HEADER_HEIGHT],\n    extrapolate: 'clamp',\n  });\n\n  // Facteur d'échelle pour l'image (effet parallaxe)\n  const imageScale = scrollY.interpolate({\n    inputRange: [0, 200],\n    outputRange: [1, 0.4],\n    extrapolateRight: 'clamp',\n  });\n\n  // Translation verticale de l'image pour un effet de zoom\n  const imageTranslateY = scrollY.interpolate({\n    inputRange: [0, 200],\n    outputRange: [0, 50],\n    extrapolateRight: 'clamp',\n  });\n\n  // Opacité du titre\n  const titleOpacity = scrollY.interpolate({\n    inputRange: [0, 150, HEADER_HEIGHT - MIN_HEADER_HEIGHT],\n    outputRange: [1, 0.5, 0],\n    extrapolate: 'clamp',\n  });\n\n  // Hauteur du contenu paddingTop pour compenser l'en-tête\n  const contentPaddingTop = scrollY.interpolate({\n    inputRange: [0, HEADER_HEIGHT - MIN_HEADER_HEIGHT],\n    outputRange: [HEADER_HEIGHT, MIN_HEADER_HEIGHT],\n    extrapolate: 'clamp',\n  });\n\n  return (\n    <View style={styles.container}>\n      <Animated.ScrollView\n        showsVerticalScrollIndicator={false}\n        scrollEventThrottle={16}\n        onScroll={Animated.event(\n          [{ nativeEvent: { contentOffset: { y: scrollY } } }],\n          { useNativeDriver: false } // car on modifie height\n        )}\n      >\n        <Animated.View style={{ paddingTop: contentPaddingTop }}>\n          <View style={styles.content}>\n            <Text style={styles.sectionTitle}>À propos</Text>\n            <Text style={styles.text}>\n              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\n            </Text>\n            <Text style={styles.sectionTitle}>Expériences</Text>\n            <Text style={styles.text}>\n              • Développeur React Native - 2023 à aujourd'hui{'\\n'}\n              • Stage en développement mobile - 2022{'\\n'}\n              • Projet personnel : application e-commerce\n            </Text>\n            <Text style={styles.sectionTitle}>Formation</Text>\n            <Text style={styles.text}>\n              Master en Informatique, spécialité Développement Mobile\n            </Text>\n          </View>\n        </Animated.View>\n      </Animated.ScrollView>\n\n      {/* En-tête fixe avec effet parallaxe */}\n      <Animated.View\n        style={[\n          styles.header,\n          {\n            height: headerHeight,\n          },\n        ]}\n      >\n        <Animated.Image\n          source={{ uri: 'https://picsum.photos/id/100/800/400' }}\n          style={[\n            styles.backgroundImage,\n            {\n              transform: [\n                { scale: imageScale },\n                { translateY: imageTranslateY },\n              ],\n            },\n          ]}\n          resizeMode=\"cover\"\n        />\n        <Animated.View style={[styles.overlay, { opacity: titleOpacity }]}>\n          <Text style={styles.title}>Mon Profil</Text>\n          <Text style={styles.subtitle}>Développeur Mobile</Text>\n        </Animated.View>\n      </Animated.View>\n    </View>\n  );\n};\n\nconst styles = StyleSheet.create({\n  container: {\n    flex: 1,\n    backgroundColor: '#fff',\n  },\n  header: {\n    position: 'absolute',\n    top: 0,\n    left: 0,\n    right: 0,\n    overflow: 'hidden',\n  },\n  backgroundImage: {\n    width: '100%',\n    height: '100%',\n  },\n  overlay: {\n    position: 'absolute',\n    bottom: 20,\n    left: 0,\n    right: 0,\n    alignItems: 'center',\n    backgroundColor: 'rgba(0,0,0,0.4)',\n    paddingVertical: 10,\n  },\n  title: {\n    fontSize: 28,\n    fontWeight: 'bold',\n    color: 'white',\n  },\n  subtitle: {\n    fontSize: 16,\n    color: 'white',\n  },\n  content: {\n    padding: 20,\n  },\n  sectionTitle: {\n    fontSize: 22,\n    fontWeight: 'bold',\n    marginTop: 20,\n    marginBottom: 10,\n    color: '#1F2937',\n  },\n  text: {\n    fontSize: 16,\n    lineHeight: 24,\n    color: '#4B5563',\n  },\n});\n\nexport default ParallaxHeader;\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer le rôle de <code>scrollEventThrottle={16}</code> et pourquoi on utilise <code>useNativeDriver: false</code> dans cet exemple.",
+        "niveau": "medium",
+        "reponse": "**`scrollEventThrottle={16}`** : Cet attribut contrôle la fréquence à laquelle les événements de défilement sont envoyés. La valeur 16 millisecondes correspond environ à 60 images par seconde (1000ms / 60 ≈ 16.67ms). Cela garantit que l'animation reste fluide tout en évitant une surcharge inutile d'événements.\n\n**`useNativeDriver: false`** : Dans cet exemple, on modifie la propriété `height` de l'en-tête via `headerHeight`. La modification des propriétés de layout (height, width, padding, etc.) ne peut pas être exécutée sur le thread natif car elle nécessite un re-calcul de la mise en page (re-layout) qui doit être fait par le moteur de rendu JavaScript. Les transformations (scale, translate) et l'opacité peuvent en revanche utiliser le native driver.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Animation de likes avec effet de rebond",
+    "type": "competence",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Un réseau social souhaite ajouter un effet \"like\" sur les publications. Lorsque l'utilisateur tape sur l'icône cœur, celle-ci doit :</p><ul><li>Grossir (scale de $1 \\rightarrow 1.4 \\rightarrow 1$) en $0.3$ secondes</li><li>Changer de couleur (gris → rouge)</li><li>Utiliser <code>Animated.spring</code> pour un effet de rebond naturel</li><li>Si le like est déjà activé, le cœur revient à son état normal (animation inverse)</li></ul><p>Paramètres du spring : friction = 7, tension = 100</p>",
+      "images": ["animation like heart bounce react native spring"]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créer le composant <code>LikeButton</code> avec l'animation spring décrite. Utiliser <code>useState</code> pour gérer l'état liké/non liké et <code>Animated.spring</code> pour l'animation.",
+        "niveau": "medium",
+        "reponse": "```javascript\nimport React, { useState, useRef } from 'react';\nimport { TouchableOpacity, Animated, StyleSheet } from 'react-native';\n\nconst LikeButton = () => {\n  const [liked, setLiked] = useState(false);\n  const scaleAnim = useRef(new Animated.Value(1)).current;\n\n  const animateLike = () => {\n    // Animation de rebond\n    Animated.sequence([\n      Animated.spring(scaleAnim, {\n        toValue: 1.4,\n        friction: 7,\n        tension: 100,\n        useNativeDriver: true,\n      }),\n      Animated.spring(scaleAnim, {\n        toValue: 1,\n        friction: 7,\n        tension: 100,\n        useNativeDriver: true,\n      }),\n    ]).start();\n\n    // Inverser l'état liké\n    setLiked(!liked);\n  };\n\n  return (\n    <TouchableOpacity onPress={animateLike} activeOpacity={0.7}>\n      <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>\n        <Animated.Text style={[styles.heart, { color: liked ? '#EF4444' : '#9CA3AF' }]}>\n          {liked ? '❤️' : '♡'}\n        </Animated.Text>\n      </Animated.View>\n    </TouchableOpacity>\n  );\n};\n\nconst styles = StyleSheet.create({\n  heart: {\n    fontSize: 48,\n  },\n});\n\nexport default LikeButton;\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Comparer l'effet produit par <code>Animated.spring</code> par rapport à <code>Animated.timing</code> avec <code>Easing.bounce</code>. Dans quel cas préférer l'un à l'autre ?",
+        "niveau": "medium",
+        "reponse": "**`Animated.spring`** : Crée un effet de ressort physique naturel avec des paramètres comme friction et tension. Idéal pour les interactions directes de l'utilisateur (clics, glissements) car le rebond donne une sensation de matière et de réactivité. Le mouvement est plus organique.\n\n**`Animated.timing` avec `Easing.bounce`** : Produit un rebond plus mathématique et prévisible. La durée est fixe contrairement au spring dont la durée dépend des paramètres.\n\n**Quand préférer spring** :\n- Boutons tactiles, likes, animations de feedback immédiat\n- Gestes de traînée (drag & drop)\n- Animations qui doivent sembler \"naturelles\" ou \"physiques\"\n\n**Quand préférer timing avec bounce** :\n- Animations séquencées où la durée doit être précise\n- Quand on veut synchroniser plusieurs animations sur une durée fixe\n- Effets décoratifs où le rebond mathématique est préférable\n\nDans notre cas, le bouton like bénéficie d'un effet spring car l'interaction est directe et le rebond donne une impression de réactivité.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

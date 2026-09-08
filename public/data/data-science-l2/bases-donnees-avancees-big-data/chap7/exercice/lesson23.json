@@ -1,0 +1,160 @@
+[
+  {
+    "intitule": "Création de Tables Temporaires",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>En PySpark, les tables temporaires permettent d'interroger des DataFrames avec des requêtes SQL.</p><p><strong>Consigne :</strong> À partir d'un DataFrame <code>df_employes</code> contenant les colonnes <code>nom, age, service, ville</code>, écrivez les instructions PySpark pour :</p><ol><li>Créer une table temporaire nommée <code>employes</code>.</li><li>Créer une table temporaire globale nommée <code>employes_global</code>.</li></ol>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le code PySpark pour créer les tables temporaires.",
+        "niveau": "easy",
+        "reponse": "# Table temporaire simple\ndf_employes.createOrReplaceTempView(\"employes\")\n\n# Table temporaire globale\ndf_employes.createOrReplaceGlobalTempView(\"employes_global\")",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quelle est la différence entre une table temporaire et une table temporaire globale ?",
+            "niveau": "easy",
+            "reponse": "Une table temporaire est accessible uniquement dans la session Spark en cours et est supprimée à la fermeture de la session. Une table temporaire globale est accessible depuis toutes les sessions Spark et son nom est préfixé par 'global_temp'."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Requêtes SQL Simples avec spark.sql()",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Une fois la table temporaire créée, on peut l'interroger avec <code>spark.sql()</code>.</p><p><strong>Consigne :</strong> À partir de la table temporaire <code>employes</code>, écrivez les requêtes SQL pour :</p><ol><li>Sélectionner les employés de plus de 30 ans.</li><li>Compter le nombre d'employés par service.</li><li>Trouver l'âge moyen par ville.</li></ol>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez les requêtes SQL à exécuter avec spark.sql().",
+        "niveau": "easy",
+        "reponse": "# 1. Employés de plus de 30 ans\nspark.sql(\"SELECT * FROM employes WHERE age > 30\")\n\n# 2. Nombre d'employés par service\nspark.sql(\"SELECT service, COUNT(*) as nb_employes FROM employes GROUP BY service\")\n\n# 3. Âge moyen par ville\nspark.sql(\"SELECT ville, AVG(age) as age_moyen FROM employes GROUP BY ville\")",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Jointures avec Spark SQL",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous disposez de deux DataFrames :</p><ul><li><code>df_commandes</code> : <code>id_commande, id_client, date, montant</code></li><li><code>df_clients</code> : <code>id_client, nom, email, ville</code></li></ul><p><strong>Consigne :</strong> Créez les tables temporaires et écrivez les requêtes SQL pour :</p><ol><li>Obtenir toutes les commandes avec le nom du client (jointure interne).</li><li>Obtenir tous les clients avec leurs commandes (incluant ceux qui n'ont pas de commandes).</li><li>Calculer le montant total des commandes par ville.</li></ol>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le code PySpark avec les requêtes SQL pour réaliser ces analyses.",
+        "niveau": "medium",
+        "reponse": "df_commandes.createOrReplaceTempView(\"commandes\")\ndf_clients.createOrReplaceTempView(\"clients\")\n\n# 1. Jointure interne\nspark.sql(\"\"\"\n    SELECT c.id_commande, cl.nom, c.montant\n    FROM commandes c\n    INNER JOIN clients cl ON c.id_client = cl.id_client\n\"\"\")\n\n# 2. Jointure externe gauche\nspark.sql(\"\"\"\n    SELECT cl.nom, cl.email, c.id_commande, c.montant\n    FROM clients cl\n    LEFT JOIN commandes c ON cl.id_client = c.id_client\n\"\"\")\n\n# 3. Montant total par ville\nspark.sql(\"\"\"\n    SELECT cl.ville, SUM(c.montant) as total_ventes\n    FROM commandes c\n    INNER JOIN clients cl ON c.id_client = cl.id_client\n    GROUP BY cl.ville\n\"\"\")",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Fonctions de Fenêtrage en Spark SQL",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Les fonctions de fenêtrage permettent de faire des calculs sur des groupes de lignes.</p><p><strong>Consigne :</strong> À partir de la table <code>ventes</code> contenant <code>id_vente, id_produit, region, montant, date_vente</code>, écrivez des requêtes SQL pour :</p><ol><li>Classer les ventes par région selon le montant (du plus élevé au plus bas).</li><li>Calculer la moyenne mobile des ventes sur 3 jours (si les dates sont continues).</li><li>Pour chaque région, trouver les 3 meilleures ventes.</li></ol>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez les requêtes SQL utilisant les fonctions de fenêtrage.",
+        "niveau": "hard",
+        "reponse": "# 1. Classement par région\nspark.sql(\"\"\"\n    SELECT *, RANK() OVER (PARTITION BY region ORDER BY montant DESC) as rang\n    FROM ventes\n\"\"\")\n\n# 2. Moyenne mobile sur 3 jours (suppose une date par ligne)\nspark.sql(\"\"\"\n    SELECT *, \n           AVG(montant) OVER (ORDER BY date_vente ROWS BETWEEN 2 PRECEDING AND CURRENT ROW) as moyenne_glissante\n    FROM ventes\n\"\"\")\n\n# 3. Top 3 par région\nspark.sql(\"\"\"\n    SELECT * FROM (\n        SELECT *, ROW_NUMBER() OVER (PARTITION BY region ORDER BY montant DESC) as rang\n        FROM ventes\n    ) WHERE rang <= 3\n\"\"\")",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse des Ventes avec Spark SQL",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Une entreprise de distribution vous confie son fichier de ventes. Le DataFrame <code>df_ventes</code> contient : <code>id_vente, id_produit, categorie, quantite, prix_unitaire, date_vente, region, magasin</code>.</p><p><strong>Consigne :</strong> Utilisez Spark SQL pour :</p><ol><li>Nettoyer les données en filtrant les quantités et prix unitaires positifs.</li><li>Calculer le chiffre d'affaires total par catégorie.</li><li>Identifier la catégorie avec le meilleur CA par région.</li><li>Calculer la variation mensuelle du CA pour chaque région.</li></ol>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez les requêtes SQL Spark permettant d'analyser ces données.",
+        "niveau": "hard",
+        "reponse": "df_ventes.createOrReplaceTempView(\"ventes\")\n\n# 1. Création d'une vue nettoyée\nspark.sql(\"\"\"\n    CREATE OR REPLACE TEMP VIEW ventes_propres AS\n    SELECT *, (quantite * prix_unitaire) as ca\n    FROM ventes\n    WHERE quantite > 0 AND prix_unitaire > 0\n\"\"\")\n\n# 2. CA par catégorie\nspark.sql(\"\"\"\n    SELECT categorie, SUM(ca) as ca_total\n    FROM ventes_propres\n    GROUP BY categorie\n    ORDER BY ca_total DESC\n\"\"\")\n\n# 3. Meilleure catégorie par région\nspark.sql(\"\"\"\n    SELECT region, categorie, ca_total\n    FROM (\n        SELECT region, categorie, SUM(ca) as ca_total,\n               ROW_NUMBER() OVER (PARTITION BY region ORDER BY SUM(ca) DESC) as rang\n        FROM ventes_propres\n        GROUP BY region, categorie\n    ) WHERE rang = 1\n\"\"\")\n\n# 4. Variation mensuelle du CA par région\nspark.sql(\"\"\"\n    SELECT region, \n           DATE_FORMAT(date_vente, 'yyyy-MM') as mois,\n           SUM(ca) as ca_mensuel,\n           LAG(SUM(ca), 1) OVER (PARTITION BY region ORDER BY DATE_FORMAT(date_vente, 'yyyy-MM')) as ca_mois_precedent,\n           (SUM(ca) - LAG(SUM(ca), 1) OVER (PARTITION BY region ORDER BY DATE_FORMAT(date_vente, 'yyyy-MM'))) * 100.0 / LAG(SUM(ca), 1) OVER (PARTITION BY region ORDER BY DATE_FORMAT(date_vente, 'yyyy-MM')) as variation_pct\n    FROM ventes_propres\n    GROUP BY region, DATE_FORMAT(date_vente, 'yyyy-MM')\n\"\"\")",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Interrogation Directe de Fichiers",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Avec Spark SQL, on peut interroger directement des fichiers sans créer de DataFrame au préalable.</p><p><strong>Consigne :</strong> Écrivez les instructions Spark SQL pour :</p><ol><li>Créer une table temporaire à partir d'un fichier CSV nommé <code>commandes.csv</code> (avec en-tête).</li><li>Interroger directement un fichier Parquet nommé <code>clients.parquet</code>.</li><li>Lire un fichier JSON et sélectionner les champs <code>nom</code> et <code>age</code>.</li></ol>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez le code Spark SQL pour ces opérations de lecture.",
+        "niveau": "medium",
+        "reponse": "# 1. Table temporaire à partir de CSV\nspark.sql(\"\"\"\n    CREATE OR REPLACE TEMP VIEW commandes_csv\n    USING csv\n    OPTIONS (\n        path \"commandes.csv\",\n        header \"true\",\n        delimiter \",\"\n    )\n\"\"\")\n\n# 2. Interroger directement un fichier Parquet\nspark.sql(\"SELECT * FROM parquet.`clients.parquet`\")\n\n# 3. Lecture JSON avec sélection\nspark.sql(\"\"\"\n    SELECT nom, age FROM json.`clients.json`\n\"\"\")",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation de Requêtes avec EXPLAIN",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous avez une requête Spark SQL qui s'exécute lentement sur un grand volume de données.</p><p><strong>Consigne :</strong> Analysez la requête suivante et proposez des optimisations :</p><pre style='background-color: #1e1e1e; color: #d4d4d4; padding: 10px; border-radius: 5px; overflow-x: auto; font-size: 14px;'>SELECT c.nom, SUM(v.montant) as total_achats\nFROM ventes v\nINNER JOIN clients c ON v.id_client = c.id_client\nWHERE v.date_vente BETWEEN '2023-01-01' AND '2023-12-31'\nGROUP BY c.nom\nORDER BY total_achats DESC\nLIMIT 10</pre><p>Questions :</p><ol><li>Comment utiliser EXPLAIN pour diagnostiquer les problèmes ?</li><li>Quelles optimisations proposez-vous ?</li><li>Comment partitionner les données pour améliorer cette requête ?</li></ol>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez votre approche d'optimisation pour cette requête.",
+        "niveau": "very hard",
+        "reponse": "1. Utiliser EXPLAIN pour voir le plan d'exécution, identifier les scans complets, les shuffles et les stratégies de jointure.\n2. Optimisations : partitionner les données par date pour réduire le scan, utiliser des index sur id_client et date_vente, broadcaster la table clients si elle est petite, utiliser des formats de fichier colonnaires (Parquet).\n3. Partitionnement : partitionner par année/mois pour éviter de scanner toutes les données, utiliser le pushdown des prédicats.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment vérifier que le pushdown de prédicats est bien appliqué ?",
+            "niveau": "hard",
+            "reponse": "En utilisant EXPLAIN, on peut voir dans le plan d'exécution si le filtre WHERE est appliqué avant la jointure (pushdown). On doit voir le filtre dans la partie 'PushedFilters' du plan."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Rapport de Ventes Mensuel avec Spark SQL",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous devez produire un rapport mensuel des ventes pour une entreprise. Les données sont dans des fichiers CSV partitionnés par année et mois dans HDFS.</p><p><strong>Consigne :</strong> Utilisez Spark SQL pour créer un pipeline qui :</p><ol><li>Lit les données depuis HDFS (fichiers partitionnés par année/mois).</li><li>Calcule les indicateurs suivants par mois et par région : CA total, nombre de commandes, panier moyen.</li><li>Identifie les 5 produits les plus vendus (en volume) pour chaque région.</li><li>Sauvegarde les résultats en format Parquet partitionné par région.</li></ol>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le code Spark SQL complet pour ce pipeline de reporting.",
+        "niveau": "very hard",
+        "reponse": "spark.sql(\"\"\"\n    CREATE OR REPLACE TEMP VIEW ventes_brut\n    USING csv\n    OPTIONS (\n        path \"hdfs://data/ventes/*/*\",\n        header \"true\"\n    )\n\"\"\")\n\n# 1. Indicateurs par mois et région\nspark.sql(\"\"\"\n    CREATE OR REPLACE TEMP VIEW rapport_mensuel AS\n    SELECT \n        region,\n        DATE_FORMAT(date_vente, 'yyyy-MM') as mois,\n        SUM(montant) as ca_total,\n        COUNT(*) as nb_commandes,\n        AVG(montant) as panier_moyen\n    FROM ventes_brut\n    WHERE montant > 0\n    GROUP BY region, DATE_FORMAT(date_vente, 'yyyy-MM')\n\"\"\")\n\n# 2. Top 5 produits par région\nspark.sql(\"\"\"\n    CREATE OR REPLACE TEMP VIEW top_produits AS\n    SELECT * FROM (\n        SELECT \n            region,\n            id_produit,\n            SUM(quantite) as volume,\n            ROW_NUMBER() OVER (PARTITION BY region ORDER BY SUM(quantite) DESC) as rang\n        FROM ventes_brut\n        GROUP BY region, id_produit\n    ) WHERE rang <= 5\n\"\"\")\n\n# 3. Sauvegarde des résultats\nspark.sql(\"SELECT * FROM rapport_mensuel\")\n    .write.partitionBy(\"region\")\n    .parquet(\"hdfs://data/rapports/mensuel.parquet\")\n\nspark.sql(\"SELECT * FROM top_produits\")\n    .write.partitionBy(\"region\")\n    .parquet(\"hdfs://data/rapports/top_produits.parquet\")",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

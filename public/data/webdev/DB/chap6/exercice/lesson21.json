@@ -1,0 +1,176 @@
+[
+  {
+    "intitule": "Analyser un plan d'exécution avec EXPLAIN",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous êtes administrateur d'une base de données PostgreSQL pour une application de e-commerce. Une requête de recherche de produits par catégorie et prix est anormalement lente. Vous exécutez <code>EXPLAIN</code> sur la requête suivante :</p><pre><code>SELECT nom, prix FROM produits WHERE categorie_id = 5 AND prix BETWEEN 10 AND 100 ORDER BY prix DESC;</code></pre><p>Le plan d'exécution retourné indique : <strong>Seq Scan on produits</strong> (coût=0.00..1250.00 lignes=450 largeur=32).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer ce que signifie \"Seq Scan on produits\" dans ce plan d'exécution.",
+        "niveau": "easy",
+        "reponse": "Seq Scan signifie que le SGBD parcourt séquentiellement toutes les lignes de la table 'produits' pour trouver celles qui satisfont la condition WHERE, sans utiliser d'index.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Justifier pourquoi ce type de scan est problématique pour une table contenant des milliers de lignes.",
+        "niveau": "medium",
+        "reponse": "Le Seq Scan lit toute la table, ce qui est coûteux en termes d'E/S et de temps CPU. Plus la table est grande, plus la requête est lente, contrairement à un Index Scan qui lit uniquement les lignes correspondantes via un index.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposer et justifier une amélioration pour éviter ce Seq Scan.",
+        "niveau": "medium",
+        "reponse": "Créer un index composite sur (categorie_id, prix) car la condition WHERE filtre sur ces deux colonnes. L'index permettra un Index Scan et réduira le coût. Exemple : CREATE INDEX idx_produits_cat_prix ON produits(categorie_id, prix);",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Interpréter les types de scan",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>On exécute <code>EXPLAIN ANALYZE</code> sur deux requêtes différentes interrogeant une table <strong>commandes</strong> de 500 000 lignes avec un index sur <code>client_id</code>.</p><p><strong>Requête A :</strong> <code>SELECT * FROM commandes WHERE client_id = 1025;</code><br>Plan : <strong>Index Scan using idx_client on commandes</strong> (coût=0.29..8.31 lignes=5 largeur=68)</p><p><strong>Requête B :</strong> <code>SELECT * FROM commandes WHERE client_id = 1025 OR client_id = 1026;</code><br>Plan : <strong>Bitmap Heap Scan on commandes</strong> (coût=8.32..14.45 lignes=10 largeur=68)<br>  -> Bitmap Index Scan on idx_client (coût=0.00..8.32 lignes=10)</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Comparer et différencier les plans Index Scan et Bitmap Heap Scan observés.",
+        "niveau": "hard",
+        "reponse": "Index Scan lit l'index de manière séquentielle pour récupérer directement les tuples, efficace pour un petit nombre de lignes. Bitmap Heap Scan utilise d'abord un bitmap en mémoire pour collecter les adresses des tuples correspondants via l'index, puis lit le heap une seule fois, ce qui est plus efficace pour un nombre modéré de lignes (plusieurs valeurs) car cela réduit les accès aléatoires au disque.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer pourquoi la requête B utilise un Bitmap Heap Scan plutôt qu'un Index Scan.",
+        "niveau": "hard",
+        "reponse": "La requête B contient deux conditions OR (client_id = 1025 OR client_id = 1026). L'optimiseur estime que cela renverra 10 lignes (5+5). Le Bitmap Heap Scan est préféré car il combine efficacement les deux accès à l'index via un bitmap, puis lit la table une seule fois pour toutes les lignes trouvées, ce qui est plus performant que deux Index Scans séparés.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Évaluer dans quel cas un Seq Scan pourrait être préférable à un Index Scan.",
+        "niveau": "very hard",
+        "reponse": "Un Seq Scan est préférable lorsque la condition WHERE sélectionne une grande proportion des lignes (par exemple plus de 20-30% de la table) car l'Index Scan nécessite des accès aléatoires au disque pour chaque tuple, ce qui devient plus coûteux que la lecture séquentielle complète. L'optimiseur bascule automatiquement vers Seq Scan via le paramètre random_page_cost.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation d'une requête lente réelle",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Dans une base de données d'une plateforme de réservation hôtelière au Cameroun, la requête suivante met 8 secondes à s'exécuter :</p><pre><code>SELECT clients.nom, clients.email, COUNT(reservations.id) AS nb_reservations\nFROM clients\nLEFT JOIN reservations ON clients.id = reservations.client_id\nWHERE reservations.date_reservation BETWEEN '2025-01-01' AND '2025-12-31'\nGROUP BY clients.id\nORDER BY nb_reservations DESC\nLIMIT 10;</code></pre><p>L'analyse avec <code>EXPLAIN</code> montre :</p><ul><li><strong>Seq Scan on reservations</strong> (filtre date)</li><li><strong>Hash Join</strong> avec clients</li><li><strong>Sort</strong> sur nb_reservations</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier le goulot d'étranglement principal dans ce plan d'exécution.",
+        "niveau": "medium",
+        "reponse": "Le Seq Scan sur reservations pour filtrer sur date_reservation est le principal goulot, car il force la lecture de toute la table réservations à chaque exécution, même si seule une année est demandée.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer une solution concrète pour accélérer cette requête en utilisant un index.",
+        "niveau": "medium",
+        "reponse": "Créer un index sur la colonne date_reservation de la table reservations : CREATE INDEX idx_reservations_date ON reservations(date_reservation); Cela permettra un Index Scan ou Index Seek pour la condition BETWEEN, réduisant radicalement le nombre de lignes lues.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Après création de l'index, la requête passe à 0,5 s. Expliquer pourquoi le Hash Join peut encore être optimisé.",
+        "niveau": "hard",
+        "reponse": "Le Hash Join construit une table de hachage en mémoire avec la table la plus petite (clients). Si celle-ci est grande, il y a débordement disque. On peut optimiser en créant un index sur clients.id (déjà souvent clé primaire) pour permettre un Nested Loop Join plus efficace quand la table résultante de reservations est petite. On peut aussi réécrire la requête en déplaçant la condition date dans le JOIN ou en utilisant une sous-requête.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 4,
+        "texte": "Écrire la commande SQL permettant d'analyser les performances avant/après optimisation avec EXPLAIN ANALYZE.",
+        "niveau": "easy",
+        "reponse": "EXPLAIN ANALYZE SELECT clients.nom, ... LIMIT 10;",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Diagnostic et correction de requêtes métier",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous travaillez pour une entreprise camerounaise de gestion de flotte de véhicules. La table <strong>trajets</strong> contient 2 millions d'enregistrements. Les utilisateurs se plaignent que le tableau de bord quotidien prend plus de 30 secondes à charger. La requête incriminée est :</p><pre><code>SELECT chauffeur_id, COUNT(*) AS nb_trajets, SUM(kilometres) AS total_km\nFROM trajets\nWHERE date_depart >= CURRENT_DATE - INTERVAL '30 days'\nGROUP BY chauffeur_id\nORDER BY total_km DESC;</code></pre><p>EXPLAIN révèle : <strong>Gather Merge</strong> (parallélisme) puis <strong>Sort</strong> et <strong>Seq Scan on trajets</strong> (filtre date_depart).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer pourquoi le Seq Scan persiste malgré le parallélisme.",
+        "niveau": "medium",
+        "reponse": "Le Seq Scan persiste car il n'existe pas d'index sur date_depart. Le parallélisme (Gather Merge) divise le travail entre plusieurs processeurs mais ne réduit pas le volume total de données lues : les 2 millions de lignes sont toujours lues intégralement. L'index est indispensable pour un filtrage efficace.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Créer l'index approprié et justifier le choix.",
+        "niveau": "medium",
+        "reponse": "CREATE INDEX idx_trajets_date ON trajets(date_depart); Cet index B-Tree standard est optimal pour les requêtes avec des opérateurs de comparaison (>=, BETWEEN, etc.) sur une colonne de type date.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Après ajout de l'index, EXPLAIN montre un Index Scan mais aussi un Sort explicite. Proposer une optimisation supplémentaire.",
+        "niveau": "hard",
+        "reponse": "On peut créer un index couvrant (covering index) incluant également les colonnes utilisées dans les agrégats : CREATE INDEX idx_trajets_date_km ON trajets(date_depart, chauffeur_id, kilometres); PostgreSQL pourra alors réaliser un Index Only Scan, évitant d'accéder à la table elle-même, et le GROUP BY pourrait bénéficier d'un index trié si l'on ajoute chauffeur_id en tête. Mais comme le GROUP BY est sur chauffeur_id et le WHERE sur date, l'index idéal serait (date_depart, chauffeur_id, kilometres).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 4,
+        "texte": "Évaluer l'impact d'une colonne calculée (comme total_km) sur les performances si elle était indexée.",
+        "niveau": "very hard",
+        "reponse": "On pourrait créer un index fonctionnel sur SUM(kilometres) mais cela n'a pas de sens car SUM est une agrégation, pas une colonne. En revanche, on pourrait matérialiser le total_km par chauffeur dans une table de statistiques journalières (pré-agrégation). Un index sur une expression fonctionnelle comme (date_trunc('day', date_depart)) serait utile pour les regroupements par jour. Pour la requête actuelle, l'index classique reste la meilleure solution.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Comparaison des méthodes d'analyse de requêtes",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un développeur débutant utilise uniquement <code>EXPLAIN</code> pour optimiser ses requêtes. Vous lui expliquez l'importance d'<code>EXPLAIN ANALYZE</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Distinguer EXPLAIN et EXPLAIN ANALYZE en précisant ce que chacun apporte.",
+        "niveau": "easy",
+        "reponse": "EXPLAIN donne le plan d'exécution estimé par l'optimiseur (coûts théoriques). EXPLAIN ANALYZE exécute réellement la requête et affiche les coûts réels, le nombre de lignes effectives, le temps d'exécution réel par nœud, et permet de détecter les écarts entre estimation et réalité.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer pourquoi EXPLAIN ANALYZE doit être utilisé avec précaution en production.",
+        "niveau": "medium",
+        "reponse": "EXPLAIN ANALYZE exécute réellement la requête, donc elle modifie les données si la requête est une écriture (INSERT, UPDATE, DELETE) et peut être lourde en performance pour des requêtes complexes. En production, on utilise plutôt EXPLAIN (sans ANALYZE) ou EXPLAIN (BUFFERS, TIMING) pour éviter un impact trop fort.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Interpréter la ligne suivante d'un EXPLAIN ANALYZE :<br><code>Index Scan using idx_date on trajets (actual time=0.045..12.342 rows=550 loops=1)</code>",
+        "niveau": "hard",
+        "reponse": "Cela signifie : l'Index Scan a utilisé l'index idx_date. Le temps réel minimum était 0.045 ms, maximum 12.342 ms. L'opérateur a retourné 550 lignes (estimation probablement proche). 'loops=1' indique que ce nœud a été exécuté une fois. Le temps total pour ce nœud est donc d'environ 12.3 ms, ce qui est très performant.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

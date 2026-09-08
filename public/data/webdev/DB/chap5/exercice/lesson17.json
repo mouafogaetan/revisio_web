@@ -1,0 +1,127 @@
+[
+  {
+    "intitule": "Identifier le rôle d’une sous-requête",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>En SQL, une sous-requête est une requête placée à l’intérieur d’une autre requête. Associez chaque emplacement de sous-requête à son rôle principal.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez brièvement ce qu’est une sous-requête et donnez deux endroits différents où on peut l’écrire dans une instruction `SELECT`.",
+        "niveau": "easy",
+        "reponse": "Une sous-requête est une requête SQL imbriquée dans une autre requête. On peut la placer dans la clause `WHERE` (exemple : `WHERE colonne IN (SELECT ...)`), dans la clause `SELECT` (pour calculer une valeur dérivée) ou dans la clause `FROM` (comme table dérivée).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Distinguer IN, EXISTS, ANY, ALL dans WHERE",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Soit deux tables : <code>etudiants(id, nom, moyenne)</code> et <code>mentions(mention, moyenne_min)</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez une requête utilisant `IN` pour trouver les étudiants ayant une moyenne qui figure dans la colonne `moyenne_min` de la table `mentions`.",
+        "niveau": "medium",
+        "reponse": "```sql\nSELECT nom, moyenne\nFROM etudiants\nWHERE moyenne IN (SELECT moyenne_min FROM mentions);\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Réécrivez la même requête en utilisant `EXISTS`.",
+        "niveau": "medium",
+        "reponse": "```sql\nSELECT nom, moyenne\nFROM etudiants e\nWHERE EXISTS (SELECT 1 FROM mentions m WHERE m.moyenne_min = e.moyenne);\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Que renverrait la condition `moyenne > ANY (SELECT moyenne_min FROM mentions)` ? Justifiez.",
+        "niveau": "hard",
+        "reponse": "Elle renvoie les étudiants dont la moyenne est supérieure à **au moins une** des `moyenne_min` de la table `mentions`. Par exemple, si les minima sont 10, 12, 14, un élève avec 11 sera sélectionné car 11 > 10.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Créer une colonne calculée avec sous-requête dans SELECT",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans une base de données d’une librairie, on a :<br>\n<code>livres(id, titre, prix)</code><br>\n<code>ventes(id_livre, quantite)</code>.</p>\n<p>Pour chaque livre, affichez son titre, son prix et le chiffre d’affaires total généré (prix × quantité vendue).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédigez la requête SQL utilisant une sous-requête dans la clause `SELECT` pour calculer le chiffre d’affaires par livre.",
+        "niveau": "medium",
+        "reponse": "```sql\nSELECT \n    titre,\n    prix,\n    (SELECT SUM(quantite) FROM ventes WHERE id_livre = livres.id) * prix AS chiffre_affaires\nFROM livres;\n```\nSi un livre n’a jamais été vendu, la sous-requête renvoie NULL et le produit devient NULL. On peut utiliser `COALESCE` pour mettre 0.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Améliorez la requête pour afficher 0 au lieu de NULL quand aucun exemplaire n’est vendu.",
+        "niveau": "medium",
+        "reponse": "```sql\nSELECT \n    titre,\n    prix,\n    COALESCE((SELECT SUM(quantite) FROM ventes WHERE id_livre = livres.id), 0) * prix AS chiffre_affaires\nFROM livres;\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Utiliser une sous-requête en tant que table dérivée (FROM)",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Une entreprise suit les commandes :<br>\n<code>commandes(id, date, montant, client_id)</code><br>\n<code>clients(id, nom, ville)</code>.</p>\n<p>Le patron veut connaître, pour chaque client, le montant total de ses commandes, mais uniquement pour les clients dont le total dépasse 5000 €. Il ne peut pas utiliser `HAVING` directement sur une agrégation sans `GROUP BY` dans la requête principale.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Construisez une requête avec une sous-requête dans `FROM` (table dérivée) qui calcule d’abord le total par client, puis filtre les totaux > 5000.",
+        "niveau": "hard",
+        "reponse": "```sql\nSELECT \n    c.nom,\n    totaux.total\nFROM clients c\nJOIN (\n    SELECT client_id, SUM(montant) AS total\n    FROM commandes\n    GROUP BY client_id\n) AS totaux ON c.id = totaux.client_id\nWHERE totaux.total > 5000;\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Que se passe-t‑il si un client n’a aucune commande ?",
+            "niveau": "medium",
+            "reponse": "Ce client n’apparaît pas dans la table dérivée `totaux`, donc la jointure `INNER JOIN` l’exclut. Pour l’inclure avec un total de 0, il faudrait un `LEFT JOIN` et utiliser `COALESCE(totaux.total, 0)`."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Problème réel : Trouver les employés mieux payés que leur chef",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Dans une table <code>employes(id, nom, salaire, chef_id)</code>, `chef_id` fait référence à `id` dans la même table. Un `chef_id` NULL signifie que l’employé est le directeur.</p>\n<p>Vous devez lister les employés (nom, salaire) dont le salaire est supérieur à celui de leur chef direct.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez une requête utilisant une sous-requête corrélée dans `WHERE` pour résoudre ce problème.",
+        "niveau": "very hard",
+        "reponse": "```sql\nSELECT e1.nom, e1.salaire\nFROM employes e1\nWHERE e1.salaire > (\n    SELECT e2.salaire\n    FROM employes e2\n    WHERE e2.id = e1.chef_id\n);\n```\nLes employés sans chef (chef_id IS NULL) ne sont pas sélectionnés car la sous-requête renvoie NULL, et la comparaison > NULL est inconnue (non vraie).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Modifiez la requête pour inclure les employés sans chef (on les considère comme n’ayant pas de chef, donc pas mieux payés qu’un inexistant).",
+            "niveau": "hard",
+            "reponse": "Il suffit d’ajouter `AND e1.chef_id IS NOT NULL` dans la clause `WHERE` principale pour les exclure volontairement :\n```sql\nSELECT e1.nom, e1.salaire\nFROM employes e1\nWHERE e1.chef_id IS NOT NULL\n  AND e1.salaire > (SELECT e2.salaire FROM employes e2 WHERE e2.id = e1.chef_id);\n```"
+          }
+        ]
+      }
+    ]
+  }
+]

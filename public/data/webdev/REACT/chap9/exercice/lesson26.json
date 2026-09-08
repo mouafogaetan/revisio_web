@@ -1,0 +1,148 @@
+[
+  {
+    "intitule": "Comprendre fetch() dans useEffect",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>En React, on utilise souvent <code>fetch()</code> à l'intérieur de <code>useEffect</code> pour récupérer des données depuis une API après le montage du composant.</p>",
+      "images": ["schéma du cycle de vie d'un composant React avec useEffect pour le chargement des données", "icône représentant une requête API vers un serveur"]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer pourquoi on place les appels fetch() à l'intérieur de useEffect plutôt que directement dans le corps du composant.",
+        "niveau": "easy",
+        "reponse": "Si on place fetch() directement dans le corps du composant, il sera exécuté à chaque rendu, ce qui peut provoquer des requêtes infinies si on modifie l'état après la réponse. useEffect permet de contrôler quand la requête est exécutée (au montage ou quand certaines dépendances changent) et évite les appels intempestifs.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Décrire les trois états principaux qu'un composant qui récupère des données doit généralement gérer.",
+        "niveau": "easy",
+        "reponse": "Les trois états sont : 1) loading (chargement) : affiché pendant que la requête est en cours ; 2) data (données) : affiché quand la requête a réussi ; 3) error (erreur) : affiché quand la requête a échoué. Ces trois états permettent une bonne expérience utilisateur.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Implémentation d'une recherche d'utilisateurs",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous développez un annuaire en ligne pour une entreprise camerounaise. Les utilisateurs peuvent rechercher des collègues par nom. À chaque frappe dans la barre de recherche, une requête API est envoyée à <code>/api/users?search={terme}</code>.</p>",
+      "images": ["interface de recherche avec champ input et liste de résultats", "diagramme séquentiel d'une recherche avec debouncing"]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire un composant UserSearch qui utilise useState pour gérer le terme de recherche (searchTerm), les résultats (users), l'état de chargement (loading) et l'erreur (error).",
+        "niveau": "medium",
+        "reponse": "const [searchTerm, setSearchTerm] = useState('');\nconst [users, setUsers] = useState([]);\nconst [loading, setLoading] = useState(false);\nconst [error, setError] = useState(null);",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Écrire l'effet useEffect qui déclenche la recherche à chaque changement de searchTerm (avec un délai de debouncing de 500ms).",
+            "niveau": "hard",
+            "reponse": "useEffect(() => {\n  const timeoutId = setTimeout(() => {\n    if (searchTerm.trim()) {\n      fetchUsers(searchTerm);\n    } else {\n      setUsers([]);\n    }\n  }, 500);\n  return () => clearTimeout(timeoutId);\n}, [searchTerm]);"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Écrire la fonction asynchrone fetchUsers qui appelle l'API, gère le loading et les erreurs, et met à jour l'état.",
+        "niveau": "medium",
+        "reponse": "const fetchUsers = async (term) => {\n  setLoading(true);\n  setError(null);\n  try {\n    const response = await fetch(`/api/users?search=${encodeURIComponent(term)}`);\n    if (!response.ok) throw new Error('Erreur réseau');\n    const data = await response.json();\n    setUsers(data);\n  } catch (err) {\n    setError(err.message);\n  } finally {\n    setLoading(false);\n  }\n};",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Annulation de requêtes avec AbortController",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Dans une application de recherche en temps réel, si l'utilisateur tape rapidement \"A\", puis \"AB\", puis \"ABC\", trois requêtes sont envoyées. Sans annulation, les réponses peuvent arriver dans le désordre et afficher des résultats obsolètes (par exemple, la réponse de \"A\" après celle de \"ABC\").</p>",
+      "images": ["schéma montrant des requêtes concurrentes et la nécessité d'AbortController", "diagramme de timing avec annulation des requêtes précédentes"]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer le problème des requêtes concurrentes et pourquoi AbortController est nécessaire.",
+        "niveau": "very hard",
+        "reponse": "Lorsqu'on envoie plusieurs requêtes rapidement (à chaque frappe), les réponses ne reviennent pas nécessairement dans l'ordre d'envoi. Une requête plus ancienne peut arriver après une plus récente et écraser les résultats corrects avec des données obsolètes. AbortController permet d'annuler la requête précédente avant d'en envoyer une nouvelle, garantissant que seul le dernier résultat est affiché.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Modifier la fonction fetchUsers pour utiliser AbortController et annuler la requête précédente.",
+        "niveau": "very hard",
+        "reponse": "let abortController = null;\n\nconst fetchUsers = async (term) => {\n  if (abortController) {\n    abortController.abort();\n  }\n  abortController = new AbortController();\n  setLoading(true);\n  try {\n    const response = await fetch(`/api/users?search=${term}`, {\n      signal: abortController.signal\n    });\n    const data = await response.json();\n    setUsers(data);\n    setError(null);\n  } catch (err) {\n    if (err.name !== 'AbortError') {\n      setError(err.message);\n    }\n  } finally {\n    setLoading(false);\n  }\n};",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Justifier pourquoi on vérifie err.name !== 'AbortError' dans le catch.",
+            "niveau": "very hard",
+            "reponse": "Lorsqu'on appelle abort(), la requête est interrompue et fetch lance une erreur spécifique de type 'AbortError'. Cette erreur n'est pas une vraie erreur (pas de problème réseau), c'est simplement l'annulation volontaire. On ne veut pas afficher de message d'erreur à l'utilisateur dans ce cas, donc on ignore cette erreur."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Hook personnalisé useFetch",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Dans une application React, plusieurs composants ont besoin de récupérer des données depuis une API. Pour éviter la duplication de code, vous décidez de créer un hook personnalisé <code>useFetch</code> réutilisable.</p>",
+      "images": ["schéma d'un hook personnalisé useFetch avec ses états (data, loading, error)", "exemple d'utilisation du hook dans plusieurs composants différents"]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire un hook personnalisé useFetch qui prend une URL en paramètre et retourne un objet avec data, loading, error, et une fonction refetch pour recharger manuellement.",
+        "niveau": "hard",
+        "reponse": "function useFetch(url) {\n  const [data, setData] = useState(null);\n  const [loading, setLoading] = useState(true);\n  const [error, setError] = useState(null);\n\n  const fetchData = useCallback(async () => {\n    setLoading(true);\n    setError(null);\n    try {\n      const response = await fetch(url);\n      if (!response.ok) throw new Error(`HTTP ${response.status}`);\n      const result = await response.json();\n      setData(result);\n    } catch (err) {\n      setError(err.message);\n    } finally {\n      setLoading(false);\n    }\n  }, [url]);\n\n  useEffect(() => {\n    fetchData();\n  }, [fetchData]);\n\n  return { data, loading, error, refetch: fetchData };\n}",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer pourquoi on utilise useCallback pour fetchData et pourquoi url est dans les dépendances.",
+            "niveau": "hard",
+            "reponse": "useCallback permet de mémoriser la fonction fetchData pour qu'elle ne soit pas recréée à chaque rendu. Sans useCallback, fetchData changerait à chaque rendu, ce qui déclencherait useEffect à chaque fois (car fetchData est dans les dépendances). On met url dans les dépendances de useCallback pour que la fonction soit recréée si l'URL change."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Ajouter l'AbortController au hook useFetch pour annuler la requête si le composant est démonté avant la fin de la requête.",
+        "niveau": "very hard",
+        "reponse": "useEffect(() => {\n  const abortController = new AbortController();\n  \n  const fetchData = async () => {\n    try {\n      const response = await fetch(url, { signal: abortController.signal });\n      const result = await response.json();\n      setData(result);\n    } catch (err) {\n      if (err.name !== 'AbortError') setError(err.message);\n    }\n  };\n  \n  fetchData();\n  return () => abortController.abort();\n}, [url]);",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion d'erreur et retry",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans une application météo, on affiche les prévisions pour la ville de Douala. Parfois, l'API peut être temporairement indisponible. Il faut gérer l'affichage d'une erreur et proposer un bouton pour réessayer.</p>",
+      "images": ["widget météo avec message d'erreur et bouton 'Réessayer'", "schéma de fonctionnement du retry après échec"]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire un composant Weather qui affiche un message de chargement, puis la température, ou un message d'erreur avec un bouton de réessai.",
+        "niveau": "medium",
+        "reponse": "function Weather() {\n  const [weather, setWeather] = useState(null);\n  const [loading, setLoading] = useState(true);\n  const [error, setError] = useState(null);\n\n  const fetchWeather = useCallback(async () => {\n    setLoading(true);\n    setError(null);\n    try {\n      const res = await fetch('/api/weather/douala');\n      if (!res.ok) throw new Error('Erreur serveur');\n      const data = await res.json();\n      setWeather(data);\n    } catch (err) {\n      setError(err.message);\n    } finally {\n      setLoading(false);\n    }\n  }, []);\n\n  useEffect(() => { fetchWeather(); }, [fetchWeather]);\n\n  if (loading) return <div>Chargement de la météo...</div>;\n  if (error) return (\n    <div>\n      <p>Erreur : {error}</p>\n      <button onClick={fetchWeather}>Réessayer</button>\n    </div>\n  );\n  return <div>Température : {weather.temp}°C</div>;\n}",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Citer au moins deux types d'erreurs réseau que cette gestion peut capturer.",
+            "niveau": "medium",
+            "reponse": "1) Erreurs de réseau : absence de connexion internet, serveur inaccessible. 2) Erreurs HTTP : 404 (ressource non trouvée), 500 (erreur serveur). Dans le code, on vérifie if (!res.ok) pour capturer les erreurs HTTP, et le catch capture les erreurs réseau."
+          }
+        ]
+      }
+    ]
+  }
+]

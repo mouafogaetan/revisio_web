@@ -1,0 +1,109 @@
+[
+  {
+    "intitule": "Relations entre documents MongoDB avec Mongoose",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans une application de blog, vous avez deux modèles Mongoose : <code>Author</code> et <code>Post</code>. Un auteur peut avoir plusieurs articles, mais chaque article appartient à un seul auteur (relation One-to-Many).</p><p>Voici les schémas actuels :</p><pre><code>const authorSchema = new mongoose.Schema({\n  name: String,\n  email: String\n});\n\nconst postSchema = new mongoose.Schema({\n  title: String,\n  content: String,\n  author: { type: mongoose.Schema.Types.ObjectId, ref: 'Author' }\n});</code></pre><p>Vous devez expliquer et implémenter la création d’un article associé à un auteur existant, puis afficher l’article avec les informations de l’auteur.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer la différence entre l’embedding et le referencing dans MongoDB. Identifier quel type de relation est utilisé ici.",
+        "niveau": "medium",
+        "reponse": "L'embedding consiste à stocker les données liées directement à l'intérieur du document parent (ex: un tableau d'articles dans l'auteur). Le referencing consiste à stocker uniquement l'identifiant (ObjectId) d'un document dans un autre, avec une référence explicite (ref). Ici, on utilise le referencing car postSchema contient un champ author qui fait référence à un document Author.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Rédiger le code Mongoose pour créer un nouvel auteur, puis créer un article associé à cet auteur en utilisant l'ID de l'auteur.",
+        "niveau": "medium",
+        "reponse": "const newAuthor = new Author({ name: 'Alpha Konaré', email: 'alpha@example.com' });\nawait newAuthor.save();\n\nconst newPost = new Post({\n  title: 'Découverte de Node.js',\n  content: 'Contenu du billet...',\n  author: newAuthor._id\n});\nawait newPost.save();",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquer comment utiliser la méthode populate() pour récupérer un article avec les informations complètes de son auteur. Donner un exemple de code.",
+        "niveau": "medium",
+        "reponse": "La méthode populate() remplace automatiquement l'ObjectId stocké dans le champ `author` par le document Author correspondant, après une jointure effectuée par Mongoose.\nExemple :\nconst post = await Post.findById(postId).populate('author');\nconsole.log(post.author.name); // Affiche le nom de l'auteur",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion d’auteurs et d’articles pour un blog",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous devez créer une petite API REST pour un blog personnel. Les fonctionnalités attendues :</p><ul><li>CRUD complet pour les auteurs (nom, email)</li><li>CRUD complet pour les articles (titre, contenu, auteur référencé)</li><li>Un endpoint qui retourne un article avec le nom et l’email de l’auteur (sans afficher l'ObjectId brut).</li></ul><p>Vous devez choisir entre embedding ou referencing, justifier ce choix, puis écrire le code Mongoose des schémas et l’implémentation de la route GET /posts/:id avec la récupération de l’auteur.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Justifier le choix du referencing plutôt que de l’embedding pour ce cas d’usage, en expliquant deux avantages.",
+        "niveau": "hard",
+        "reponse": "Avantages du referencing : 1) Éviter la duplication des données d’auteur (si un auteur modifie son email, tous ses articles restent à jour sans avoir à parcourir chaque article). 2) La taille des documents reste raisonnable, surtout si un auteur publie beaucoup d’articles, évitant ainsi le dépassement de la limite de 16 Mo par document BSON.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrire les deux schémas Mongoose (Author et Post) en respectant la relation One-to-Many par referencing, puis créer la route GET /posts/:id qui retourne l’article avec le nom et l’email de l’auteur (sans l’ObjectId).",
+        "niveau": "hard",
+        "reponse": "Schémas :\nconst authorSchema = new mongoose.Schema({\n  name: String,\n  email: String\n});\nconst PostSchema = new mongoose.Schema({\n  title: String,\n  content: String,\n  author: { type: mongoose.Schema.Types.ObjectId, ref: 'Author' }\n});\n\nRoute :\napp.get('/posts/:id', async (req, res) => {\n  try {\n    const post = await Post.findById(req.params.id).populate('author', 'name email -_id');\n    if (!post) return res.status(404).json({ error: 'Post not found' });\n    res.json({\n      title: post.title,\n      content: post.content,\n      author: post.author\n    });\n  } catch(err) {\n    res.status(500).json({ error: err.message });\n  }\n});",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Identifier les types de relations entre collections",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous analysez une base de données MongoDB pour une plateforme de cours en ligne. Trois collections existent : <code>Students</code>, <code>Courses</code>, <code>Enrollments</code>. Chaque étudiant peut s’inscrire à plusieurs cours, et chaque cours peut avoir plusieurs étudiants.</p><p>Les inscriptions (<code>Enrollments</code>) contiennent le <code>studentId</code>, le <code>courseId</code> et une date d’inscription.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Nommer le type de relation entre Students et Courses, et expliquer pourquoi on utilise une collection intermédiaire (Enrollments).",
+        "niveau": "easy",
+        "reponse": "Il s’agit d’une relation Many-to-Many. On utilise une collection intermédiaire (Enrollments) pour stocker les associations et éviter la duplication des données (embedding ne serait pas efficace ici) et permettre d’ajouter des propriétés propres à la relation (comme la date d’inscription).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Dessiner (décrire avec des mots) le schéma Mongoose pour la collection Enrollments avec les références vers Student et Course.",
+        "niveau": "easy",
+        "reponse": "const enrollmentSchema = new mongoose.Schema({\n  student: { type: mongoose.Schema.Types.ObjectId, ref: 'Student', required: true },\n  course: { type: mongoose.Schema.Types.ObjectId, ref: 'Course', required: true },\n  enrolledAt: { type: Date, default: Date.now }\n});",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Optimiser des requêtes avec populate et sélection de champs",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Un site e-commerce possède trois collections : <code>User</code>, <code>Order</code>, <code>Product</code>. Un utilisateur peut avoir plusieurs commandes. Une commande peut contenir plusieurs produits (relation Many-to-Many via un tableau d’ObjectId dans <code>Order</code>).</p><p>On souhaite afficher la liste des commandes d’un utilisateur (sans les détails internes des produits) ET pour chaque commande, récupérer uniquement le nom et le prix des produits associés, sans les autres champs des produits.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer comment vous écririez la requête Mongoose pour obtenir : les commandes d’un utilisateur (userId donné) avec pour chaque commande les champs 'orderDate' et 'total', et les produits associés (seulement 'name' et 'price').",
+        "niveau": "very hard",
+        "reponse": "On utilisera find() sur Order avec filtre sur userId, puis populate() sur le champ 'products' en précisant les champs souhaités (name et price).\n\nawait Order.find({ user: userId })\n  .select('orderDate total')\n  .populate('products', 'name price');\n\nCela évite de charger tous les champs des produits et de toutes les commandes.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Créer les trois schémas Mongoose simplifiés (User, Product, Order) permettant cette relation, en respectant les bonnes pratiques (references, clés étrangères).",
+        "niveau": "very hard",
+        "reponse": "const userSchema = new mongoose.Schema({\n  name: String,\n  email: String\n});\n\nconst productSchema = new mongoose.Schema({\n  name: String,\n  price: Number,\n  stock: Number\n});\n\nconst orderSchema = new mongoose.Schema({\n  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },\n  orderDate: { type: Date, default: Date.now },\n  total: Number,\n  products: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }]\n});",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

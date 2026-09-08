@@ -1,0 +1,154 @@
+[
+  {
+    "intitule": "Audit de sécurité d'une image Docker vulnérable",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous êtes DevOps dans une startup. Un développeur a construit une image Docker nommée <code>myapp:latest</code> à partir d'un Dockerfile basé sur <code>ubuntu:20.04</code>. Il a installé des paquets avec <code>apt-get</code> sans nettoyer le cache, ajouté des secrets en clair dans les variables d'environnement, et utilisé une version obsolète de <code>curl</code> connue pour une faille CVE. Vous devez analyser cette image avec <strong>Trivy</strong>.</p>",
+      "images": [
+        "Capture d'écran d'un terminal Linux affichant un scan Trivy avec des vulnérabilités critiques (CRITICAL) et HIGH, avec les colonnes CVE, PACKAGE, FIXED VERSION"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez en quoi l’utilisation de Trivy illustre le principe du 'Shift Left' en sécurité.",
+        "niveau": "medium",
+        "reponse": "Le 'Shift Left' consiste à déplacer la sécurité vers les phases les plus précoces du cycle de développement. Trivy analyse l'image Docker avant son déploiement (local ou CI), permettant de détecter les vulnérabilités avant qu'elles n'atteignent la production, réduisant ainsi les risques et les coûts de correction.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrivez la commande Trivy pour scanner l'image 'myapp:latest' et afficher uniquement les vulnérabilités de sévérité CRITICAL et HIGH.",
+        "niveau": "medium",
+        "reponse": "trivy image --severity CRITICAL,HIGH myapp:latest",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Proposez une option pour ignorer les vulnérabilités non corrigées (pas de version fixe disponible).",
+            "niveau": "medium",
+            "reponse": "trivy image --ignore-unfixed myapp:latest",
+            "sousQuestions": []
+          }
+        ]
+      },
+      {
+        "numero": 3,
+        "texte": "Déterminez trois bonnes pratiques à intégrer dans le Dockerfile pour réduire la surface d'attaque et les faux positifs lors du scan.",
+        "niveau": "hard",
+        "reponse": "1. Utiliser des images de base légères et sécurisées (ex: alpine, distroless).\n2. Nettoyer les caches des gestionnaires de paquets (apt-get clean, rm -rf /var/lib/apt/lists/*).\n3. Ne pas utiliser l'utilisateur root ; créer un utilisateur non privilégié (USER).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Comparaison et choix d'un scanner de vulnérabilités pour conteneurs",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Votre équipe hésite entre <strong>Trivy</strong> et <strong>Clair</strong> pour intégrer un scan de sécurité dans le pipeline CI/CD. Vous devez comparer ces deux outils selon plusieurs critères.</p>",
+      "images": [
+        "Diagramme comparatif entre Trivy et Clair avec des icônes : rapidité (chronomètre), intégration CI/CD (puzzle), détection de vulnérabilités OS et langages (code), interface (terminal vs API)"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Citez deux avantages de Trivy par rapport à Clair pour une utilisation en CI/CD.",
+        "niveau": "medium",
+        "reponse": "1. Trivy est plus rapide car il n'a pas besoin d'initialiser une base de données ni de lancer des services (clairctl, PostgreSQL).\n2. Trivy scanne non seulement les vulnérabilités OS mais aussi les dépendances des langages (npm, pip, gem, etc.) sans configuration supplémentaire.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Justifiez pourquoi Clair nécessite une architecture plus lourde (clairctl, PostgreSQL, API REST) tandis que Trivy fonctionne comme un binaire autonome.",
+        "niveau": "hard",
+        "reponse": "Clair utilise une architecture client-serveur : l'API Clair reçoit l'image, l'analyse et stocke les résultats dans PostgreSQL pour permettre des requêtes historiques et une analyse à grande échelle. Trivy, en revanche, embarque sa base de données de vulnérabilités localement (ou la télécharge à la volée) et effectue l'analyse en mémoire sans dépendances externes, ce qui le rend plus simple et plus rapide pour des exécutions ponctuelles dans des pipelines.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposez un workflow d'intégration de Trivy dans un pipeline GitHub Actions pour scanner chaque image construite avant push vers un registre.",
+        "niveau": "very hard",
+        "reponse": "```yaml\nname: Docker Security Scan\non: [push]\njobs:\n  build-and-scan:\n    runs-on: ubuntu-latest\n    steps:\n      - name: Checkout code\n        uses: actions/checkout@v3\n      - name: Build Docker image\n        run: docker build -t myapp:${{ github.sha }} .\n      - name: Run Trivy vulnerability scanner\n        uses: aquasecurity/trivy-action@master\n        with:\n          image-ref: 'myapp:${{ github.sha }}'\n          format: 'sarif'\n          output: 'trivy-results.sarif'\n          severity: 'CRITICAL,HIGH'\n      - name: Upload Trivy results to GitHub Security tab\n        uses: github/codeql-action/upload-sarif@v2\n        with:\n          sarif_file: 'trivy-results.sarif'\n      - name: Push image only if no critical/high vulns (optional)\n        run: docker push myapp:${{ github.sha }}\n```\nCet exemple bloque l'upload si Trivy trouve des vulnérabilités critiques ou hautes, et publie le rapport SARIF pour GitHub Security.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse d’un rapport de scan et correction des vulnérabilités",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Voici un extrait du rapport Trivy après scan de l'image <code>python:3.8-slim-buster</code> :</p>\n<pre>\nCVE-2023-25136  (CRITICAL)  openssl   1.1.1n   -> fixed in 1.1.1t\nCVE-2022-37434  (HIGH)      libcrypto 1.1.1n   -> fixed in 1.1.1p\nCVE-2021-28831  (MEDIUM)    python3.8 3.8.13   -> fixed in 3.8.14\n</pre>\n<p>Vous devez proposer un plan d'action pour corriger ces vulnérabilités sans casser l'application existante.</p>",
+      "images": [
+        "Exemple de terminal montrant un rapport Trivy en tableau avec CVE, PACKAGE, INSTALLED VERSION, FIXED VERSION, et STATUS"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Classez les vulnérabilités par ordre de priorité de correction et expliquez votre raisonnement.",
+        "niveau": "medium",
+        "reponse": "1. CVE-2023-25136 (CRITICAL sur openssl) – priorité absolue car critique et exposée. 2. CVE-2022-37434 (HIGH sur libcrypto) – haute sévérité. 3. CVE-2021-28831 (MEDIUM sur python3.8) – moindre priorité mais à corriger.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrivez une stratégie de correction pour le package 'openssl' en utilisant un multi-stage build ou une mise à niveau de l'image de base.",
+        "niveau": "hard",
+        "reponse": "Remplacer l'image de base `python:3.8-slim-buster` par `python:3.8-slim-bullseye` (Debian 11) ou ajouter dans le Dockerfile : `RUN apt-get update && apt-get upgrade -y openssl libcrypto* && apt-get clean`. Sinon, utiliser une image de base plus récente comme `python:3.8-slim` qui contient des versions patchées. Avec multi-stage, on peut recompiler openssl en statique si besoin.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Évaluez l'impact potentiel d'une mise à jour de l'image de base sur le comportement de l'application. Quels tests recommandez-vous ?",
+        "niveau": "very hard",
+        "reponse": "L'impact peut être dû à des modifications dans les bibliothèques système (glibc, libstdc++), la version de Python (3.8.13 → 3.8.14 est mineure), ou openssl (API compatibles mais modifications de TLS). Recommandations : tests unitaires, tests d'intégration, tests de non-régression, et surtout tests de compatibilité TLS avec des clients variés (anciennes versions). Mettre en place un environnement de staging identique à la production et exécuter la batterie de tests automatisés avant déploiement.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Intégrer un scan de vulnérabilités dans une politique de sécurité DevOps",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Une entreprise bancaire doit se conformer à la norme PCI DSS. Elle exige que toutes les images Docker utilisées en production soient scannées et exemptes de vulnérabilités CRITICAL. Les développeurs proposent d'intégrer Trivy dans le pipeline. Vous devez rédiger une <strong>procédure</strong> et un <strong>seuil de blocage</strong>.</p>",
+      "images": [
+        "Schéma d'un pipeline CI/CD avec une étape 'Security Scan' (Trivy) qui peut soit PASS, soit FAIL, et un registre d'images avec un badge 'Approved'"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez une règle de blocage (fail pipeline) pertinente pour respecter l'exigence PCI DSS, tout en évitant trop de blocages inutiles.",
+        "niveau": "medium",
+        "reponse": "Bloquer le pipeline si Trivy trouve au moins UNE vulnérabilité CRITICAL. Pour les vulnérabilités HIGH, générer un avertissement sans bloquer, mais exiger un correctif sous 48h. Les MEDIUM/LOW sont informatives seulement.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment gérer les 'faux positifs' ou les vulnérabilités non exploitables dans le contexte de l'application ?",
+            "niveau": "hard",
+            "reponse": "Utiliser un fichier `.trivyignore` listant les CVE à ignorer avec une justification et une date de réévaluation. Exemple : `CVE-2023-25136 # Non exploitable car OpenSSL utilisé seulement pour le client TLS interne, pas exposé au réseau`. En code review, l'équipe sécurité valide ces exemptions.",
+            "sousQuestions": []
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Décrivez comment mesurer l'efficacité de la politique de scan sur le temps (KPI).",
+        "niveau": "medium",
+        "reponse": "KPI : \n- Nombre de vulnérabilités CRITICAL détectées en CI vs en production (réduction).\n- Temps moyen de correction d'une vulnérabilité CRITICAL.\n- Taux de faux positifs rapporté par l'équipe.\n- Pourcentage d'images scannées avant déploiement (doit être 100%).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposez un workflow d'exemption pour une vulnérabilité CRITICAL qu'il est impossible de corriger immédiatement (ex: package non maintenu en amont).",
+        "niveau": "very hard",
+        "reponse": "Workflow :\n1. Le développeur ouvre un ticket Jira/ServiceNow décrivant la CVE, l'impact réel, et pourquoi la correction est impossible.\n2. Un responsable sécurité évalue l'exploitabilité et signe l'exemption temporaire (ex: 30 jours).\n3. L'exemption est ajoutée au fichier `.trivyignore` avec l'ID du ticket et la date d'expiration.\n4. Un job CI séparé vérifie chaque nuit que les exemptions ne sont pas périmées, et crée une alerte si dépassé.\n5. Une fois corrigé, supprimer la ligne du fichier et résoudre le ticket.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

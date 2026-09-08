@@ -1,0 +1,151 @@
+[
+  {
+    "intitule": "Configuration d'un test e2e avec supertest - Analyse",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous devez configurer un test end-to-end pour l'API NestJS d'une application e-commerce. Répondez aux questions suivantes concernant l'utilisation de supertest.</p>",
+      "images": [
+        "Logo de Supertest avec une requête HTTP vers une API NestJS"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Quels packages npm doivent être installés pour écrire des tests e2e avec supertest dans un projet NestJS ?",
+        "niveau": "easy",
+        "reponse": "Les packages nécessaires sont :\n- `@types/supertest` (types TypeScript)\n- `supertest` (bibliothèque de test HTTP)\n- `jest` (framework de test, déjà présent dans NestJS)\n\nCommande d'installation : `npm install -D supertest @types/supertest`",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez la différence entre un test unitaire et un test e2e dans le contexte d'une API NestJS.",
+        "niveau": "easy",
+        "reponse": "**Test unitaire** : Teste une unité isolée (service, contrôleur) en mockant ses dépendances. Rapide, ne touche pas à la base de données ni au réseau.\n\n**Test e2e** : Teste le circuit complet de l'API (de la requête HTTP à la réponse). Utilise un serveur réel (ou en mémoire) et une vraie base de données. Plus lent mais plus fiable pour valider les intégrations.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Structure d'un test e2e NestJS avec supertest",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Voici un extrait de test e2e pour un contrôleur `ProductsController`. Complétez les parties manquantes.</p>\n<pre><code>\n// products.e2e-spec.ts\nimport { Test, TestingModule } from '@nestjs/testing';\nimport { INestApplication } from '@nestjs/common';\nimport * as request from 'supertest';\nimport { AppModule } from './../src/app.module';\n\ndescribe('ProductsController (e2e)', () => {\n  let app: INestApplication;\n\n  beforeEach(async () => {\n    const moduleFixture: TestingModule = await Test.createTestingModule({\n      imports: [AppModule],\n    }).compile();\n\n    app = moduleFixture.createNestApplication();\n    await app.init();\n  });\n\n  it('GET /products', () => {\n    return request(app.getHttpServer())\n      .get('/products')\n      .expect(200)\n      .expect(res => {\n        expect(Array.isArray(res.body)).toBe(true);\n      });\n  });\n});\n</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifiez deux problèmes potentiels dans ce code et proposez des améliorations.",
+        "niveau": "medium",
+        "reponse": "**Problèmes identifiés :**\n\n1. **Base de données persistante** : Les tests modifient la vraie base de données. Chaque test laisse des traces.\n   - **Correction** : Utiliser une base de données de test (ex: SQLite en mémoire, ou PostgreSQL temporaire).\n\n2. **État non réinitialisé entre les tests** : `beforeEach` crée une nouvelle app mais la base n'est pas nettoyée.\n   - **Correction** : Ajouter `afterEach` pour tronquer les tables ou utiliser `beforeEach` avec `dropSchema` (TypeORM).\n\n3. **Absence de gestion des données de test** : Impossible de tester POST, PUT, DELETE sans données préexistantes.\n   - **Correction** : Créer des fixtures de test avant les tests.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Ajoutez le code nécessaire pour fermer proprement l'application après chaque test (nettoyage des ressources).",
+        "niveau": "easy",
+        "reponse": "```typescript\nafterAll(async () => {\n  await app.close();\n});\n\n// Ou pour chaque test (plus propre)\nafterEach(async () => {\n  await app.close();\n});\n```\n\nIl est recommandé d'utiliser `afterAll` pour une seule fermeture si le module est recompilé avant chaque test, ou `afterEach` si on crée une nouvelle app par test.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Test d'un endpoint POST avec validation",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous testez l'endpoint `POST /products` qui attend un corps JSON avec `name` (string, requis) et `price` (number, > 0). Écrivez les tests pour les cas suivants : succès, validation échouée (name manquant), prix invalide.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédigez le code des trois tests avec supertest. Incluez les assertions sur le statut HTTP et le corps de la réponse.",
+        "niveau": "hard",
+        "reponse": "```typescript\ndescribe('POST /products', () => {\n  it('devrait créer un produit avec des données valides', async () => {\n    const validProduct = { name: 'Smartphone', price: 599.99 };\n    \n    const response = await request(app.getHttpServer())\n      .post('/products')\n      .send(validProduct)\n      .expect(201);\n    \n    expect(response.body).toHaveProperty('id');\n    expect(response.body.name).toBe(validProduct.name);\n    expect(response.body.price).toBe(validProduct.price);\n  });\n\n  it('devrait retourner 400 si le champ name est manquant', async () => {\n    const invalidProduct = { price: 599.99 };\n    \n    const response = await request(app.getHttpServer())\n      .post('/products')\n      .send(invalidProduct)\n      .expect(400);\n    \n    expect(response.body.message).toContain('name should not be empty');\n  });\n\n  it('devrait retourner 400 si le prix est négatif', async () => {\n    const invalidProduct = { name: 'Smartphone', price: -10 };\n    \n    const response = await request(app.getHttpServer())\n      .post('/products')\n      .send(invalidProduct)\n      .expect(400);\n    \n    expect(response.body.message).toContain('price must be a positive number');\n  });\n});\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment tester qu'un token JWT est requis pour cet endpoint ?",
+            "niveau": "medium",
+            "reponse": "```typescript\nit('devrait retourner 401 si aucun token JWT n\\'est fourni', async () => {\n  await request(app.getHttpServer())\n    .post('/products')\n    .send({ name: 'Test', price: 100 })\n    .expect(401);\n});\n\nit('devrait accepter la requête avec un token valide', async () => {\n  const token = 'valid_jwt_token'; // À générer via un login test\n  await request(app.getHttpServer())\n    .post('/products')\n    .set('Authorization', `Bearer ${token}`)\n    .send({ name: 'Test', price: 100 })\n    .expect(201);\n});\n```"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Base de données de test avec TypeORM",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Pour vos tests e2e, vous voulez utiliser une base de données PostgreSQL dédiée aux tests, mais réinitialisée avant chaque test. Écrivez la configuration complète.</p>",
+      "images": [
+        "Schéma montrant une base de données de test séparée de la base de développement"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créez un module de test avec une configuration TypeORM qui utilise PostgreSQL mais avec un schéma différent ou une base dédiée, et qui nettoie les données après chaque test.",
+        "niveau": "very hard",
+        "reponse": "```typescript\n// test-utils.ts\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { DataSource } from 'typeorm';\n\nexport const createTestDatabaseModule = () => TypeOrmModule.forRoot({\n  type: 'postgres',\n  host: process.env.TEST_DB_HOST || 'localhost',\n  port: parseInt(process.env.TEST_DB_PORT || '5432'),\n  username: process.env.TEST_DB_USERNAME || 'postgres',\n  password: process.env.TEST_DB_PASSWORD || 'postgres',\n  database: process.env.TEST_DB_NAME || 'ecommerce_test',\n  entities: [__dirname + '/../**/*.entity{.ts,.js}'],\n  synchronize: true, // Crée les tables au démarrage\n  dropSchema: true,  // Supprime le schéma à la fermeture\n});\n\n// Dans le test\ndescribe('e2e tests', () => {\n  let app: INestApplication;\n  let dataSource: DataSource;\n\n  beforeAll(async () => {\n    const moduleFixture = await Test.createTestingModule({\n      imports: [AppModule],\n    }).compile();\n\n    app = moduleFixture.createNestApplication();\n    await app.init();\n    dataSource = app.get(DataSource);\n  });\n\n  afterEach(async () => {\n    // Nettoyer toutes les tables après chaque test\n    const entities = dataSource.entityMetadatas;\n    for (const entity of entities) {\n      const repository = dataSource.getRepository(entity.name);\n      await repository.query(`TRUNCATE \"${entity.tableName}\" RESTART IDENTITY CASCADE;`);\n    }\n  });\n\n  afterAll(async () => {\n    await app.close();\n  });\n\n  // Tests...\n});\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi utilise-t-on `synchronize: true` et `dropSchema: true` dans la configuration de test ? Quel est le risque ?",
+            "niveau": "medium",
+            "reponse": "`synchronize: true` crée automatiquement les tables à partir des entités au démarrage du test.\n`dropSchema: true` supprime le schéma à la fermeture.\n\n**Avantages :** Isolation totale, pas de migrations à gérer.\n\n**Risques :**\n- Plus lent car recrée toutes les tables à chaque lancement\n- En développement, si on utilise la même base, `dropSchema` effacerait toutes les données\n- Solution : toujours utiliser une base **dédiée aux tests** (`ecommerce_test`) pour éviter ces risques."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Test d'un flux complet (création → récupération → suppression)",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Testez le cycle de vie complet d'une commande : création, récupération, mise à jour du statut, puis suppression. Écrivez le test e2e avec supertest.</p>",
+      "images": [
+        "Diagramme du cycle de vie d'une commande (created → paid → shipped → delivered → deleted)"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédigez le test complet qui : crée une commande, vérifie qu'elle existe, met à jour son statut, vérifie la mise à jour, puis la supprime et vérifie la suppression.",
+        "niveau": "very hard",
+        "reponse": "```typescript\ndescribe('Order lifecycle e2e', () => {\n  let createdOrderId: number;\n  \n  it('should create a new order', async () => {\n    const newOrder = {\n      customerName: 'Jean Dupont',\n      email: 'jean@example.com',\n      totalAmount: 299.99,\n      items: [\n        { productId: 1, quantity: 2, price: 149.99 }\n      ]\n    };\n\n    const response = await request(app.getHttpServer())\n      .post('/orders')\n      .send(newOrder)\n      .expect(201);\n\n    expect(response.body).toHaveProperty('id');\n    expect(response.body.status).toBe('pending');\n    createdOrderId = response.body.id;\n  });\n\n  it('should retrieve the created order', async () => {\n    const response = await request(app.getHttpServer())\n      .get(`/orders/${createdOrderId}`)\n      .expect(200);\n\n    expect(response.body.customerName).toBe('Jean Dupont');\n    expect(response.body.totalAmount).toBe(299.99);\n  });\n\n  it('should update order status to paid', async () => {\n    const response = await request(app.getHttpServer())\n      .patch(`/orders/${createdOrderId}`)\n      .send({ status: 'paid' })\n      .expect(200);\n\n    expect(response.body.status).toBe('paid');\n  });\n\n  it('should list orders and find our order', async () => {\n    const response = await request(app.getHttpServer())\n      .get('/orders')\n      .expect(200);\n\n    const orderExists = response.body.some(o => o.id === createdOrderId);\n    expect(orderExists).toBe(true);\n  });\n\n  it('should delete the order', async () => {\n    await request(app.getHttpServer())\n      .delete(`/orders/${createdOrderId}`)\n      .expect(204);\n\n    // Vérifier la suppression\n    await request(app.getHttpServer())\n      .get(`/orders/${createdOrderId}`)\n      .expect(404);\n  });\n});\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Mock des services externes dans les tests e2e",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Votre API utilise un service de paiement externe (Stripe). Écrivez un test e2e pour l'endpoint `POST /orders/:id/pay` qui doit appeler Stripe, mais sans réellement contacter Stripe pendant les tests.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez comment mocker le service Stripe dans un test e2e sans modifier le code de production.",
+        "niveau": "very hard",
+        "reponse": "**Méthode 1 : Remplacer le provider dans le module de test**\n\n```typescript\nconst mockStripeService = {\n  createPaymentIntent: jest.fn().mockResolvedValue({ clientSecret: 'mock_secret' }),\n  confirmPayment: jest.fn().mockResolvedValue({ status: 'succeeded' }),\n};\n\nbeforeAll(async () => {\n  const moduleFixture = await Test.createTestingModule({\n    imports: [AppModule],\n  })\n    .overrideProvider(StripeService)\n    .useValue(mockStripeService)\n    .compile();\n  // ...\n});\n```\n\n**Méthode 2 : Utiliser des variables d'environnement**\n```typescript\n// Dans .env.test\nSTRIPE_API_KEY=sk_test_mock\nSTRIPE_WEBHOOK_SECRET=whsec_mock\n```\n\n**Méthode 3 : Intercepter les requêtes HTTP avec nock**\n```typescript\nimport nock from 'nock';\n\nbeforeAll(() => {\n  nock('https://api.stripe.com')\n    .post('/v1/payment_intents')\n    .reply(200, { id: 'pi_mock', client_secret: 'mock_secret' });\n});\n```\n\n**Recommandation :** La méthode 1 (overrideProvider) est la plus propre pour NestJS car elle utilise l'IoC container et ne dépend pas du réseau.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment vérifier que le service mocké a bien été appelé avec les bons paramètres ?",
+            "niveau": "medium",
+            "reponse": "```typescript\nit('should call Stripe with correct amount', async () => {\n  await request(app.getHttpServer())\n    .post('/orders/1/pay')\n    .send({ paymentMethodId: 'pm_card_visa' })\n    .expect(200);\n\n  expect(mockStripeService.createPaymentIntent).toHaveBeenCalledWith({\n    amount: expect.any(Number),\n    currency: 'eur',\n    paymentMethodTypes: ['card']\n  });\n});\n```\nOn utilise `expect(mockFunction).toHaveBeenCalledWith(...)` pour valider les arguments."
+          }
+        ]
+      }
+    ]
+  }
+]

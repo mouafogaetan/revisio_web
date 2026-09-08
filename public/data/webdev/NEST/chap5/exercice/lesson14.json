@@ -1,0 +1,145 @@
+[
+  {
+    "intitule": "Authentification par token JWT avec Passport",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Dans NestJS, l'authentification repose souvent sur le module Passport. Vous avez installé <code>@nestjs/jwt</code>, <code>@nestjs/passport</code> et <code>passport-jwt</code>.</p><p>Question : Quel est le rôle principal d'une <strong>stratégie (Strategy)</strong> dans Passport ?</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer le rôle d'une stratégie Passport dans le contexte de NestJS.",
+        "niveau": "easy",
+        "reponse": "Une stratégie dans Passport encapsule la logique d'authentification pour un mécanisme donné (ex: local, JWT, OAuth). Elle reçoit les credentials (email/mot de passe ou token) et décide si l'utilisateur est valide. Dans NestJS, on implémente une classe qui étend PassportStrategy et on y définit la méthode validate().",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Implémentation de LocalStrategy",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous devez implémenter une authentification par email et mot de passe dans une API NestJS. Pour cela, vous créez une <code>LocalStrategy</code>.</p><p>Rappel : La méthode <code>validate(email, password)</code> doit retourner l'utilisateur si les identifiants sont corrects, sinon lancer une <code>UnauthorizedException</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire le code TypeScript d'une classe LocalStrategy complète. On suppose l'existence d'un AuthService avec la méthode validateUser(email, password): Promise<any>.",
+        "niveau": "medium",
+        "reponse": "```typescript\nimport { Strategy } from 'passport-local';\nimport { PassportStrategy } from '@nestjs/passport';\nimport { Injectable, UnauthorizedException } from '@nestjs/common';\nimport { AuthService } from './auth.service';\n\n@Injectable()\nexport class LocalStrategy extends PassportStrategy(Strategy) {\n  constructor(private authService: AuthService) {\n    super({ usernameField: 'email' }); // utiliser 'email' au lieu de 'username'\n  }\n\n  async validate(email: string, password: string): Promise<any> {\n    const user = await this.authService.validateUser(email, password);\n    if (!user) {\n      throw new UnauthorizedException();\n    }\n    return user;\n  }\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Justifier l'utilisation de l'option { usernameField: 'email' } dans le constructeur de la stratégie.",
+            "niveau": "medium",
+            "reponse": "Par défaut, Passport-local attend les champs 'username' et 'password' dans le corps de la requête. En définissant usernameField: 'email', on indique à Passport d'utiliser le champ 'email' comme identifiant, ce qui correspond à notre logique métier."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Création et validation d'un token JWT",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Une fois l'utilisateur authentifié par LocalStrategy, on génère un token JWT via JwtService.</p><p>La méthode <code>login(user)</code> du AuthService doit retourner un objet <code>{ access_token: string }</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémenter la méthode login(user: any) dans AuthService en utilisant JwtService. Le payload du token doit contenir sub (userId) et email.",
+        "niveau": "medium",
+        "reponse": "```typescript\nimport { Injectable } from '@nestjs/common';\nimport { JwtService } from '@nestjs/jwt';\n\n@Injectable()\nexport class AuthService {\n  constructor(private jwtService: JwtService) {}\n\n  async login(user: any) {\n    const payload = { sub: user.id, email: user.email };\n    return {\n      access_token: this.jwtService.sign(payload),\n    };\n  }\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi utilise-t-on 'sub' pour l'identifiant utilisateur et non 'id' ?",
+            "niveau": "easy",
+            "reponse": "'sub' (subject) est un champ standard du JWT (RFC 7519) qui représente le sujet du token, souvent l'identifiant unique de l'utilisateur. Utiliser 'sub' assure une meilleure interopérabilité avec d'autres bibliothèques JWT."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Validation d'un token JWT avec JwtStrategy",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Pour protéger les routes, on utilise JwtStrategy qui vérifie le token JWT présent dans l'en-tête Authorization (Bearer token).</p><p>La méthode <code>validate(payload)</code> doit retourner l'utilisateur correspondant au payload.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire la classe JwtStrategy complète. Elle doit extraire le token du header Authorization, vérifier sa validité avec la clé secrète (configurable), et utiliser un service UserService pour récupérer l'utilisateur à partir du sub.",
+        "niveau": "hard",
+        "reponse": "```typescript\nimport { ExtractJwt, Strategy } from 'passport-jwt';\nimport { PassportStrategy } from '@nestjs/passport';\nimport { Injectable, UnauthorizedException } from '@nestjs/common';\nimport { ConfigService } from '@nestjs/config';\nimport { UserService } from '../user/user.service';\n\n@Injectable()\nexport class JwtStrategy extends PassportStrategy(Strategy) {\n  constructor(\n    private configService: ConfigService,\n    private userService: UserService,\n  ) {\n    super({\n      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),\n      ignoreExpiration: false,\n      secretOrKey: configService.get('JWT_SECRET'),\n    });\n  }\n\n  async validate(payload: any) {\n    const user = await this.userService.findById(payload.sub);\n    if (!user) {\n      throw new UnauthorizedException();\n    }\n    // On retourne l'utilisateur complet qui sera attaché à req.user\n    return user;\n  }\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer à quoi sert l'option ignoreExpiration: false.",
+            "niveau": "medium",
+            "reponse": "L'option ignoreExpiration: false garantit que si le token JWT a expiré (propriété 'exp' dans le payload), Passport le rejettera automatiquement et renverra une erreur 401 Unauthorized. Cela empêche l'utilisation de tokens périmés."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Protection d'une route avec AuthGuard",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Dans un contrôleur NestJS, vous avez un endpoint <code>GET /profile</code> qui doit être accessible uniquement aux utilisateurs authentifiés.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire comment protéger cette route en utilisant AuthGuard pour JWT.",
+        "niveau": "easy",
+        "reponse": "On utilise le décorateur @UseGuards(AuthGuard('jwt')) sur la méthode du contrôleur. Si la stratégie par défaut est configurée, on peut simplement utiliser @UseGuards(AuthGuard()).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Où récupère-t-on les informations de l'utilisateur authentifié dans la méthode du contrôleur ?",
+            "niveau": "easy",
+            "reponse": "On les récupère via le décorateur @Req() req.user, ou plus élégamment via le décorateur @GetUser() personnalisé. NestJS attache automatiquement l'utilisateur retourné par la méthode validate() de la stratégie à l'objet request.user."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Problème de sécurité : injection de dépendances",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Dans votre application NestJS, vous avez une stratégie JWT qui dépend de <code>UserService</code> pour charger l'utilisateur depuis la base de données. Le <code>UserService</code> lui-même dépend du <code>Repository</code> TypeORM.</p><p>Vous constatez que lors de l'authentification, une erreur <code>Nest can't resolve dependencies of the JwtStrategy</code> apparaît.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Diagnostiquer la cause probable de cette erreur et proposer une solution.",
+        "niveau": "hard",
+        "reponse": "La cause probable est que UserService (ou ses dépendances) n'est pas disponible dans le scope du module où JwtStrategy est déclaré. JwtStrategy est généralement déclaré dans le module AuthModule, mais UserService est souvent dans UserModule. Solution : exporter UserService depuis UserModule et importer UserModule dans AuthModule. Vérifier également que tous les providers sont bien déclarés.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Écrire le code d'importation correct dans AuthModule pour résoudre cette dépendance.",
+            "niveau": "medium",
+            "reponse": "```typescript\n@Module({\n  imports: [\n    UserModule, // UserModule doit exporter UserService\n    JwtModule.register({ ... }),\n    PassportModule,\n  ],\n  providers: [AuthService, LocalStrategy, JwtStrategy],\n  exports: [AuthService],\n})\nexport class AuthModule {}\n```\n\nDans UserModule :\n```typescript\n@Module({\n  imports: [TypeOrmModule.forFeature([User])],\n  providers: [UserService],\n  exports: [UserService], // crucial pour que AuthModule puisse l'injecter\n})\nexport class UserModule {}\n```"
+          }
+        ]
+      }
+    ]
+  }
+]

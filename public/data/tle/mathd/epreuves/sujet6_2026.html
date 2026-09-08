@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+  "matiere": "Mathématiques",
+  "classe": "Terminale D",
+  "sequence": "Séquence 6",
+  "anneeScolaire": "2025-2026",
+  "exercices": [
+    {
+      "titre": "Exercice 1 : Nombres complexes - Similitudes et lieux géométriques (Ressources)",
+      "points": "3.75 points",
+      "enonce": "<div style='display: flex; flex-direction: column; gap: 8px;'>\n  <p>Le plan complexe est muni d'un repère orthonormé \\( (O; \\vec{u}; \\vec{v}) \\).</p>\n  <p>On considère les points \\( A \\), \\( B \\) et \\( C \\) d'affixes respectives :</p>\n  <div style='background: #f1f5f9; padding: 10px; border-radius: 6px;'>\n    <p class='math'>\\( z_A = 2 + i \\), \\( z_B = 4 + 3i \\), \\( z_C = 1 - 2i \\)</p>\n  </div>\n  <p>Soit \\( S \\) la similitude directe de centre \\( A \\) qui transforme \\( B \\) en \\( C \\).</p>\n</div>",
+      "questions": [
+        {
+          "question": "<p>1) Déterminer l'écriture complexe de \\( S \\). (1pt)</p>",
+          "reponse": "<p>\\( z' - z_A = a(z - z_A) \\)</p><p>\\( z_C - z_A = a(z_B - z_A) \\)</p><p>\\( z_C - z_A = (1-2i) - (2+i) = -1 - 3i \\)</p><p>\\( z_B - z_A = (4+3i) - (2+i) = 2 + 2i \\)</p><p>\\( a = \\dfrac{-1 - 3i}{2 + 2i} = \\dfrac{(-1-3i)(2-2i)}{(2+2i)(2-2i)} = \\dfrac{-2+2i-6i+6i^2}{4+4} = \\dfrac{-2-4i-6}{8} = \\dfrac{-8-4i}{8} = -1 - \\dfrac{1}{2}i \\)</p><p>Donc \\( S(z) = a(z - z_A) + z_A = a z + z_A(1 - a) \\)</p><p>\\( z' = \\left(-1 - \\dfrac{1}{2}i\\right)z + (2+i)\\left(2 + \\dfrac{1}{2}i\\right) \\)</p><p>\\( (2+i)\\left(2 + \\dfrac{1}{2}i\\right) = 4 + i + 2i + \\dfrac{1}{2}i^2 = 4 + 3i - \\dfrac{1}{2} = \\dfrac{7}{2} + 3i \\)</p><p>\\( z' = \\left(-1 - \\dfrac{1}{2}i\\right)z + \\dfrac{7}{2} + 3i \\)</p>"
+        },
+        {
+          "question": "<p>2) Déterminer le rapport, l'angle et le centre de \\( S \\). (0.75pt)</p>",
+          "reponse": "<p>\\( a = -1 - \\dfrac{1}{2}i \\)</p><p>Rapport : \\( k = |a| = \\sqrt{1 + \\dfrac{1}{4}} = \\sqrt{\\dfrac{5}{4}} = \\dfrac{\\sqrt{5}}{2} \\)</p><p>Angle : \\( \\theta = \\arg(a) \\). \\( \\cos\\theta = -\\dfrac{1}{\\sqrt{5}/2} = -\\dfrac{2}{\\sqrt{5}} \\), \\( \\sin\\theta = -\\dfrac{1/2}{\\sqrt{5}/2} = -\\dfrac{1}{\\sqrt{5}} \\)</p><p>Donc \\( \\theta \\approx \\pi + 0.46 \\, rad \\).</p><p>Centre : \\( \\omega = \\dfrac{b}{1-a} = \\dfrac{\\dfrac{7}{2} + 3i}{1 - (-1 - \\dfrac{1}{2}i)} = \\dfrac{\\dfrac{7}{2} + 3i}{2 + \\dfrac{1}{2}i} = \\dfrac{(\\dfrac{7}{2} + 3i)(2 - \\dfrac{1}{2}i)}{(2 + \\dfrac{1}{2}i)(2 - \\dfrac{1}{2}i)} = \\dfrac{7 - \\dfrac{7}{4}i + 6i - \\dfrac{3}{2}i^2}{4 + \\dfrac{1}{4}} = \\dfrac{7 + \\dfrac{3}{2} + \\dfrac{17}{4}i}{\\dfrac{17}{4}} = \\dfrac{\\dfrac{17}{2} + \\dfrac{17}{4}i}{\\dfrac{17}{4}} = 2 + i \\)</p><p>Le centre est bien \\( A(2+i) \\).</p>"
+        },
+        {
+          "question": "<p>3) Soit \\( E \\) l'ensemble des points \\( M \\) d'affixe \\( z \\) tels que \\( |z - 2 - i| = |z - 4 - 3i| \\). Déterminer la nature de \\( E \\). (0.5pt)</p>",
+          "reponse": "<p>\\( |z - (2+i)| = |z - (4+3i)| \\)</p><p>L'ensemble \\( E \\) est la <strong>médiatrice</strong> du segment [AB].</p>"
+        },
+        {
+          "question": "<p>4) Déterminer l'équation cartésienne de \\( E \\). (1.5pts)</p>",
+          "reponse": "<p>Soit \\( M(x; y) \\), \\( A(2; 1) \\), \\( B(4; 3) \\).</p><p>\\( AM^2 = BM^2 \\Rightarrow (x-2)^2 + (y-1)^2 = (x-4)^2 + (y-3)^2 \\)</p><p>\\( x^2 - 4x + 4 + y^2 - 2y + 1 = x^2 - 8x + 16 + y^2 - 6y + 9 \\)</p><p>\\( -4x - 2y + 5 = -8x - 6y + 25 \\)</p><p>\\( 4x + 4y - 20 = 0 \\Rightarrow x + y - 5 = 0 \\)</p><p>Donc \\( E : x + y - 5 = 0 \\).</p>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 2 : Étude de fonction, intégration et statistiques (Ressources)",
+      "points": "3.75 points",
+      "enonce": "<div style='display: flex; flex-direction: column; gap: 8px;'>\n  <p>On considère la fonction \\( f \\) définie sur \\( ]0; +\\infty[ \\) par :</p>\n  <div style='background: #f1f5f9; padding: 10px; border-radius: 6px;'>\n    <p class='math'>\\( f(x) = \\dfrac{\\ln x}{x} \\)</p>\n  </div>\n  <p>Le tableau ci-dessous donne le nombre d'habitants (en milliers) d'une ville en fonction de l'année.</p>\n  <div style='background: #f1f5f9; padding: 10px; border-radius: 6px; overflow-x: auto;'>\n    <table style='width: 100%; border-collapse: collapse; font-size: 14px;'>\n      <thead>\n        <tr style='background: #3b82f6; color: white;'>\n          <th style='padding: 6px; border: 1px solid #ddd;'>Année \\( x \\)</th>\n          <th style='padding: 6px; border: 1px solid #ddd;'>2010</th>\n          <th style='padding: 6px; border: 1px solid #ddd;'>2012</th>\n          <th style='padding: 6px; border: 1px solid #ddd;'>2014</th>\n          <th style='padding: 6px; border: 1px solid #ddd;'>2016</th>\n          <th style='padding: 6px; border: 1px solid #ddd;'>2018</th>\n        </tr>\n      </thead>\n      <tbody>\n        <tr>\n          <td style='padding: 6px; border: 1px solid #ddd; background: #f8fafc;'><strong>Population \\( y \\)</strong></td>\n          <td style='padding: 6px; border: 1px solid #ddd; background: #f8fafc;'>12</td>\n          <td style='padding: 6px; border: 1px solid #ddd; background: #f8fafc;'>14</td>\n          <td style='padding: 6px; border: 1px solid #ddd; background: #f8fafc;'>17</td>\n          <td style='padding: 6px; border: 1px solid #ddd; background: #f8fafc;'>21</td>\n          <td style='padding: 6px; border: 1px solid #ddd; background: #f8fafc;'>26</td>\n        </tr>\n      </tbody>\n    </table>\n  </div>\n</div>",
+      "questions": [
+        {
+          "question": "<p>1) Étudier les variations de \\( f \\) sur \\( ]0; +\\infty[ \\). (1pt)</p>",
+          "reponse": "<p>\\( f'(x) = \\dfrac{1 - \\ln x}{x^2} \\)</p><p>\\( f'(x) > 0 \\iff 1 - \\ln x > 0 \\iff \\ln x < 1 \\iff x < e \\)</p><p>\\( f \\) est croissante sur \\( ]0; e] \\) et décroissante sur \\( [e; +\\infty[ \\).</p>"
+        },
+        {
+          "question": "<p>2) Déterminer une primitive de \\( f \\) sur \\( ]0; +\\infty[ \\). (0.75pt)</p>",
+          "reponse": "<p>\\( \\int \\dfrac{\\ln x}{x} dx = \\dfrac{1}{2}(\\ln x)^2 + C \\)</p><p>Car \\( (\\ln x)' = \\dfrac{1}{x} \\), donc \\( \\dfrac{1}{2}(\\ln x)^2 \\) a pour dérivée \\( \\dfrac{\\ln x}{x} \\).</p>"
+        },
+        {
+          "question": "<p>3) Calculer \\( \\int_1^e f(x) dx \\). (0.5pt)</p>",
+          "reponse": "<p>\\( \\int_1^e \\dfrac{\\ln x}{x} dx = \\left[ \\dfrac{1}{2}(\\ln x)^2 \\right]_1^e = \\dfrac{1}{2}(\\ln e)^2 - \\dfrac{1}{2}(\\ln 1)^2 = \\dfrac{1}{2} \\times 1 - 0 = \\dfrac{1}{2} \\)</p>"
+        },
+        {
+          "question": "<p>4) Déterminer l'équation de la droite de régression de \\( y \\) en \\( x \\) par la méthode des moindres carrés. (1.5pts)</p>",
+          "reponse": "<p>On pose \\( X = x - 2010 \\). On obtient : 0, 2, 4, 6, 8.</p><p>\\( \\bar{X} = 4 \\), \\( \\bar{y} = \\dfrac{12+14+17+21+26}{5} = \\dfrac{90}{5} = 18 \\)</p><p>\\( \\sum X_i^2 = 0+4+16+36+64 = 120 \\)</p><p>\\( \\sum X_i y_i = 0\\times12 + 2\\times14 + 4\\times17 + 6\\times21 + 8\\times26 = 0+28+68+126+208 = 430 \\)</p><p>\\( a = \\dfrac{430 - 5\\times4\\times18}{120 - 5\\times16} = \\dfrac{430 - 360}{120 - 80} = \\dfrac{70}{40} = 1.75 \\)</p><p>\\( b = 18 - 1.75\\times4 = 18 - 7 = 11 \\)</p><p>\\( y = 1.75X + 11 = 1.75(x-2010) + 11 = 1.75x - 3517.5 + 11 = 1.75x - 3506.5 \\)</p>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 3 : Suites, probabilités et graphes (Ressources)",
+      "points": "2.5 points",
+      "enonce": "<div style='display: flex; flex-direction: column; gap: 8px;'>\n  <p>On considère la suite \\( (u_n) \\) définie par :</p>\n  <div style='background: #f1f5f9; padding: 10px; border-radius: 6px;'>\n    <p class='math'>\\( u_0 = 2 \\) et \\( u_{n+1} = \\sqrt{2u_n + 3} \\)</p>\n  </div>\n  <p>Un sac contient 4 boules rouges et 2 boules bleues. On tire au hasard et sans remise 3 boules du sac.</p>\n</div>",
+      "questions": [
+        {
+          "question": "<p>1) Montrer que \\( (u_n) \\) est convergente et déterminer sa limite. (1pt)</p>",
+          "reponse": "<p>On montre par récurrence que \\( 2 \\le u_n \\le 3 \\).</p><p>\\( u_{n+1}^2 - u_n^2 = 2u_n + 3 - u_n^2 = -(u_n - 3)(u_n + 1) \\)</p><p>Sur \\( [2; 3] \\), \\( u_n + 1 > 0 \\) et \\( u_n - 3 \\le 0 \\), donc \\( u_{n+1}^2 - u_n^2 \\ge 0 \\).</p><p>La suite est croissante et majorée par 3, donc convergente.</p><p>Limite \\( l \\) vérifie \\( l = \\sqrt{2l + 3} \\Rightarrow l^2 = 2l + 3 \\Rightarrow l^2 - 2l - 3 = 0 \\Rightarrow (l-3)(l+1) = 0 \\)</p><p>Comme \\( l \\ge 2 \\), on a \\( l = 3 \\).</p>"
+        },
+        {
+          "question": "<p>2) Soit \\( X \\) le nombre de boules rouges obtenues. Déterminer la loi de probabilité de \\( X \\) et calculer \\( E(X) \\). (1.5pts)</p>",
+          "reponse": "<p>On tire 3 boules sans remise dans un sac contenant 4 rouges et 2 bleues.</p><p>\\( P(X=0) = \\dfrac{\\binom{2}{3}}{\\binom{6}{3}} = 0 \\) (car il n'y a que 2 bleues)</p><p>\\( P(X=1) = \\dfrac{\\binom{4}{1}\\binom{2}{2}}{\\binom{6}{3}} = \\dfrac{4\\times1}{20} = \\dfrac{1}{5} \\)</p><p>\\( P(X=2) = \\dfrac{\\binom{4}{2}\\binom{2}{1}}{\\binom{6}{3}} = \\dfrac{6\\times2}{20} = \\dfrac{12}{20} = \\dfrac{3}{5} \\)</p><p>\\( P(X=3) = \\dfrac{\\binom{4}{3}\\binom{2}{0}}{\\binom{6}{3}} = \\dfrac{4\\times1}{20} = \\dfrac{1}{5} \\)</p><p>Loi : \\( P(X=1)=\\dfrac{1}{5} \\), \\( P(X=2)=\\dfrac{3}{5} \\), \\( P(X=3)=\\dfrac{1}{5} \\).</p><p>\\( E(X) = 1\\times\\dfrac{1}{5} + 2\\times\\dfrac{3}{5} + 3\\times\\dfrac{1}{5} = \\dfrac{1+6+3}{5} = 2 \\)</p>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 4 : Synthèse - Problème de gestion et optimisation (Compétences)",
+      "points": "5 points",
+      "enonce": "<div style='display: flex; flex-direction: column; gap: 12px;'>\n  <p>Une compagnie de transport exploite un réseau de bus desservant 5 villes A, B, C, D, E. Les distances entre les villes (en km) sont données par le graphe suivant :</p>\n  <div style='background: #f1f5f9; padding: 10px; border-radius: 6px;'>\n    <ul>\n      <li>AB = 8, AC = 10, AD = 15</li>\n      <li>BC = 6, BD = 12, BE = 18</li>\n      <li>CD = 9, CE = 14, DE = 11</li>\n    </ul>\n  </div>\n  <p>Par ailleurs, le nombre de passagers (en milliers) transportés annuellement est modélisé par la fonction \\( P(t) = 12\\ln(t+1) - t \\) où \\( t \\) est le temps écoulé en années depuis la création du réseau.</p>\n</div>",
+      "questions": [
+        {
+          "question": "<p>1) Déterminer l'arbre couvrant de poids minimum pour relier toutes les villes. Quel est le poids total minimal ? (1.5pts)</p>",
+          "reponse": "<p>On trie les arêtes par poids croissant : BC(6), AB(8), CD(9), AC(10), DE(11), BD(12), CE(14), AD(15), BE(18).</p><p>Algorithme de Kruskal :</p><ul><li>BC(6) → pas de cycle</li><li>AB(8) → pas de cycle</li><li>CD(9) → pas de cycle</li><li>DE(11) → pas de cycle</li></ul><p>L'arbre couvrant est composé des arêtes : BC(6), AB(8), CD(9), DE(11).</p><p>Poids total = 6 + 8 + 9 + 11 = 34 km.</p>"
+        },
+        {
+          "question": "<p>2) Étudier les variations de \\( P \\) sur \\( [0; +\\infty[ \\) et déterminer le nombre maximal de passagers. (2pts)</p>",
+          "reponse": "<p>\\( P'(t) = \\dfrac{12}{t+1} - 1 = \\dfrac{12 - (t+1)}{t+1} = \\dfrac{11 - t}{t+1} \\)</p><p>\\( P'(t) > 0 \\iff 11 - t > 0 \\iff t < 11 \\)</p><p>\\( P \\) est croissante sur \\( [0; 11] \\) et décroissante sur \\( [11; +\\infty[ \\).</p><p>Nombre maximal de passagers : \\( P(11) = 12\\ln(12) - 11 \\approx 12\\times2.485 - 11 = 29.82 - 11 = 18.82 \\) milliers de passagers.</p>"
+        },
+        {
+          "question": "<p>3) Déterminer les années où le nombre de passagers atteint 10 000. (1.5pts)</p>",
+          "reponse": "<p>On résout \\( 12\\ln(t+1) - t = 10 \\)</p><p>Par approximation :</p><p>t = 5 : \\( 12\\ln 6 - 5 = 12\\times1.792 - 5 = 21.50 - 5 = 16.50 \\)</p><p>t = 15 : \\( 12\\ln 16 - 15 = 12\\times2.773 - 15 = 33.28 - 15 = 18.28 \\)</p><p>t = 20 : \\( 12\\ln 21 - 20 = 12\\times3.045 - 20 = 36.54 - 20 = 16.54 \\)</p><p>t = 25 : \\( 12\\ln 26 - 25 = 12\\times3.258 - 25 = 39.10 - 25 = 14.10 \\)</p><p>t = 30 : \\( 12\\ln 31 - 30 = 12\\times3.434 - 30 = 41.21 - 30 = 11.21 \\)</p><p>t = 35 : \\( 12\\ln 36 - 35 = 12\\times3.584 - 35 = 43.01 - 35 = 8.01 \\)</p><p>Les solutions sont entre t = 30 et t = 35. Par interpolation : t ≈ 32 ans.</p>"
+        }
+      ]
+    }
+  ]
+};
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

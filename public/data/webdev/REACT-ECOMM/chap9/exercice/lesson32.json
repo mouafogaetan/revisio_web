@@ -1,0 +1,79 @@
+[
+  {
+    "intitule": "Affichage de l'historique des commandes avec React Query",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous développez la page \"Mes commandes\" d'un site e-commerce. L'utilisateur connecté doit pouvoir :</p><ul><li>Voir la liste de toutes ses commandes passées (numéro, date, montant total, statut)</li><li>Cliquer sur une commande pour voir les détails (produits, quantités, adresse de livraison)</li><li>Voir l'évolution du statut (pending, paid, shipped, delivered, cancelled)</li></ul><p>L'API backend fournit les endpoints : <code>GET /orders</code> (liste des commandes de l'utilisateur) et <code>GET /orders/{id}</code> (détails d'une commande).</p>",
+      "images": [
+        "tableau récapitulatif des commandes avec colonnes : numéro, date, total, statut, actions",
+        "schéma de timeline des statuts de commande (pending → paid → shipped → delivered)"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevez et écrivez le code du composant <code>OrdersList</code> qui utilise <code>useQuery</code> de TanStack Query pour récupérer et afficher la liste des commandes. Gérez les états de chargement et d'erreur, et proposez un lien vers les détails de chaque commande.",
+        "niveau": "medium",
+        "reponse": "```jsx\n// pages/account/OrdersList.jsx\nimport { useQuery } from '@tanstack/react-query';\nimport { Link } from 'react-router-dom';\nimport { ordersApi } from '../../services/api';\n\nconst OrdersList = () => {\n  const { data: orders, isLoading, error } = useQuery({\n    queryKey: ['userOrders'],\n    queryFn: ordersApi.getMyOrders,\n    staleTime: 5 * 60 * 1000, // 5 minutes\n  });\n\n  if (isLoading) {\n    return (\n      <div className=\"space-y-4\">\n        {[1, 2, 3].map(i => (\n          <div key={i} className=\"h-24 bg-gray-200 animate-pulse rounded-lg\"></div>\n        ))}\n      </div>\n    );\n  }\n\n  if (error) {\n    return (\n      <div className=\"text-red-500 text-center py-8\">\n        ❌ Erreur lors du chargement des commandes\n      </div>\n    );\n  }\n\n  if (!orders || orders.length === 0) {\n    return (\n      <div className=\"text-center py-12\">\n        <p className=\"text-gray-500\">Vous n'avez pas encore passé de commande.</p>\n        <Link to=\"/products\" className=\"text-blue-600 underline mt-2 inline-block\">\n          Découvrir nos produits →\n        </Link>\n      </div>\n    );\n  }\n\n  return (\n    <div className=\"overflow-x-auto\">\n      <table className=\"w-full text-sm\">\n        <thead className=\"bg-gray-100\">\n          <tr>\n            <th className=\"p-3 text-left\">N° commande</th>\n            <th className=\"p-3 text-left\">Date</th>\n            <th className=\"p-3 text-right\">Total</th>\n            <th className=\"p-3 text-left\">Statut</th>\n            <th className=\"p-3 text-center\">Action</th>\n          </tr>\n        </thead>\n        <tbody>\n          {orders.map(order => (\n            <tr key={order.id} className=\"border-b hover:bg-gray-50\">\n              <td className=\"p-3 font-mono\">{order.orderNumber}</td>\n              <td className=\"p-3\">{new Date(order.createdAt).toLocaleDateString('fr-FR')}</td>\n              <td className=\"p-3 text-right font-semibold\">{order.total.toFixed(2)} €</td>\n              <td className=\"p-3\">\n                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${\n                  order.status === 'delivered' ? 'bg-green-100 text-green-800' :\n                  order.status === 'shipped' ? 'bg-blue-100 text-blue-800' :\n                  order.status === 'paid' ? 'bg-purple-100 text-purple-800' :\n                  order.status === 'cancelled' ? 'bg-red-100 text-red-800' :\n                  'bg-yellow-100 text-yellow-800'\n                }`}>\n                  {order.status === 'pending' ? 'En attente' :\n                   order.status === 'paid' ? 'Payée' :\n                   order.status === 'shipped' ? 'Expédiée' :\n                   order.status === 'delivered' ? 'Livrée' : 'Annulée'}\n                </span>\n              </td>\n              <td className=\"p-3 text-center\">\n                <Link to={`/account/orders/${order.id}`} className=\"text-blue-600 hover:underline\">\n                  Voir détails\n                </Link>\n              </td>\n            </tr>\n          ))}\n        </tbody>\n      </table>\n    </div>\n  );\n};\n\nexport default OrdersList;\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez l'utilité de l'option <code>staleTime: 5 * 60 * 1000</code> dans la configuration de <code>useQuery</code>. Quel impact cela a-t-il sur les performances et l'expérience utilisateur ?",
+            "niveau": "medium",
+            "reponse": "`staleTime` définit la durée pendant laquelle les données sont considérées comme \"fraîches\" avant de devenir \"périmées\" (stale). Pendant cette période, React Query ne refera pas de requête réseau si le composant est remonté. Cela évite des appels API inutiles lorsque l'utilisateur navigue entre les pages puis revient à la liste des commandes. Une valeur de 5 minutes signifie que les commandes ne seront rechargées que toutes les 5 minutes, améliorant les performances et réduisant la charge serveur, tout en gardant des données relativement récentes."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Analysez et corrigez le code suivant qui affiche les détails d'une commande. Identifiez les problèmes et proposez une version améliorée.",
+        "niveau": "hard",
+        "reponse": "```javascript\n// Code à analyser\nfunction OrderDetails({ orderId }) {\n  const [order, setOrder] = useState(null);\n  \n  useEffect(() => {\n    fetch(`/api/orders/${orderId}`)\n      .then(res => res.json())\n      .then(data => setOrder(data));\n  }, []);\n  \n  return (\n    <div>\n      <h2>Commande {order?.id}</h2>\n      <p>Total : {order?.total} €</p>\n    </div>\n  );\n}\n```\n\n**Problèmes identifiés :**\n1. **Pas de gestion de chargement** : l'utilisateur ne voit rien pendant le fetch\n2. **Pas de gestion d'erreur** : si l'API échoue, rien ne s'affiche\n3. **Dépendance manquante** : `orderId` n'est pas dans le tableau de dépendances du `useEffect`\n4. **Pas d'annulation de requête** : si le composant est démonté avant la fin, risque de memory leak\n5. **Pas de cache** : chaque montage du composant refait une requête\n\n**Version corrigée :**\n```jsx\nimport { useQuery } from '@tanstack/react-query';\nimport { ordersApi } from '../../services/api';\n\nfunction OrderDetails({ orderId }) {\n  const { data: order, isLoading, error } = useQuery({\n    queryKey: ['order', orderId],\n    queryFn: () => ordersApi.getOrderById(orderId),\n    enabled: !!orderId, // ne s'exécute que si orderId existe\n    staleTime: 10 * 60 * 1000, // 10 minutes de cache\n  });\n\n  if (isLoading) {\n    return <div className=\"text-center py-8\">Chargement de la commande...</div>;\n  }\n\n  if (error) {\n    return (\n      <div className=\"text-red-500 text-center py-8\">\n        Erreur : {error.message}\n      </div>\n    );\n  }\n\n  if (!order) return null;\n\n  return (\n    <div className=\"p-4 border rounded-lg\">\n      <h2 className=\"text-xl font-bold\">Commande {order.orderNumber}</h2>\n      <p>Date : {new Date(order.createdAt).toLocaleDateString()}</p>\n      <p>Total : {order.total.toFixed(2)} €</p>\n      <h3 className=\"font-semibold mt-4\">Produits :</h3>\n      <ul>\n        {order.items.map(item => (\n          <li key={item.id}>{item.name} x {item.quantity} = {item.price * item.quantity} €</li>\n        ))}\n      </ul>\n    </div>\n  );\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Définissez et implémentez une fonction <code>getStatusBadge</code> qui retourne la classe CSS et le libellé approprié pour chaque statut de commande. Les statuts possibles sont : <code>pending</code>, <code>paid</code>, <code>shipped</code>, <code>delivered</code>, <code>cancelled</code>.",
+        "niveau": "easy",
+        "reponse": "```jsx\n// utils/orderStatus.js\nexport const getStatusBadge = (status) => {\n  const statusMap = {\n    pending: {\n      label: 'En attente de paiement',\n      className: 'bg-yellow-100 text-yellow-800 border-yellow-200'\n    },\n    paid: {\n      label: 'Payée - En préparation',\n      className: 'bg-purple-100 text-purple-800 border-purple-200'\n    },\n    shipped: {\n      label: 'Expédiée',\n      className: 'bg-blue-100 text-blue-800 border-blue-200'\n    },\n    delivered: {\n      label: 'Livrée',\n      className: 'bg-green-100 text-green-800 border-green-200'\n    },\n    cancelled: {\n      label: 'Annulée',\n      className: 'bg-red-100 text-red-800 border-red-200'\n    }\n  };\n\n  return statusMap[status] || {\n    label: 'Statut inconnu',\n    className: 'bg-gray-100 text-gray-800'\n  };\n};\n\n// Utilisation dans le composant\nconst { label, className } = getStatusBadge(order.status);\nreturn (\n  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${className}`}>\n    {label}\n  </span>\n);\n```",
+        "sousQuestions": [
+          {
+            "numero": "3.a",
+            "texte": "Proposez une amélioration pour afficher une timeline visuelle des statuts (comme une barre de progression) plutôt qu'un simple badge.",
+            "niveau": "medium",
+            "reponse": "```jsx\n// components/OrderTimeline.jsx\nconst STATUS_ORDER = ['pending', 'paid', 'shipped', 'delivered'];\nconst STATUS_LABELS = {\n  pending: 'Commande confirmée',\n  paid: 'Paiement accepté',\n  shipped: 'Expédiée',\n  delivered: 'Livrée'\n};\n\nconst OrderTimeline = ({ currentStatus }) => {\n  const currentIndex = STATUS_ORDER.indexOf(currentStatus);\n  \n  return (\n    <div className=\"w-full py-4\">\n      <div className=\"flex items-center justify-between\">\n        {STATUS_ORDER.map((status, index) => (\n          <div key={status} className=\"flex-1 text-center\">\n            <div className=\"relative\">\n              {/* Ligne de connexion */}\n              {index < STATUS_ORDER.length - 1 && (\n                <div className={`absolute top-4 left-1/2 w-full h-1 ${\n                  index < currentIndex ? 'bg-green-500' : 'bg-gray-300'\n                }`} style={{ transform: 'translateX(0%)' }}></div>\n              )}\n              {/* Cercle d'étape */}\n              <div className={`relative z-10 w-8 h-8 mx-auto rounded-full flex items-center justify-center ${\n                index <= currentIndex ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'\n              }`}>\n                {index < currentIndex ? '✓' : index + 1}\n              </div>\n              <p className={`text-xs mt-2 ${index <= currentIndex ? 'font-semibold text-gray-800' : 'text-gray-400'}`}>\n                {STATUS_LABELS[status]}\n              </p>\n            </div>\n          </div>\n        ))}\n      </div>\n    </div>\n  );\n};\n```\nCette timeline donne une vision claire de l'avancement de la commande. Les étapes validées sont en vert avec une coche, l'étape courante est mise en évidence."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Suivi de commande en temps réel avec polling",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Un client souhaite suivre l'évolution de sa commande en temps réel. Au lieu de recharger manuellement la page, vous devez implémenter un système de \"polling\" (interrogation périodique) qui vérifie toutes les 30 secondes si le statut de la commande a changé.</p><p>L'API fournit un endpoint <code>GET /orders/{id}/status</code> qui retourne uniquement le statut actuel.</p>",
+      "images": [
+        "schéma du polling : requêtes répétées à intervalle régulier vers le serveur",
+        "interface utilisateur avec indicateur de mise à jour automatique"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez un hook personnalisé <code>useOrderStatus</code> qui utilise <code>useQuery</code> avec l'option <code>refetchInterval</code> pour interroger périodiquement le statut d'une commande. Le hook doit permettre d'arrêter le polling quand la commande est livrée ou annulée.",
+        "niveau": "hard",
+        "reponse": "```jsx\n// hooks/useOrderStatus.js\nimport { useQuery } from '@tanstack/react-query';\nimport { ordersApi } from '../services/api';\n\nconst FINAL_STATUSES = ['delivered', 'cancelled'];\n\nexport const useOrderStatus = (orderId, enabled = true) => {\n  const query = useQuery({\n    queryKey: ['orderStatus', orderId],\n    queryFn: () => ordersApi.getOrderStatus(orderId),\n    enabled: enabled && !!orderId,\n    refetchInterval: (query) => {\n      const status = query.state.data?.status;\n      // Arrêter le polling si statut final atteint\n      if (status && FINAL_STATUSES.includes(status)) {\n        return false;\n      }\n      return 30000; // 30 secondes\n    },\n    staleTime: 0, // Toujours considéré stale pour rafraîchir\n    refetchOnWindowFocus: true, // Rafraîchir quand l'onglet redevient actif\n  });\n\n  return {\n    status: query.data?.status,\n    isPolling: query.isFetching,\n    isFinal: query.data?.status && FINAL_STATUSES.includes(query.data.status),\n    ...query\n  };\n};\n\n// Utilisation dans OrderDetails\nconst OrderStatusTracker = ({ orderId }) => {\n  const { status, isPolling, isFinal } = useOrderStatus(orderId);\n  \n  return (\n    <div className=\"flex items-center gap-2\">\n      <span className=\"font-semibold\">Statut :</span>\n      <StatusBadge status={status} />\n      {isPolling && !isFinal && (\n        <span className=\"text-xs text-gray-400 animate-pulse\">\n          Mise à jour automatique...\n        </span>\n      )}\n    </div>\n  );\n};\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comparez le polling avec les WebSockets pour le suivi de commande. Quels sont les avantages et inconvénients de chaque approche dans un contexte e-commerce ?",
+            "niveau": "hard",
+            "reponse": "| Critère | Polling (HTTP) | WebSockets |\n|---------|----------------|------------|\n| **Latence** | Jusqu'à 30s (délai d'interrogation) | Temps réel (quelques ms) |\n| **Charge serveur** | Élevée si nombreux clients (requêtes répétées même sans changement) | Faible (communication uniquement lors des changements) |\n| **Complexité** | Simple à implémenter (requêtes standard) | Plus complexe (gestion de connexion, reconnexion) |\n| **Compatibilité** | Universelle (tous les navigateurs, sans configuration spéciale) | Nécessite support WebSocket (tous les navigateurs modernes OK) |\n| **Scalabilité** | Moins bonne pour un grand nombre d'utilisateurs | Excellente (connexions persistantes) |\n| **Déconnexion** | Automatiquement gérée par HTTP | Nécessite une gestion de reconnexion |\n\n**Recommandation pour e-commerce :**\n- Pour un petit site (< 1000 commandes/heure) : **polling** simple et suffisant\n- Pour un grand site avec des utilisateurs nombreux : **WebSockets** (ou Server-Sent Events) pour réduire la charge\n- Approche hybride : polling au démarrage, puis WebSocket pour les mises à jour temps réel\n- Alternative moderne : **HTTP/2 Server Push** ou **GraphQL Subscriptions**"
+          }
+        ]
+      }
+    ]
+  }
+]

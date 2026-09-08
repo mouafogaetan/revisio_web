@@ -1,0 +1,134 @@
+[
+  {
+    "intitule": "Modélisation d'une structure organisationnelle hiérarchique",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Une entreprise multinationale souhaite modéliser sa structure organisationnelle. Chaque employé a un manager (sauf le PDG), et chaque employé peut avoir plusieurs subordonnés. L'entreprise souhaite pouvoir :</p><ul><li>Connaître la hiérarchie complète d'un employé (tous ses supérieurs)</li><li>Lister tous les subordonnés d'un manager (directs ou indirects)</li><li>Calculer la profondeur hiérarchique d'un employé</li><li>Connaître le nombre total de subordonnés d'un manager</li></ul><p>La structure est représentée par un arbre, mais l'entreprise prévoit des restructurations fréquentes qui peuvent modifier les relations hiérarchiques.</p>",
+      "images": [
+        "Arbre organisationnel représentant la hiérarchie d'une entreprise avec un PDG en racine, des managers intermédiaires et des employés en feuilles."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analysez les différentes approches de modélisation des hiérarchies (liste d'adjacence, chemin, ensemble imbriqué, table de fermeture) et proposez la plus adaptée pour ce cas d'usage. Justifiez votre choix.",
+        "niveau": "medium",
+        "reponse": "<p>Les approches :</p><ul><li><strong>Liste d'adjacence</strong> : chaque nœud a une colonne parent_id. Simple, mais les requêtes hiérarchiques (CTE récursives) sont coûteuses pour les grandes profondeurs.</li><li><strong>Chemin (Path Enumeration)</strong> : stocke le chemin complet (ex : '/1/3/5/'). Bon pour les requêtes de descendants, mais coûteux en mise à jour lors des restructurations.</li><li><strong>Ensemble imbriqué (Nested Set)</strong> : utilise left/right pour représenter l'arbre. Rapide pour les requêtes de descendants, mais très coûteux en mise à jour (recalcul de tous les nœuds).</li><li><strong>Table de fermeture (Closure Table)</strong> : stocke tous les chemins possibles entre ancêtres et descendants. Optimale pour les requêtes hiérarchiques complexes et les mises à jour fréquentes, car les modifications n'affectent qu'une partie de la table.</li></ul><p>Dans ce cas, avec des restructurations fréquentes et le besoin de requêtes complexes (ancêtres, descendants, profondeur, comptage), la <strong>Table de fermeture</strong> est la plus adaptée. Elle offre un bon compromis entre performance des requêtes et coût des mises à jour.</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Concevez un schéma de base de données utilisant l'approche Table de fermeture pour modéliser cette hiérarchie. Identifiez les tables, les clés primaires, les clés étrangères et les contraintes nécessaires.",
+            "niveau": "medium",
+            "reponse": "<p>Schéma avec table de fermeture :</p><ul><li><strong>Employe</strong> (id_employe PK, nom, prenom, poste, date_embauche, date_naissance)</li><li><strong>Hierarchie_Closure</strong> (ancetre_id FK, descendant_id FK, profondeur INTEGER, PRIMARY KEY (ancetre_id, descendant_id))</li></ul><p>Contraintes :</p><ul><li>ancetre_id et descendant_id référencent Employe(id_employe)</li><li>profondeur >= 0 (0 pour soi-même)</li><li>On peut ajouter une contrainte UNIQUE sur (ancetre_id, descendant_id) déjà garantie par la PK composite</li><li>Un trigger ou une procédure garantit que les chemins sont cohérents (ex : si A est ancêtre de B et B ancêtre de C, alors A ancêtre de C avec profondeur = profondeur(A,B) + profondeur(B,C))</li></ul>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Écrire la requête SQL permettant de lister tous les subordonnés (directs et indirects) d'un manager donné, ainsi que leur profondeur dans la hiérarchie.",
+            "niveau": "hard",
+            "reponse": "<pre><code>SELECT e.id_employe, e.nom, e.prenom, hc.profondeur\nFROM Hierarchie_Closure hc\nJOIN Employe e ON hc.descendant_id = e.id_employe\nWHERE hc.ancetre_id = @id_manager\nAND hc.profondeur > 0\nORDER BY hc.profondeur, e.nom;</code></pre><p>Cette requête retourne tous les descendants du manager spécifié, avec leur profondeur. Le tri par profondeur permet d'obtenir une structure hiérarchique claire. La condition profondeur > 0 exclut le manager lui-même du résultat.</p>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Catalogue de produits avec catégories imbriquées",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un site de e-commerce souhaite organiser son catalogue de produits selon une structure hiérarchique de catégories. Les catégories peuvent être imbriquées indéfiniment (ex: Informatique > Ordinateurs > Portables > Gaming). Chaque produit est associé à une catégorie. Le système doit permettre :</p><ul><li>La navigation par catégories avec affichage du chemin complet</li><li>La recherche de tous les produits d'une catégorie et de ses sous-catégories</li><li>Le déplacement d'une catégorie avec toutes ses sous-catégories</li><li>Les mises à jour sont assez fréquentes (ajout/suppression de catégories)</li></ul>",
+      "images": [
+        "Arborescence de catégories de produits électroniques montrant plusieurs niveaux de profondeur et des branches avec des produits associés."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Comparez les approches de modélisation des hiérarchies (liste d'adjacence, chemin, ensemble imbriqué, table de fermeture) pour ce cas d'usage. Proposez la solution la plus adaptée.",
+        "niveau": "medium",
+        "reponse": "<p>Analyse comparative :</p><ul><li><strong>Liste d'adjacence</strong> : Simple, mais les CTE récursives pour obtenir le chemin complet ou les produits d'une catégorie sont coûteuses.</li><li><strong>Chemin</strong> : Bonne solution, permet d'obtenir facilement le chemin complet et les descendants. Le déplacement d'une sous-arborescence nécessite de mettre à jour tous les chemins des descendants (coût proportionnel à la taille de la sous-arborescence).</li><li><strong>Ensemble imbriqué</strong> : Très efficace pour les lectures (descendants, ancêtres), mais le déplacement d'une sous-arborescence nécessite de recalculer un grand nombre de valeurs (coût très élevé).</li><li><strong>Table de fermeture</strong> : Offre les meilleures performances pour les requêtes complexes et les déplacements de sous-arborescence (car seule une partie de la table est affectée).</li></ul><p>Pour ce cas d'usage, la <strong>Table de fermeture</strong> est la plus adaptée. Elle offre d'excellentes performances pour la navigation et la recherche, et gère efficacement les déplacements de sous-arbres. Le coût en espace (stockage de tous les chemins) est acceptable pour un nombre de catégories de l'ordre de quelques milliers.</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Concevez le schéma de base de données en utilisant l'approche Table de fermeture. Incluez les tables nécessaires et expliquez comment elles sont liées.",
+            "niveau": "easy",
+            "reponse": "<p>Schéma proposé :</p><ul><li><strong>Categorie</strong> (id_categorie PK, nom, description, date_creation, actif)</li><li><strong>Produit</strong> (id_produit PK, nom, description, prix, id_categorie FK, date_creation)</li><li><strong>Categorie_Closure</strong> (ancetre_id FK, descendant_id FK, profondeur INTEGER, PRIMARY KEY (ancetre_id, descendant_id))</li></ul><p>Liaisons :</p><ul><li>Produit.id_categorie → Categorie.id_categorie (lien produit → catégorie directe)</li><li>Categorie_Closure.ancetre_id → Categorie.id_categorie</li><li>Categorie_Closure.descendant_id → Categorie.id_categorie</li></ul><p>La table Categorie_Closure stocke tous les couples (ancêtre, descendant) avec leur distance. Par exemple, pour une hiérarchie A > B > C, on aura : (A,A,0), (A,B,1), (A,C,2), (B,B,0), (B,C,1), (C,C,0).</p>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Écrivez la requête SQL pour obtenir tous les produits d'une catégorie donnée (par exemple 'Portables') et de toutes ses sous-catégories.",
+            "niveau": "medium",
+            "reponse": "<pre><code>SELECT p.id_produit, p.nom, p.prix, c.nom AS categorie\nFROM Produit p\nJOIN Categorie c ON p.id_categorie = c.id_categorie\nJOIN Categorie_Closure cc ON c.id_categorie = cc.descendant_id\nWHERE cc.ancetre_id = (SELECT id_categorie FROM Categorie WHERE nom = 'Portables')\nAND cc.profondeur > 0;</code></pre><p>Cette requête utilise la table de fermeture pour récupérer toutes les catégories descendantes de la catégorie 'Portables', puis joint la table Produit pour obtenir les produits correspondants. La condition profondeur > 0 exclut la catégorie elle-même du résultat (ne conserver que les sous-catégories).</p>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion d'un réseau de connaissances scientifiques",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Un laboratoire de recherche souhaite modéliser un réseau de connaissances scientifiques où les concepts sont organisés hiérarchiquement (taxonomie). Les relations entre concepts sont de type 'est-un' (ex: 'Chat' est un 'Félin', 'Félin' est un 'Mammifère'). Le système doit permettre de :</p><ul><li>Naviguer dans la hiérarchie des concepts (ancêtres, descendants, frères)</li><li>Rechercher tous les concepts descendants d'un concept donné</li><li>Déplacer des sous-arbres de concepts (ex: reclasser un concept dans une autre branche)</li><li>Gérer les concepts ayant plusieurs parents (polyhiérarchie) - exemple: un 'Robot' peut être à la fois une 'Machine' et un 'Système Autonome'</li></ul>",
+      "images": [
+        "Graphe de concepts scientifiques montrant une hiérarchie avec des relations multiples et des concepts ayant plusieurs parents."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analysez les limites des approches classiques (liste d'adjacence, chemin, ensemble imbriqué) pour gérer la polyhiérarchie. Proposez une approche adaptée.",
+        "niveau": "hard",
+        "reponse": "<p>Limites des approches classiques pour la polyhiérarchie :</p><ul><li><strong>Liste d'adjacence</strong> : Ne permet qu'une seule relation parent-enfant par nœud (arbre simple). Ne supporte pas la polyhiérarchie.</li><li><strong>Chemin</strong> : En théorie pourrait stocker plusieurs chemins, mais devient complexe à gérer et à interroger efficacement.</li><li><strong>Ensemble imbriqué</strong> : Conçu pour les arbres, ne supporte pas la polyhiérarchie sans modifications majeures (qui complexifient le modèle).</li></ul><p>La <strong>Table de fermeture</strong> est la plus adaptée pour la polyhiérarchie, car elle stocke explicitement tous les chemins possibles entre nœuds. Un concept peut apparaître comme descendant de plusieurs ancêtres. Les requêtes restent simples et performantes.</p><p>Alternativement, on peut utiliser une <strong>approche par graphe</strong> (Neo4j) qui est naturellement adaptée aux relations complexes et aux modèles non-arborescents.</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposez un schéma de base de données utilisant la Table de fermeture pour supporter la polyhiérarchie. Expliquez comment les insertions et les suppressions de relations sont gérées.",
+            "niveau": "hard",
+            "reponse": "<p>Schéma modifié pour la polyhiérarchie :</p><ul><li><strong>Concept</strong> (id_concept PK, nom, description, type)</li><li><strong>Relation_Hierarchie</strong> (ancetre_id FK, descendant_id FK, profondeur INTEGER, PRIMARY KEY (ancetre_id, descendant_id))</li></ul><p>Gestion des opérations :</p><ul><li><strong>Insertion d'une relation A→B</strong> : Ajouter (A,B,1). Puis pour chaque ancêtre X de A, ajouter (X,B,profondeur(X,A)+1). Enfin, pour chaque descendant Y de B (excluant B), ajouter (A,Y,1+profondeur(B,Y)) et (X,Y,profondeur(X,A)+1+profondeur(B,Y)).</li><li><strong>Suppression d'une relation A→B</strong> : Supprimer tous les chemins qui passent par cette relation, mais seulement s'ils ne sont pas supportés par un autre chemin (dans le cas de la polyhiérarchie).</li><li><strong>Mise à jour</strong> : Les opérations sont gérées par des procédures stockées ou des triggers pour maintenir la cohérence.</li></ul>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Écrire la requête Cypher (Neo4j) pour créer ce réseau de connaissances avec des nœuds 'Robot', 'Machine' et 'Système Autonome' ainsi que leurs relations. Puis, écrire la requête pour trouver tous les descendants de 'Machine'.",
+            "niveau": "hard",
+            "reponse": "<p><strong>Création des nœuds et relations :</strong></p><pre><code>// Création des nœuds\nCREATE (r:Concept {nom: 'Robot', type: 'entite'})\nCREATE (m:Concept {nom: 'Machine', type: 'entite'})\nCREATE (s:Concept {nom: 'Système Autonome', type: 'entite'})\n// Création des relations\nCREATE (r)-[:EST_UN]->(m)\nCREATE (r)-[:EST_UN]->(s);</code></pre><p><strong>Recherche des descendants de 'Machine' :</strong></p><pre><code>MATCH (machine:Concept {nom: 'Machine'})<-[:EST_UN*]-(descendant)\nRETURN descendant.nom AS descendant, \n       LENGTH((descendant)-[:EST_UN*]->(machine)) AS profondeur\nORDER BY profondeur;</code></pre><p>Cette requête Neo4j utilise la syntaxe <code>[:EST_UN*]</code> pour parcourir tous les chemins de la relation EST_UN, permettant de trouver tous les descendants directs et indirects de 'Machine', même ceux qui ont d'autres ancêtres (polyhiérarchie). La fonction LENGTH permet de calculer la profondeur.</p>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Organisation des commentaires d'un blog",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Un blog souhaite organiser ses commentaires sous forme de fils de discussion (threads) où les commentaires peuvent être des réponses à d'autres commentaires, formant une structure arborescente. Les utilisateurs peuvent :</p><ul><li>Publier un commentaire sur un article (racine)</li><li>Répondre à un commentaire existant (enfant)</li><li>Visualiser l'ensemble des commentaires d'un article sous forme de hiérarchie</li><li>Supprimer un commentaire (et éventuellement ses enfants)</li></ul>",
+      "images": [
+        "Arborescence de commentaires d'un article de blog montrant plusieurs niveaux de réponses avec un format d'imbrication visuel."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez une modélisation de cette hiérarchie de commentaires. Quelle approche est la plus adaptée pour ce cas d'usage ? Justifiez votre choix.",
+        "niveau": "easy",
+        "reponse": "<p>La <strong>liste d'adjacence</strong> est l'approche la plus adaptée pour ce cas d'usage pour plusieurs raisons :</p><ul><li>La profondeur des commentaires est généralement limitée (moins de 10 niveaux en pratique).</li><li>Les requêtes peuvent être réalisées efficacement avec des CTE récursives (disponibles dans la plupart des SGBD).</li><li>La structure est simple à comprendre et à implémenter.</li><li>Les opérations d'insertion, de suppression et de déplacement sont très simples (une seule ligne de commentaire à manipuler).</li><li>L'approche est légère en termes de stockage (pas de redondance).</li></ul><p>La table de fermeture serait un overkill pour cette application qui n'a pas besoin de requêtes très complexes ni d'opérations fréquentes de déplacement de sous-arbres.</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Concevez le schéma de la table Commentaire et écrivez la requête SQL pour récupérer tous les commentaires d'un article avec leur niveau d'imbrication.",
+            "niveau": "easy",
+            "reponse": "<p><strong>Schéma :</strong></p><pre><code>CREATE TABLE Commentaire (\n    id_commentaire INT PRIMARY KEY AUTO_INCREMENT,\n    id_article INT NOT NULL,\n    id_parent INT NULL,\n    auteur VARCHAR(100),\n    contenu TEXT,\n    date_creation DATETIME DEFAULT CURRENT_TIMESTAMP,\n    FOREIGN KEY (id_parent) REFERENCES Commentaire(id_commentaire) ON DELETE CASCADE\n);</code></pre><p><strong>Requête SQL (avec CTE récursive) :</strong></p><pre><code>WITH RECURSIVE commentaire_hierarchie AS (\n    SELECT id_commentaire, id_parent, auteur, contenu, date_creation, 0 AS niveau\n    FROM Commentaire\n    WHERE id_article = @id_article AND id_parent IS NULL\n    UNION ALL\n    SELECT c.id_commentaire, c.id_parent, c.auteur, c.contenu, c.date_creation, ch.niveau + 1\n    FROM Commentaire c\n    INNER JOIN commentaire_hierarchie ch ON c.id_parent = ch.id_commentaire\n)\nSELECT id_commentaire, id_parent, auteur, contenu, date_creation, niveau\nFROM commentaire_hierarchie\nORDER BY niveau, date_creation;</code></pre><p>Cette requête utilise une CTE récursive pour reconstruire la hiérarchie des commentaires. La colonne niveau indique la profondeur dans l'arbre, ce qui permet de formater les commentaires avec une indentation visuelle.</p>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Quelles précautions doit-on prendre lors de la suppression d'un commentaire parent pour éviter les orphelins ?",
+            "niveau": "easy",
+            "reponse": "Plusieurs approches sont possibles :<br/>1. <strong>Suppression en cascade</strong> : utiliser <code>ON DELETE CASCADE</code> sur la clé étrangère pour supprimer automatiquement tous les commentaires enfants. C'est la solution la plus simple.<br/>2. <strong>Suppression logique</strong> : ajouter un champ <code>est_supprime BOOLEAN</code> et filtrer les commentaires supprimés dans les requêtes. Les commentaires enfants restent visibles mais marqués comme 'supprimés'.<br/>3. <strong>Réattribution</strong> : réattacher les commentaires enfants au parent du commentaire supprimé (moins simple).<br/>En pratique, l'approche <strong>logique</strong> (point 2) est souvent préférée pour les applications web car elle permet de conserver l'historique complet et d'offrir une meilleure expérience utilisateur (le fil de discussion reste cohérent)."
+          }
+        ]
+      }
+    ]
+  }
+]

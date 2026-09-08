@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+  "matiere": "Informatique",
+  "classe": "Terminale D",
+  "sequence": "Séquence 4",
+  "anneeScolaire": "2025-2026",
+  "exercices": [
+    {
+      "titre": "PARTIE A : TABLEUR",
+      "points": "6 points",
+      "enonce": "<div style='display: flex; flex-direction: column; gap: 8px;'>\n  <p><strong>Exercice A1 : Évaluation des ressources - Fonctions avancées du tableur (2 pts)</strong></p>\n</div>",
+      "questions": [
+        {
+          "question": "<p>1) Donner la syntaxe et le rôle de la fonction <code>SI</code> dans un tableur. (0.5pt)</p>",
+          "reponse": "<p>Syntaxe : <code>=SI(condition; valeur_si_vrai; valeur_si_faux)</code></p><p>Rôle : La fonction SI permet d'effectuer un test logique et d'afficher un résultat différent selon que la condition est vraie ou fausse.</p>"
+        },
+        {
+          "question": "<p>2) Donner la syntaxe et le rôle des fonctions <code>SOMME.SI</code>, <code>NB.SI</code> et <code>MOYENNE</code>. (1pt)</p>",
+          "reponse": "<ul><li><code>=SOMME.SI(plage; critère; plage_somme)</code> : additionne les cellules d'une plage qui répondent à un critère donné.</li><li><code>=NB.SI(plage; critère)</code> : compte le nombre de cellules d'une plage qui répondent à un critère donné.</li><li><code>=MOYENNE(plage)</code> : calcule la moyenne arithmétique des valeurs d'une plage.</li></ul>"
+        },
+        {
+          "question": "<p>3) Citer les opérateurs mathématiques utilisés dans les formules de calcul d'un tableur. (0.5pt)</p>",
+          "reponse": "<ul><li><code>+</code> : addition</li><li><code>-</code> : soustraction</li><li><code>*</code> : multiplication</li><li><code>/</code> : division</li><li><code>^</code> : puissance</li><li><code>%</code> : pourcentage</li></ul>"
+        }
+      ]
+    },
+    {
+      "titre": "PARTIE A : TABLEUR (suite)",
+      "points": "",
+      "enonce": "<div style='display: flex; flex-direction: column; gap: 8px;'>\n  <p><strong>Exercice A2 : Étude de cas - Bulletin de notes (4 pts)</strong></p>\n  <p>Soit la feuille de calcul ci-dessous :</p>\n  <div style='background: #f1f5f9; padding: 10px; border-radius: 6px; overflow-x: auto;'>\n    <table style='width: 100%; border-collapse: collapse; font-size: 14px;'>\n      <thead>\n        <tr style='background: #3b82f6; color: white;'>\n          <th style='padding: 8px; border: 1px solid #ddd;'></th>\n          <th style='padding: 8px; border: 1px solid #ddd;'>A</th>\n          <th style='padding: 8px; border: 1px solid #ddd;'>B</th>\n          <th style='padding: 8px; border: 1px solid #ddd;'>C</th>\n          <th style='padding: 8px; border: 1px solid #ddd;'>D</th>\n          <th style='padding: 8px; border: 1px solid #ddd;'>E</th>\n        </tr>\n      </thead>\n      <tbody>\n        <tr><td style='padding: 6px; border: 1px solid #ddd;'><strong>1</strong></td><td style='padding: 6px; border: 1px solid #ddd;'><strong>Matières</strong></td><td style='padding: 6px; border: 1px solid #ddd;'><strong>Notes</strong></td><td style='padding: 6px; border: 1px solid #ddd;'><strong>Coefs</strong></td><td style='padding: 6px; border: 1px solid #ddd;'><strong>Notes*Coef</strong></td><td style='padding: 6px; border: 1px solid #ddd;'><strong>Mention</strong></td></tr>\n        <tr><td style='padding: 6px; border: 1px solid #ddd;'><strong>2</strong></td><td style='padding: 6px; border: 1px solid #ddd;'>Maths</td><td style='padding: 6px; border: 1px solid #ddd;'>13</td><td style='padding: 6px; border: 1px solid #ddd;'>4</td><td style='padding: 6px; border: 1px solid #ddd;'></td><td style='padding: 6px; border: 1px solid #ddd;'></td></tr>\n        <tr><td style='padding: 6px; border: 1px solid #ddd;'><strong>3</strong></td><td style='padding: 6px; border: 1px solid #ddd;'>Info</td><td style='padding: 6px; border: 1px solid #ddd;'>17</td><td style='padding: 6px; border: 1px solid #ddd;'>2</td><td style='padding: 6px; border: 1px solid #ddd;'></td><td style='padding: 6px; border: 1px solid #ddd;'></td></tr>\n        <tr><td style='padding: 6px; border: 1px solid #ddd;'><strong>4</strong></td><td style='padding: 6px; border: 1px solid #ddd;'>Chimie</td><td style='padding: 6px; border: 1px solid #ddd;'>16</td><td style='padding: 6px; border: 1px solid #ddd;'>2</td><td style='padding: 6px; border: 1px solid #ddd;'></td><td style='padding: 6px; border: 1px solid #ddd;'></td></tr>\n        <tr><td style='padding: 6px; border: 1px solid #ddd;'><strong>5</strong></td><td style='padding: 6px; border: 1px solid #ddd;'>Total Coef</td><td style='padding: 6px; border: 1px solid #ddd;'></td><td style='padding: 6px; border: 1px solid #ddd;'></td><td style='padding: 6px; border: 1px solid #ddd;'></td><td style='padding: 6px; border: 1px solid #ddd;'></td></tr>\n        <tr><td style='padding: 6px; border: 1px solid #ddd;'><strong>6</strong></td><td style='padding: 6px; border: 1px solid #ddd;'>Moyenne</td><td style='padding: 6px; border: 1px solid #ddd;'></td><td style='padding: 6px; border: 1px solid #ddd;'></td><td style='padding: 6px; border: 1px solid #ddd;'></td><td style='padding: 6px; border: 1px solid #ddd;'></td></tr>\n        <tr><td style='padding: 6px; border: 1px solid #ddd;'><strong>7</strong></td><td style='padding: 6px; border: 1px solid #ddd;'>Décision</td><td style='padding: 6px; border: 1px solid #ddd;'></td><td style='padding: 6px; border: 1px solid #ddd;'></td><td style='padding: 6px; border: 1px solid #ddd;'></td><td style='padding: 6px; border: 1px solid #ddd;'></td></tr>\n      </tbody>\n    </table>\n  </div>\n  <p>Les mentions sont attribuées selon les règles suivantes :</p>\n  <ul>\n    <li>Note < 10 → \"Non Admis\" (NA)</li>\n    <li>10 ≤ Note ≤ 13 → \"Admis\" (A)</li>\n    <li>Note > 13 → \"Bien\" (B)</li>\n  </ul>\n</div>",
+      "questions": [
+        {
+          "question": "<p>1) Écrire la formule de la cellule D2 (Notes*Coef). (0.5pt)</p>",
+          "reponse": "<p><code>=B2*C2</code></p>"
+        },
+        {
+          "question": "<p>2) Décrire comment obtenir automatiquement les formules des cellules D3 et D4. (0.5pt)</p>",
+          "reponse": "<p>En utilisant la copie par recopie vers le bas (recopiage) : sélectionner la cellule D2, puis faire glisser la poignée de recopie (le petit carré en bas à droite de la cellule) jusqu'à la cellule D4. Les références relatives (B2 et C2) s'ajusteront automatiquement.</p>"
+        },
+        {
+          "question": "<p>3) Écrire la formule de la cellule E2 (Mention) en utilisant la fonction <code>SI</code>. (0.5pt)</p>",
+          "reponse": "<p><code>=SI(B2<10;\"NA\";SI(B2<=13;\"A\";\"B\"))</code></p>"
+        },
+        {
+          "question": "<p>4) Écrire la formule de la cellule C5 (Total Coef) sachant que si la note est 0, le coefficient est annulé. (0.5pt)</p>",
+          "reponse": "<p><code>=SOMME.SI(B2:B4;\"<>0\";C2:C4)</code></p><p>ou</p><p><code>=SI(B2=0;0;C2)+SI(B3=0;0;C3)+SI(B4=0;0;C4)</code></p>"
+        },
+        {
+          "question": "<p>5) Écrire la formule de la cellule B6 (Moyenne pondérée). (0.5pt)</p>",
+          "reponse": "<p><code>=SOMME(D2:D4)/C5</code></p>"
+        },
+        {
+          "question": "<p>6) Écrire la formule de la cellule B7 (Décision) sachant que l'élève est admis si la moyenne est ≥ 10. (0.5pt)</p>",
+          "reponse": "<p><code>=SI(B6>=10;\"ADMIS\";\"ECHOUE\")</code></p>"
+        },
+        {
+          "question": "<p>7) Appliquer ce bulletin pour les notes données. Déterminer la moyenne et la décision. (1pt)</p>",
+          "reponse": "<p>D2 = 13×4 = 52</p><p>D3 = 17×2 = 34</p><p>D4 = 16×2 = 32</p><p>C5 = 4+2+2 = 8 (car toutes les notes sont différentes de 0)</p><p>B6 = (52+34+32)/8 = 118/8 = 14.75</p><p>B7 = \"ADMIS\" (car 14.75 ≥ 10)</p><p>E2 = \"B\" (13 < 13 ? Non, donc 13 ≤ 13 → \"A\") ? Correction : 13 est dans la plage 10 à 13 donc \"A\"</p><p>E3 = \"B\" (17 > 13)</p><p>E4 = \"B\" (16 > 13)</p>"
+        }
+      ]
+    },
+    {
+      "titre": "PARTIE B : RÉSEAUX INFORMATIQUES",
+      "points": "4 points",
+      "enonce": "<div style='display: flex; flex-direction: column; gap: 8px;'>\n  <p><strong>Exercice B1 : Évaluation des ressources - Réseaux (2 pts)</strong></p>\n</div>",
+      "questions": [
+        {
+          "question": "<p>1) Définir un réseau informatique et citer ses avantages. (0.5pt)</p>",
+          "reponse": "<p>Un réseau informatique est un ensemble d'ordinateurs et d'équipements interconnectés permettant le partage de ressources et d'informations.</p><p>Avantages :</p><ul><li>Partage de ressources (imprimantes, fichiers).</li><li>Communication rapide (courrier électronique, messagerie).</li><li>Centralisation des données.</li><li>Sécurité accrue.</li></ul>"
+        },
+        {
+          "question": "<p>2) Distinguer les topologies en étoile et en bus. (0.5pt)</p>",
+          "reponse": "<ul><li><strong>Topologie en étoile</strong> : tous les équipements sont connectés à un équipement central (switch). En cas de panne d'un équipement, les autres continuent de fonctionner. La panne du central paralyse tout le réseau.</li><li><strong>Topologie en bus</strong> : tous les équipements sont connectés à un câble principal. En cas de coupure du bus, tout le réseau tombe en panne.</li></ul>"
+        },
+        {
+          "question": "<p>3) Déterminer la classe des adresses IP suivantes : (0.5pt)</p><p>a) 192.168.1.0 &nbsp;&nbsp; b) 10.0.0.1 &nbsp;&nbsp; c) 172.31.0.1</p>",
+          "reponse": "<ul><li>192.168.1.0 → <strong>Classe C</strong> (réseau privé)</li><li>10.0.0.1 → <strong>Classe A</strong> (réseau privé)</li><li>172.31.0.1 → <strong>Classe B</strong> (réseau privé)</li></ul>"
+        },
+        {
+          "question": "<p>4) Expliquer le rôle des commandes <code>ipconfig</code> et <code>ping</code>. (0.5pt)</p>",
+          "reponse": "<ul><li><code>ipconfig</code> : affiche la configuration réseau d'une machine (adresse IP, masque de sous-réseau, passerelle).</li><li><code>ping</code> : permet de tester la connectivité entre deux machines en envoyant des paquets ICMP et en mesurant le temps de réponse.</li></ul>"
+        }
+      ]
+    },
+    {
+      "titre": "PARTIE C : BASES DE DONNÉES ET SQL",
+      "points": "5 points",
+      "enonce": "<div style='display: flex; flex-direction: column; gap: 8px;'>\n  <p><strong>Exercice C1 : Modélisation - MCD et MLD (2 pts)</strong></p>\n  <p>Un hôpital souhaite gérer son système de consultations. Un patient (identifié par un numéro de sécurité sociale, avec un nom, un prénom, une date de naissance) peut consulter plusieurs médecins. Un médecin (identifié par un matricule, avec un nom, un prénom, une spécialité) peut recevoir plusieurs patients. Chaque consultation est caractérisée par une date, une heure et un diagnostic.</p>\n</div>",
+      "questions": [
+        {
+          "question": "<p>1) Identifier les entités, leurs attributs et les associations. (0.5pt)</p>",
+          "reponse": "<ul><li><strong>Entité PATIENT</strong> : <code>num_secu</code> (clé), <code>nom</code>, <code>prenom</code>, <code>date_naissance</code></li><li><strong>Entité MEDECIN</strong> : <code>matricule</code> (clé), <code>nom</code>, <code>prenom</code>, <code>specialite</code></li><li><strong>Entité CONSULTATION</strong> : <code>date_consult</code>, <code>heure</code>, <code>diagnostic</code></li><li><strong>Association CONSULTER</strong> entre PATIENT, MEDECIN et CONSULTATION (ternaire)</li></ul>"
+        },
+        {
+          "question": "<p>2) Déterminer les cardinalités de l'association CONSULTER. (0.5pt)</p>",
+          "reponse": "<ul><li>Un patient peut avoir 0 ou plusieurs consultations → (0,n)</li><li>Un médecin peut avoir 0 ou plusieurs consultations → (0,n)</li><li>Une consultation concerne un seul patient et un seul médecin → (1,1)</li></ul>"
+        },
+        {
+          "question": "<p>3) Proposer un MLD pour cette base de données. (1pt)</p>",
+          "reponse": "<div style='background: #f1f5f9; padding: 10px; border-radius: 6px; font-family: monospace;'>\n  PATIENT (num_secu, nom, prenom, date_naissance)<br>\n  &nbsp;&nbsp;PK : num_secu<br>\n  <br>\n  MEDECIN (matricule, nom, prenom, specialite)<br>\n  &nbsp;&nbsp;PK : matricule<br>\n  <br>\n  CONSULTATION (id_consult, date_consult, heure, diagnostic, num_secu, matricule)<br>\n  &nbsp;&nbsp;PK : id_consult<br>\n  &nbsp;&nbsp;FK : num_secu → PATIENT(num_secu)<br>\n  &nbsp;&nbsp;FK : matricule → MEDECIN(matricule)\n</div>"
+        }
+      ]
+    },
+    {
+      "titre": "PARTIE C : BASES DE DONNÉES ET SQL (suite)",
+      "points": "",
+      "enonce": "<div style='display: flex; flex-direction: column; gap: 8px;'>\n  <p><strong>Exercice C2 : Interrogation SQL (3 pts)</strong></p>\n  <p>On considère les tables suivantes :</p>\n  <div style='background: #f1f5f9; padding: 10px; border-radius: 6px; font-family: monospace;'>\n    EMPLOYE (id_emp, nom, prenom, date_embauche, salaire, id_service)<br>\n    SERVICE (id_service, nom_service, responsable)<br>\n  </div>\n</div>",
+      "questions": [
+        {
+          "question": "<p>1) Écrire la requête SQL pour afficher le nom et le prénom de tous les employés. (0.5pt)</p>",
+          "reponse": "<div style='background: #f1f5f9; padding: 10px; border-radius: 6px; font-family: monospace;'>\n  SELECT nom, prenom FROM EMPLOYE;\n</div>"
+        },
+        {
+          "question": "<p>2) Écrire la requête SQL pour afficher les employés ayant un salaire supérieur à 200 000 FCFA. (0.5pt)</p>",
+          "reponse": "<div style='background: #f1f5f9; padding: 10px; border-radius: 6px; font-family: monospace;'>\n  SELECT * FROM EMPLOYE WHERE salaire > 200000;\n</div>"
+        },
+        {
+          "question": "<p>3) Écrire la requête SQL pour afficher le nom, le prénom des employés du service 'Informatique'. (0.5pt)</p>",
+          "reponse": "<div style='background: #f1f5f9; padding: 10px; border-radius: 6px; font-family: monospace;'>\n  SELECT e.nom, e.prenom<br>\n  FROM EMPLOYE e, SERVICE s<br>\n  WHERE e.id_service = s.id_service<br>\n  AND s.nom_service = 'Informatique';\n</div>"
+        },
+        {
+          "question": "<p>4) Écrire la requête SQL pour afficher le nombre total d'employés par service. (0.5pt)</p>",
+          "reponse": "<div style='background: #f1f5f9; padding: 10px; border-radius: 6px; font-family: monospace;'>\n  SELECT s.nom_service, COUNT(e.id_emp) AS nb_employes<br>\n  FROM EMPLOYE e, SERVICE s<br>\n  WHERE e.id_service = s.id_service<br>\n  GROUP BY s.id_service, s.nom_service;\n</div>"
+        },
+        {
+          "question": "<p>5) Écrire la requête SQL pour afficher le salaire moyen par service. (0.5pt)</p>",
+          "reponse": "<div style='background: #f1f5f9; padding: 10px; border-radius: 6px; font-family: monospace;'>\n  SELECT s.nom_service, AVG(e.salaire) AS salaire_moyen<br>\n  FROM EMPLOYE e, SERVICE s<br>\n  WHERE e.id_service = s.id_service<br>\n  GROUP BY s.id_service, s.nom_service;\n</div>"
+        },
+        {
+          "question": "<p>6) Écrire la requête SQL pour afficher les employés avec leur nom de service. (0.5pt)</p>",
+          "reponse": "<div style='background: #f1f5f9; padding: 10px; border-radius: 6px; font-family: monospace;'>\n  SELECT e.nom, e.prenom, s.nom_service<br>\n  FROM EMPLOYE e, SERVICE s<br>\n  WHERE e.id_service = s.id_service;\n</div>"
+        }
+      ]
+    },
+    {
+      "titre": "PARTIE D : ALGORITHMIQUE ET PROGRAMMATION EN C",
+      "points": "5 points",
+      "enonce": "<div style='display: flex; flex-direction: column; gap: 8px;'>\n  <p><strong>Exercice D1 : Évaluation des ressources - Algorithmique et C (2 pts)</strong></p>\n</div>",
+      "questions": [
+        {
+          "question": "<p>1) Définir un algorithme. (0.5pt)</p>",
+          "reponse": "<p>Un algorithme est une suite finie et ordonnée d'instructions permettant de résoudre un problème donné.</p>"
+        },
+        {
+          "question": "<p>2) Donner la syntaxe d'une boucle <code>for</code> en langage C. (0.5pt)</p>",
+          "reponse": "<div style='background: #f1f5f9; padding: 10px; border-radius: 6px; font-family: monospace;'>\n  for (initialisation; condition; incrément) {<br>\n  &nbsp;&nbsp;// instructions<br>\n  }\n</div>"
+        },
+        {
+          "question": "<p>3) Donner la syntaxe d'une boucle <code>while</code> en langage C. (0.5pt)</p>",
+          "reponse": "<div style='background: #f1f5f9; padding: 10px; border-radius: 6px; font-family: monospace;'>\n  while (condition) {<br>\n  &nbsp;&nbsp;// instructions<br>\n  }\n</div>"
+        },
+        {
+          "question": "<p>4) Donner la syntaxe d'une instruction conditionnelle <code>if...else</code> en langage C. (0.5pt)</p>",
+          "reponse": "<div style='background: #f1f5f9; padding: 10px; border-radius: 6px; font-family: monospace;'>\n  if (condition) {<br>\n  &nbsp;&nbsp;// instructions si condition vraie<br>\n  } else {<br>\n  &nbsp;&nbsp;// instructions si condition fausse<br>\n  }\n</div>"
+        }
+      ]
+    },
+    {
+      "titre": "PARTIE D : ALGORITHMIQUE ET PROGRAMMATION EN C (suite)",
+      "points": "",
+      "enonce": "<div style='display: flex; flex-direction: column; gap: 8px;'>\n  <p><strong>Exercice D2 : Exécution d'algorithme (1.5 pts)</strong></p>\n  <p>On considère l'algorithme suivant :</p>\n  <div style='background: #f1f5f9; padding: 10px; border-radius: 6px; font-family: monospace;'>\n    Algorithme calcul<br>\n    Variables : n, i, somme : entiers<br>\n    Début<br>\n    &nbsp;&nbsp;Lire(n)<br>\n    &nbsp;&nbsp;somme ← 0<br>\n    &nbsp;&nbsp;Pour i de 1 à n faire<br>\n    &nbsp;&nbsp;&nbsp;&nbsp;somme ← somme + i*i<br>\n    &nbsp;&nbsp;FinPour<br>\n    &nbsp;&nbsp;Afficher(somme)<br>\n    Fin<br>\n  </div>\n</div>",
+      "questions": [
+        {
+          "question": "<p>1) Que calcule cet algorithme ? (0.5pt)</p>",
+          "reponse": "<p>Cet algorithme calcule la somme des carrés des n premiers entiers : \\( S = 1^2 + 2^2 + 3^2 + ... + n^2 \\).</p>"
+        },
+        {
+          "question": "<p>2) Exécuter l'algorithme pour n = 3. Qu'affiche-t-il ? (0.5pt)</p>",
+          "reponse": "<p>Pour n = 3 :</p><p>i=1 : somme = 0 + 1² = 1</p><p>i=2 : somme = 1 + 2² = 1 + 4 = 5</p><p>i=3 : somme = 5 + 3² = 5 + 9 = 14</p><p>L'algorithme affiche 14.</p>"
+        },
+        {
+          "question": "<p>3) Exécuter l'algorithme pour n = 4. Qu'affiche-t-il ? (0.5pt)</p>",
+          "reponse": "<p>Pour n = 4 :</p><p>i=1 : somme = 1</p><p>i=2 : somme = 1 + 4 = 5</p><p>i=3 : somme = 5 + 9 = 14</p><p>i=4 : somme = 14 + 16 = 30</p><p>L'algorithme affiche 30.</p>"
+        }
+      ]
+    },
+    {
+      "titre": "PARTIE D : ALGORITHMIQUE ET PROGRAMMATION EN C (suite)",
+      "points": "",
+      "enonce": "<div style='display: flex; flex-direction: column; gap: 8px;'>\n  <p><strong>Exercice D3 : Programme C - Synthèse (1.5 pts)</strong></p>\n  <p>Écrire un programme C qui lit un nombre entier n et affiche la somme des carrés des nombres de 1 à n (soit \\( 1^2 + 2^2 + ... + n^2 \\)).</p>\n</div>",
+      "questions": [
+        {
+          "question": "<p>Écrire le programme C complet. (1.5pts)</p>",
+          "reponse": "<div style='background: #f1f5f9; padding: 10px; border-radius: 6px; font-family: monospace;'>\n  #include &lt;stdio.h&gt;<br>\n  int main() {<br>\n  &nbsp;&nbsp;int n, i, somme = 0;<br>\n  <br>\n  &nbsp;&nbsp;printf(\"Entrez un nombre n : \");<br>\n  &nbsp;&nbsp;scanf(\"%d\", &amp;n);<br>\n  <br>\n  &nbsp;&nbsp;for (i = 1; i <= n; i++) {<br>\n  &nbsp;&nbsp;&nbsp;&nbsp;somme += i * i;<br>\n  &nbsp;&nbsp;}<br>\n  <br>\n  &nbsp;&nbsp;printf(\"La somme des carres de 1 a %d est : %d\\n\", n, somme);<br>\n  &nbsp;&nbsp;return 0;<br>\n  }<br>\n</div>"
+        }
+      ]
+    }
+  ]
+};
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

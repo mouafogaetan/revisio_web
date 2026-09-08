@@ -1,0 +1,98 @@
+[
+  {
+    "intitule": "Affichage et modification du profil utilisateur",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans une application e-commerce React, vous devez créer la page <code>/account/profile</code> qui affiche les informations de l'utilisateur connecté (nom, prénom, email, téléphone) et permet de les modifier via un formulaire. Les données sont stockées dans un store Zustand (<code>useAuthStore</code>) et synchronisées avec le backend via une API <code>PUT /users/profile</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer comment récupérer les informations de l'utilisateur depuis le store Zustand et les afficher dans des champs de formulaire pré-remplis.",
+        "niveau": "medium",
+        "reponse": "```jsx\nimport useAuthStore from '../stores/authStore';\n\nconst ProfilePage = () => {\n  const user = useAuthStore((state) => state.user);\n  const [formData, setFormData] = useState({\n    firstName: user?.firstName || '',\n    lastName: user?.lastName || '',\n    email: user?.email || '',\n    phone: user?.phone || ''\n  });\n\n  return (\n    <form>\n      <input value={formData.firstName} onChange={(e) => setFormData({...formData, firstName: e.target.value})} />\n      {/* autres champs */}\n    </form>\n  );\n};\n```\n\nLe sélecteur <code>useAuthStore((state) => state.user)</code> permet de ne se re-render que si l'objet user change.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Rédiger la fonction <code>handleSubmit</code> qui envoie les modifications au backend, met à jour le store local en cas de succès, et affiche une notification de confirmation.",
+        "niveau": "hard",
+        "reponse": "```jsx\nimport { toast } from 'sonner';\nimport useAuthStore from '../stores/authStore';\n\nconst ProfilePage = () => {\n  const updateUser = useAuthStore((state) => state.updateUser);\n  const [loading, setLoading] = useState(false);\n\n  const handleSubmit = async (e) => {\n    e.preventDefault();\n    setLoading(true);\n    try {\n      const response = await api.put('/users/profile', formData);\n      updateUser(response.data.user); // met à jour le store\n      toast.success('Profil mis à jour avec succès');\n    } catch (error) {\n      toast.error(error.response?.data?.message || 'Erreur lors de la mise à jour');\n    } finally {\n      setLoading(false);\n    }\n  };\n\n  return <form onSubmit={handleSubmit}>...</form>;\n};\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Analyser l'importance de la validation des champs (côté client) avant l'envoi au backend. Proposer une validation simple avec Zod pour le nom, l'email et le téléphone.",
+        "niveau": "medium",
+        "reponse": "La validation côté client améliore l'expérience utilisateur (feedback immédiat) et réduit les requêtes inutiles vers le serveur.\n\n```javascript\nimport { z } from 'zod';\n\nconst profileSchema = z.object({\n  firstName: z.string().min(2, 'Le prénom doit contenir au moins 2 caractères'),\n  lastName: z.string().min(2, 'Le nom doit contenir au moins 2 caractères'),\n  email: z.string().email('Email invalide'),\n  phone: z.string().regex(/^[0-9+\\s]{8,20}$/, 'Téléphone invalide')\n});\n\n// Utilisation avec React Hook Form\nconst { register, handleSubmit, formState: { errors } } = useForm({\n  resolver: zodResolver(profileSchema)\n});\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Changement de mot de passe sécurisé",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous devez implémenter la fonctionnalité de changement de mot de passe dans la page <code>/account/security</code>. Le formulaire doit contenir trois champs : mot de passe actuel, nouveau mot de passe, confirmation du nouveau mot de passe. Le backend expose un endpoint <code>POST /users/change-password</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire la structure du store Zustand pour gérer l'état du formulaire de changement de mot de passe (champs, erreurs, chargement).",
+        "niveau": "medium",
+        "reponse": "```javascript\n// stores/passwordStore.js\nimport { create } from 'zustand';\n\nconst usePasswordStore = create((set) => ({\n  currentPassword: '',\n  newPassword: '',\n  confirmPassword: '',\n  loading: false,\n  errors: {},\n  \n  setField: (field, value) => set({ [field]: value, errors: {} }),\n  setLoading: (loading) => set({ loading }),\n  setErrors: (errors) => set({ errors }),\n  resetForm: () => set({\n    currentPassword: '',\n    newPassword: '',\n    confirmPassword: '',\n    loading: false,\n    errors: {}\n  })\n}));\n```\n\nOu plus simplement utiliser un useState local dans le composant, car ce formulaire est isolé.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Rédiger le code du composant <code>ChangePasswordForm</code> avec validation des champs (mot de passe minimum 8 caractères, confirmation identique), gestion du chargement et affichage des erreurs.",
+        "niveau": "hard",
+        "reponse": "```jsx\nimport { useState } from 'react';\nimport { toast } from 'sonner';\nimport api from '../services/api';\n\nconst ChangePasswordForm = () => {\n  const [form, setForm] = useState({ current: '', new: '', confirm: '' });\n  const [loading, setLoading] = useState(false);\n  const [errors, setErrors] = useState({});\n\n  const validate = () => {\n    const newErrors = {};\n    if (form.new.length < 8) newErrors.new = 'Minimum 8 caractères';\n    if (form.new !== form.confirm) newErrors.confirm = 'Les mots de passe ne correspondent pas';\n    setErrors(newErrors);\n    return Object.keys(newErrors).length === 0;\n  };\n\n  const handleSubmit = async (e) => {\n    e.preventDefault();\n    if (!validate()) return;\n    setLoading(true);\n    try {\n      await api.post('/users/change-password', {\n        currentPassword: form.current,\n        newPassword: form.new\n      });\n      toast.success('Mot de passe modifié avec succès');\n      setForm({ current: '', new: '', confirm: '' });\n    } catch (error) {\n      if (error.response?.status === 401) {\n        setErrors({ current: 'Mot de passe actuel incorrect' });\n      } else {\n        toast.error('Erreur lors du changement de mot de passe');\n      }\n    } finally {\n      setLoading(false);\n    }\n  };\n\n  return (\n    <form onSubmit={handleSubmit} className=\"space-y-4\">\n      <div>\n        <input type=\"password\" placeholder=\"Mot de passe actuel\" value={form.current}\n          onChange={(e) => setForm({...form, current: e.target.value})} />\n        {errors.current && <p className=\"text-red-500 text-sm\">{errors.current}</p>}\n      </div>\n      <div>\n        <input type=\"password\" placeholder=\"Nouveau mot de passe\" value={form.new}\n          onChange={(e) => setForm({...form, new: e.target.value})} />\n        {errors.new && <p className=\"text-red-500 text-sm\">{errors.new}</p>}\n      </div>\n      <div>\n        <input type=\"password\" placeholder=\"Confirmer\" value={form.confirm}\n          onChange={(e) => setForm({...form, confirm: e.target.value})} />\n        {errors.confirm && <p className=\"text-red-500 text-sm\">{errors.confirm}</p>}\n      </div>\n      <button type=\"submit\" disabled={loading} className=\"bg-indigo-600 text-white px-4 py-2 rounded\">\n        {loading ? 'Chargement...' : 'Changer le mot de passe'}\n      </button>\n    </form>\n  );\n};\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Critiquer la sécurité de stocker le mot de passe actuel en clair dans le state React. Proposer une amélioration.",
+        "niveau": "hard",
+        "reponse": "Le mot de passe actuel est stocké en clair dans le state React (mémoire). Bien que cela soit inévitable pour l'envoi au backend, il faut :\n\n1. **Ne jamais logger** le mot de passe (console.log ou Sentry)\n2. **Effacer immédiatement** les champs après soumission\n3. **Ne pas stocker** dans localStorage ou sessionStorage\n4. **Utiliser HTTPS** pour la transmission\n5. **Option avancée** : hasher côté client avant envoi (mais généralement le backend attend le mot de passe en clair sur une connexion HTTPS)\n\nAmélioration : ajouter un champ `type=\"password\"` qui empêche le navigateur de stocker en auto-complétion non souhaitée, et utiliser `autoComplete=\"off\"`.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation du profil utilisateur avec React Query",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>La page de profil est visitée fréquemment par les utilisateurs. Actuellement, à chaque montage du composant, un appel API <code>GET /users/profile</code> est effectué. Vous souhaitez optimiser cette page en utilisant React Query pour mettre en cache les données du profil et permettre une mise à jour optimiste lors des modifications.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer pourquoi il est judicieux d'utiliser React Query plutôt qu'un simple useState + useEffect pour charger le profil. Citer au moins deux avantages.",
+        "niveau": "medium",
+        "reponse": "Avantages de React Query :\n1. **Cache automatique** : les données sont conservées en cache (staleTime) et ne sont pas rechargées à chaque remontage du composant.\n2. **Gestion d'état intégrée** : <code>isLoading, isError, data, refetch</code> sont fournis prêts à l'emploi.\n3. **Revalidation en arrière-plan** : les données sont rafraîchies silencieusement sans bloquer l'interface.\n4. **Déduplication des requêtes** : deux composants qui appellent <code>useProfile</code> ne feront qu'un seul appel API.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Rédiger le hook personnalisé <code>useProfile</code> utilisant React Query, avec un staleTime de 5 minutes et une gestion d'erreur appropriée.",
+        "niveau": "hard",
+        "reponse": "```javascript\n// hooks/useProfile.js\nimport { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';\nimport api from '../services/api';\n\nconst fetchProfile = async () => {\n  const { data } = await api.get('/users/profile');\n  return data;\n};\n\nconst updateProfile = async (profileData) => {\n  const { data } = await api.put('/users/profile', profileData);\n  return data;\n};\n\nexport const useProfile = () => {\n  return useQuery({\n    queryKey: ['profile'],\n    queryFn: fetchProfile,\n    staleTime: 5 * 60 * 1000, // 5 minutes\n    retry: 1,\n  });\n};\n\nexport const useUpdateProfile = () => {\n  const queryClient = useQueryClient();\n\n  return useMutation({\n    mutationFn: updateProfile,\n    onSuccess: (updatedUser) => {\n      // Met à jour le cache immédiatement\n      queryClient.setQueryData(['profile'], updatedUser);\n      toast.success('Profil mis à jour');\n    },\n    onError: (error) => {\n      toast.error(error.response?.data?.message || 'Erreur lors de la mise à jour');\n    }\n  });\n};\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Décrire la stratégie de mise à jour optimiste (optimistic update) pour la modification du profil. Coder l'implémentation avec <code>onMutate</code>.",
+        "niveau": "very hard",
+        "reponse": "La mise à jour optimiste consiste à mettre à jour immédiatement l'interface (cache) avant même que l'API ne réponde, puis à annuler en cas d'erreur.\n\n```javascript\nexport const useUpdateProfileOptimistic = () => {\n  const queryClient = useQueryClient();\n\n  return useMutation({\n    mutationFn: updateProfile,\n    onMutate: async (newProfileData) => {\n      // Annuler les requêtes en cours\n      await queryClient.cancelQueries({ queryKey: ['profile'] });\n      \n      // Sauvegarder l'ancienne valeur\n      const previousProfile = queryClient.getQueryData(['profile']);\n      \n      // Mettre à jour le cache immédiatement\n      queryClient.setQueryData(['profile'], (old) => ({ ...old, ...newProfileData }));\n      \n      // Retourner le contexte pour rollback\n      return { previousProfile };\n    },\n    onError: (err, newData, context) => {\n      // Restaurer l'ancienne valeur en cas d'erreur\n      queryClient.setQueryData(['profile'], context.previousProfile);\n      toast.error('Erreur lors de la mise à jour');\n    },\n    onSettled: () => {\n      // Revalider pour être sûr d'avoir les données fraîches\n      queryClient.invalidateQueries({ queryKey: ['profile'] });\n    }\n  });\n};\n```\n\nAvantage : l'utilisateur voit le changement instantanément, sans attendre la réponse du serveur.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

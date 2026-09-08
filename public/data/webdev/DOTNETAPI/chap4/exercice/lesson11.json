@@ -1,0 +1,105 @@
+[
+  {
+    "intitule": "Installation et configuration d'Entity Framework Core",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous débutez un projet d'API .NET Core et vous souhaitez utiliser Entity Framework Core pour interagir avec une base de données SQL Server. Vous devez installer les packages nécessaires et comprendre l'approche <strong>Code First</strong>.</p>",
+      "images": [
+        "Capture d'écran du gestionnaire de packages NuGet dans Visual Studio montrant les packages Microsoft.EntityFrameworkCore et Microsoft.EntityFrameworkCore.SqlServer",
+        "Schéma simplifié du flux de travail Code First : des classes C# (entités) vers la base de données via les migrations"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Énumérez les trois packages NuGet principaux à installer pour utiliser EF Core avec SQL Server.",
+        "niveau": "easy",
+        "reponse": "1. Microsoft.EntityFrameworkCore\n2. Microsoft.EntityFrameworkCore.SqlServer\n3. Microsoft.EntityFrameworkCore.Tools (optionnel mais recommandé pour les migrations)",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Comparez l'approche 'Code First' et 'Database First' en citant un avantage spécifique de Code First.",
+        "niveau": "medium",
+        "reponse": "Code First permet de définir entièrement le modèle de données en C#, offrant un meilleur contrôle via le code, le contrôle de version (Git) et l'indépendance vis-à-vis du SGBD. Database First est utile pour une base existante, mais crée des classes parfois moins adaptées.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Rédigez la commande .NET CLI permettant de créer une migration nommée 'InitialCreate', en supposant que vous êtes à la racine du projet.",
+        "niveau": "easy",
+        "reponse": "dotnet ef migrations add InitialCreate",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Création d’un DbContext et de premières entités",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous développez une API de gestion de blog. Un utilisateur peut avoir plusieurs articles. Vous devez créer les entités <code>User</code> et <code>Post</code> respectant les spécifications, puis configurer le <code>DbContext</code>.</p><ul><li>User : Id (int), Username (string, requis, max 50), Email (string, requis)</li><li>Post : Id (int), Title (string, requis), Content (string), UserId (int, clé étrangère)</li><li>La relation est : un User → plusieurs Post</li></ul>",
+      "images": [
+        "Diagramme de classes UML avec les deux entités et leurs propriétés, flèche de User vers Post indiquant One-to-Many"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémentez la classe C# <code>User</code> avec les propriétés et attributs de validation requis.",
+        "niveau": "hard",
+        "reponse": "```csharp\nusing System.ComponentModel.DataAnnotations;\npublic class User\n{\n    [Key]\n    public int Id { get; set; }\n\n    [Required]\n    [MaxLength(50)]\n    public string Username { get; set; }\n\n    [Required]\n    [EmailAddress]\n    public string Email { get; set; }\n\n    public ICollection<Post> Posts { get; set; }\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Implémentez la classe <code>Post</code> avec la clé étrangère <code>UserId</code> et la propriété de navigation vers <code>User</code>.",
+        "niveau": "hard",
+        "reponse": "```csharp\npublic class Post\n{\n    [Key]\n    public int Id { get; set; }\n\n    [Required]\n    public string Title { get; set; }\n\n    public string Content { get; set; }\n\n    [Required]\n    public int UserId { get; set; }\n\n    [ForeignKey(\"UserId\")]\n    public User User { get; set; }\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Écrivez la classe <code>BlogDbContext</code> qui hérite de <code>DbContext</code> et expose les deux <code>DbSet</code>. Prévoyez une méthode <code>OnConfiguring</code> pour une connexion en mémoire (InMemory) à des fins de test.",
+        "niveau": "very hard",
+        "reponse": "```csharp\nusing Microsoft.EntityFrameworkCore;\npublic class BlogDbContext : DbContext\n{\n    public BlogDbContext(DbContextOptions<BlogDbContext> options) : base(options) { }\n\n    public DbSet<User> Users { get; set; }\n    public DbSet<Post> Posts { get; set; }\n\n    protected override void OnModelCreating(ModelBuilder modelBuilder)\n    {\n        modelBuilder.Entity<User>()\n            .HasMany(u => u.Posts)\n            .WithOne(p => p.User)\n            .HasForeignKey(p => p.UserId);\n    }\n}\n\n// Pour la config en mémoire (Program.cs ou test) :\n// services.AddDbContext<BlogDbContext>(options => options.UseInMemoryDatabase(\"BlogDb\"));\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Mise en situation – migration et mise à jour de base",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous avez déjà créé votre <code>DbContext</code> et vos entités. Vous ajoutez une nouvelle propriété <code>CreatedAt</code> (DateTime) à l’entité <code>Post</code>. Expliquez la procédure pour appliquer ce changement à la base de données sans perdre les données existantes.</p>",
+      "images": [
+        "Capture de terminal montrant la commande 'dotnet ef migrations add AddCreatedAtToPost' puis 'dotnet ef database update'"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Quelle commande utilisez-vous pour créer une nouvelle migration après avoir modifié la classe <code>Post</code> ? Nommez la migration 'AddCreatedAtToPost'.",
+        "niveau": "easy",
+        "reponse": "dotnet ef migrations add AddCreatedAtToPost",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Décrivez ce que contient le fichier de migration généré (dans le dossier Migrations) et comment il permet de préserver les données.",
+        "niveau": "hard",
+        "reponse": "Le fichier contient deux méthodes : Up() (ajout de la colonne CreatedAt avec une valeur par défaut possible) et Down() (suppression). Pour préserver les données, on peut définir une valeur par défaut (ex: GETDATE() pour SQL Server) ou autoriser les valeurs NULL. Ainsi, l'ajout ne supprime ni ne modifie les lignes existantes.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Après la création de la migration, appliquez-la à la base de données. Rédigez la commande correspondante.",
+        "niveau": "easy",
+        "reponse": "dotnet ef database update",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

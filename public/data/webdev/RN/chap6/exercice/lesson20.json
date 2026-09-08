@@ -1,0 +1,122 @@
+[
+  {
+    "intitule": "SecureStore vs AsyncStorage",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>En React Native avec Expo, deux solutions permettent de stocker des données localement : <code>AsyncStorage</code> et <code>SecureStore</code>. Pour chaque cas d’usage ci-dessous, identifiez la solution la plus adaptée et justifiez votre choix.</p><ul><li>Stocker la préférence de thème (clair/sombre) de l’utilisateur</li><li>Stocker un token d’authentification JWT</li><li>Stocker un brouillon de message non sensible</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Associez chaque besoin à la solution appropriée (AsyncStorage ou SecureStore). Expliquez la différence fondamentale de sécurité entre les deux.",
+        "niveau": "easy",
+        "reponse": "Thème et brouillon → AsyncStorage (données non sensibles). Token JWT → SecureStore (chiffrement au niveau système). SecureStore utilise le trousseau (Keychain sur iOS, Keystore sur Android) tandis qu’AsyncStocke stocke en texte clair dans un fichier persistant.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Mise en place d’un stockage sécurisé",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous développez une application avec Expo. Expliquez les étapes pour installer et utiliser <code>expo-secure-store</code> afin de sauvegarder un token d’authentification.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez la commande d’installation et écrivez les fonctions `saveToken`, `getToken` et `deleteToken` en utilisant l’API de SecureStore.",
+        "niveau": "medium",
+        "reponse": "Installation : `expo install expo-secure-store`. Code : `import * as SecureStore from 'expo-secure-store'; const saveToken = async (token) => { await SecureStore.setItemAsync('userToken', token); }; const getToken = async () => { return await SecureStore.getItemAsync('userToken'); }; const deleteToken = async () => { await SecureStore.deleteItemAsync('userToken'); };`",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quelle est la différence entre `setItemAsync` et `setItem` ?",
+            "niveau": "easy",
+            "reponse": "`setItemAsync` est asynchrone (retourne une Promise), `setItem` n’existe pas dans l’API moderne de SecureStore. Toutes les méthodes sont asynchrones."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Implémentation d’un flux de connexion",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous construisez une application avec un écran de connexion. Après authentification réussie via une API, vous recevez un token JWT. Vous devez le stocker de manière sécurisée et rediriger l’utilisateur vers l’écran principal. Au redémarrage de l’app, si le token existe et est valide, l’utilisateur doit être automatiquement connecté.</p>",
+      "images": [
+        "schéma d’un flux d’authentification mobile : écran login → API → stockage token → écran accueil, et au redémarrage vérification du token stocké"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez une architecture complète avec les fonctions nécessaires (login, logout, vérification du token au démarrage). Expliquez comment vous gérez l’état de connexion global (par exemple avec React Context).",
+        "niveau": "hard",
+        "reponse": "Créez un AuthContext avec `isLoading`, `userToken`, et les fonctions `signIn`, `signOut`. `signIn` appelle l’API, récupère le token, appelle `SecureStore.setItemAsync`, puis met à jour l’état. `signOut` supprime le token et réinitialise l’état. Dans App.js, au montage, `getToken` via SecureStore, si existe, validez-le (peut-être avec une API /verify) puis définissez l’utilisateur comme connecté. Pendant la vérification, affichez un écran de chargement. Utilisez un NavigationContainer avec des routeurs conditionnels (si token → AppStack sinon AuthStack).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi ne faut-il pas stocker directement le mot de passe dans SecureStore ?",
+            "niveau": "medium",
+            "reponse": "On ne stocke jamais le mot de passe en clair côté client. On utilise un token d’authentification éphémère. Le mot de passe ne doit être envoyé qu’au serveur via une connexion sécurisée (HTTPS)."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion des erreurs et des tokens expirés",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Dans une application authentifiée, le serveur peut retourner une erreur <code>401 Unauthorized</code> si le token a expiré. Vous devez implémenter une logique pour : détecter l’expiration, supprimer le token local, et rediriger l’utilisateur vers l’écran de connexion.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez un interceptor ou une fonction générique `fetchWithAuth` qui : 1) ajoute le token dans l’en-tête Authorization, 2) en cas d’erreur 401, appelle `logout()` et renvoie une erreur spécifique. Expliquez comment vous testez cette mécanique.",
+        "niveau": "very hard",
+        "reponse": "`async function fetchWithAuth(url, options={}) { const token = await SecureStore.getItemAsync('userToken'); const headers = { ...options.headers, Authorization: `Bearer ${token}` }; const response = await fetch(url, { ...options, headers }); if (response.status === 401) { await logout(); // fonction qui supprime le token et reset le contexte throw new Error('Session expirée'); } return response; }` Test : simuler une API qui retourne 401 après un certain temps, vérifier que logout est appelé et que l’utilisateur est redirigé. On peut aussi ajouter un mécanisme de rafraîchissement du token.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quelle est la limite de cette approche si plusieurs requêtes échouent simultanément ?",
+            "niveau": "hard",
+            "reponse": "Plusieurs 401 peuvent déclencher plusieurs appels à `logout` et plusieurs redirections. Il faut ajouter un flag `isRefreshing` ou `isLoggingOut` pour éviter les appels concurrents et les multiples suppressions de token."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Migration d’AsyncStorage vers SecureStore pour un token",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Une version précédente de votre application stockait le token JWT dans AsyncStorage (non sécurisé). Vous souhaitez migrer vers SecureStore. Proposez une stratégie de migration transparente pour les utilisateurs déjà connectés.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez les étapes à suivre dans le code au démarrage de l’application pour : récupérer l’ancien token depuis AsyncStorage, le stocker dans SecureStore, puis effacer l’ancienne clé. Gérez le cas où la migration a déjà eu lieu.",
+        "niveau": "hard",
+        "reponse": "1) Lire un flag `migrationDone` dans SecureStore. 2) S’il n’existe pas, lire `'userToken'` dans AsyncStorage. 3) Si trouvé, le sauvegarder dans SecureStore avec `setItemAsync`. 4) Supprimer la clé d’AsyncStorage. 5) Écrire `migrationDone: 'true'` dans SecureStore pour ne pas répéter la migration. 6) Effacer tout token invalide si nécessaire. Cela garantit qu’au prochain démarrage, seul SecureStore est utilisé.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Que faire si le token stocké dans AsyncStorage est corrompu ou expiré ?",
+            "niveau": "medium",
+            "reponse": "On peut valider le token (par exemple en appelant une API `/verify`). S’il est invalide, on ne migre pas et on demande une nouvelle connexion. On supprime également le token corrompu."
+          }
+        ]
+      }
+    ]
+  }
+]

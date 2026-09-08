@@ -1,0 +1,132 @@
+[
+  {
+    "intitule": "Fondements de Spark Streaming",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Apache Spark Streaming est une extension de Spark qui permet le traitement de données en temps réel. Cet exercice vous permet d'<strong>identifier</strong> et de <strong>distinguer</strong> les concepts clés de Spark Streaming et Structured Streaming.</p><p><strong>Consigne :</strong> Répondez aux questions suivantes sur les fondamentaux de Spark Streaming.</p>",
+      "images": [
+        "Architecture de Spark Streaming montrant la division des données en micro-batchs"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "<strong>Expliquez</strong> le concept de <strong>micro-batch</strong> dans Spark Streaming. <strong>Comparez</strong> cette approche avec le streaming pur (ex: Apache Flink).",
+        "niveau": "medium",
+        "reponse": "<strong>Micro-batch dans Spark Streaming :</strong><br>Spark Streaming divise le flux de données en <strong>petits lots (micro-batchs)</strong> de quelques secondes. Chaque micro-batch est traité comme un mini-job Spark, en utilisant les mêmes API que le batch processing.<br><br><strong>Comparaison avec le streaming pur (Flink) :</strong><br><ul><li><strong>Latence :</strong> Spark Streaming a une latence plus élevée (secondes) vs Flink (millisecondes).</li><li><strong>Modèle :</strong> Spark Streaming est basé sur des micro-batchs (nature batch), Flink est basé sur un véritable streaming (event-by-event).</li><li><strong>Tolérance aux pannes :</strong> Spark Streaming utilise le mécanisme de relecture (checkpointing) de Spark; Flink utilise un modèle d'état distribué.</li><li><strong>Facilité d'utilisation :</strong> Spark Streaming est plus simple à apprendre pour les utilisateurs de Spark (mêmes APIs).</li></ul>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "<strong>Distinguez</strong> Spark Streaming (DStream) de Structured Streaming. <strong>Identifiez</strong> les avantages de Structured Streaming.",
+        "niveau": "medium",
+        "reponse": "<strong>Différence entre Spark Streaming (DStream) et Structured Streaming :</strong><br><br><strong>Spark Streaming (DStream) :</strong><ul><li>Basé sur l'API RDD (Resilient Distributed Datasets).</li><li>Les opérations sont effectuées sur des séries de RDD (micro-batchs).</li><li>Plus difficile à maintenir, API moins intuitive.</li><li>Traitement par micro-batchs.</li></ul><br><strong>Structured Streaming :</strong><ul><li>Basé sur l'API DataFrame/Dataset (SQL-like).</li><li>Modèle unifié avec le batch processing (même code pour batch et streaming).</li><li>Supporte le traitement event-time, les fenêtres, les jointures.</li><li>Garanties de consistance (exactly-once).</li><li>Plus simple à utiliser et à maintenir.</li></ul><br><strong>Avantages de Structured Streaming :</strong><br>1. <strong>API unifiée</strong> : Même code pour batch et streaming.<br>2. <strong>Gestion du temps d'événement</strong> : Support des fenêtres basées sur le temps des événements.<br>3. <strong>Fault-tolerance</strong> : Garantie exactly-once.<br>4. <strong>Performance</strong> : Optimisations automatiques (Catalyst, Tungsten).<br>5. <strong>Intégration</strong> : Compatible avec toutes les sources/sinks de Spark.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse de Code Structured Streaming",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous travaillez sur un projet de <strong>détection de fraudes</strong> pour une banque camerounaise. Vous utilisez Apache Spark Structured Streaming pour analyser les transactions en temps réel.</p><p>Voici un extrait de code que vous devez analyser et améliorer.</p><pre style='background: #263238; color: #fff; padding: 15px; border-radius: 5px; overflow-x: auto;'>\nfrom pyspark.sql import SparkSession\nfrom pyspark.sql.functions import window, avg, col, sum, count\nfrom pyspark.sql.types import StructType, StructField, StringType, DoubleType, TimestampType\n\nspark = SparkSession.builder \\\n    .appName(\"FraudDetection\") \\\n    .config(\"spark.sql.shuffle.partitions\", \"10\") \\\n    .getOrCreate()\n\n# Schéma des transactions\nschema = StructType([\n    StructField(\"transaction_id\", StringType(), True),\n    StructField(\"merchant_id\", StringType(), True),\n    StructField(\"amount\", DoubleType(), True),\n    StructField(\"timestamp\", TimestampType(), True),\n    StructField(\"user_id\", StringType(), True)\n])\n\n# Lecture du flux depuis Kafka\ndf = spark.readStream \\\n    .format(\"kafka\") \\\n    .option(\"kafka.bootstrap.servers\", \"localhost:9092\") \\\n    .option(\"subscribe\", \"transactions\") \\\n    .option(\"startingOffsets\", \"latest\") \\\n    .load()\n\n# Parsing des données\nfrom pyspark.sql.functions import from_json\n\ntransactions = df.select(from_json(col(\"value\").cast(\"string\"), schema).alias(\"data\")) \\\n    .select(\"data.*\")\n\n# Calcul des agrégations par fenêtre\nfraud_metrics = transactions \\\n    .withWatermark(\"timestamp\", \"1 minute\") \\\n    .groupBy(\n        window(col(\"timestamp\"), \"5 minutes\"),\n        col(\"merchant_id\")\n    ) \\\n    .agg(\n        count(\"*\").alias(\"transaction_count\"),\n        avg(\"amount\").alias(\"avg_amount\"),\n        sum(\"amount\").alias(\"total_amount\")\n    ) \\\n    .filter(col(\"transaction_count\") > 20) \\\n    .filter(col(\"avg_amount\") > 5000)\n\n# Écriture des résultats\nquery = fraud_metrics.writeStream \\\n    .outputMode(\"update\") \\\n    .format(\"console\") \\\n    .option(\"truncate\", \"false\") \\\n    .trigger(processingTime=\"10 seconds\") \\\n    .start()\n\nquery.awaitTermination()\n</pre>",
+      "images": [
+        "Schéma d'une architecture de streaming avec Spark Streaming et Kafka"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "<strong>Analysez</strong> le code fourni. <strong>Identifiez</strong> les composants suivants : source, transformation, fenêtre (window), watermark, sink.",
+        "niveau": "medium",
+        "reponse": "<strong>Analyse du code :</strong><br><br><strong>Source :</strong><br>• Kafka (topic 'transactions') avec <code>readStream.format(\"kafka\")</code>.<br>• Démarrage à partir du dernier offset (<code>startingOffsets: \"latest\"</code>).<br><br><strong>Transformation :</strong><br>• Parsing du JSON avec <code>from_json</code>.<br>• Agré gations par fenêtre (comptage, moyenne, somme).<br>• Filtres : <code>transaction_count > 20</code> et <code>avg_amount > 5000</code> (détection de fraudes).<br><br><strong>Fenêtre (Window) :</strong><br>• Fenêtre de 5 minutes sur la colonne 'timestamp'.<br>• Permet d'agréger les transactions par tranche de 5 minutes.<br><br><strong>Watermark :</strong><br>• <code>withWatermark(\"timestamp\", \"1 minute\")</code>.<br>• Gère les données en retard (late data) jusqu'à 1 minute.<br><br><strong>Sink (Destination) :</strong><br>• Sortie vers la console (<code>format(\"console\")</code>) pour visualisation.<br>• Mode de sortie : <code>update</code> (seules les données mises à jour sont affichées).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "<strong>Évaluez</strong> la configuration de la fenêtre (5 minutes) et du watermark (1 minute) pour un cas de détection de fraude. <strong>Proposez</strong> des améliorations.",
+        "niveau": "hard",
+        "reponse": "<strong>Évaluation de la configuration :</strong><br><br><strong>Fenêtre de 5 minutes :</strong><br>• Avantage : Capture les transactions groupées dans un court laps de temps.<br>• Inconvénient : Peut manquer des fraudes qui s'étendent sur plus de 5 minutes.<br><br><strong>Watermark de 1 minute :</strong><br>• Avantage : Permet de traiter les données en retard jusqu'à 1 minute.<br>• Inconvénient : Si les données sont régulièrement en retard de plus d'1 minute, elles seront ignorées.<br><br><strong>Améliorations proposées :</strong><br><br>1. <strong>Fenêtre plus longue</strong> :<br>• Utiliser une fenêtre de <strong>10 minutes</strong> avec slide de 5 minutes pour capturer des patterns plus longs.<br>• Exemple : <code>window(col(\"timestamp\"), \"10 minutes\", \"5 minutes\")</code>.<br><br>2. <strong>Watermark adapté</strong> :<br>• Augmenter le watermark à <strong>5 minutes</strong> si les données ont souvent du retard.<br>• Ceci est important dans le contexte camerounais où la connectivité peut être instable.<br><br>3. <strong>Ajout de métriques supplémentaires</strong> :<br>• Détection des transactions frauduleuses (ex: montants ronds, transactions à des heures inhabituelles).<br><br>4. <strong>Seuils dynamiques</strong> :<br>• Utiliser des seuils basés sur l'historique du marchand (moyenne mobile).<br>• Exemple : alerte si le montant est > 3 écarts-types de la moyenne.",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Quel serait l'impact d'un watermark de 10 minutes sur les performances du système ?",
+            "niveau": "hard",
+            "reponse": "<strong>Impact d'un watermark de 10 minutes :</strong><br><br>1. <strong>Mémoire (State) :</strong><br>• Le système doit conserver l'état (state) des fenêtres plus longtemps (10 minutes vs 1 minute).<br>• Augmentation de l'utilisation de la mémoire.<br>• Risque de saturation si le volume de données est élevé.<br><br>2. <strong>Latence :</strong><br>• Les résultats sont retardés de 10 minutes (le temps d'attendre les données en retard).<br>• Moins adapté pour une détection de fraude en temps réel.<br><br>3. <strong>Complétude des données :</strong><br>• Plus de données en retard sont prises en compte.<br>• Meilleure précision des résultats.<br><br>4. <strong>Recommandation :</strong><br>• Utiliser un watermark de <strong>2-3 minutes</strong> comme compromis.<br>• Configurer des alertes si le retard dépasse le watermark.<br>• Surveiller les métriques (latence, mémoire utilisée)."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Comparaison Spark Streaming vs Flink",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous êtes architecte Data Engineering pour une <strong>plateforme de livraison de nourriture (\"CamFood\")</strong> au Cameroun. Vous devez choisir entre <strong>Apache Spark Structured Streaming</strong> et <strong>Apache Flink</strong> pour le traitement en temps réel des données de géolocalisation des livreurs.</p><p>Les besoins sont :</p><ul><li>Latence < 500ms pour les mises à jour de position.</li><li>Traitement de plus de 100 000 événements par seconde.</li><li>Gestion des données en retard (réseau instable).</li><li>Calculs complexes de fenêtres (itinéraires optimaux).</li><li>Équipe familiarisée avec Spark (batch).</li></ul>",
+      "images": [
+        "Comparaison des architectures de Spark Streaming et Flink",
+        "Image d'une application de livraison sur mobile avec des livreurs"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "<strong>Comparez</strong> Spark Structured Streaming et Flink selon les critères suivants : latence, modèle de traitement, gestion des états, tolérance aux pannes, facilité d'utilisation.",
+        "niveau": "hard",
+        "reponse": "<strong>Comparaison Spark Structured Streaming vs Flink :</strong><br><br><strong>1. Latence :</strong><br>• <strong>Spark</strong> : Latence de 100ms à quelques secondes (micro-batchs).<br>• <strong>Flink</strong> : Latence de quelques millisecondes (true streaming).<br><br><strong>2. Modèle de traitement :</strong><br>• <strong>Spark</strong> : Basé sur des micro-batchs (batch processing).<br>• <strong>Flink</strong> : Basé sur un véritable streaming (event-by-event).<br><br><strong>3. Gestion des états (State) :</strong><br>• <strong>Spark</strong> : Support des états via l'API <code>mapGroupsWithState</code> et <code>flatMapGroupsWithState</code>.<br>• <strong>Flink</strong> : Support avancé des états (état clé-valeur, états distribués, fenêtres complexes).<br><br><strong>4. Tolérance aux pannes :</strong><br>• <strong>Spark</strong> : Checkpointing périodique, exactly-once pour les opérations déterministes.<br>• <strong>Flink</strong> : Checkpointing distribué, exactly-once garantie.<br><br><strong>5. Facilité d'utilisation :</strong><br>• <strong>Spark</strong> : API plus simple, familiarité pour les utilisateurs de Spark (SQL, DataFrames).<br>• <strong>Flink</strong> : Courbe d'apprentissage plus raide, API plus complexe (DataStream API, Table API).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "<strong>Analysez</strong> les besoins de CamFood et <strong>choisissez</strong> la technologie la plus adaptée. <strong>Justifiez</strong> votre choix.",
+        "niveau": "very hard",
+        "reponse": "<strong>Analyse des besoins de CamFood :</strong><br><br>1. <strong>Latence < 500ms</strong> : Les deux technologies peuvent atteindre cette latence, mais Flink est plus adapté pour une latence très faible (< 100ms).<br><br>2. <strong>Volume > 100 000 événements/s</strong> : Les deux technologies sont scalables pour ce volume.<br><br>3. <strong>Gestion des données en retard</strong> : Les deux supportent le watermark et la gestion des données tardives. Flink a un support plus avancé des fenêtres.<br><br>4. <strong>Calculs complexes de fenêtres</strong> : Flink est plus puissant pour les fenêtres complexes (fenêtres glissantes, fenêtres de session, fenêtres avec déclenchements personnalisés).<br><br>5. <strong>Équipe familiarisée avec Spark</strong> : C'est un avantage majeur pour Spark (moins de formation).<br><br><strong>Choix recommandé : Apache Spark Structured Streaming</strong><br><br><strong>Justification :</strong><br>1. <strong>Latence suffisante</strong> : La latence de Spark (100-500ms) est acceptable pour une application de livraison (les positions ne changent pas toutes les millisecondes).<br><br>2. <strong>Facilité d'adoption</strong> : L'équipe connaît déjà Spark, la transition sera plus rapide et moins coûteuse.<br><br>3. <strong>Fonctionnalités suffisantes</strong> : Spark Structured Streaming supporte les fenêtres, les watermarks, et les jointures pour les besoins de CamFood.<br><br>4. <strong>Intégration avec l'existant</strong> : CamFood utilise probablement déjà Spark pour le batch, ce qui permet un code unifié.<br><br><strong>Si la latence devient critique (< 100ms), on pourra migrer vers Flink.</strong>",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Quels seraient les avantages de choisir Flink malgré la courbe d'apprentissage ?",
+            "niveau": "very hard",
+            "reponse": "<strong>Avantages de Flink (malgré la courbe d'apprentissage) :</strong><br><br>1. <strong>Latence ultra-faible</strong> :<br>• Idéal pour des cas où la réactivité est critique (ex: jeux, trading financier).<br>• Dans le cas de CamFood, les livreurs n'ont pas besoin d'une mise à jour toutes les 10ms.<br><br>2. <strong>Fenêtres avancées</strong> :<br>• Flink supporte des fenêtres plus complexes (session windows, fenêtres avec déclenchements personnalisés).<br>• Utile pour des calculs d'itinéraires complexes.<br><br>3. <strong>Gestion d'état plus flexible</strong> :<br>• Flink permet de gérer des états distribués de manière plus flexible.<br>• Utile pour maintenir le contexte des livreurs sur de longues périodes.<br><br>4. <strong>Scalabilité en temps réel</strong> :<br>• Flink est conçu pour le streaming pur, il est plus efficace pour des pipelines complexes (plusieurs étapes avec état).<br><br>5. <strong>Ecosysteme</strong> :<br>• Intégration avec Kafka, Cassandra, Elasticsearch, etc.<br>• Utilisé par des entreprises avec des besoins de streaming intensifs (Uber, Netflix, Alibaba).<br><br><strong>Conclusion :</strong> Bien que Flink offre des avantages, Spark Structured Streaming est un bon choix pour CamFood compte tenu des besoins et de l'expertise de l'équipe."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation d'un Pipeline Spark Streaming",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous gérez un pipeline Spark Structured Streaming pour une <strong>plateforme de trading financier</strong> au Cameroun. Le pipeline traite les transactions boursières en temps réel et calcule des indicateurs (moyenne mobile, volume, volatilité) sur des fenêtres glissantes.</p><p>Actuellement, le pipeline présente les problèmes suivants :</p><ul><li>Latence élevée (plus de 10 secondes).</li><li>Utilisation mémoire excessive.</li><li>Checkpoints trop fréquents qui ralentissent le système.</li><li>Certaines données en retard sont ignorées.</li></ul>",
+      "images": [
+        "Graphique montrant une latence élevée dans un pipeline de streaming",
+        "Schéma de checkpointing dans Spark Streaming"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "<strong>Analysez</strong> les causes probables des problèmes de performance et <strong>proposez</strong> des solutions pour chaque problème.",
+        "niveau": "hard",
+        "reponse": "<strong>Analyse des causes et solutions :</strong><br><br><strong>1. Latence élevée (> 10 secondes) :</strong><br>• <strong>Cause</strong> : Micro-batchs trop longs, trop de données par micro-batch, ou opérations lourdes (shuffles).<br>• <strong>Solution</strong> : Réduire le intervalle de déclenchement (<code>trigger(processingTime=\"2 seconds\")</code>). Optimiser les requêtes (utiliser des partitions, éviter les shuffles).<br><br><strong>2. Utilisation mémoire excessive :</strong><br>• <strong>Cause</strong> : Fenêtres trop longues, état trop grand, watermark trop long.<br>• <strong>Solution</strong> : Réduire la taille des fenêtres, nettoyer l'état régulièrement, augmenter la mémoire du cluster (<code>spark.executor.memory</code>).<br><br><strong>3. Checkpoints trop fréquents :</strong><br>• <strong>Cause</strong> : Configuration de checkpoint par micro-batch.<br>• <strong>Solution</strong> : Augmenter l'intervalle de checkpoint (<code>spark.sql.streaming.checkpointInterval</code>).<br><br><strong>4. Données en retard ignorées :</strong><br>• <strong>Cause</strong> : Watermark trop court.<br>• <strong>Solution</strong> : Augmenter le watermark (<code>withWatermark(\"timestamp\", \"5 minutes\")</code>) et utiliser <code>update</code> output mode pour traiter les données tardives.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposez une configuration optimale pour ce pipeline en justifiant vos choix.",
+            "niveau": "very hard",
+            "reponse": "<strong>Configuration optimale proposée :</strong><br><br><strong>1. Trigger interval :</strong><br>• <code>trigger(processingTime=\"5 seconds\")</code><br>• Justification : Compromis entre latence et performance.<br><br><strong>2. Watermark :</strong><br>• <code>withWatermark(\"timestamp\", \"2 minutes\")</code><br>• Justification : Permet de capturer les données en retard sans conserver un état trop grand.<br><br><strong>3. Fenêtre :</strong><br>• <code>window(col(\"timestamp\"), \"10 minutes\", \"5 minutes\")</code><br>• Justification : Fenêtre de 10 minutes avec slide de 5 minutes pour une moyenne mobile lisse.<br><br><strong>4. Checkpoint interval :</strong><br>• <code>spark.sql.streaming.checkpointInterval = 10</code> (toutes les 10 micro-batchs)<br>• Justification : Réduit la fréquence des checkpoints sans compromettre la tolérance aux pannes.<br><br><strong>5. Memory configuration :</strong><br>• <code>spark.executor.memory = 8g</code><br>• <code>spark.sql.shuffle.partitions = 50</code><br>• Justification : Plus de mémoire pour les états et les shuffles.<br><br><strong>6. Output mode :</strong><br>• <code>outputMode(\"update\")</code> pour les données tardives.<br>• Justification : Permet de mettre à jour les résultats avec les données en retard."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "<strong>Évaluez</strong> l'impact de l'augmentation du watermark sur la consommation mémoire et la latence.",
+        "niveau": "hard",
+        "reponse": "<strong>Impact de l'augmentation du watermark (de 1 min à 5 min) :</strong><br><br><strong>1. Consommation mémoire :</strong><br>• <strong>Augmentation</strong> : Le système doit conserver l'état (state) des fenêtres plus longtemps (5 minutes au lieu de 1 minute).<br>• <strong>Impact</strong> : Plus de mémoire nécessaire pour stocker les agrégations intermédiaires.<br>• <strong>Risque</strong> : OOM (Out of Memory) si la mémoire est insuffisante.<br><br><strong>2. Latence :</strong><br>• <strong>Augmentation</strong> : Les résultats sont retardés de 5 minutes (le temps d'attendre les données en retard).<br>• <strong>Impact</strong> : Détection de fraudes plus lente.<br><br><strong>3. Précision :</strong><br>• <strong>Augmentation</strong> : Plus de données en retard sont prises en compte.<br>• <strong>Impact</strong> : Résultats plus précis.<br><br><strong>Recommandation :</strong><br>• Utiliser un watermark adapté au contexte : <strong>2-3 minutes</strong> pour un bon compromis.<br>• Surveiller l'utilisation mémoire et ajuster si nécessaire.<br>• Utiliser des <strong>métriques de retard</strong> pour optimiser dynamiquement le watermark."
+      }
+    ]
+  }
+]

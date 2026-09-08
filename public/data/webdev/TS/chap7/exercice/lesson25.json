@@ -1,0 +1,134 @@
+[
+  {
+    "intitule": "Création d'un mapped type pour rendre toutes les propriétés readonly",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous travaillez sur une application de gestion de configuration. Vous avez l'interface suivante :</p>\n<pre><code>interface Configuration {\n  apiUrl: string;\n  timeout: number;\n  retryCount: number;\n  enableCache: boolean;\n}</code></pre>\n<p>Vous souhaitez créer un type <code>ImmutableConfiguration</code> où toutes les propriétés sont en lecture seule (<code>readonly</code>) sans avoir à écrire manuellement chaque propriété.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créez un mapped type générique <code>ReadonlyDeep&lt;T&gt;</code> qui rend toutes les propriétés de <code>T</code> en lecture seule. Utilisez la syntaxe des mapped types (<code>[P in keyof T]: T[P]</code>) avec le modificateur <code>readonly</code>.",
+        "niveau": "medium",
+        "reponse": "```typescript\ntype ReadonlyDeep<T> = {\n  readonly [P in keyof T]: T[P];\n};\n\ntype ImmutableConfiguration = ReadonlyDeep<Configuration>;\n// Équivalent à : { readonly apiUrl: string; readonly timeout: number; ... }\n```\nCe mapped type itère sur toutes les clés de `T` et ajoute le modificateur `readonly` à chaque propriété.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Modifiez le mapped type pour qu'il supprime le modificateur <code>readonly</code> existant (si présent) et le remplace par un champ modifiable. Utilisez <code>-readonly</code>.",
+        "niveau": "hard",
+        "reponse": "```typescript\ntype Mutable<T> = {\n  -readonly [P in keyof T]: T[P];\n};\n```\nL'opérateur `-readonly` supprime le modificateur `readonly` des propriétés, les rendant modifiables. C'est l'opposé de `+readonly` (qui est implicite).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion des propriétés optionnelles avec mapped types",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Considérez l'interface <code>Formulaire</code> suivante :</p>\n<pre><code>interface Formulaire {\n  nom: string;\n  email: string;\n  age?: number;\n  adresse?: string;\n}</code></pre>\n<p>Les propriétés <code>age</code> et <code>adresse</code> sont optionnelles. Vous devez créer un type <code>RequiredProperties&lt;T&gt;</code> qui transforme toutes les propriétés optionnelles en propriétés obligatoires.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez un mapped type <code>RequiredProperties&lt;T&gt;</code> qui utilise le modificateur <code>-?</code> pour supprimer l'optionnalité de toutes les propriétés.",
+        "niveau": "easy",
+        "reponse": "```typescript\ntype RequiredProperties<T> = {\n  [P in keyof T]-?: T[P];\n};\n\ntype FormulaireComplet = RequiredProperties<Formulaire>;\n// Résultat : { nom: string; email: string; age: number; adresse: string; }\n```\nL'opérateur `-?` supprime le caractère optionnel (`?`) des propriétés, les rendant toutes obligatoires.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Créez maintenant un mapped type <code>OptionalExcept&lt;T, K&gt;</code> qui rend toutes les propriétés optionnelles SAUF celles dont les clés sont dans l'union <code>K</code> (qui restent obligatoires).",
+        "niveau": "very hard",
+        "reponse": "```typescript\ntype OptionalExcept<T, K extends keyof T> = {\n  [P in keyof T]: P extends K ? T[P] : T[P] | undefined;\n} & {\n  [P in K]: T[P];\n};\n\n// Version plus simple avec Omit et Partial\ntype OptionalExceptSimplified<T, K extends keyof T> = \n  Partial<Omit<T, K>> & Pick<T, K>;\n\n// Exemple : seuls 'nom' et 'email' sont obligatoires\ntype FormulairePartiel = OptionalExcept<Formulaire, \"nom\" | \"email\">;\n```\nOn utilise `Pick<T, K>` pour garder les propriétés obligatoires et `Partial<Omit<T, K>>` pour rendre les autres optionnelles. L'intersection (`&`) combine les deux.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Template literal types : construire des types de routes",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous développez un routeur pour une application web. Vous avez les types suivants :</p>\n<pre><code>type Resource = \"user\" | \"product\" | \"order\";\ntype Action = \"list\" | \"get\" | \"create\" | \"update\" | \"delete\";</code></pre>\n<p>Vous souhaitez générer automatiquement tous les chemins d'API possibles sous la forme <code>/api/resource/action</code>, par exemple <code>\"/api/user/list\"</code>, <code>\"/api/product/get\"</code>, etc.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Utilisez les template literal types (${}) pour créer un type <code>ApiRoute</code> représentant toutes les combinaisons possibles de routes.",
+        "niveau": "medium",
+        "reponse": "```typescript\ntype ApiRoute = `/api/${Resource}/${Action}`;\n// Résultat : \"/api/user/list\" | \"/api/user/get\" | ... | \"/api/order/delete\"\n```\nTypeScript génère automatiquement l'union de toutes les combinaisons (5 actions × 3 ressources = 15 routes).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Généralisez en créant un type générique <code>Route&lt;T extends string, U extends string&gt;</code> qui construit des routes avec un préfixe et un suffixe quelconques.",
+        "niveau": "hard",
+        "reponse": "```typescript\ntype Route<Prefix extends string, Suffix extends string> = `${Prefix}/${Suffix}`;\n\ntype ApiRouteV2 = Route<`/api/${Resource}`, Action>;\n// Ou encore plus flexible :\ntype FlexibleRoute<Base extends string, Segments extends string[]> = \n  Segments extends [infer First, ...infer Rest] \n    ? First extends string \n      ? Rest extends string[] \n        ? `${Base}/${First}` | FlexibleRoute<`${Base}/${First}`, Rest>\n        : `${Base}/${First}`\n      : never\n    : Base;\n```\nLa version récursive permet de construire des routes à profondeur variable.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquez l'intérêt des template literal types pour la sécurité des routes dans une application. Comparez avec une approche où les routes sont définies comme des chaînes littérales.",
+        "niveau": "medium",
+        "reponse": "Les template literal types apportent plusieurs avantages :\n1. **Vérification à la compilation** : une erreur de frappe comme `\"/api/usr/list\"` sera détectée immédiatement.\n2. **Autocomplétion** : l'IDE suggère toutes les routes valides.\n3. **Évolutivité** : si on ajoute une nouvelle ressource ou action, le type `ApiRoute` se met automatiquement à jour.\n4. **Documentation vivante** : le type sert de source unique de vérité pour toutes les routes.\n\nAvec des chaînes littérales classiques, on perd la garantie que la route correspond bien à une combinaison valide.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Mapped types avec transformation de valeurs",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous devez créer un système de sérialisation automatique. Pour toute interface, vous voulez générer un type correspondant où toutes les propriétés de type <code>Date</code> sont transformées en <code>string</code> (format ISO), et toutes les propriétés de type <code>number</code> sont transformées en <code>string</code> (pour l'envoi en JSON).</p>\n<p>Partez de l'interface suivante :</p>\n<pre><code>interface Utilisateur {\n  id: number;\n  nom: string;\n  dateNaissance: Date;\n  dateInscription: Date;\n  score: number;\n  estActif: boolean;\n}</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créez un mapped type conditionnel <code>Serializable&lt;T&gt;</code> qui transforme :\n- <code>Date</code> → <code>string</code>\n- <code>number</code> → <code>string</code>\n- Les autres types restent inchangés.",
+        "niveau": "very hard",
+        "reponse": "```typescript\ntype Serializable<T> = {\n  [P in keyof T]: T[P] extends Date\n    ? string\n    : T[P] extends number\n      ? string\n      : T[P];\n};\n\ntype UtilisateurSerializable = Serializable<Utilisateur>;\n// Résultat :\n// {\n//   id: string;        // number → string\n//   nom: string;       // string → string (inchangé)\n//   dateNaissance: string;  // Date → string\n//   dateInscription: string; // Date → string\n//   score: string;     // number → string\n//   estActif: boolean; // boolean → boolean (inchangé)\n// }\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Améliorez le mapped type pour qu'il gère aussi les tableaux : si une propriété est de type <code>Date[]</code>, elle doit devenir <code>string[]</code>. Utilisez une récursion ou une condition sur <code>Array&lt;any&gt;</code>.",
+        "niveau": "very hard",
+        "reponse": "```typescript\ntype SerializableDeep<T> = {\n  [P in keyof T]: T[P] extends Date\n    ? string\n    : T[P] extends number\n      ? string\n      : T[P] extends Array<infer U>\n        ? Array<SerializableDeep<U>>\n        : T[P] extends object\n          ? SerializableDeep<T[P]>\n          : T[P];\n};\n\n// Exemple avec tableau de dates\ninterface Historique {\n  visites: Date[];\n  utilisateur: Utilisateur;\n}\n// visites devient string[], utilisateur est transformé récursivement\n```\nLe type `infer U` permet d'extraire le type des éléments du tableau, puis on applique la transformation récursivement.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Modificateurs et mapped types pour les événements",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous développez un système d'événements. Chaque événement a des propriétés : certaines sont obligatoires, d'autres optionnelles, d'autres en lecture seule.</p>\n<pre><code>interface Evenement {\n  readonly id: string;\n  timestamp: number;\n  type: string;\n  source?: string;\n  details?: Record&lt;string, unknown&gt;;\n}</code></pre>\n<p>Vous souhaitez créer plusieurs variantes de ce type :</p>\n<ul>\n  <li><code>EvenementModifiable</code> : où <code>id</code> n'est plus en lecture seule.</li>\n  <li><code>EvenementRequis</code> : où toutes les propriétés optionnelles deviennent obligatoires.</li>\n  <li><code>EvenementPartiel</code> : où toutes les propriétés deviennent optionnelles (même <code>id</code>).</li>\n</ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créez les trois types demandés en utilisant les modificateurs <code>-readonly</code>, <code>-?</code> et le type utilitaire <code>Partial</code> combiné avec mapped types.",
+        "niveau": "hard",
+        "reponse": "```typescript\n// 1. Supprimer readonly\ntype EvenementModifiable = {\n  -readonly [P in keyof Evenement]: Evenement[P];\n};\n\n// 2. Rendre toutes les propriétés obligatoires (supprimer ?)\ntype EvenementRequis = {\n  [P in keyof Evenement]-?: Evenement[P];\n};\n\n// 3. Rendre toutes les propriétés optionnelles\n// Méthode 1 : avec Partial intégré\ntype EvenementPartiel = Partial<Evenement>;\n\n// Méthode 2 : mapped type explicite\ntype EvenementPartielExplicit = {\n  [P in keyof Evenement]?: Evenement[P];\n};\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Combine les transformations : créez un type <code>EvenementCreation</code> où <code>id</code> est optionnel (car généré côté serveur) et <code>timestamp</code> est optionnel (par défaut <code>Date.now()</code>), mais les autres propriétés restent obligatoires.",
+        "niveau": "very hard",
+        "reponse": "```typescript\ntype EvenementCreation = {\n  id?: string;\n  timestamp?: number;\n  type: string;\n  source?: string;        // reste optionnel comme dans l'original\n  details?: Record<string, unknown>;\n};\n\n// Version générique avec Pick et Omit\ntype EvenementCreationGenerique = \n  Partial<Pick<Evenement, \"id\" | \"timestamp\">> \n  & Omit<Evenement, \"id\" | \"timestamp\">;\n\n// Résultat : id et timestamp deviennent optionnels, les autres propriétés\n// conservent leur modificateur original (readonly pour id est supprimé ici)\n```",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

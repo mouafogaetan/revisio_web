@@ -1,0 +1,125 @@
+[
+  {
+    "intitule": "Architecture des E/S et modes d'accès",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un syst\u00E8me embarqu\u00E9 contr\u00F4le une imprimante thermique. Le microcontr\u00F4leur peut interroger en permanence l'\u00E9tat de l'imprimante (polling), ou attendre une interruption mat\u00E9rielle. La latence maximale acceptable pour l'impression est de 5 ms.</p>",
+      "images": [
+        "Diagramme comparant le polling cyclique et le mode interruption sur une frise temporelle",
+        "Sch\u00E9ma d'une architecture simple avec un bus de donn\u00E9es, un contr\u00F4leur d'interruptions (PIC) et un p\u00E9riph\u00E9rique"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Distinguer les trois modes d'acc\u00E8s aux p\u00E9riph\u00E9riques en citant un avantage et un inconv\u00E9nient pour chacun.",
+        "niveau": "medium",
+        "reponse": "Polling : le CPU v\u00E9rifie en boucle l'\u00E9tat du p\u00E9riph. Avantage : simple \u00E0 impl\u00E9menter. Inconv\u00E9nient : gaspillage de cycles CPU. Interruption : le p\u00E9riph signale au CPU qu'il est pr\u00EAt. Avantage : r\u00E9activit\u00E9, pas d'attente active. Inconv\u00E9nient : complexit\u00E9 (gestion des vecteurs, priorit\u00E9s). DMA (Direct Memory Access) : un contr\u00F4leur transf\u00E8re les donn\u00E9es directement en m\u00E9moire sans CPU. Avantage : d\u00E9charge le CPU pour les gros transferts. Inconv\u00E9nient : mat\u00E9riel suppl\u00E9mentaire (contr\u00F4leur DMA).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Classer ces trois modes du plus \u00E9conome en cycles CPU au moins \u00E9conome pour un transfert de 1 Mo de donn\u00E9es.",
+            "niveau": "easy",
+            "reponse": "1. DMA (presque aucun cycle CPU), 2. Interruption (cycles uniquement lors du service de l'IRQ), 3. Polling (le CPU consomme en permanence m\u00EAme si aucun donn\u00E9e n'est pr\u00EAte)."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Justifier pourquoi l'imprimante thermique utilisera un mode avec interruption ou DMA plut\u00F4t qu'un polling, \u00E9tant donn\u00E9 la latence maximale de 5 ms.",
+            "niveau": "hard",
+            "reponse": "Avec le polling, si le CPU ex\u00E9cute une longue t\u00E2che et ne revient interroger l'imprimante qu'apr\u00E8s 10 ms, la latence est d\u00E9pass\u00E9e. L'interruption permet de suspendre imm\u00E9diatement la t\u00E2che courante pour servir l'imprimante. Le DMA n'est pas n\u00E9cessaire ici car les volumes de donn\u00E9es sont faibles (caract\u00E8res), mais utile si l'imprimante re\u00E7oit des images bitmap enti\u00E8res."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer le r\u00F4le d'un pilote (driver) et d\u00E9crire comment la couche d'abstraction mat\u00E9rielle (HAL) permet d'ex\u00E9cuter le m\u00EAme syst\u00E8me d'exploitation sur deux cartes m\u00E8res diff\u00E9rentes (ex: Intel et ARM).",
+        "niveau": "hard",
+        "reponse": "Le pilote est un module logiciel qui conna\u00EEt les registres et protocoles sp\u00E9cifiques \u00E0 un p\u00E9riph. Il traduit les requ\u00EAtes g\u00E9n\u00E9riques du noyau (ex: 'lire 512 octets du disque') en commandes compr\u00E9hensibles par le contr\u00F4leur disque. La HAL (Hardware Abstraction Layer) est une interface standard entre le noyau et les pilotes. Sur une carte Intel, le driver PCIe utilisera des adresses m\u00E9moire sp\u00E9cifiques ; sur ARM, le driver MMIO utilisera des m\u00E9canismes diff\u00E9rents. Le noyau appelle les m\u00EAmes fonctions HAL (`HalReadRegister`, `HalWritePort`) sans conna\u00EEtre le mat\u00E9riel, assurant la portabilit\u00E9.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation d'un syst\u00E8me de lecture de capteur",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous concevez une station m\u00E9t\u00E9o embarqu\u00E9e. Un capteur de pression fournit une mesure toutes les 50 $\\mu s$ (20 000 mesures/seconde) via un bus SPI. Un second capteur (temp\u00E9rature) donne une mesure toutes les 100 ms. Le microcontr\u00F4leur (50 MHz) doit aussi envoyer les donn\u00E9es par liaison s\u00E9rie (UART) toutes les 10 secondes.</p>",
+      "images": [
+        "Courbe de pression en fonction du temps montrant des \u00E9chantillons toutes les 50 microsecondes",
+        "Sch\u00E9ma fonctionnel : capteur pression (interruption), capteur temp\u00E9rature (polling ou interruption), UART (DMA)"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "D\u00E9cider quel mode d'acc\u00E8s (polling, interruption, DMA) vous associez \u00E0 chaque p\u00E9riph\u00E9rique pour ne pas perdre de mesures.",
+        "niveau": "hard",
+        "reponse": "Capteur pression (50 µs) : impossible en polling car le CPU serait bloqu\u00E9. Interruption possible mais \u00E0 condition que l'ISR (Interrupt Service Routine) soit ultra-courte (< 50 µs). Mieux : DMA pour stocker automatiquement les mesures dans un buffer circulaire. Capteur temp\u00E9rature (100 ms) : polling ou interruption conviennent car lenteur. UART : usage de DMA avec buffer pour envoyer les lots toutes les 10 s, \u00E9vitant de saturer le CPU.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Calculer la charge CPU minimale pour la lecture du capteur pression si on utilise exclusivement une interruption (chaque mesure d\u00E9clenche une ISR de 1 µs).",
+            "niveau": "medium",
+            "reponse": "P\u00E9riode = 50 µs = 20 000 interruptions/s. Dur\u00E9e ISR = 1 µs. Charge = (1 µs / 50 µs) = 0,02 soit 2% du temps CPU uniquement pour cette ISR. Acceptable, mais le DMA descend la charge proche de 0%."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Proposer une architecture utilisant un buffer en double tampon (double buffering) avec DMA pour le capteur pression, et justifier pourquoi cela \u00E9vite la perte de donn\u00E9es pendant le traitement.",
+            "niveau": "very hard",
+            "reponse": "On configure deux buffers A et B de 512 \u00E9chantillons. DMA \u00E9crit dans A. Quand A est plein, le DMA bascule automatiquement vers B et d\u00E9clenche une interruption. Pendant que DMA remplit B, le CPU traite les 512 valeurs de A (moyenne, compression). La commutation est instantan\u00E9e, pas de trou entre deux buffers, donc aucune perte m\u00EAme si le CPU est momentan\u00E9ment occup\u00E9."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Sch\u00E9matiser la table des vecteurs d'interruption (IDT) pour ce syst\u00E8me. On suppose que l'IRQ0 correspond au capteur pression, l'IRQ1 \u00E0 la temp\u00E9rature, l'IRQ2 au timer syst\u00E8me.",
+        "niveau": "hard",
+        "reponse": "La IDT est un tableau stock\u00E9 en m\u00E9moire \u00E0 une adresse fixe (ex: 0x0000). Chaque entr\u00E9e contient l'adresse de la routine \u00E0 ex\u00E9cuter (ISR).\n- IRQ0 (capteur pression) -> adresse de `isr_pression()`\n- IRQ1 (capteur temp\u00E9rature) -> adresse de `isr_temperature()`\n- IRQ2 (timer) -> adresse de `isr_timer()`\nLorsqu'une interruption survient, le CPU sauvegarde le contexte, lit l'entr\u00E9e correspondant au num\u00E9ro IRQ dans l'IDT, et saute \u00E0 l'adresse indiqu\u00E9e.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Diagnostic d'un p\u00E9riph\u00E9rique lent",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un utilisateur se plaint que son disque dur externe USB 3.0 (d\u00E9bit th\u00E9orique 500 Mo/s) ne transf\u00E8re les donn\u00E9es qu'\u00E0 2 Mo/s. Vous suspectez un probl\u00E8me li\u00E9 \u00E0 la gestion des entr\u00E9es/sorties.</p>",
+      "images": [
+        "Graphique du d\u00E9bit mesur\u00E9 (2 Mo/s) vs attendu (500 Mo/s)",
+        "Utilisation CPU \u00E0 100% lors d'une copie de fichier"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "D\u00E9terminer si le syst\u00E8me utilise le polling, les interruptions ou le DMA pour ce disque, en observant que l'utilisation CPU monte \u00E0 100% pendant le transfert.",
+        "niveau": "medium",
+        "reponse": "Une utilisation CPU \u00E0 100% pendant un transfert indique fortement que le mode polling est utilis\u00E9. Le CPU interroge en permanence le contr\u00F4leur USB pour savoir si des donn\u00E9es sont pr\u00EAtes, gaspillant tous les cycles. En mode interruption normale, le CPU serait inactif (wait for interrupt) \u00E0 99% du temps. En DMA, il serait quasi nul \u00E9galement.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposer une commande ou une modification de pilote pour basculer en mode DMA si le mat\u00E9riel le supporte.",
+            "niveau": "medium",
+            "reponse": "Sous Linux : `lsusb -t` pour v\u00E9rifier le driver. Si driver `usb-storage`, on peut forcer UAS (USB Attached SCSI) qui utilise le DMA. Ajouter `usb-storage.quirks=1234:5678:u` dans les param\u00E8tres noyau (avec les IDs du produit). V\u00E9rifier avec `cat /sys/block/sdX/device/scsi_disk/*/uas` si UAS est actif. Sous Windows : d\u00E9sactiver la 'mise en cache \u00E9criture' peut forcer du polling ; v\u00E9rifier les propri\u00E9t\u00E9s du contr\u00F4leur USB dans le gestionnaire de p\u00E9riph\u00E9riques."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Expliquer pourquoi un mauvais c\u00E2ble USB peut forcer le syst\u00E8me \u00E0 r\u00E9duire le mode de transfert (de SuperSpeed \u00E0 Full-Speed) et ainsi augmenter le polling.",
+            "niveau": "hard",
+            "reponse": "Un c\u00E2ble d\u00E9fectueux ou trop long ( >3m sans hub actif) d\u00E9grade le signal. Le contr\u00F4leur USB n\u00E9gocie alors un mode plus lent (ex: USB 2.0 Full-Speed 12 Mbit/s au lieu de USB 3.0 SuperSpeed 5 Gbit/s). Les pilotes utilisent parfois le polling par d\u00E9faut sur les modes basse vitesse pour simplifier. De plus, si le flux arrive lentement, le CPU attend activement, d'o\u00F9 le 100% CPU."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Concevoir une exp\u00E9rience simple (sans outil sp\u00E9cialis\u00E9) pour mesurer la latence d'interruption sur ce m\u00EAme disque en utilisant une boucle de lecture et une horloge haute r\u00E9solution.",
+        "niveau": "very hard",
+        "reponse": "On \u00E9crit un petit programme C (ou script Python avec `perf_counter`) qui lance une lecture d'1 secteur (512 octets) en appel syst\u00E8me `read()`. On mesure le temps avant et apr\u00E8s l'appel. On r\u00E9p\u00E8te 10 000 fois et on prend le min. Ce temps min inclut : le temps pour passer en noyau + attendre l'interruption du disque + revenir. En soustrayant le temps d'une simple interruption logicielle vide, on isole la latence mat\u00E9rielle. Sur un syst\u00E8me non charg\u00E9, on obtient typiquement 15-30 µs (bon) ; si > 200 µs, probl\u00E8me d'ordonnancement ou driver bugg\u00E9.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

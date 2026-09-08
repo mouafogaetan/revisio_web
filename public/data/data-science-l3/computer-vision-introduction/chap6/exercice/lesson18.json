@@ -1,0 +1,165 @@
+[
+  {
+    "intitule": "Comprendre la Segmentation d'Instances",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>La segmentation d'instances est une tâche avancée de vision par ordinateur qui combine détection d'objets et segmentation sémantique.</p><p><strong>Question 1</strong> : Définissez la segmentation d'instances et expliquez en quoi elle diffère de la segmentation sémantique et de la détection d'objets.</p><p><strong>Question 2</strong> : Donnez trois applications concrètes de la segmentation d'instances dans le monde réel.</p>",
+      "images": [
+        "Schéma comparatif montrant : (1) détection d'objets avec boîtes englobantes, (2) segmentation sémantique avec pixels colorés par classe, (3) segmentation d'instances avec masques distincts pour chaque objet de la même classe. Légender chaque cas."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Définissez la segmentation d'instances et expliquez en quoi elle diffère de la segmentation sémantique et de la détection d'objets.",
+        "niveau": "easy",
+        "reponse": "**Segmentation d'instances** :\nTâche qui consiste à détecter chaque objet individuellement dans une image et à générer un masque pixel-par-pixel pour chaque instance, même pour des objets de la même classe.\n\n**Comparaison** :\n\n| Tâche | Objectif | Sortie | Exemple |\n|-------|----------|--------|---------|\n| **Détection d'objets** | Localiser les objets | Boîtes englobantes (bounding boxes) | [personne] avec une boîte |\n| **Segmentation sémantique** | Classifier chaque pixel | Carte de classes (pixels étiquetés) | Tous les pixels des personnes sont de la même couleur |\n| **Segmentation d'instances** | Localiser + segmenter chaque objet | Masques par objet + classes | Chaque personne a un masque distinct |\n\n**Principales différences** :\n- La segmentation sémantique ne distingue pas les instances (tous les objets de la même classe sont fusionnés).\n- La détection d'objets donne une localisation grossière (boîte) tandis que la segmentation d'instances donne une localisation précise (masque).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Donnez trois applications concrètes de la segmentation d'instances dans le monde réel.",
+        "niveau": "easy",
+        "reponse": "Trois applications concrètes de la segmentation d'instances :\n\n1. **Véhicules autonomes** :\n   - Segmenter chaque piéton, véhicule, cycliste individuellement\n   - Permet une meilleure compréhension de la scène et des interactions\n   - Essentiel pour la prise de décision sécuritaire\n\n2. **Imagerie médicale** :\n   - Segmenter chaque tumeur, organe ou cellule individuellement\n   - Suivi de l'évolution de lésions spécifiques\n   - Planification chirurgicale précise\n\n3. **Comptage et suivi en agriculture** :\n   - Compter les fruits ou légumes individuels dans une parcelle\n   - Estimer les rendements de manière précise\n   - Suivi de la croissance de chaque plante\n\n4. **E-commerce et réalité augmentée** :\n   - Extraire précisément un produit du fond pour l'affichage\n   - Essayer virtuellement des vêtements avec un masque précis du corps",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Architecture de Mask R-CNN",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Mask R-CNN est l'architecture de référence pour la segmentation d'instances. Elle étend Faster R-CNN en ajoutant une branche de segmentation.</p><p><strong>Question 1</strong> : Décrivez l'architecture de Mask R-CNN en identifiant ses composantes principales.</p><p><strong>Question 2</strong> : Expliquez le rôle du ROI Align dans Mask R-CNN et pourquoi il remplace le ROI Pooling de Faster R-CNN.</p><p><strong>Question 3</strong> : Quelles sont les trois tâches que Mask R-CNN prédit simultanément ?</p>",
+      "images": [
+        "Schéma détaillé de l'architecture Mask R-CNN montrant : input image → backbone (ResNet+FPN) → RPN → ROI Align → branches parallèles (classification, regression des boîtes, prédiction des masques). Annoter chaque composante."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez l'architecture de Mask R-CNN en identifiant ses composantes principales.",
+        "niveau": "medium",
+        "reponse": "L'architecture de Mask R-CNN se compose de plusieurs composantes principales :\n\n**1. Backbone (Réseau d'extraction de caractéristiques)** :\n- Généralement ResNet-50 ou ResNet-101\n- Extrait des caractéristiques hiérarchiques de l'image\n- Intègre souvent une FPN (Feature Pyramid Network) pour des détections multi-échelles\n\n**2. RPN (Region Proposal Network)** :\n- Propose des régions candidates (anchors) où des objets pourraient se trouver\n- Génère environ 2000 propositions par image\n\n**3. ROI Align (Region of Interest Align)** :\n- Extrait des caractéristiques de chaque région proposée\n- Évite les problèmes de quantification du ROI Pooling\n- Produit des cartes de caractéristiques de taille fixe (7×7)\n\n**4. Têtes de prédiction (branches parallèles)** :\n- **Branch Classification** : Prédit la classe de l'objet\n- **Branch Box Regression** : Ajuste les coordonnées de la boîte englobante\n- **Branch Mask Prediction** : Prédit le masque binaire de l'objet (28×28)\n\n**5. Post-traitement** :\n- NMS (Non-Maximum Suppression) pour éliminer les doublons\n- Upsampling des masques à la résolution de l'image originale",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez le rôle du ROI Align dans Mask R-CNN et pourquoi il remplace le ROI Pooling de Faster R-CNN.",
+        "niveau": "hard",
+        "reponse": "**ROI Align** :\n\nC'est une opération qui extrait des caractéristiques de taille fixe à partir des régions proposées, en utilisant une interpolation bilinéaire pour éviter les problèmes de quantification.\n\n**Problème du ROI Pooling (Faster R-CNN)** :\n1. **Quantification** : Les coordonnées sont arrondies à l'entier le plus proche\n2. **Perte de précision** : Des petites décalages dans les coordonnées peuvent dégrader la qualité\n3. **Problème pour la segmentation** : Les masques nécessitent une précision pixel-par-pixel\n\n**Avantages du ROI Align** :\n1. **Pas de quantification** : Les coordonnées sont conservées en virgule flottante\n2. **Interpolation bilinéaire** : Utilise les 4 points les plus proches pour calculer la valeur\n3. **Meilleure précision** : Essentiel pour les tâches de segmentation\n\n**Différence clé** :\n- ROI Pooling : \\( \\text{pool}(x,y) = \\text{max}_{(i,j) \\in \\text{cell}} \\text{feature}[i,j] \\) avec arrondi\n- ROI Align : \\( \\text{pool}(x,y) = \\sum_{i,j} w_{i,j} \\cdot \\text{feature}[i,j] \\) avec interpolation\n\n**Impact** :\n- Amélioration de 10% des performances de segmentation\n- Meilleure localisation des masques\n- Essentiel pour les objets de petite taille",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Quelles sont les trois tâches que Mask R-CNN prédit simultanément ?",
+        "niveau": "easy",
+        "reponse": "Mask R-CNN prédit simultanément trois tâches :\n\n1. **Classification (Classe de l'objet)** :\n   - Prédit la catégorie de l'objet détecté\n   - Utilise une perte d'entropie croisée\n   - Sortie : probabilités pour chaque classe\n\n2. **Régression des boîtes englobantes (Bounding Box)** :\n   - Ajuste les coordonnées de la boîte pour qu'elle épouse précisément l'objet\n   - Utilise une perte L1 smooth\n   - Sortie : coordonnées (x, y, w, h) corrigées\n\n3. **Prédiction du masque (Mask)** :\n   - Génère un masque binaire pixel-par-pixel de l'objet\n   - Utilise une perte d'entropie croisée binaire\n   - Sortie : masque de 28×28 pixels (upsamplé ensuite)\n\n**Perte totale** :\n\\( L = L_{\\text{class}} + L_{\\text{box}} + L_{\\text{mask}} \\)",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Application de Mask R-CNN à la Surveillance Maritime au Cameroun",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Le Cameroun possède un littoral atlantique de 400 km. Les autorités maritimes souhaitent mettre en place un système de surveillance pour détecter et compter les navires (bateaux de pêche, cargos, pirogues) ainsi que les activités suspectes (déchargements illégaux).</p><p><strong>Question 1</strong> : Justifiez l'utilisation de Mask R-CNN plutôt que YOLO ou la segmentation sémantique pour cette application.</p><p><strong>Question 2</strong> : Décrivez le pipeline complet de traitement avec Mask R-CNN pour cette application, de l'acquisition à la visualisation.</p><p><strong>Question 3</strong> : Quels seraient les défis spécifiques à l'environnement maritime camerounais et comment y faire face ?</p>",
+      "images": [
+        "Image satellite ou drone d'un port camerounais montrant différents types de navires (cargos, bateaux de pêche, pirogues). Ajouter des annotations montrant les masques de segmentation pour chaque navire."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Justifiez l'utilisation de Mask R-CNN plutôt que YOLO ou la segmentation sémantique pour cette application.",
+        "niveau": "medium",
+        "reponse": "**Comparaison avec YOLO** :\n- YOLO donne des boîtes englobantes (localisation grossière)\n- Mask R-CNN donne des masques précis, essentiel pour :\n  - Distinguer des navires proches les uns des autres\n  - Mesurer précisément la taille du navire\n  - Voir l'orientation et la forme exacte\n\n**Comparaison avec la segmentation sémantique** :\n- La segmentation sémantique fusionne tous les navires dans une seule classe\n- Mask R-CNN distingue chaque navire individuellement pour :\n  - Compter précisément le nombre de navires\n  - Suivre chaque navire individuellement\n  - Détecter les activités illégales (transfert entre navires)\n\n**Conclusion** : Mask R-CNN est plus adapté car il combine précision de localisation et distinction des instances.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Décrivez le pipeline complet de traitement avec Mask R-CNN pour cette application, de l'acquisition à la visualisation.",
+        "niveau": "hard",
+        "reponse": "Pipeline complet avec Mask R-CNN :\n\n1. **Acquisition des images** :\n   - Caméras fixes sur le littoral\n   - Drones pour la surveillance mobile\n   - Images satellites (avec résolution suffisante)\n\n2. **Prétraitement** :\n   - Redimensionnement des images\n   - Normalisation des couleurs\n   - Correction des distorsions (lentille, perspective)\n\n3. **Inférence Mask R-CNN** :\n   - Passage dans le backbone (ResNet+FPN)\n   - Génération des propositions de régions (RPN)\n   - ROI Align pour extraire les caractéristiques\n   - Prédiction des trois branches\n\n4. **Post-traitement** :\n   - Filtrage par score de confiance\n   - NMS pour éliminer les doublons\n   - Upsampling des masques à la résolution originale\n\n5. **Analyse métier** :\n   - Classification des navires par type (cargo, pêche, pirogue)\n   - Comptage par zone\n   - Mesure de la taille (surface du masque)\n   - Détection d'anomalies (navires sans AIS, transferts)\n\n6. **Visualisation** :\n   - Superposition des masques colorés\n   - Affichage des métriques\n   - Alertes en cas d'activité suspecte",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Quels seraient les défis spécifiques à l'environnement maritime camerounais et comment y faire face ?",
+        "niveau": "hard",
+        "reponse": "**Défi 1 : Conditions météorologiques variables**\n- **Problème** : Brouillard, pluie, reflets du soleil sur l'eau\n- **Solutions** :\n  - Utiliser des caméras thermiques pour les conditions de faible visibilité\n  - Augmenter les données d'entraînement avec ces conditions\n  - Utiliser des techniques de prétraitement (débrumage, correction des reflets)\n\n**Défi 2 : Diversité des navires**\n- **Problème** : Navires de tailles très variables (petites pirogues aux grands cargos), certains non standardisés\n- **Solutions** :\n  - Collecter un dataset local diversifié\n  - Fine-tuner Mask R-CNN sur ce dataset\n  - Utiliser l'augmentation de données (échelles variables, rotations)\n\n**Défi 3 : Surveillance 24h/24**\n- **Problème** : Ressources computationnelles limitées pour une analyse continue\n- **Solutions** :\n  - Déployer un modèle plus léger (ResNet-50 au lieu de ResNet-101)\n  - Utiliser des architectures optimisées (TensorRT, ONNX)\n  - Mettre en place un système de détection avec YOLO (rapide) puis Mask R-CNN pour les cas critiques\n\n**Défi 4 : Données limitées**\n- **Problème** : Peu d'images annotées de la côte camerounaise\n- **Solutions** :\n  - Utiliser le transfert learning (pré-entraînement sur COCO)\n  - Annoter des données avec des outils semi-automatiques\n  - Utiliser des données synthétiques (générées par des jeux de simulation)",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Comparaison des Architectures de Segmentation d'Instances",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Mask R-CNN n'est pas la seule architecture pour la segmentation d'instances. D'autres approches comme YOLACT, SOLO et Cascade Mask R-CNN proposent des alternatives avec des compromis différents.</p><p><strong>Question 1</strong> : Comparez Mask R-CNN avec YOLACT (You Only Look At CoefficienTs) en termes d'architecture, de rapidité et de précision.</p><p><strong>Question 2</strong> : Qu'est-ce que Cascade Mask R-CNN et comment améliore-t-il les performances de Mask R-CNN standard ?</p><p><strong>Question 3</strong> : Pour une application nécessitant une très haute précision sur des images médicales (ex: détection de tumeurs), quelle architecture recommanderiez-vous et pourquoi ?</p>",
+      "images": [
+        "Tableau comparatif des architectures de segmentation d'instances : Mask R-CNN, YOLACT, SOLO, Cascade Mask R-CNN. Colonnes : Architecture, Précision (mAP), Rapidité (FPS), Taille modèle."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Comparez Mask R-CNN avec YOLACT (You Only Look At CoefficienTs) en termes d'architecture, de rapidité et de précision.",
+        "niveau": "hard",
+        "reponse": "**Architecture** :\n\n| Aspect | Mask R-CNN | YOLACT |\n|--------|------------|--------|\n| **Approche** | Two-stage (régions + classification) | One-stage (directe) |\n| **Fonctionnement** | Propose des régions puis prédit les masques | Prédit directement les masques |\n| **Modules clés** | RPN, ROI Align, branches parallèles | Prototypes + coefficients, prédiction directe |\n\n**Rapidité** :\n- YOLACT est beaucoup plus rapide (33 FPS vs 5 FPS)\n- YOLACT est adapté aux applications en temps réel\n- Mask R-CNN est plus lent mais plus précis\n\n**Précision** :\n- Mask R-CNN est plus précis (mAP ~36% vs YOLACT ~29%)\n- Mask R-CNN donne des masques de meilleure qualité\n- YOLACT a des limitations sur les détails fins\n\n**Compromis** :\n- Mask R-CNN : Précision > Rapidité\n- YOLACT : Rapidité > Précision\n\n**Choix** :\n- YOLACT pour les applications temps réel (surveillance, robots)\n- Mask R-CNN pour les applications où la précision est critique (médical)",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Qu'est-ce que Cascade Mask R-CNN et comment améliore-t-il les performances de Mask R-CNN standard ?",
+        "niveau": "very hard",
+        "reponse": "**Cascade Mask R-CNN** :\n\nC'est une extension de Mask R-CNN qui utilise une cascade de détecteurs pour améliorer progressivement la qualité des propositions.\n\n**Principe** :\n- Au lieu d'un seul détecteur, Cascade Mask R-CNN utilise une séquence de détecteurs\n- Chaque détecteur utilise un seuil IoU différent (0.5, 0.6, 0.7)\n- Les sorties d'un détecteur deviennent les entrées du suivant\n\n**Améliorations par rapport à Mask R-CNN standard** :\n\n1. **Meilleure qualité des boîtes** :\n   - Chaque détecteur affine les boîtes des prédécesseurs\n   - Réduction des faux positifs\n\n2. **Apprentissage progressif** :\n   - Les seuils IoU augmentent progressivement\n   - Le modèle apprend à faire des prédictions de plus en plus précises\n\n3. **Meilleure segmentation** :\n   - Des boîtes plus précises donnent des masques plus précis\n   - Amélioration de la localisation des contours\n\n**Performance** :\n- mAP ~40-42% vs ~36-38% pour Mask R-CNN standard\n- Légèrement plus lent (plus de calculs)\n\n**Utilisation** :\n- Quand la haute précision est critique\n- Applications médicales, recherche scientifique",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Pour une application nécessitant une très haute précision sur des images médicales (ex: détection de tumeurs), quelle architecture recommanderiez-vous et pourquoi ?",
+        "niveau": "medium",
+        "reponse": "**Recommandation : Cascade Mask R-CNN avec ResNet-101 ou ResNeXt**\n\n**Justification** :\n\n1. **Haute précision** :\n   - Cascade Mask R-CNN offre la meilleure précision disponible\n   - Les masques sont plus précis (essentiel pour les tumeurs)\n   - Les boîtes sont mieux localisées\n\n2. **Backbone puissant** :\n   - ResNet-101 ou ResNeXt pour des caractéristiques plus riches\n   - Plus de profondeur pour capturer des détails fins\n\n3. **Adaptation aux petits objets** :\n   - FPN (Feature Pyramid Network) pour détecter les tumeurs de différentes tailles\n   - ROI Align pour une précision pixel-par-pixel\n\n**Alternatives** :\n- **Mask R-CNN standard** : Si la rapidité est plus importante (mais en médical, la précision prime)\n- **U-Net avec segmentation sémantique** : Si on n'a pas besoin de distinguer les instances\n\n**Points critiques** :\n- Nécessite un GPU puissant pour l'inférence\n- Besoin d'un dataset médical annoté pour le fine-tuning\n- Important de valider avec des experts médicaux",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Évaluation et Métriques pour la Segmentation d'Instances",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>L'évaluation des modèles de segmentation d'instances utilise des métriques spécifiques qui vont au-delà de la simple précision de classification.</p><p><strong>Question 1</strong> : Définissez et expliquez les métriques AP (Average Precision) et AR (Average Recall) pour la segmentation d'instances.</p><p><strong>Question 2</strong> : Qu'est-ce que le COCO AP et comment est-il calculé ? Pourquoi utilise-t-on une moyenne sur plusieurs seuils IoU ?</p><p><strong>Question 3</strong> : Pourquoi la métrique mAP (mean Average Precision) est-elle plus complète qu'une simple mesure de précision pour évaluer un système de segmentation d'instances ?</p>",
+      "images": [
+        "Courbe Précision-Rappel pour la segmentation d'instances montrant l'aire sous la courbe (AP). Inclure les différents seuils IoU (0.5, 0.75) et leur impact sur la courbe."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Définissez et expliquez les métriques AP (Average Precision) et AR (Average Recall) pour la segmentation d'instances.",
+        "niveau": "hard",
+        "reponse": "**AP (Average Precision)** :\n\nMétrique principale qui mesure la qualité des prédictions d'un détecteur.\n\n**Calcul** :\n1. Les détections sont triées par score de confiance\n2. La précision et le rappel sont calculés à chaque point\n3. L'AP est l'aire sous la courbe Précision-Rappel\n\n\\( \\text{AP} = \\int_0^1 P(R) \\, dR \\)\n\n**AR (Average Recall)** :\n\nMétrique qui mesure la capacité du détecteur à trouver tous les objets.\n\n**Calcul** :\n- Moyenne du rappel maximal sur plusieurs configurations\n- Généralement sur 100 détections par image\n\n**Interprétation** :\n- AP élevé = Bonne qualité des détections\n- AR élevé = Bonne couverture des objets\n- Idéal : les deux métriques sont élevées",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Qu'est-ce que le COCO AP et comment est-il calculé ? Pourquoi utilise-t-on une moyenne sur plusieurs seuils IoU ?",
+        "niveau": "very hard",
+        "reponse": "**COCO AP (mAP 0.5:0.95)** :\n\nC'est la métrique principale utilisée sur le dataset COCO.\n\n**Calcul** :\n- 10 seuils IoU : 0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95\n- Pour chaque seuil, on calcule l'AP\n- La moyenne des 10 AP est le COCO AP final\n\n\\( \\text{COCO AP} = \\frac{1}{10} \\sum_{iou \\in \\{0.50, ..., 0.95\\}} \\text{AP}^{iou} \\)\n\n**Pourquoi plusieurs seuils** :\n\n1. **Évaluation complète** :\n   - IoU 0.5 : détection grossière (facile)\n   - IoU 0.75 : détection précise (difficile)\n   - IoU 0.9 : détection très précise (très difficile)\n\n2. **Robustesse** :\n   - Un modèle qui performe bien sur tous les seuils est robuste\n   - Évite le sur-ajustement à un seul seuil\n\n3. **Évaluation fine** :\n   - Permet de distinguer les modèles de haute qualité\n   - Les modèles avancés ont un meilleur AP à IoU élevé\n\n**Autres métriques COCO** :\n- **AP50** : AP à IoU=0.5 (plus facile)\n- **AP75** : AP à IoU=0.75 (plus difficile)\n- **APsmall** : AP pour les petits objets (Aire < 32²)\n- **APmedium** : AP pour les objets moyens (32² < Aire < 96²)\n- **APlarge** : AP pour les grands objets (Aire > 96²)",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Pourquoi la métrique mAP (mean Average Precision) est-elle plus complète qu'une simple mesure de précision pour évaluer un système de segmentation d'instances ?",
+        "niveau": "medium",
+        "reponse": "**Limites de la simple précision** :\n\n1. **Biais des classes déséquilibrées** :\n   - Une précision globale peut être élevée même si certaines classes sont mal détectées\n   - Exemple : 95% d'objets d'une classe A, 5% de classe B\n\n2. **Ne capture pas le compromis** :\n   - Précision seule ne montre pas si le modèle manque des objets\n   - Un modèle avec précision 100% peut avoir un rappel de 10%\n\n**Avantages du mAP** :\n\n1. **Moyenne sur toutes les classes** :\n   - Chaque classe a le même poids\n   - Détecte les faiblesses sur certaines classes\n   - Plus équitable pour les classes rares\n\n2. **Courbe complète** :\n   - Considère toute la courbe Précision-Rappel\n   - Un seul nombre résume les performances globales\n\n3. **Compromis explicite** :\n   - Punit à la fois les faux positifs et les faux négatifs\n   - Encourage un bon équilibre\n\n4. **Comparaison standardisée** :\n   - Permet de comparer différents modèles\n   - Acceptée par la communauté de recherche\n\n**Conclusion** : mAP est plus complet car il combine précision, rappel, traitement équitable des classes, et offre une métrique standardisée.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

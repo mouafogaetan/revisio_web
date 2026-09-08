@@ -1,0 +1,106 @@
+[
+  {
+    "intitule": "Identifier les avantages des vues dans une base de données",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Lisez la situation suivante : Dans une entreprise, l’administrateur de base de données souhaite donner accès à certaines colonnes d’une table `employes` (contenant `id`, `nom`, `salaire`, `date_embauche`, `adresse`, `numero_securite_sociale`) sans exposer les données sensibles comme le salaire et le numéro de sécurité sociale. Il crée pour cela une vue.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifiez deux avantages de l’utilisation d’une vue dans ce contexte précis.",
+        "niveau": "easy",
+        "reponse": "1. Sécurité : la vue masque les colonnes sensibles (salaire, numéro de sécurité sociale).\n2. Simplification : les utilisateurs voient uniquement les données nécessaires (nom, date_embauche, adresse) sans avoir à écrire des requêtes complexes ou connaître la structure complète de la table.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Distinguer vue simple et vue matérialisée",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>On considère deux objets d’une base de données :<br>\n- Vue A : `CREATE VIEW commandes_recentes AS SELECT * FROM commandes WHERE date_commande > '2025-01-01';`<br>\n- Vue B : `CREATE MATERIALIZED VIEW stats_produits AS SELECT produit_id, SUM(quantite) as total FROM ventes GROUP BY produit_id;`</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Distinguez ces deux types de vues en comparant leur mode de stockage des données et leur comportement en cas de modification des tables sources.",
+        "niveau": "medium",
+        "reponse": "La vue simple (Vue A) ne stocke pas physiquement les données ; elle exécute la requête à chaque appel et reflète toujours les dernières modifications des tables sources. La vue matérialisée (Vue B) stocke physiquement les résultats ; elle ne se met pas à jour automatiquement quand les tables sources changent, elle nécessite un rafraîchissement manuel ou programmé (REFRESH MATERIALIZED VIEW).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Créer une vue pour simplifier une requête fréquente",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Une bibliothèque utilise une base de données avec les tables :<br>\n- `livres(id_livre, titre, auteur, annee_publication)`<br>\n- `emprunts(id_emprunt, id_livre, date_emprunt, date_retour, id_membre)`<br>\nLes bibliothécaires ont besoin fréquemment de connaître le titre, l’auteur et la date d’emprunt des livres actuellement empruntés (date_retour IS NULL).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez la commande SQL pour créer une vue nommée `emprunts_en_cours` qui affiche uniquement le titre, l’auteur et la date d’emprunt des livres non encore retournés.",
+        "niveau": "medium",
+        "reponse": "CREATE VIEW emprunts_en_cours AS\nSELECT l.titre, l.auteur, e.date_emprunt\nFROM livres l\nJOIN emprunts e ON l.id_livre = e.id_livre\nWHERE e.date_retour IS NULL;",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Justifiez pourquoi cette vue simplifie le travail des bibliothécaires.",
+            "niveau": "easy",
+            "reponse": "Les bibliothécaires n’ont plus besoin d’écrire chaque fois la jointure et la condition WHERE. Ils peuvent simplement faire `SELECT * FROM emprunts_en_cours;` pour obtenir les informations souhaitées, ce qui réduit les erreurs et le temps d’écriture des requêtes."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Analyser l’impact d’une modification de table source sur une vue",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>On a créé la vue suivante :<br>\n`CREATE VIEW vue_clients_actifs AS SELECT id, nom, email FROM clients WHERE statut = 'actif';`<br>\nPar la suite, la table `clients` est modifiée : la colonne `email` est renommée en `adresse_email`.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Anticipez ce qui se produit lorsqu’on interroge la vue `vue_clients_actifs` après le renommage de la colonne. Proposez une solution pour résoudre le problème.",
+        "niveau": "hard",
+        "reponse": "La vue devient invalide ou génère une erreur car la colonne `email` n’existe plus dans la table source. Le SGBD ne peut pas exécuter la requête sous-jacente.\nSolution : il faut recréer la vue avec la nouvelle définition : `CREATE OR REPLACE VIEW vue_clients_actifs AS SELECT id, nom, adresse_email FROM clients WHERE statut = 'actif';`",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Créer une vue avec agrégation pour un tableau de bord",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Un responsable commercial veut un tableau de bord quotidien affichant pour chaque produit : le nombre total de commandes et le chiffre d’affaires généré. Les tables sont :<br>\n`produits(id_produit, nom, prix_unitaire)`<br>\n`commandes(id_commande, id_produit, quantite, date_commande)`</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez la requête SQL pour créer une vue nommée `performance_produits` qui présente : id_produit, nom, total_commandes (nombre de commandes), et ca_total (somme de quantite * prix_unitaire).",
+        "niveau": "very hard",
+        "reponse": "CREATE VIEW performance_produits AS\nSELECT p.id_produit, p.nom,\n       COUNT(c.id_commande) AS total_commandes,\n       SUM(c.quantite * p.prix_unitaire) AS ca_total\nFROM produits p\nLEFT JOIN commandes c ON p.id_produit = c.id_produit\nGROUP BY p.id_produit, p.nom;",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez pourquoi l’utilisation de LEFT JOIN est préférable à INNER JOIN dans cette vue pour un tableau de bord.",
+            "niveau": "hard",
+            "reponse": "LEFT JOIN inclut tous les produits, même ceux qui n’ont aucune commande. Ainsi, ces produits apparaîtront avec total_commandes = 0 et ca_total = NULL (ou 0 selon les besoins). Avec INNER JOIN, les produits sans commande seraient exclus de la vue, ce qui serait trompeur pour le responsable commercial."
+          }
+        ]
+      }
+    ]
+  }
+]

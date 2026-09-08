@@ -1,0 +1,200 @@
+[
+  {
+    "intitule": "Fondamentaux des Tests en MLOps",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Les tests sont une composante essentielle du MLOps pour garantir la fiabilité des modèles en production. Ils couvrent plusieurs niveaux : données, modèles et intégration.</p><p><strong>Question :</strong> Après avoir défini les trois principaux types de tests en MLOps, expliquez leur rôle dans le cycle de vie d'un modèle.</p>",
+      "images": [
+        "Un schéma de pyramide des tests en MLOps : Tests de données à la base (nombreux, rapides), Tests de modèles au milieu, Tests d'intégration en haut (peu nombreux, lents)."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Définissez les trois types de tests en MLOps : tests de données, tests de modèles et tests d'intégration.",
+        "niveau": "easy",
+        "reponse": "1. **Tests de données (Data Tests)** : Vérifient la qualité, la structure et la distribution des données. Ils s'assurent qu'il n'y a pas de valeurs manquantes, de doublons, ou de changements inattendus dans les distributions. 2. **Tests de modèles (Model Tests)** : Valident les performances du modèle (exactitude, F1-score, AUC) et sa robustesse (comportement face à des données bruitées, biais). 3. **Tests d'intégration (Integration Tests)** : Vérifient que l'ensemble du pipeline ML (ingestion, transformation, entraînement, déploiement) fonctionne correctement ensemble, y compris les interactions avec les services externes (bases de données, APIs).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez pourquoi les tests de données sont souvent considérés comme les plus critiques dans un pipeline MLOps.",
+            "niveau": "medium",
+            "reponse": "Les tests de données sont critiques car les données sont le fondement du modèle. Une dégradation de la qualité des données (ex: valeurs aberrantes, changement de distribution, colonnes manquantes) entraînera nécessairement une dégradation des performances du modèle, peu importe la qualité du modèle lui-même. Des données erronées en entrée produisent des prédictions erronées (GIGO : Garbage In, Garbage Out). De plus, les tests de données sont exécutés tôt dans le pipeline, ce qui permet de détecter les problèmes rapidement et d'éviter des entraînements coûteux sur des données de mauvaise qualité."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Comparez les tests de modèles unitaires et les tests de modèles en production.",
+            "niveau": "hard",
+            "reponse": "**Tests unitaires de modèles** : Exécutés pendant le développement et le CI/CD. Ils vérifient les performances sur un dataset de test fixe (ex: accuracy > 0.85). Ils sont rapides, automatisés, et permettent de valider une version du modèle avant le déploiement. **Tests en production (monitoring)** : Exécutés en continu sur les données réelles. Ils surveillent la performance opérationnelle (latence, throughput), détectent les dérives (data drift, concept drift) par rapport aux données d'entraînement, et déclenchent des alertes. Ils sont moins fréquents mais critiques pour la détection de dégradations en condition réelle."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Tests de Données avec Great Expectations",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous travaillez sur un pipeline ML qui prédit le taux de désabonnement des clients. Les données arrivent quotidiennement sous forme de fichiers CSV. Vous devez mettre en place des tests de données automatisés.</p><p><strong>Question :</strong> En utilisant l'outil Great Expectations, concevez une suite de tests de données pour valider les fichiers entrants avant l'entraînement du modèle.</p>",
+      "images": [
+        "Un schéma montrant un pipeline de données avec une étape de validation 'Great Expectations' avant l'entraînement, avec des exemples de tests : 'expect_column_values_to_not_be_null', 'expect_column_values_to_be_between', etc."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Listez cinq tests de données essentiels à mettre en place sur les fichiers CSV entrants.",
+        "niveau": "medium",
+        "reponse": "1. **Expect column values to not be null** : Vérifier qu'aucune colonne critique (ex: `customer_id`, `monthly_charges`) ne contient de valeurs nulles. 2. **Expect column values to be between** : Pour les colonnes numériques (ex: `age` entre 18 et 100, `tenure` entre 0 et 72). 3. **Expect column values to be in set** : Pour les colonnes catégorielles (ex: `churn` in ['Yes', 'No']). 4. **Expect table row count to be between** : Vérifier que le nombre de lignes est cohérent avec les données historiques (ex: entre 5000 et 10000). 5. **Expect column distribution to match** : Vérifier que la distribution des colonnes clés (ex: `monthly_charges`) ne s'est pas significativement décalée par rapport aux données d'entraînement (détection de data drift).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment intégrer ces tests dans un pipeline CI/CD avec Great Expectations ?",
+            "niveau": "hard",
+            "reponse": "1. **Création d'une suite de tests (Expectation Suite)** : Définir les tests dans un fichier JSON ou YAML (ex: `churn_expectations.json`) avec des 'Expectations' spécifiques. 2. **Validation** : Dans le pipeline CI/CD (ex: GitHub Actions), ajouter une étape qui exécute `great_expectations validate` sur les données nouvellement ingérées. 3. **Seuil d'échec** : Configurer le pipeline pour qu'il échoue (exit code non nul) si un pourcentage de tests échoue (ex: > 1% d'erreurs). 4. **Rapports** : Générer des rapports HTML des résultats des tests pour faciliter le debugging. 5. **Data Docs** : Utiliser les Data Docs de Great Expectations pour partager les résultats avec l'équipe. 6. **Monitoring** : En production, planifier une exécution quotidienne des tests et envoyer des alertes en cas d'échec."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Proposez une stratégie de gestion des échecs de tests dans le pipeline.",
+            "niveau": "hard",
+            "reponse": "1. **Détection précoce** : Les tests de données sont exécutés en premier dans le pipeline. 2. **Actions en cas d'échec** : a) Si les erreurs sont mineures (ex: 1% de valeurs manquantes), déclencher une alerte (Slack/Email) mais continuer le pipeline. b) Si les erreurs sont critiques (ex: > 20% de valeurs manquantes, colonne manquante), arrêter le pipeline et notifier l'équipe. 3. **Inspection manuelle** : Fournir un rapport détaillé des tests échoués pour permettre l'inspection manuelle. 4. **Rollback** : Si le pipeline est en production, arrêter le ré-entraînement automatique et garder le modèle précédent. 5. **Analyse des causes** : Après un échec, l'équipe analyse les causes (ex: changement dans la source de données) et ajuste les tests ou le pipeline en conséquence."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Tests de Robustesse des Modèles",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous avez développé un modèle de classification pour un système de détection de fraudes bancaires. Avant de le déployer en production, vous devez tester sa robustesse face à des données dégradées ou malveillantes.</p><p><strong>Question :</strong> Concevez une batterie de tests de robustesse pour ce modèle, en expliquant comment vous les mettriez en œuvre.</p>",
+      "images": [
+        "Un schéma montrant des tests de robustesse : ajout de bruit aux données, modification de features, adversariale attack, avec des métriques de performance avant/après."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez trois types de tests de robustesse que vous appliqueriez au modèle.",
+        "niveau": "hard",
+        "reponse": "1. **Test de sensibilité au bruit** : Ajouter du bruit gaussien ou uniforme aux données d'entrée (ex: bruit de $\\mathcal{N}(0, 0.01)$) et mesurer l'impact sur la métrique de performance (F1-score). Un modèle robuste doit dégrader de manière acceptable. 2. **Test de modification de features** : Supprimer ou dégrader une feature à la fois (ex: mettre la feature 'montant' à zéro) et observer l'impact. Les features critiques doivent être identifiées. 3. **Test d'attaques adversariales** : Utiliser des techniques comme FGSM (Fast Gradient Sign Method) pour créer des exemples adversariaux et tester la résistance du modèle. Le modèle ne doit pas être trompé par de petites perturbations.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Établissez des critères de succès pour ces tests (quand considère-t-on qu'un modèle est suffisamment robuste ?).",
+            "niveau": "very hard",
+            "reponse": "**Critères quantitatifs** : 1) Après l'ajout de bruit (SNR = 20dB), la performance (F1-score) ne doit pas chuter de plus de 5% par rapport à la performance sur données propres. 2) La suppression d'une feature non critique ne doit pas faire chuter la performance de plus de 3%. La suppression d'une feature critique (ex: 'montant') ne doit pas faire chuter la performance de plus de 15%. 3) Les attaques adversariales (FGSM, epsilon=0.01) ne doivent pas faire chuter la performance de plus de 10%. **Critères qualitatifs** : Le modèle doit être inspecté par des experts métier pour valider que les décisions sont cohérentes avec le domaine (ex: un montant élevé doit augmenter le score de fraude). Des seuils de rejet sont définis : si un test échoue, le modèle est rejeté avant le déploiement."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Comment automatiser ces tests dans un pipeline CI/CD ?",
+            "niveau": "hard",
+            "reponse": "1. **Scripts de test** : Écrire des scripts Python qui : a) chargent le modèle, b) chargent un dataset de test, c) appliquent les perturbations (bruit, suppression de features), d) calculent les métriques de performance, e) comparent les métriques aux seuils définis. 2. **Intégration CI/CD** : Ajouter une étape dans le pipeline (ex: GitHub Actions) qui exécute ces scripts après l'entraînement du modèle. 3. **Échec du pipeline** : Si les métriques ne respectent pas les seuils, le pipeline échoue et le modèle n'est pas déployé. 4. **Rapports** : Générer un rapport HTML avec les métriques avant/après pour faciliter l'analyse. 5. **Paramétrage** : Permettre de configurer les seuils via des variables d'environnement pour les adapter selon les cas (ex: en développement, seuils plus souples)."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Diagnostic d'un Pipeline de Test",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous êtes consultant en MLOps pour une entreprise de logistique. Ils ont mis en place un pipeline CI/CD pour leurs modèles de prédiction de délais de livraison. Cependant, ils rencontrent des problèmes : des modèles défaillants sont parfois déployés en production, et les tests sont souvent ignorés car ils ralentissent le pipeline.</p><p><strong>Question :</strong> Analysez les problèmes de ce pipeline et proposez des améliorations concrètes pour une stratégie de tests efficace.</p>",
+      "images": [
+        "Un schéma de pipeline CI/CD avec des étapes de test qui prennent trop de temps, des tests ignorés, et des modèles défaillants en production. Des flèches rouges indiquent les points de blocage."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifiez les causes probables de l'échec de la stratégie de tests.",
+        "niveau": "hard",
+        "reponse": "1. **Tests trop lents** : Les tests de modèles (ex: validation croisée, tests sur de grands datasets) prennent trop de temps, poussant les équipes à les ignorer ou à les réduire. 2. **Absence de tests hiérarchisés** : Pas de distinction entre tests rapides (unitaires) et tests lents (intégration), donc tout est exécuté à chaque push. 3. **Tests non automatisés ou manuels** : Certains tests sont manuels ou semi-automatisés, ce qui crée des oublis et des erreurs. 4. **Seuils trop stricts** : Les seuils de performance sont trop élevés, causant des échecs fréquents et une perte de confiance dans le pipeline. 5. **Absence de monitoring des tests** : L'équipe ne sait pas quels tests échouent le plus souvent, ni pourquoi, donc les problèmes persistent.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposez une stratégie de tests hiérarchisée (pyramide des tests) adaptée au ML.",
+            "niveau": "very hard",
+            "reponse": "**Pyramide des tests pour le ML (adaptée) :** 1. **Base (Nombreux, très rapides, < 1s)** : Tests unitaires du code (fonctions de preprocessing, chargement de données, logique métier), tests de données légers (ex: vérification de la présence des colonnes, types). 2. **Milieu (Quelques dizaines, rapides, < 1 min)** : Tests de modèles sur un petit échantillon de données (ex: 1000 lignes), tests de robustesse simplifiés, tests de performance sur un sous-ensemble. 3. **Sommet (Peu, lents, > 5 min)** : Tests d'intégration (pipeline complet, end-to-end), tests de performance sur l'ensemble du dataset, tests de biais (fairness). **Stratégie d'exécution** : Les tests de base sont exécutés à chaque push. Les tests du milieu sont exécutés sur les PRs. Les tests du sommet sont exécutés sur les branches principales (main) et en nightly build. Ainsi, les développeurs ont un feedback rapide, et les tests lents ne bloquent pas le développement."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Comment rétablir la confiance dans le pipeline de tests ?",
+            "niveau": "hard",
+            "reponse": "1. **Transparence** : Mettre en place un dashboard (ex: Grafana) qui affiche le taux de réussite des tests, les temps d'exécution et les échecs récurrents. 2. **Priorisation** : Corriger en priorité les tests qui échouent le plus souvent et qui sont critiques. 3. **Revue des seuils** : Revoir les seuils de performance avec l'équipe métier pour s'assurer qu'ils sont réalistes (ex: un F1-score de 0.85 vs 0.95). 4. **Tests de régression** : Ajouter des tests de régression pour les bugs déjà corrigés, pour éviter les régressions. 5. **Formation** : Former l'équipe à l'importance des tests et à l'utilisation des résultats. 6. **Célébration des succès** : Célébrer les passages réussis du pipeline pour renforcer une culture de la qualité. 7. **Politique de non-régression** : Imposer une règle stricte : aucun code ne peut être mergé si les tests unitaires échouent, et aucun modèle ne peut être déployé si les tests d'intégration échouent."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Tests de Biais et d'Équité (Fairness)",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Un modèle de recrutement automatisé est accusé de biais envers certaines catégories de candidats. L'entreprise souhaite intégrer des tests d'équité (fairness) dans son pipeline MLOps.</p><p><strong>Question :</strong> Concevez un plan pour intégrer des tests de biais dans le pipeline, en identifiant les métriques, les outils et les seuils.</p>",
+      "images": [
+        "Un schéma de pipeline avec une étape de 'Fairness Testing' après l'entraînement, montrant des métriques comme 'Disparate Impact', 'Demographic Parity', et 'Equal Opportunity' avec des seuils."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Définissez trois métriques de biais et expliquez comment vous les calculeriez.",
+        "niveau": "hard",
+        "reponse": "1. **Disparate Impact** : Rapport entre le taux de sélection du groupe défavorisé et le taux de sélection du groupe favorisé. Un rapport < 0.8 est considéré comme un biais. $\\text{Disparate Impact} = \\frac{P(\\hat{Y}=1 | \\text{groupe défavorisé})}{P(\\hat{Y}=1 | \\text{groupe favorisé})}$. 2. **Demographic Parity** : Différence entre les taux de sélection des groupes. $\\text{Demographic Parity} = |P(\\hat{Y}=1 | \\text{groupe A}) - P(\\hat{Y}=1 | \\text{groupe B})|$. Un seuil de 0.1 est souvent accepté. 3. **Equal Opportunity** : Différence des taux de vrais positifs entre les groupes. $\\text{Equal Opportunity} = |TPR_A - TPR_B|$ où $TPR = \\frac{TP}{TP+FN}$. Un seuil de 0.1 est souvent accepté.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Intégrez ces tests dans un pipeline CI/CD avec des outils comme Fairlearn ou AI Fairness 360.",
+            "niveau": "very hard",
+            "reponse": "1. **Installation** : Installer Fairlearn (`pip install fairlearn`) ou AI Fairness 360 dans l'environnement CI/CD. 2. **Création des métriques** : Dans le script de test, calculer les métriques pour chaque groupe protégé (ex: genre, ethnie). 3. **Seuils** : Définir des seuils pour chaque métrique (ex: Disparate Impact > 0.8, Demographic Parity < 0.1). 4. **Test automatisé** : Ajouter une étape dans le pipeline CI/CD (ex: GitHub Actions) qui : a) charge le modèle, b) charge les données de test avec les attributs protégés, c) exécute les métriques via Fairlearn (`fairlearn.metrics`), d) compare aux seuils, e) échoue si les seuils ne sont pas respectés. 5. **Rapports** : Générer un rapport HTML avec les métriques pour chaque groupe et les écarts. 6. **Mitigation** : Si un biais est détecté, proposer des stratégies de mitigation (ex: ré-échantillonnage, ré-étalonnage) et relancer les tests."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Discutez des compromis entre performance (accuracy) et équité (fairness) dans le contexte de ce modèle.",
+            "niveau": "very hard",
+            "reponse": "Il existe souvent un **trade-off** entre la performance globale (accuracy) et l'équité. Un modèle très performant sur l'ensemble des données peut être biaisé envers un groupe sous-représenté. **Exemple** : En optimisant uniquement l'accuracy, le modèle peut apprendre des motifs qui favorisent les groupes majoritaires. **Stratégies pour gérer le compromis** : 1) **Contrainte d'équité** : Ajouter une contrainte d'équité dans la fonction de perte (ex: utiliser des méthodes comme 'Exponentiated Gradient' de Fairlearn). 2) **Post-traitement** : Ajuster les prédictions après l'entraînement pour respecter des contraintes d'équité (ex: ré-étalonnage des scores). 3) **Acceptation consciente** : Si une légère baisse de performance (ex: -2% d'accuracy) permet une amélioration significative de l'équité (+15%), l'entreprise peut décider de l'accepter. La décision doit être prise avec les parties prenantes métier et juridiques."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Tests de Performance et de Scalabilité",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous devez déployer un modèle de recommandation en temps réel. Le modèle doit répondre en moins de 100ms à 1000 requêtes par seconde.</p><p><strong>Question :</strong> Concevez une batterie de tests de performance pour valider que le modèle répond aux exigences de production.</p>",
+      "images": [
+        "Un schéma de test de charge avec un outil de benchmarking (ex: Locust, JMeter) qui envoie des requêtes au serveur de modèle, avec des métriques de latence, throughput, et erreurs."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez les métriques de performance à mesurer et les outils que vous utiliseriez.",
+        "niveau": "hard",
+        "reponse": "**Métriques** : 1) **Latence (P50, P95, P99)** : Temps de réponse en millisecondes. 2) **Throughput** : Nombre de requêtes traitées par seconde (RPS). 3) **Taux d'erreur** : Pourcentage de réponses avec erreur (timeout, 500). 4) **Utilisation CPU/Mémoire** : Consommation des ressources. **Outils** : 1) **Locust** : Outil de test de charge en Python, facile à intégrer dans un pipeline CI/CD. 2) **JMeter** : Outil de test de charge Java, très complet. 3) **wrk** : Outil léger pour tester les APIs HTTP. 4) **K6** : Outil moderne de test de performance. **Intégration** : Ajouter une étape de test de performance dans le pipeline CI/CD qui : exécute les tests de charge sur une instance de staging, collecte les métriques, et compare aux seuils définis.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Établissez des critères d'acceptation pour le déploiement en production.",
+            "niveau": "hard",
+            "reponse": "**Critères d'acceptation** : 1) **Latence** : P95 < 100ms, P99 < 200ms sur un test de 5 minutes avec montée en charge. 2) **Throughput** : Support de 1200 RPS (marge de 20% par rapport à l'objectif de 1000 RPS) sans dégradation de latence. 3) **Taux d'erreur** : < 0.1% d'erreurs (timeouts, 5xx). 4) **Utilisation CPU** : < 70% sur l'instance cible (pour permettre des pics). 5) **Stabilité** : Les performances doivent rester stables sur une heure de test. **Action** : Si un critère n'est pas rempli, le pipeline échoue et le modèle n'est pas déployé."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Que faire si les tests de performance échouent en production alors qu'ils avaient réussi en staging ?",
+            "niveau": "very hard",
+            "reponse": "1. **Analyse** : Comparer les conditions de staging (ex: données, charge) avec celles de production. Vérifier les différences de configuration (ex: taille d'instance, réseau). 2. **Scaling** : Si le problème est lié à la charge, activer l'auto-scaling pour ajouter des instances. 3. **Optimisation** : Optimiser le code d'inférence (ex: batch processing, réduction de la taille du modèle, utilisation d'ONNX Runtime). 4. **Rollback** : Si les performances sont inacceptables, faire un rollback vers une version stable du modèle. 5. **Alerting** : Mettre en place des alertes (Prometheus) pour détecter les dégradations de performance et déclencher automatiquement le scaling ou notifier l'équipe. 6. **Plan d'action** : Documenter l'incident, analyser la cause racine, et mettre en place des tests de performance plus réalistes en staging (ex: reproduire le traffic réel)."
+          }
+        ]
+      }
+    ]
+  }
+]

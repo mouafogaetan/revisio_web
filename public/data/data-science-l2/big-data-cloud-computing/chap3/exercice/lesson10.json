@@ -1,0 +1,105 @@
+[
+  {
+    "intitule": "Comprendre Spark MLlib",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Spark MLlib est une bibliothèque de Machine Learning distribuée qui permet d'entraîner des modèles à grande échelle.</p>",
+      "images": [
+        "Schéma montrant l'architecture de Spark MLlib avec les concepts clés : Transformers, Estimators, Pipelines"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire les concepts de base de Spark MLlib : Transformer, Estimator, Pipeline.",
+        "niveau": "easy",
+        "reponse": "<p><strong>Spark MLlib concepts clés :</strong></p><ul><li><strong>Transformer</strong> : Un objet qui transforme un DataFrame en un nouveau DataFrame. Exemples : VectorAssembler, StandardScaler, StringIndexer.</li><li><strong>Estimator</strong> : Un objet qui entraîne un modèle sur un DataFrame et produit un Transformer. Exemples : LogisticRegression, RandomForestClassifier, LinearRegression.</li><li><strong>Pipeline</strong> : Une séquence de Transformers et d'Estimators qui sont appliqués dans l'ordre. Les Estimators entraînent des modèles et les Transformers les appliquent. Le Pipeline est lui-même un Estimator qui, une fois entraîné, devient un PipelineModel (Transformer).</li></ul>"
+      }
+    ]
+  },
+  {
+    "intitule": "Création d'un Pipeline ML dans Spark",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous travaillez sur un projet de classification de clients pour une banque camerounaise. Vous disposez d'un DataFrame Spark contenant les colonnes : <code>age</code>, <code>salaire</code>, <code>nombre_enfants</code>, <code>compte_epargne</code>, et la colonne <code>label</code> (0 = non-risqué, 1 = risqué).</p>",
+      "images": [
+        "Diagramme d'un pipeline ML avec les étapes : VectorAssembler, StandardScaler, LogisticRegression"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créer un pipeline Spark MLlib pour classifier les clients. Inclure les étapes suivantes : VectorAssembler, StandardScaler, et un classifieur (LogisticRegression ou RandomForestClassifier). Expliquer le rôle de chaque étape.",
+        "niveau": "medium",
+        "reponse": "<p>Voici le code pour créer le pipeline :</p><pre><code>from pyspark.ml import Pipeline<br>from pyspark.ml.feature import VectorAssembler, StandardScaler<br>from pyspark.ml.classification import RandomForestClassifier<br><br># Définir les étapes du pipeline<br># 1. VectorAssembler : regroupe les colonnes de features en un seul vecteur<br>assembler = VectorAssembler(<br>    inputCols=['age', 'salaire', 'nombre_enfants', 'compte_epargne'],<br>    outputCol='raw_features'<br>)<br><br># 2. StandardScaler : normalise les features (moyenne=0, variance=1)<br>scaler = StandardScaler(<br>    inputCol='raw_features',<br>    outputCol='scaled_features'<br>)<br><br># 3. Classifieur : RandomForestClassifier<br>classifier = RandomForestClassifier(<br>    featuresCol='scaled_features',<br>    labelCol='label'<br>)<br><br># Créer le pipeline<br>pipeline = Pipeline(stages=[assembler, scaler, classifier])</code></pre><p><strong>Rôle de chaque étape :</strong></p><ul><li><strong>VectorAssembler</strong> : Convertit les colonnes individuelles en un seul vecteur de features.</li><li><strong>StandardScaler</strong> : Normalise les features pour éviter que les variables avec des échelles plus grandes ne dominent le modèle.</li><li><strong>RandomForestClassifier</strong> : Entraîne un modèle de forêt aléatoire pour la classification.</li></ul>"
+      }
+    ]
+  },
+  {
+    "intitule": "Entraînement d'un Modèle sur Spark",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous avez créé un pipeline ML dans Spark et souhaitez entraîner un modèle sur un grand jeu de données distribué.</p>",
+      "images": [
+        "Schéma montrant le processus d'entraînement distribué avec Spark : driver distribue les tâches aux exécuteurs"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire les étapes d'entraînement d'un modèle Spark MLlib sur un grand jeu de données. Expliquer comment Spark distribue l'entraînement et quels sont les avantages de cette approche.",
+        "niveau": "hard",
+        "reponse": "<p><strong>Étapes d'entraînement d'un modèle Spark MLlib :</strong></p><ol><li><strong>Chargement des données</strong> : Charger les données dans un DataFrame Spark distribué.</li><li><strong>Prétraitement</strong> : Appliquer les Transformers pour préparer les données.</li><li><strong>Division des données</strong> : Utiliser <code>randomSplit</code> pour diviser en train/test.</li><li><strong>Entraînement</strong> : Appeler <code>fit()</code> sur le pipeline ou sur l'Estimator.</li><li><strong>Évaluation</strong> : Utiliser le DataFrame de test pour évaluer les performances.</li></ol><p><strong>Distribution de l'entraînement :</strong></p><ul><li>Spark distribue l'entraînement sur le cluster en partitionnant les données.</li><li>Les algorithmes comme RandomForest, LogisticRegression, et GradientBoostedTrees implémentent des versions distribuées.</li><li>Chaque exécuteur traite une partition des données et les résultats sont agrégés par le Driver.</li></ul><p><strong>Avantages :</strong></p><ul><li>Scalabilité : peut traiter des téraoctets de données.</li><li>Vitesse : parallélisation sur des centaines de nœuds.</li><li>Résilience : tolérance aux pannes.</li></ul>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer comment évaluer un modèle Spark MLlib en utilisant les métriques de classification (précision, rappel, F1-score).",
+            "niveau": "medium",
+            "reponse": "<p>Pour évaluer un modèle de classification dans Spark MLlib :</p><pre><code>from pyspark.ml.evaluation import MulticlassClassificationEvaluator<br><br># Faire des prédictions sur l'ensemble de test<br>predictions = model.transform(test_df)<br><br># Créer un évaluateur<br>evaluator = MulticlassClassificationEvaluator(<br>    labelCol='label',<br>    predictionCol='prediction',<br>    metricName='accuracy'<br>)<br><br># Calculer l'accuracy<br>accuracy = evaluator.evaluate(predictions)<br><br># Pour d'autres métriques (précision, rappel, F1)<br>evaluator.setMetricName('weightedPrecision')<br>precision = evaluator.evaluate(predictions)</code></pre><p>Spark MLlib supporte également des métriques comme la précision pondérée, le rappel pondéré, et le F1-score pondéré, qui sont utiles pour les jeux de données déséquilibrés.</p>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation des Hyperparamètres",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous avez entraîné un modèle RandomForestClassifier sur Spark. Vous souhaitez maintenant optimiser les hyperparamètres pour améliorer les performances.</p>",
+      "images": [
+        "Schéma d'une grille de recherche (GridSearch) avec Cross-Validation (CV) montrant les différentes combinaisons de paramètres testées"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire comment utiliser Spark MLlib pour optimiser les hyperparamètres d'un modèle avec Cross-Validation (ParamGridBuilder et CrossValidator). Expliquer les avantages et les limites de cette approche.",
+        "niveau": "very hard",
+        "reponse": "<p>Pour optimiser les hyperparamètres avec Spark MLlib :</p><pre><code>from pyspark.ml.tuning import ParamGridBuilder, CrossValidator<br>from pyspark.ml.evaluation import MulticlassClassificationEvaluator<br><br># Créer la grille de paramètres<br>paramGrid = ParamGridBuilder()<br>    .addGrid(classifier.numTrees, [10, 50, 100])<br>    .addGrid(classifier.maxDepth, [5, 10, 15])<br>    .build()<br><br># Créer l'évaluateur<br>evaluator = MulticlassClassificationEvaluator(<br>    labelCol='label',<br>    predictionCol='prediction',<br>    metricName='accuracy'<br>)<br><br># Créer le CrossValidator<br>cv = CrossValidator(<br>    estimator=pipeline,<br>    estimatorParamMaps=paramGrid,<br>    evaluator=evaluator,<br>    numFolds=3<br>)<br><br># Entraîner avec Cross-Validation<br>cv_model = cv.fit(train_df)<br><br># Récupérer le meilleur modèle<br>best_model = cv_model.bestModel</code></pre><p><strong>Avantages :</strong></p><ul><li>Automatisation de la recherche des meilleurs paramètres.</li><li>La Cross-Validation réduit le risque de sur-apprentissage.</li><li>Distribution de la recherche sur le cluster (Spark lance les tests en parallèle).</li></ul><p><strong>Limites :</strong></p><ul><li>Coût de calcul élevé (nombre de combinaisons × nombre de folds).</li><li>Peut être lent sur de très grands jeux de données.</li></ul>"
+      }
+    ]
+  },
+  {
+    "intitule": "Déploiement d'un Modèle Spark",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous avez entraîné un modèle Spark MLlib et vous souhaitez le déployer en production pour faire des prédictions en temps réel.</p>",
+      "images": [
+        "Schéma d'architecture de déploiement : modèle Spark exporté en PMML ou MLeap, servie via une API REST"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer les différentes options pour déployer un modèle Spark MLlib en production (export PMML, MLeap, export vers ONNX, SageMaker). Décrire les avantages et inconvénients de chaque approche.",
+        "niveau": "hard",
+        "reponse": "<p><strong>Options de déploiement pour les modèles Spark MLlib :</strong></p><p><strong>1. Export PMML</strong> :</p><ul><li>Export au format PMML (Predictive Model Markup Language).</li><li>Peut être chargé par d'autres outils (PMML4S, etc.).</li><li><strong>Avantages</strong> : Standard ouvert, interopérable.</li><li><strong>Inconvénients</strong> : Support limité pour les modèles complexes.</li></ul><p><strong>2. MLeap</strong> :</p><ul><li>Format de sérialisation et runtime pour les modèles Spark ML.</li><li>Permet de servir les modèles sans Spark (MLeap Runtime).</li><li><strong>Avantages</strong> : Rapide, léger, sans dépendances Spark.</li><li><strong>Inconvénients</strong> : Support limité pour certaines fonctionnalités.</li></ul><p><strong>3. Export vers ONNX</strong> :</p><ul><li>ONNX (Open Neural Network Exchange) est un format standard pour les modèles ML.</li><li><strong>Avantages</strong> : Large support, interopérable.</li><li><strong>Inconvénients</strong> : Support des modèles Spark ML limité.</li></ul><p><strong>4. Déploiement sur AWS SageMaker</strong> :</p><ul><li>Utiliser Spark MLlib dans un notebook SageMaker et déployer via SageMaker.</li><li><strong>Avantages</strong> : Intégration avec l'écosystème AWS, auto-scaling.</li><li><strong>Inconvénients</strong> : Dépendance à AWS.</li></ul>"
+      }
+    ]
+  }
+]

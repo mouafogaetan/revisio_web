@@ -1,0 +1,146 @@
+[
+  {
+    "intitule": "Déboguer un déploiement avec perte de données",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous êtes DevOps dans une startup qui déploie une application de gestion de notes clients sur Kubernetes. Après un redémarrage d’un Pod, toutes les notes ont disparu. Le responsable technique vous demande de diagnostiquer et corriger le problème.</p><p>Contexte actuel :<br/>- Un Deployment <code>notes-app</code> avec 2 réplicas.<br/>- Chaque Pod stocke les notes dans <code>/data/notes</code>.<br/>- Les notes sont critiques et doivent survivre à un redémarrage ou à une migration du Pod.<br/>- Aucun <code>PersistentVolumeClaim</code> n’est utilisé actuellement.</p><p>Questions :</p>",
+      "images": [
+        "schéma d'un Pod Kubernetes avec un conteneur écrivant dans un répertoire /data et un redémarrage entraînant la perte des fichiers"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier et expliquer la cause racine de la perte des données après redémarrage du Pod.",
+        "niveau": "medium",
+        "reponse": "Le Pod utilise un stockage éphémère (emptyDir par défaut si rien n’est déclaré ou un volume de type emptyDir). Ce type de volume est lié au cycle de vie du Pod : lors d’un redémarrage ou recréation du Pod, le répertoire /data/notes est recréé vide.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer une solution pérenne en utilisant les concepts Kubernetes adaptés. Rédiger un extrait YAML montrant les changements nécessaires.",
+        "niveau": "hard",
+        "reponse": "Il faut utiliser un PersistentVolumeClaim (PVC) associé à un PersistentVolume (PV) (ou StorageClass pour du dynamique). L’extrait YAML :\n\napiVersion: v1\nkind: PersistentVolumeClaim\nmetadata:\n  name: notes-pvc\nspec:\n  accessModes:\n    - ReadWriteOnce\n  resources:\n    requests:\n      storage: 1Gi\n---\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: notes-app\nspec:\n  replicas: 2\n  template:\n    spec:\n      containers:\n      - name: app\n        image: notes-app:latest\n        volumeMounts:\n        - mountPath: /data/notes\n          name: notes-storage\n      volumes:\n      - name: notes-storage\n        persistentVolumeClaim:\n          claimName: notes-pvc",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquer pourquoi l’utilisation d’un hostPath ne serait pas recommandée dans ce contexte (production).",
+        "niveau": "medium",
+        "reponse": "hostPath lie le Pod à un nœud spécifique (donc anti-affinité avec plusieurs réplicas), ne gère pas automatiquement la capacité de stockage et pose des risques de sécurité (accès au système de fichiers de l’hôte).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Migration d’un PV local vers un stockage cloud",
+    "type": "ressource",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Votre entreprise migre son cluster Kubernetes depuis un datacenter on-premise vers Azure AKS. Vous avez un <code>PersistentVolume</code> local de type <code>hostPath</code> utilisé par une base de données MySQL. Expliquez comment sauvegarder les données, créer un nouveau <code>StorageClass</code> sur AKS et recréer le <code>PersistentVolumeClaim</code> sans perte de données.</p>",
+      "images": [
+        "flèche entre un serveur on-premise et un cloud Azure avec une base de données et un disque persistant"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire les étapes de sauvegarde et de transfert des données depuis le PV local.",
+        "niveau": "hard",
+        "reponse": "1. Identifier le nœud où le PV local est monté. 2. Utiliser kubectl exec pour entrer dans le Pod MySQL et exécuter mysqldump. 3. Copier le dump vers une machine locale ou un stockage intermédiaire (ex: kubectl cp). 4. Transférer le fichier vers un stockage cloud temporaire (Azure Blob Storage).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Donner un exemple de StorageClass pour Azure AKS avec un provisionnement dynamique (managed-csi).",
+        "niveau": "medium",
+        "reponse": "kind: StorageClass\napiVersion: storage.k8s.io/v1\nmetadata:\n  name: azure-disk-csi\nprovisioner: disk.csi.azure.com\nparameters:\n  skuname: StandardSSD_LRS",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquer comment recréer le PVC et restaurer les données dans la nouvelle base de données.",
+        "niveau": "hard",
+        "reponse": "1. Créer un PVC qui utilise la nouvelle StorageClass. 2. Déployer une nouvelle instance MySQL avec ce PVC. 3. Copier le fichier dump dans le nouveau Pod (kubectl cp). 4. Restaurer avec mysql < dump.sql. 5. Rediriger le trafic applicatif vers la nouvelle base.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "QCM – Concepts des volumes persistants",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Cocher la ou les bonnes réponses pour chaque question.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Quel type de volume permet de persister les données au-delà du cycle de vie d’un Pod ?",
+        "niveau": "easy",
+        "reponse": "PersistentVolume (PV) associé à un PersistentVolumeClaim (PVC).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "emptyDir",
+            "niveau": "easy",
+            "reponse": "Faux, emptyDir est éphémère."
+          },
+          {
+            "numero": "1.b",
+            "texte": "PersistentVolumeClaim",
+            "niveau": "easy",
+            "reponse": "Vrai, c’est la demande de stockage persistant."
+          },
+          {
+            "numero": "1.c",
+            "texte": "hostPath",
+            "niveau": "easy",
+            "reponse": "Faux, persiste mais nœud-spécifique, pas recommandé en production."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Quelle commande kubectl permet de lister les PersistentVolumes disponibles dans le cluster ?",
+        "niveau": "easy",
+        "reponse": "kubectl get pv",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "À quoi sert un StorageClass ?",
+        "niveau": "medium",
+        "reponse": "À définir un provisionneur dynamique de volumes (ex: cloud provider) et des paramètres de stockage (SSD, HDD, réplication).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Dimensionner un PVC pour une application de logs",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Une application génère en moyenne 500 Mo de logs par jour. Vous devez conserver 7 jours de logs. La réplication est de 3 Pods identiques, chacun écrit ses propres logs dans un volume dédié (pas de partage). Calculez la capacité nécessaire pour chaque PVC et expliquez le choix du mode d’accès.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Calculer la capacité de stockage minimale par Pod pour 7 jours.",
+        "niveau": "medium",
+        "reponse": "500 Mo/jour × 7 jours = 3500 Mo = 3,5 Go. Prévoir une marge (ex: 5 Go par PVC).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Déterminer le mode d’accès (accessModes) le plus adapté pour ce cas et justifier.",
+        "niveau": "medium",
+        "reponse": "ReadWriteOnce (RWO) car chaque Pod écrit sur son propre volume et aucun autre Pod n’a besoin d’y accéder simultanément en écriture.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

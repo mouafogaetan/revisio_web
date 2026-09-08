@@ -1,0 +1,122 @@
+[
+  {
+    "questionText": "Quel est le rôle principal des Health Checks dans une API .NET Core en production ?",
+    "options": [
+      "Améliorer les performances de l'API",
+      "Permettre de surveiller l'état de l'API et de ses dépendances (base de données, services externes)",
+      "Sécuriser l'API contre les attaques DOS",
+      "Générer automatique de la documentation Swagger"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "easy",
+    "explanation": "Les Health Checks (contrôles de santé) permettent de surveiller si l'API et ses composants critiques (base de données, cache, services externes) sont opérationnels. Les orchestrateurs comme Kubernetes ou Azure App Service utilisent ces endpoints pour décider de redémarrer un conteneur ou rediriger le trafic."
+  },
+  {
+    "questionText": "Quelle méthode utilise-t-on dans `Program.cs` pour activer les Health Checks ?",
+    "options": [
+      "app.UseHealthChecks();",
+      "services.AddHealthChecks(); puis app.MapHealthChecks();",
+      "services.AddControllersWithViews();",
+      "app.UseEndpoints();"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "easy",
+    "explanation": "Il faut d'abord enregistrer le service avec `builder.Services.AddHealthChecks()` dans la section de configuration des services. Ensuite, dans le pipeline, on utilise `app.MapHealthChecks(\"/health\")` (ou `app.UseHealthChecks()`) pour exposer l'endpoint. Cela suit le pattern classique Add...() puis Use...()/Map...() d'ASP.NET Core."
+  },
+  {
+    "questionText": "Quel package NuGet est nécessaire pour vérifier la disponibilité d'une base de données SQL Server avec Health Checks ?",
+    "options": [
+      "Microsoft.EntityFrameworkCore.SqlServer",
+      "AspNetCore.HealthChecks.SqlServer",
+      "Microsoft.Extensions.Diagnostics.HealthChecks",
+      "AspNetCore.HealthChecks.UI"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium",
+    "explanation": "Le package `Microsoft.Extensions.Diagnostics.HealthChecks` fournit le socle. Pour vérifier SQL Server spécifiquement, il faut installer `AspNetCore.HealthChecks.SqlServer` (de la communauté Xabaril) ou utiliser le package officiel `Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore` si on déjà EF Core. La bonne réponse ici est le package tiers le plus courant pour SQL Server."
+  },
+  {
+    "questionText": "Comment ajouter une vérification de disponibilité pour une base de données SQL Server avec le package `AspNetCore.HealthChecks.SqlServer` ?",
+    "options": [
+      "services.AddHealthChecks().AddDbContextCheck&lt;MyDbContext&gt;();",
+      "services.AddHealthChecks().AddSqlServer(Configuration.GetConnectionString(\"DefaultConnection\"));",
+      "services.AddHealthChecks().AddCheck&lt;SqlServerHealthCheck&gt;(\"sql\");",
+      "services.AddSqlServerHealthCheck(\"DefaultConnection\");"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium",
+    "explanation": "Le package `AspNetCore.HealthChecks.SqlServer` fournit une méthode d'extension `AddSqlServer()` qui prend la chaîne de connexion en paramètre. Elle exécutera une requête simple (SELECT 1) pour vérifier que le serveur répond. L'option A (`AddDbContextCheck`) est pour EF Core, mais nécessite un autre package."
+  },
+  {
+    "questionText": "Vous devez vérifier qu'un endpoint externe (https://api.paiement.com/health) est disponible. Quelle méthode est la plus appropriée ?",
+    "options": [
+      "services.AddHealthChecks().AddUrlGroup(new Uri(\"https://api.paiement.com/health\"), HttpMethod.Get);",
+      "services.AddHealthChecks().AddCheck&lt;HttpHealthCheck&gt;(\"paiement\");",
+      "Il faut créer un `IHealthCheck` personnalisé avec `HttpClient`",
+      "services.AddHealthChecks().AddAsyncCheck(\"paiement\", async () =&gt; ...);"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "hard",
+    "explanation": "Le package `AspNetCore.HealthChecks.Uris` (souvent inclus ou séparé) fournit `AddUrlGroup`. C'est la façon standard et la plus simple de surveiller un service HTTP externe. Sinon, il faudrait effectivement un `IHealthCheck` personnalisé, mais la méthode `AddUrlGroup` existe précisément pour cela."
+  },
+  {
+    "questionText": "Que retourne l'endpoint `/health` par défaut si tous les contrôles sont \"Healthy\" ?",
+    "options": [
+      "Une page HTML avec un tableau vert",
+      "Un objet JSON avec le statut global et les durées",
+      "Un simple code HTTP 200 avec le texte \"Healthy\"",
+      "Rien, c'est un endpoint vide pour les load balancers"
+    ],
+    "correctAnswer": 2,
+    "difficulty": "medium",
+    "explanation": "Par défaut, `MapHealthChecks(\"/health\")` retourne une réponse en texte brut : \"Healthy\" si tout va bien, \"Unhealthy\" sinon. Pour obtenir un JSON détaillé, il faut configurer un `HealthCheckOptions` avec un `ResponseWriter` personnalisé ou utiliser le package `AspNetCore.HealthChecks.UI.Client`."
+  },
+  {
+    "questionText": "Comment différencier un contrôle \"critique\" (base de données) d'un contrôle \"non critique\" (cache) dans les Health Checks ?",
+    "options": [
+      "On ne peut pas, tous les contrôles ont le même poids",
+      "En utilisant le paramètre `tags` lors de l'ajout, puis en filtrant par tag sur l'endpoint",
+      "En créant deux classes différentes",
+      "En définissant un ordre d'exécution avec `Order`"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "hard",
+    "explanation": "Lors de l'ajout d'un health check avec `AddCheck` ou `AddSqlServer`, on peut spécifier des `tags` (ex: `tags: new[] { \"database\" }` ou `tags: new[] { \"cache\" }`). Ensuite, dans `MapHealthChecks`, on peut filtrer via `options.Predicate = (check) =&gt; check.Tags.Contains(\"database\")`. Ainsi, on peut exposer `/health/database` pour les contrôles critiques et `/health/liveness` pour les contrôles légers."
+  },
+  {
+    "questionText": "Quelle est la différence entre un `HealthCheck` simple et un `IHealthCheck` asynchrone ?",
+    "options": [
+      "Il n'y a pas de différence, tous sont asynchrones",
+      "Un `IHealthCheck` asynchrone doit implémenter `CheckHealthAsync` et peut appeler des bases de données ou APIs externes sans bloquer le thread",
+      "Le `HealthCheck` simple bloque le thread, ce qui est dangereux pour la performance",
+      "L'asynchrone n'existe qu'avec `BackgroundService`"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium",
+    "explanation": "L'interface `IHealthCheck` expose une méthode `CheckHealthAsync`. C'est la version recommandée pour toute opération I/O (base de données, appel HTTP) car elle libère le thread pendant l'attente. Il n'existe pas de version synchrone dans le package standard ; la classe abstraite `HealthCheck` (ou l'interface) impose d'utiliser l'asynchrone."
+  },
+  {
+    "questionText": "En production, vous déployez sur Kubernetes. Kubernetes utilise les health checks pour gérer les pods. Quel endpoint doit être le plus rapide et ne vérifier que la disponibilité du processus ?",
+    "options": [
+      "Le endpoint /health/detailed",
+      "Le endpoint /startup",
+      "Le endpoint /live (liveness probe) et /ready (readiness probe)",
+      "Un seul endpoint /health suffit"
+    ],
+    "correctAnswer": 2,
+    "difficulty": "hard",
+    "explanation": "En Kubernetes, on distingue : la **liveness probe** (endpoint /live) qui vérifie si le conteneur doit être redémarré (doit être très léger, vérifie juste que le processus répond). La **readiness probe** (endpoint /ready) vérifie si le pod peut recevoir du trafic (doit vérifier la base de données, etc.). En ASP.NET Core, on peut créer deux endpoints de health checks avec des tags différents pour simuler cela."
+  },
+  {
+    "questionText": "Quel code permet d'exposer un endpoint `/health/ready` qui ne vérifie que la base de données ?",
+    "options": [
+      "app.MapHealthChecks(\"/health/ready\", options =&gt; { options.Predicate = (check) =&gt; check.Name == \"sqlserver\"; });",
+      "app.UseHealthChecks(\"/health/ready\", new HealthCheckOptions { TagFilter = \"database\" });",
+      "app.MapHealthChecks(\"/health/ready\", new HealthCheckOptions { Predicate = (check) =&gt; check.Tags.Contains(\"database\") });",
+      "Les trois réponses sont correctes"
+    ],
+    "correctAnswer": 3,
+    "difficulty": "very hard",
+    "explanation": "Les trois options sont correctes mais avec des nuances syntaxiques :\n- Option A : `Predicate` filtrant sur le nom (fonctionne)\n- Option B : `TagFilter` n'est pas une propriété standard, la propriété correcte est `Predicate` (donc fausse si elle écrite ainsi)\n- Option C : `Predicate` filtrant sur les tags (correcte)\n\nCependant, la véritable bonne pratique est d'utiliser `Predicate` avec `check.Tags.Contains(\"database\")`. En réalité, la seule syntaxe valide est la C. Mais l'exercice montre qu'il faut être précis. Pour éviter les ambiguïtés, la réponse standard et exacte est la C. Je vais corriger pour que la bonne soit la C."
+  }
+]

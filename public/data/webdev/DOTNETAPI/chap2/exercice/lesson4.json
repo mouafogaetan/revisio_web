@@ -1,0 +1,102 @@
+[
+  {
+    "intitule": "Architecture et cycle de vie d’une requête ASP.NET Core",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous découvrez le fichier <code>Program.cs</code> d’une API .NET 8. Une section contient :</p><pre><code>var builder = WebApplication.CreateBuilder(args);\nbuilder.Services.AddControllers();\nvar app = builder.Build();\napp.UseRouting();\napp.MapControllers();\napp.Run();\n</code></pre><p>Expliquez le rôle de <strong>builder</strong> et de <strong>app</strong> ainsi que l’ordre d’exécution des étapes ci-dessus.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "À l’aide de la taxonomie de Bloom, **décrivez** la fonction de `WebApplicationBuilder` et celle de `WebApplication` dans le code ci-dessus.",
+        "niveau": "easy",
+        "reponse": "`WebApplicationBuilder` (builder) configure les services et les middlewares. `WebApplication` (app) construit et exécute l’application. L’ordre est : création du builder, ajout des services, construction de l’app, ajout des middlewares, puis exécution.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "**Justifiez** pourquoi `app.UseRouting()` doit être placé avant `app.MapControllers()`.",
+        "niveau": "medium",
+        "reponse": "`UseRouting()` active le routage des endpoints ; `MapControllers()` mappe les contrôleurs. Si l’ordre est inversé, le routage n’est pas disponible et les contrôleurs ne peuvent pas être atteints.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Configuration des services par injection de dépendances",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous devez ajouter un service personnalisé <code>IEmailService</code> avec son implémentation <code>SmtpEmailService</code>. Vous souhaitez qu’une nouvelle instance soit créée <strong>à chaque requête HTTP</strong>.</p><p>Écrivez la ligne de code nécessaire dans <code>Program.cs</code> et expliquez la durée de vie choisie.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "**Choisissez** la méthode d’enregistrement adaptée (`AddTransient`, `AddScoped` ou `AddSingleton`) et **écrivez** la ligne de code complète.",
+        "niveau": "medium",
+        "reponse": "`builder.Services.AddScoped<IEmailService, SmtpEmailService>();` La durée de vie Scoped garantit une nouvelle instance par requête HTTP.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "**Comparez** les durées de vie Transient et Singleton avec Scoped. Dans quel cas utiliseriez-vous Singleton pour un service d’email ?",
+        "niveau": "hard",
+        "reponse": "Transient = nouvelle instance à chaque injection (consomme plus de mémoire). Singleton = une seule instance pour toute l’application (peu adaptée si l’email service a un état). Singleton pourrait être utilisé si le service est stateless, sans état de connexion.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Middleware personnalisé pour journalisation",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous devez créer un middleware qui enregistre dans la console la méthode HTTP et l’URL de chaque requête entrante, ainsi que le temps d’exécution.</p><p>Écrivez le middleware complet en C# (classe avec méthode <code>InvokeAsync</code>), puis son enregistrement dans <code>Program.cs</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "**Concevez** un middleware nommé `RequestLoggingMiddleware` respectant les contraintes ci-dessus. Incluez la mesure du temps avec un `Stopwatch`.",
+        "niveau": "hard",
+        "reponse": "```csharp\npublic class RequestLoggingMiddleware\n{\n    private readonly RequestDelegate _next;\n    public RequestLoggingMiddleware(RequestDelegate next) => _next = next;\n\n    public async Task InvokeAsync(HttpContext context)\n    {\n        var sw = System.Diagnostics.Stopwatch.StartNew();\n        Console.WriteLine($\"{context.Request.Method} {context.Request.Path}\");\n        await _next(context);\n        sw.Stop();\n        Console.WriteLine($\"Temps : {sw.ElapsedMilliseconds} ms\");\n    }\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "**Enregistrez** ce middleware dans `Program.cs` en précisant l’ordre par rapport à `UseRouting()` et `UseEndpoints()`.",
+            "niveau": "medium",
+            "reponse": "`app.UseMiddleware<RequestLoggingMiddleware>();` doit être placé avant `app.UseRouting()` pour capturer toutes les requêtes, y compris celles qui ne trouvent pas de route."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Diagnostic d’une erreur de configuration",
+    "type": "ressource",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous héritez d’une API existante. Le développeur a écrit dans <code>Program.cs</code> :</p><pre><code>var app = WebApplication.Create(args);\napp.UseHttpsRedirection();\napp.UseAuthorization();\napp.UseAuthentication();\napp.MapControllers();\napp.Run();\n</code></pre><p>L’authentification par JWT ne fonctionne jamais. Les attributs <code>[Authorize]</code> retournent systématiquement 401.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "**Identifiez** l’erreur de configuration en vous basant sur l’ordre des middlewares. Proposez une correction.",
+        "niveau": "very hard",
+        "reponse": "Erreur : `UseAuthorization()` est appelé avant `UseAuthentication()`. Or l’autorisation dépend de l’authentification. Correction : inverser les deux lignes.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "**Déduisez** pourquoi l’ordre `UseCors` -> `UseAuthentication` -> `UseAuthorization` est recommandé dans la documentation officielle.",
+            "niveau": "hard",
+            "reponse": "CORS doit vérifier les en-têtes avant toute décision d’authentification. L’authentification doit établir l’identité avant que l’autorisation ne vérifie les droits. Tout middleware qui s’y oppose peut court-circuiter la sécurité."
+          }
+        ]
+      }
+    ]
+  }
+]

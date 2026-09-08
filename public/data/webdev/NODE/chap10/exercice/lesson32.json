@@ -1,0 +1,128 @@
+[
+  {
+    "intitule": "Architecture d'une application de chat temps réel",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous devez développer une application de chat en temps réel pour une petite entreprise camerounaise. Le client souhaite que les employés puissent communiquer instantanément via un chat en ligne. Vous avez choisi d'utiliser <strong>Socket.IO</strong> avec <strong>Express</strong> pour le backend.</p><p>Répondez aux questions suivantes en vous basant sur vos connaissances de Socket.IO et de la persistance des messages.</p>",
+      "images": [
+        "schéma d'architecture client-serveur avec Socket.IO montrant les connexions WebSocket",
+        "interface de chat avec liste des utilisateurs connectés et zone de messages"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer le rôle de Socket.IO dans une application de chat comparé à une API REST classique.",
+        "niveau": "easy",
+        "reponse": "Socket.IO permet une communication bidirectionnelle en temps réel via WebSocket. Contrairement à une API REST où le client doit interroger (polling) le serveur pour obtenir de nouveaux messages, Socket.IO pousse instantanément les messages du serveur vers tous les clients connectés, ce qui est essentiel pour un chat.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Décrire les étapes nécessaires pour gérer la connexion et la déconnexion d'un utilisateur dans un chat Socket.IO.",
+        "niveau": "medium",
+        "reponse": "1. Écouter l'événement 'connection' sur le serveur. 2. Stocker les informations de l'utilisateur (socket.id, pseudo) dans un objet ou une Map. 3. Émettre un événement 'user_joined' à tous les autres clients. 4. Écouter l'événement 'disconnect' sur le socket. 5. Retirer l'utilisateur de la structure de stockage. 6. Émettre un événement 'user_left' aux autres clients.",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Justifier pourquoi il est important de gérer correctement l'événement 'disconnect'.",
+            "niveau": "medium",
+            "reponse": "Pour maintenir une liste précise des utilisateurs en ligne, éviter les fuites mémoire (références aux sockets déconnectés) et informer les autres utilisateurs des départs afin qu'ils ne tentent pas d'envoyer des messages privés à des personnes hors ligne."
+          }
+        ]
+      },
+      {
+        "numero": 3,
+        "texte": "Dessiner le schéma de communication entre les clients et le serveur lors de l'envoi d'un message public dans un chat Socket.IO.",
+        "niveau": "medium",
+        "reponse": "Client A émet 'send_message' avec {text, pseudo} -> Serveur reçoit, (optionnellement persiste en BDD) -> Serveur émet 'new_message' à TOUS les clients connectés (io.emit) -> Chaque client affiche le message.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Développement d'un chat avec messages privés et persistance",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous êtes développeur backend dans une startup camerounaise. On vous demande de créer un chat en temps réel avec les fonctionnalités suivantes :</p><ul><li>Envoi de messages publics (tout le monde voit)</li><li>Envoi de messages privés (entre deux utilisateurs spécifiques)</li><li>Persistance des messages en base de données (MongoDB avec Mongoose)</li><li>Affichage de l'historique des 50 derniers messages lorsqu'un utilisateur se connecte</li></ul><p>Le frontend est déjà développé. Vous devez implémenter la partie backend avec Node.js, Express, Socket.IO et MongoDB.</p>",
+      "images": [
+        "diagramme de séquence montrant l'envoi d'un message privé avec Socket.IO",
+        "structure d'une collection MongoDB pour les messages (champs: sender, receiver, content, timestamp)"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevoir la structure du modèle Mongoose pour persister les messages. Écrire le code du schéma avec les champs nécessaires (expéditeur, destinataire, contenu, date).",
+        "niveau": "medium",
+        "reponse": "```javascript\nconst messageSchema = new mongoose.Schema({\n  sender: { type: String, required: true },\n  receiver: { type: String, default: null }, // null pour public\n  content: { type: String, required: true },\n  timestamp: { type: Date, default: Date.now }\n});\n\nconst Message = mongoose.model('Message', messageSchema);\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposer une indexation appropriée pour optimiser la récupération des 50 derniers messages publics.",
+            "niveau": "hard",
+            "reponse": "`messageSchema.index({ receiver: 1, timestamp: -1 })` pour récupérer rapidement les messages publics (receiver: null) triés par date décroissante, limités à 50."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Implémenter le code serveur Socket.IO pour gérer :<br/>- La connexion d'un utilisateur (stockage de son pseudo avec socket.id)<br/>- L'envoi d'un message public avec persistance<br/>- L'envoi d'un message privé avec persistance",
+        "niveau": "hard",
+        "reponse": "```javascript\nconst users = new Map(); // socket.id -> pseudo\n\nio.on('connection', (socket) => {\n  socket.on('user_join', async (pseudo) => {\n    users.set(socket.id, pseudo);\n    // Envoyer historique\n    const history = await Message.find({ receiver: null }).sort({ timestamp: -1 }).limit(50);\n    socket.emit('history', history.reverse());\n    io.emit('user_list', Array.from(users.values()));\n  });\n\n  socket.on('send_public', async (data) => {\n    const message = new Message({ sender: data.pseudo, receiver: null, content: data.text });\n    await message.save();\n    io.emit('new_public', message);\n  });\n\n  socket.on('send_private', async ({ to, text }) => {\n    const sender = users.get(socket.id);\n    const targetSocketId = [...users.entries()].find(([_, pseudo]) => pseudo === to)?.[0];\n    const message = new Message({ sender, receiver: to, content: text });\n    await message.save();\n    io.to(targetSocketId).emit('new_private', { from: sender, text });\n    socket.emit('private_sent', { to, text });\n  });\n\n  socket.on('disconnect', () => {\n    users.delete(socket.id);\n    io.emit('user_list', Array.from(users.values()));\n  });\n});\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Créer un middleware Socket.IO pour authentifier les utilisateurs avant la connexion WebSocket, en utilisant un JWT transmis depuis le client.",
+        "niveau": "very hard",
+        "reponse": "```javascript\n// Côté serveur\nconst jwt = require('jsonwebtoken');\n\nio.use((socket, next) => {\n  const token = socket.handshake.auth.token;\n  if (!token) return next(new Error('Authentication required'));\n  \n  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {\n    if (err) return next(new Error('Invalid token'));\n    socket.user = decoded; // Stocke les infos utilisateur\n    next();\n  });\n});\n\n// Côté client\nconst socket = io({\n  auth: { token: localStorage.getItem('jwt') }\n});\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation et débogage d'un chat Socket.IO existant",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Un stagiaire a développé un chat Socket.IO mais l'application rencontre plusieurs problèmes :</p><ul><li>Les messages privés arrivent parfois à plusieurs utilisateurs (fuite de données)</li><li>Quand un utilisateur se reconnecte, il ne voit pas les messages envoyés pendant son absence</li><li>Le serveur plante après quelques heures d'utilisation (mémoire qui augmente)</li><li>Les messages d'un chat de groupe (room) ne sont pas correctement isolés entre les différentes salles</li></ul><p>En tant que lead développeur, vous devez analyser et corriger ces problèmes.</p>",
+      "images": [
+        "graphique de croissance de la mémoire (fuite mémoire) d'une application Node.js",
+        "interface de débogage Chrome DevTools montrant les listeners Socket.IO"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analyser la cause probable de la fuite mémoire et proposer une solution.",
+        "niveau": "hard",
+        "reponse": "Les fuites mémoire dans Socket.IO viennent souvent : 1) des tableaux/Map qui ne sont pas nettoyés lors de 'disconnect', 2) des événements écoutés sans être retirés, 3) des closures qui retiennent des références lourdes. Solution : utiliser WeakMap pour les associations volatiles, appeler `socket.removeAllListeners()` dans 'disconnect', et vider périodiquement les structures de données.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Corriger le problème de récupération des messages historiques pour les utilisateurs qui se reconnectent.",
+        "niveau": "medium",
+        "reponse": "Lors de la connexion, après authentification, le serveur doit interroger la base de données pour récupérer les derniers messages (généralement les 50 derniers messages publics et les 50 derniers messages privés concernant l'utilisateur). Utiliser `Message.find({ $or: [{ receiver: null }, { receiver: pseudo }, { sender: pseudo }] }).sort({ timestamp: -1 }).limit(50)` puis envoyer au client via un événement dédié comme 'chat_history'.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquer comment isoler correctement les messages entre plusieurs groupes (rooms) et donner un exemple de code pour qu'un utilisateur rejoigne une room.",
+        "niveau": "hard",
+        "reponse": "Socket.IO fournit les rooms. Chaque room a un identifiant unique. Code : `socket.join('room_' + groupId)`. Pour envoyer à une room : `io.to('room_' + groupId).emit('message', data)`. Pour envoyer à tous sauf l'émetteur dans la room : `socket.broadcast.to('room_' + groupId).emit('message', data)`. L'utilisateur quitte la room avec `socket.leave('room_' + groupId)` lors du changement de groupe ou déconnexion.",
+        "sousQuestions": [
+          {
+            "numero": "3.a",
+            "texte": "Créer un événement personnalisé 'join_room' et gérer la persistance des messages par room.",
+            "niveau": "hard",
+            "reponse": "```javascript\nsocket.on('join_room', async (roomId) => {\n  // Quitter l'ancienne room\n  if (socket.currentRoom) socket.leave(socket.currentRoom);\n  \n  socket.join('room_' + roomId);\n  socket.currentRoom = 'room_' + roomId;\n  \n  // Récupérer historique de la room\n  const history = await Message.find({ roomId }).sort({ timestamp: -1 }).limit(50);\n  socket.emit('room_history', history.reverse());\n});\n```"
+          }
+        ]
+      }
+    ]
+  }
+]

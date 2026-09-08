@@ -1,0 +1,134 @@
+[
+  {
+    "intitule": "Identifier et analyser le props drilling",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Observez attentivement l'arborescence de composants suivante :</p>\n<pre>\n&lt;App&gt;\n  └── &lt;Dashboard&gt;\n      └── &lt;ProfileCard&gt;\n          └── &lt;Avatar&gt;\n              └── &lt;UserAvatar /&gt;\n</pre>\n<p>La donn\u00E9e <code>userAvatarUrl</code> (l'URL de la photo de profil de l'utilisateur) est n\u00E9cessaire uniquement dans le composant <code>UserAvatar</code>. Actuellement, elle est pass\u00E9e de <code>App</code> \u00E0 <code>Dashboard</code>, puis \u00E0 <code>ProfileCard</code>, puis \u00E0 <code>Avatar</code>, et enfin \u00E0 <code>UserAvatar</code>.</p>",
+      "images": [
+        "Sch\u00E9ma d'une application React montrant le props drilling : une prop descend plusieurs niveaux de composants inutilement",
+        "Diagramme illustrant la hi\u00E9rarchie des composants avec les props interm\u00E9diaires"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "D\u00E9finir ce qu'est le \"props drilling\" en React et expliquer pourquoi il peut poser probl\u00E8me dans une application de grande taille.",
+        "niveau": "medium",
+        "reponse": "Le props drilling est une situation o\u00F9 une propri\u00E9t\u00E9 (prop) est transmise \u00E0 travers plusieurs composants interm\u00E9diaires qui n'en ont pas besoin, uniquement pour qu'elle atteigne un composant profond. Les probl\u00E8mes : code difficile \u00E0 maintenir (si la prop change, tous les composants interm\u00E9diaires doivent \u00EAtre mis \u00E0 jour), re-rendus inutiles des composants interm\u00E9diaires, r\u00E9duction de la r\u00E9utilisabilit\u00E9 des composants.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Identifier les composants qui souffrent inutilement du props drilling dans l'exemple ci-dessus.",
+            "niveau": "easy",
+            "reponse": "Les composants <Dashboard>, <ProfileCard> et <Avatar> n'utilisent pas directement la prop `userAvatarUrl` mais sont oblig\u00E9s de la recevoir et de la transmettre. Ce sont ces composants qui subissent le props drilling."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Proposer deux m\u00E9thodes alternatives \u00E0 ce props drilling pour que <UserAvatar> puisse acc\u00E9der \u00E0 la donn\u00E9e sans que les composants interm\u00E9diaires aient \u00E0 la conna\u00EEtre.",
+            "niveau": "hard",
+            "reponse": "M\u00E9thode 1 : La composition avec `children` - restructurer les composants pour que <Dashboard> et <ProfileCard> deviennent des wrappers g\u00E9n\u00E9riques. M\u00E9thode 2 : Le Context API - cr\u00E9er un `UserContext` qui fournit les donn\u00E9es utilisateur, et <UserAvatar> consomme ce contexte directement avec `useContext`."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Analyser le code ci-dessous et expliquer pourquoi il souffre de props drilling. \u00C9valuer l'impact sur la maintenabilit\u00E9 si l'on doit ajouter une nouvelle donn\u00E9e `userEmail` au m\u00EAme composant <UserAvatar>.",
+        "niveau": "hard",
+        "reponse": "Le code souffre de props drilling car le composant <MiddleComponent> ne fait que passer la prop `data` \u00E0 <DeepComponent> sans l'utiliser. L'impact sur la maintenabilit\u00E9 est n\u00E9gatif : pour ajouter `userEmail`, il faudrait modifier toutes les signatures des composants interm\u00E9diaires, ce qui viole le principe Open/Closed et rend le code fragile.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Restructurer une application avec la composition",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous travaillez sur une application de e-commerce. Voici la structure actuelle qui souffre de props drilling :</p>\n<pre>\nfunction App() {\n  const [cartItems, setCartItems] = useState([]);\n  return (\n    &lt;Layout&gt;\n      &lt;Header cartItems={cartItems} setCartItems={setCartItems} /&gt;\n      &lt;MainContent&gt;\n        &lt;ProductList cartItems={cartItems} setCartItems={setCartItems} /&gt;\n      &lt;/MainContent&gt;\n    &lt;/Layout&gt;\n  );\n}\n\nfunction Header({ cartItems, setCartItems }) {\n  return (\n    &lt;header&gt;\n      &lt;Logo /&gt;\n      &lt;CartIcon cartItems={cartItems} setCartItems={setCartItems} /&gt;\n    &lt;/header&gt;\n  );\n}\n</pre>\n<p>Seuls <code>ProductList</code> (pour afficher les produits et ajouter au panier) et <code>CartIcon</code> (pour afficher le nombre d'articles) ont besoin des props <code>cartItems</code> et <code>setCartItems</code>.</p>",
+      "images": [
+        "Diagramme d'une application e-commerce avec props drilling entre Header, CartIcon et ProductList",
+        "Sch\u00E9ma montrant la hi\u00E9rarchie des composants avant refactorisation"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer pourquoi cette architecture est probl\u00E9matique pour l'\u00E9volution future de l'application. Justifier votre r\u00E9ponse.",
+        "niveau": "medium",
+        "reponse": "Cette architecture est probl\u00E9matique car le composant <Header> re\u00E7oit et transmet des props qu'il n'utilise pas. Cela cr\u00E9e un couplage artificiel entre Header et ProductList. Si ProductList doit recevoir une nouvelle prop li\u00E9e au panier, Header devra \u00E9galement \u00EAtre modifi\u00E9, m\u00EAme s'il n'a pas besoin de cette donn\u00E9e. De plus, cela rend le composant Header moins r\u00E9utilisable dans d'autres contextes (ex: sur une page \"Panier vide\").",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposer une solution de composition pour \u00E9liminer le props drilling, sans utiliser Context API. \u00C9crire le code modifi\u00E9 de App et Header.",
+            "niveau": "hard",
+            "reponse": "```jsx\nfunction App() {\n  const [cartItems, setCartItems] = useState([]);\n  // La logique panier est d\u00E9finie ici\n  return (\n    &lt;Layout&gt;\n      &lt;Header&gt;\n        &lt;CartIcon cartItems={cartItems} setCartItems={setCartItems} /&gt;\n      &lt;/Header&gt;\n      &lt;MainContent&gt;\n        &lt;ProductList cartItems={cartItems} setCartItems={setCartItems} /&gt;\n      &lt;/MainContent&gt;\n    &lt;/Layout&gt;\n  );\n}\n\nfunction Header({ children }) {\n  return (\n    &lt;header&gt;\n      &lt;Logo /&gt;\n      {children}\n    &lt;/header&gt;\n  );\n}\n```\nHeader ne re\u00E7oit plus les props du panier. C'est App qui d\u00E9cide de passer directement CartIcon \u00E0 l'int\u00E9rieur de Header via la prop `children`."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Discuter des limites de la composition comme solution au props drilling. Dans quels cas la composition devient-elle insuffisante ou maladroite ?",
+        "niveau": "very hard",
+        "reponse": "La composition a des limites quand : (1) Les donn\u00E9es sont n\u00E9cessaires \u00E0 plusieurs composants tr\u00E8s profonds et dispers\u00E9s dans l'arbre (ex: th\u00E8me, langue, authentification). (2) Le nombre de composants \u00E0 passer via `children` devient trop important et alourdit le code. (3) Quand les composants interm\u00E9diaires ont besoin de contr\u00F4ler l'ordre d'affichage ou la mani\u00E8re dont les enfants sont rendus. Dans ces cas, le Context API est plus adapt\u00E9.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Comparer Composition et Context API",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous devez choisir entre deux approches pour partager un th\u00E8me (couleur primaire, mode sompt/clair) dans toute une application React. Le th\u00E8me est utilis\u00E9 par :</p>\n<ul>\n  <li>Le composant <code>&lt;Button&gt;</code> (pr\u00E9sent dans toute l'application)</li>\n  <li>Le composant <code>&lt;Card&gt;</code> (dans la page d'accueil)</li>\n  <li>Le composant <code>&lt;Navbar&gt;</code> (dans l'en-t\u00EAte)</li>\n  <li>Le composant <code>&lt;Footer&gt;</code> (en bas de page)</li>\n</ul>\n<p>Ces composants sont situ\u00E9s \u00E0 diff\u00E9rents endroits de l'arborescence et ne partagent pas un m\u00EAme parent direct.</p>",
+      "images": [
+        "Arbre des composants React montrant des composants \u00E9parpill\u00E9s ayant besoin du th\u00E8me",
+        "Sch\u00E9ma comparatif entre composition et Context API"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer pourquoi la composition avec `children` n'est pas une solution adapt\u00E9e pour ce cas d'usage. Argumenter votre r\u00E9ponse.",
+        "niveau": "hard",
+        "reponse": "La composition n'est pas adapt\u00E9e car les composants qui ont besoin du th\u00E8me sont dispers\u00E9s dans toute l'arborescence. Pour utiliser la composition, il faudrait remonter la prop theme \u00E0 travers tous les composants parents jusqu'\u00E0 un anc\u00EAtre commun (souvent App), puis la redescendre individuellement \u00E0 chaque composant concern\u00E9. Cela cr\u00E9erait un props drilling massif et rendrait le code difficile \u00E0 maintenir. La composition est plus adapt\u00E9e quand les composants consommateurs sont regroup\u00E9s dans une partie sp\u00E9cifique de l'arbre.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposer une meilleure solution en utilisant le Context API et d\u00E9crire les \u00E9tapes de mise en \u0153uvre.",
+            "niveau": "hard",
+            "reponse": "Solution : Context API. \u00C9tapes : 1) Cr\u00E9er un ThemeContext avec `createContext()`. 2) Cr\u00E9er un composant ThemeProvider qui g\u00E8re l'\u00E9tat du th\u00E8me (useState) et fournit la valeur via `ThemeContext.Provider`. 3) Envelopper l'application avec ThemeProvider dans App.js. 4) Dans chaque composant consommateur (Button, Card, Navbar, Footer), utiliser `useContext(ThemeContext)` pour acc\u00E9der au th\u00E8me."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Discuter des avantages et inconv\u00E9nients du Context API par rapport \u00E0 la composition dans le contexte sp\u00E9cifique du partage d'un th\u00E8me global.",
+        "niveau": "hard",
+        "reponse": "Avantages : pas de props drilling, tous les composants peuvent consommer le th\u00E8me directement, code plus propre, facilite l'ajout de nouvelles fonctionnalit\u00E9s li\u00E9es au th\u00E8me. Inconv\u00E9nients : le contexte peut entra\u00EEner des re-rendus inutiles si la valeur change fr\u00E9quemment, plus difficile \u00E0 tester isol\u00E9ment, n\u00E9cessite un Provider enveloppant l'application. Pour un th\u00E8me qui change rarement, ces inconv\u00E9nients sont minimes et le contexte reste la meilleure approche.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Corriger une application qui souffre de props drilling",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Voici un composant <code>&lt;Dashboard&gt;</code> qui affiche des donn\u00E9es utilisateur. Actuellement, la donn\u00E9e <code>userId</code> est pass\u00E9e manuellement \u00E0 travers 4 niveaux de composants :</p>\n<pre>\nfunction Dashboard() {\n  const userId = \"user-123\";\n  return &lt;Sidebar userId={userId} /&gt;;\n}\n\nfunction Sidebar({ userId }) {\n  return &lt;UserMenu userId={userId} /&gt;;\n}\n\nfunction UserMenu({ userId }) {\n  return &lt;ProfileLink userId={userId} /&gt;;\n}\n\nfunction ProfileLink({ userId }) {\n  return &lt;a href={`/profile/${userId}`}&gt;Mon profil&lt;/a&gt;;\n}\n</pre>",
+      "images": [
+        "Sch\u00E9ma de la hi\u00E9rarchie des composants Dashboard → Sidebar → UserMenu → ProfileLink",
+        "Diagramme illustrant le flux de la prop userId \u00E0 travers les composants"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "R\u00E9\u00E9crire le code en utilisant le pattern de composition pour \u00E9liminer le props drilling, sans cr\u00E9er de nouveau contexte.",
+        "niveau": "medium",
+        "reponse": "```jsx\nfunction Dashboard() {\n  const userId = \"user-123\";\n  return (\n    &lt;Sidebar&gt;\n      &lt;UserMenu&gt;\n        &lt;ProfileLink userId={userId} /&gt;\n      &lt;/UserMenu&gt;\n    &lt;/Sidebar&gt;\n  );\n}\n\nfunction Sidebar({ children }) {\n  return &lt;div className=\"sidebar\"&gt;{children}&lt;/div&gt;;\n}\n\nfunction UserMenu({ children }) {\n  return &lt;div className=\"user-menu\"&gt;{children}&lt;/div&gt;;\n}\n\nfunction ProfileLink({ userId }) {\n  return &lt;a href={`/profile/${userId}`}&gt;Mon profil&lt;/a&gt;;\n}\n```\nLe composant Dashboard compose explicitement la structure : ProfileLink est pass\u00E9 comme enfant \u00E0 UserMenu, qui est lui-m\u00EAme enfant de Sidebar. Plus aucun composant interm\u00E9diaire n'a besoin de connaître userId.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

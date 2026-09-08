@@ -1,0 +1,150 @@
+[
+  {
+    "intitule": "Créez une API de Classification avec Flask",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous êtes data engineer dans une start-up camerounaise qui développe une application de classification de fruits. L'équipe Data Science a entraîné un modèle de classification d'images. Votre mission est de créer une API REST avec Flask pour exposer ce modèle.</p><p>Le modèle est sauvegardé dans un fichier <code>fruit_classifier.pkl</code> et utilise une fonction <code>preprocess_image(image)</code> pour préparer les images avant la prédiction. Le modèle retourne une liste de 5 fruits avec leurs probabilités.</p>",
+      "images": [
+        "Diagramme d'architecture montrant le flux de données: Client HTTP -> API Flask -> Modèle chargé en mémoire -> Prédiction -> Réponse JSON"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "En vous basant sur vos connaissances de Flask, écrivez le code pour charger le modèle au démarrage de l'application et pour créer un endpoint <code>/predict</code> qui reçoit une image en POST et retourne la prédiction.",
+        "niveau": "hard",
+        "reponse": "<p>Voici une implémentation complète :</p><pre style='background:#f7fafc; padding:12px; border-radius:6px; font-size:0.9rem; overflow-x:auto;'>from flask import Flask, request, jsonify\nimport pickle\nimport numpy as np\n\napp = Flask(__name__)\n\n# Chargement du modèle au démarrage\nwith open('fruit_classifier.pkl', 'rb') as f:\n    model = pickle.load(f)\n\n@app.route('/predict', methods=['POST'])\ndef predict():\n    try:\n        # Récupération de l'image depuis la requête\n        if 'image' not in request.files:\n            return jsonify({'error': 'Aucune image fournie'}), 400\n        \n        image_file = request.files['image']\n        image = preprocess_image(image_file)  # Fonction de preprocessing\n        \n        # Prédiction\n        predictions = model.predict([image])[0]\n        probabilities = model.predict_proba([image])[0]\n        \n        # Formatage de la réponse\n        results = []\n        for i, fruit in enumerate(model.classes_):\n            results.append({\n                'fruit': fruit,\n                'probability': round(probabilities[i] * 100, 2)\n            })\n        results.sort(key=lambda x: x['probability'], reverse=True)\n        \n        return jsonify({'predictions': results})\n    except Exception as e:\n        return jsonify({'error': str(e)}), 500\n\nif __name__ == '__main__':\n    app.run(host='0.0.0.0', port=5000, debug=False)</pre>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Ajoutez une gestion d'erreur pour le cas où le fichier image n'est pas valide (extension non supportée, fichier corrompu).",
+            "niveau": "medium",
+            "reponse": "<p>On peut ajouter une vérification de l'extension et un bloc try/except lors du traitement de l'image :</p><pre style='background:#f7fafc; padding:12px; border-radius:6px; font-size:0.9rem; overflow-x:auto;'>ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}\n\ndef allowed_file(filename):\n    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS\n\n@app.route('/predict', methods=['POST'])\ndef predict():\n    if 'image' not in request.files:\n        return jsonify({'error': 'Aucune image fournie'}), 400\n    \n    image_file = request.files['image']\n    if image_file.filename == '':\n        return jsonify({'error': 'Nom de fichier vide'}), 400\n    \n    if not allowed_file(image_file.filename):\n        return jsonify({'error': 'Format de fichier non supporté'}), 400\n    \n    try:\n        image = preprocess_image(image_file)\n        # Suite du code...\n    except Exception as e:\n        return jsonify({'error': f'Erreur lors du traitement de l\\'image: {str(e)}'}), 400</pre>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Modifiez l'API pour qu'elle accepte également des requêtes GET avec l'image encodée en base64 dans un paramètre de la requête.",
+            "niveau": "very hard",
+            "reponse": "<p>Voici la modification pour accepter l'image en base64 via GET :</p><pre style='background:#f7fafc; padding:12px; border-radius:6px; font-size:0.9rem; overflow-x:auto;'>import base64\nfrom io import BytesIO\nfrom PIL import Image\n\ndef decode_base64_image(base64_string):\n    \"\"\"Décode une image encodée en base64\"\"\"\n    image_data = base64.b64decode(base64_string)\n    image = Image.open(BytesIO(image_data))\n    return image\n\n@app.route('/predict', methods=['GET', 'POST'])\ndef predict():\n    try:\n        if request.method == 'POST':\n            if 'image' not in request.files:\n                return jsonify({'error': 'Aucune image fournie'}), 400\n            image_file = request.files['image']\n            image = preprocess_image(image_file)\n        else:  # GET\n            base64_image = request.args.get('image')\n            if not base64_image:\n                return jsonify({'error': 'Paramètre image manquant'}), 400\n            try:\n                image = preprocess_image(decode_base64_image(base64_image))\n            except Exception as e:\n                return jsonify({'error': f'Erreur de décodage base64: {str(e)}'}), 400\n        \n        # Suite du code de prédiction...\n    except Exception as e:\n        return jsonify({'error': str(e)}), 500</pre>"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Évaluez les performances de votre API Flask en termes de latence par rapport à FastAPI pour cette application. Justifiez votre choix pour un contexte de production avec un trafic de 100 requêtes par seconde.",
+        "niveau": "hard",
+        "reponse": "<p>Pour un trafic de 100 requêtes par seconde, FastAPI serait généralement plus performant car :</p><ul><li><strong>Asynchrone :</strong> FastAPI est asynchrone par défaut, ce qui permet de gérer plus de requêtes simultanément avec moins de threads.</li><li><strong>Performance :</strong> FastAPI est basé sur Starlette et est <strong>plus rapide</strong> que Flask en termes de temps de réponse (environ 2-3 fois plus rapide selon les benchmarks).</li><li><strong>Documentation automatique :</strong> FastAPI génère automatiquement la documentation OpenAPI, ce qui facilite l'intégration.</li><li><strong>Validation des données :</strong> FastAPI utilise Pydantic pour une validation de données robuste.</li></ul><p>Cependant, Flask reste un bon choix si vous avez une équipe habituée à Flask ou si vous devez intégrer des bibliothèques synchrones. Dans ce cas, vous pourriez utiliser Gunicorn avec plusieurs workers pour améliorer la concurrence : <code>gunicorn -w 8 app:app</code>.</p>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Rédigez la Documentation d'une API de Prédiction",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous avez développé une API Flask pour un modèle de prédiction des prix de l'immobilier à Douala. Vous devez maintenant rédiger la documentation de cette API pour que d'autres développeurs puissent l'utiliser facilement.</p><p>L'API a les endpoints suivants :</p><ul><li><code>POST /predict</code> : Reçoit un JSON avec les caractéristiques du bien et retourne le prix estimé</li><li><code>GET /health</code> : Vérifie l'état de santé du service</li><li><code>GET /models</code> : Liste les versions de modèles disponibles</li><li><code>POST /models/load</code> : Charge une version spécifique du modèle</li></ul>",
+      "images": [
+        "Schéma de l'API montrant les différents endpoints et leurs paramètres"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédigez la section de documentation pour l'endpoint <code>POST /predict</code>. Incluez la description, les paramètres d'entrée, le format de réponse, les codes d'erreur possibles, et un exemple.",
+        "niveau": "medium",
+        "reponse": "<h3>POST /predict</h3><p><strong>Description :</strong> Calcule le prix estimé d'un bien immobilier à Douala à partir de ses caractéristiques.</p><p><strong>Paramètres d'entrée (JSON) :</strong></p><table style='border-collapse: collapse; width: 100%;'><tr style='background:#f7fafc;'><th style='border:1px solid #ccc; padding:8px;'>Champ</th><th style='border:1px solid #ccc; padding:8px;'>Type</th><th style='border:1px solid #ccc; padding:8px;'>Description</th></tr><tr><td style='border:1px solid #ccc; padding:8px;'><code>surface</code></td><td style='border:1px solid #ccc; padding:8px;'>float</td><td style='border:1px solid #ccc; padding:8px;'>Surface en mètres carrés</td></tr><tr><td style='border:1px solid #ccc; padding:8px;'><code>chambres</code></td><td style='border:1px solid #ccc; padding:8px;'>integer</td><td style='border:1px solid #ccc; padding:8px;'>Nombre de chambres</td></tr><tr><td style='border:1px solid #ccc; padding:8px;'><code>quartier</code></td><td style='border:1px solid #ccc; padding:8px;'>string</td><td style='border:1px solid #ccc; padding:8px;'>Nom du quartier (Bonapriso, Akwa, etc.)</td></tr><tr><td style='border:1px solid #ccc; padding:8px;'><code>piscine</code></td><td style='border:1px solid #ccc; padding:8px;'>boolean</td><td style='border:1px solid #ccc; padding:8px;'>Présence d'une piscine</td></tr></table><p><strong>Réponse en cas de succès (200 OK) :</strong></p><pre style='background:#f7fafc; padding:12px; border-radius:6px; font-size:0.9rem; overflow-x:auto;'>{\n  \"status\": \"success\",\n  \"price\": 85000000,\n  \"currency\": \"XAF\",\n  \"model_version\": \"v2.1\"\n}</pre><p><strong>Codes d'erreur :</strong></p><ul><li><strong>400 Bad Request :</strong> Paramètres manquants ou invalides</li><li><strong>404 Not Found :</strong> Modèle non chargé</li><li><strong>500 Internal Server Error :</strong> Erreur interne du serveur</li></ul><p><strong>Exemple de requête :</strong></p><pre style='background:#f7fafc; padding:12px; border-radius:6px; font-size:0.9rem; overflow-x:auto;'>curl -X POST http://api.douala-prices.com/predict \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"surface\": 120, \"chambres\": 3, \"quartier\": \"Bonapriso\", \"piscine\": false}'</pre>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Ajoutez une section pour les codes d'erreur avec les messages d'erreur associés.",
+            "niveau": "easy",
+            "reponse": "<p><strong>Codes d'erreur détaillés :</strong></p><ul><li><strong>400 Bad Request</strong> - <code>{\"error\": \"Paramètre manquant: surface\"}</code> quand un champ requis est absent.</li><li><strong>400 Bad Request</strong> - <code>{\"error\": \"Valeur invalide pour quartier: 'Njebe'\"}</code> quand la valeur d'un champ n'est pas dans la liste autorisée.</li><li><strong>404 Not Found</strong> - <code>{\"error\": \"Aucun modèle chargé\"}</code> quand le modèle n'est pas disponible.</li><li><strong>500 Internal Server Error</strong> - <code>{\"error\": \"Erreur lors de la prédiction: division par zéro\"}</code> pour les erreurs internes.</li></ul>"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Comparez la documentation générée automatiquement par Flask (avec <code>flask-swagger-ui</code>) avec une documentation rédigée manuellement. Quels sont les avantages et les inconvénients de chaque approche ?",
+        "niveau": "medium",
+        "reponse": "<table style='border-collapse: collapse; width: 100%;'><tr style='background:#f7fafc;'><th style='border:1px solid #ccc; padding:8px;'>Aspect</th><th style='border:1px solid #ccc; padding:8px;'>Documentation automatique</th><th style='border:1px solid #ccc; padding:8px;'>Documentation manuelle</th></tr><tr><td style='border:1px solid #ccc; padding:8px;'><strong>Mise à jour</strong></td><td style='border:1px solid #ccc; padding:8px;'>Automatique, synchronisée avec le code</td><td style='border:1px solid #ccc; padding:8px;'>Manuelle, risque de désynchronisation</td></tr><tr><td style='border:1px solid #ccc; padding:8px;'><strong>Interactivité</strong></td><td style='border:1px solid #ccc; padding:8px;'>Interface interactive (Swagger UI) pour tester les endpoints</td><td style='border:1px solid #ccc; padding:8px;'>Statique, lecture seule</td></tr><tr><td style='border:1px solid #ccc; padding:8px;'><strong>Personnalisation</strong></td><td style='border:1px solid #ccc; padding:8px;'>Limitée aux métadonnées dans le code</td><td style='border:1px solid #ccc; padding:8px;'>Très flexible, peut inclure des exemples, tutoriels, etc.</td></tr><tr><td style='border:1px solid #ccc; padding:8px;'><strong>Qualité</strong></td><td style='border:1px solid #ccc; padding:8px;'>Généralement précise mais technique</td><td style='border:1px solid #ccc; padding:8px;'>Peut être plus accessible pour les non-techniciens</td></tr><tr><td style='border:1px solid #ccc; padding:8px;'><strong>Complexité</strong></td><td style='border:1px solid #ccc; padding:8px;'>Nécessite d'ajouter des décorateurs et annotations</td><td style='border:1px solid #ccc; padding:8px;'>Simple à mettre en place, nécessite des compétences rédactionnelles</td></tr></table><p><strong>Recommandation :</strong> Une combinaison des deux approches est idéale. Utilisez Swagger pour la documentation technique (paramètres, types) et complétez avec une documentation manuelle pour les explications métier, les guides d'utilisation et les bonnes pratiques.</p>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Déployer une API Flask en Production",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous avez développé une API Flask pour un modèle de scoring de crédit. L'API est actuellement en développement et vous devez la préparer pour la production. L'entreprise souhaite un service haute disponibilité avec un temps de réponse inférieur à 200ms.</p>",
+      "images": [
+        "Schéma d'architecture de déploiement avec un load balancer, plusieurs instances de l'API, et un système de monitoring"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Élaborez une architecture de déploiement pour l'API Flask. Décrivez les composants et justifiez vos choix.",
+        "niveau": "hard",
+        "reponse": "<h3>Architecture de déploiement proposée :</h3><ul><li><strong>Conteneurisation avec Docker :</strong> <ul><li>Créer une image Docker pour l'API avec toutes les dépendances.</li><li>Permet un déploiement cohérent dans tous les environnements.</li></ul></li><li><strong>Orchestration avec Kubernetes :</strong> <ul><li>Déploiement avec <code>replicas: 3</code> pour la haute disponibilité.</li><li>Utiliser un Service de type <code>LoadBalancer</code> pour exposer l'API.</li><li>Configurer un Horizontal Pod Autoscaler pour le scaling automatique.</li></ul></li><li><strong>Serveur WSGI de production :</strong> <ul><li>Utiliser <code>gunicorn</code> avec 4 workers par Pod.</li><li>Configurer des workers asynchrones avec <code>gevent</code> pour améliorer la concurrence.</li></ul></li><li><strong>Cache et optimisation :</strong> <ul><li>Ajouter un cache (Redis) pour les prédictions fréquentes.</li><li>Utiliser un CDN pour les fichiers statiques.</li></ul></li><li><strong>Monitoring :</strong> <ul><li>Ajouter des métriques Prometheus via <code>prometheus_flask_exporter</code>.</li><li>Configurer Grafana pour les dashboards.</li></ul></li></ul><pre style='background:#f7fafc; padding:12px; border-radius:6px; font-size:0.9rem; overflow-x:auto;'># Dockerfile\nFROM python:3.9-slim\nWORKDIR /app\nCOPY requirements.txt .\nRUN pip install -r requirements.txt\nCOPY . .\nCMD [\"gunicorn\", \"-w\", \"4\", \"-k\", \"gevent\", \"--bind\", \"0.0.0.0:5000\", \"app:app\"]</pre>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez pourquoi vous utilisez Gunicorn plutôt que le serveur de développement de Flask en production.",
+            "niveau": "medium",
+            "reponse": "<p>Le serveur de développement de Flask (<code>app.run()</code>) n'est pas adapté à la production car :</p><ul><li><strong>Performance :</strong> Le serveur intégré est mono-threadé et ne gère qu'une seule requête à la fois. Gunicorn avec des workers permet de traiter plusieurs requêtes en parallèle.</li><li><strong>Robustesse :</strong> Gunicorn gère le redémarrage automatique des workers en cas de crash.</li><li><strong>Scalabilité :</strong> Gunicorn permet d'ajuster facilement le nombre de workers en fonction de la charge.</li><li><strong>Sécurité :</strong> Les serveurs de production comme Gunicorn ont une meilleure gestion des timeouts et des attaques.</li></ul>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Quelles métriques de performance allez-vous surveiller en production pour garantir un temps de réponse inférieur à 200ms ?",
+            "niveau": "medium",
+            "reponse": "<p><strong>Métriques à surveiller :</strong></p><ul><li><strong>Latence (p50, p95, p99) :</strong> Temps de réponse des requêtes. Alerte si p95 > 200ms.</li><li><strong>Débit (RPS) :</strong> Requêtes par seconde pour planifier le scaling.</li><li><strong>Temps CPU :</strong> Temps CPU utilisé par requête pour identifier les bottlenecks.</li><li><strong>Temps de prédiction :</strong> Temps spécifique pour la prédiction du modèle.</li><li><strong>Taux d'erreur :</strong> Pourcentage de requêtes en échec (5xx, 4xx).</li><li><strong>Mémoire utilisée :</strong> Pour détecter les fuites de mémoire.</li><li><strong>Nombre de workers actifs :</strong> Pour optimiser le paramétrage de Gunicorn.</li></ul>"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Vous devez mettre à jour le modèle de scoring de crédit vers une nouvelle version. Décrivez une stratégie de déploiement sans interruption de service (zero-downtime).",
+        "niveau": "hard",
+        "reponse": "<p><strong>Stratégie de déploiement Blue/Green avec Kubernetes :</strong></p><ol><li><strong>Préparation :</strong> <ul><li>Charger le nouveau modèle dans un répertoire de l'image ou via un volume monté.</li><li>Modifier le code pour accepter un paramètre d'environnement <code>MODEL_VERSION</code>.</li></ul></li><li><strong>Déploiement Green :</strong> <ul><li>Créer un nouveau Deployment (green) avec la nouvelle version du modèle.</li><li>Le déployer en parallèle du Deployment existant (blue).</li><li>Utiliser des labels différents pour les deux versions.</li></ul></li><li><strong>Tests :</strong> <ul><li>Tester le nouveau déploiement via un service interne (ex: <code>app-green</code>).</li><li>Exécuter des tests de validation sur le nouveau modèle.</li></ul></li><li><strong>Bascule du trafic :</strong> <ul><li>Modifier le Service principal pour pointer vers les Pods green.</li><li>Si Kubernetes, utiliser le selecteur de labels : <code>selector: version: v2</code>.</li></ul></li><li><strong>Rollback :</strong> <ul><li>Conserver le Deployment blue en place pour un rollback rapide.</li><li>En cas de problème, basculer le Service vers blue.</li></ul></li><li><strong>Nettoyage :</strong> <ul><li>Supprimer le Deployment blue après une période de validation (ex: 24h).</li></ul></li></ol><pre style='background:#f7fafc; padding:12px; border-radius:6px; font-size:0.9rem; overflow-x:auto;'># Service Kubernetes avec sélecteur de version\napiVersion: v1\nkind: Service\nmetadata:\n  name: api-service\nspec:\n  selector:\n    app: api\n    version: v2  # Bascule ici pour changer de version\n  ports:\n  - port: 80\n    targetPort: 5000</pre>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse Critique de Flask vs FastAPI",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Votre équipe doit choisir entre Flask et FastAPI pour le développement d'une nouvelle API de Machine Learning. Vous devez présenter une analyse comparative pour aider à la décision.</p>",
+      "images": [
+        "Graphique comparant les performances (requêtes par seconde) de Flask et FastAPI pour différentes charge"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Établissez une comparaison complète entre Flask et FastAPI pour le déploiement de modèles ML. Considérez les aspects suivants : performance, facilité d'utilisation, documentation, validation des données, et écosystème.",
+        "niveau": "medium",
+        "reponse": "<table style='border-collapse: collapse; width: 100%;'><tr style='background:#f7fafc;'><th style='border:1px solid #ccc; padding:8px;'>Aspect</th><th style='border:1px solid #ccc; padding:8px;'>Flask</th><th style='border:1px solid #ccc; padding:8px;'>FastAPI</th></tr><tr><td style='border:1px solid #ccc; padding:8px;'><strong>Performance</strong></td><td style='border:1px solid #ccc; padding:8px;'>Bon (synchrones, ~10k RPS avec Gunicorn)</td><td style='border:1px solid #ccc; padding:8px;'>Excellent (asynchrones, ~30k RPS, comparable à NodeJS)</td></tr><tr><td style='border:1px solid #ccc; padding:8px;'><strong>Facilité d'utilisation</strong></td><td style='border:1px solid #ccc; padding:8px;'>Très simple, courbe d'apprentissage faible</td><td style='border:1px solid #ccc; padding:8px;'>Assez simple, nécessite la compréhension de l'async</td></tr><tr><td style='border:1px solid #ccc; padding:8px;'><strong>Documentation</strong></td><td style='border:1px solid #ccc; padding:8px;'>Bonne, nombreux tutoriels disponibles</td><td style='border:1px solid #ccc; padding:8px;'>Excellente, génération OpenAPI automatique, interactive</td></tr><tr><td style='border:1px solid #ccc; padding:8px;'><strong>Validation des données</strong></td><td style='border:1px solid #ccc; padding:8px;'>Manuelle (avec Marshmallow ou Pydantic en extension)</td><td style='border:1px solid #ccc; padding:8px;'>Intégrée avec Pydantic, automatique et type-safe</td></tr><tr><td style='border:1px solid #ccc; padding:8px;'><strong>Écosystème</strong></td><td style='border:1px solid #ccc; padding:8px;'>Très mature, extensions nombreuses (Flask-SQLAlchemy, Flask-JWT)</td><td style='border:1px solid #ccc; padding:8px;'>Croissant, mais moins d'extensions que Flask</td></tr><tr><td style='border:1px solid #ccc; padding:8px;'><strong>Cas d'usage ML</strong></td><td style='border:1px solid #ccc; padding:8px;'>Idéal pour les prototypages et applications simples</td><td style='border:1px solid #ccc; padding:8px;'>Idéal pour les API haute performance avec validation de données</td></tr></table><p><strong>Recommandation :</strong> Pour un projet de production avec des exigences de performance élevées, FastAPI est souvent le meilleur choix. Pour un projet simple ou une équipe novice, Flask reste une option solide et plus accessible.</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Dans quel cas choisiriez-vous Flask plutôt que FastAPI ? Justifiez votre réponse avec deux exemples concrets.",
+            "niveau": "medium",
+            "reponse": "<p><strong>Cas où Flask est préférable :</strong></p><ol><li><strong>Intégration avec des bibliothèques synchrones :</strong> Si votre code utilise des bibliothèques ML qui ne sont pas compatibles avec l'asynchrone (comme certaines versions de scikit-learn ou TensorFlow), Flask est plus simple car il gère tout en synchrone.</li><li><strong>Équipe junior ou projets rapides :</strong> Flask est plus simple à apprendre et à mettre en œuvre. Pour un projet de preuve de concept (POC) où le temps de développement est critique, Flask permet d'aller plus vite.</li><li><strong>Écosystème existant :</strong> Si votre organisation a déjà des extensions Flask (Flask-Admin, Flask-Security) que vous voulez réutiliser, Flask est un choix naturel.</li></ol>"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Évaluez l'impact de l'utilisation de l'asynchrone dans FastAPI sur les performances d'une API de prédiction. Donnez un exemple de code pour illustrer votre propos.",
+        "niveau": "hard",
+        "reponse": "<p><strong>Impact de l'asynchrone sur les performances :</strong></p><ul><li><strong>Concurrence :</strong> FastAPI peut gérer plusieurs requêtes simultanément sans bloquer le thread principal. Cela est particulièrement bénéfique pour les API ML qui font des appels à des services externes (base de données, cache, API d'embeddings).</li><li><strong>Scalabilité :</strong> Avec Flask, chaque requête bloque un thread. Avec FastAPI, une seule boucle d'événements peut gérer des milliers de requêtes concurrentes, réduisant l'utilisation de la mémoire.</li><li><strong>Latence :</strong> Pour les prédictions qui impliquent des appels asynchrones (ex: recherche vectorielle, appels à des microservices), FastAPI peut améliorer significativement la latence.</li></ul><p><strong>Exemple de code FastAPI asynchrone :</strong></p><pre style='background:#f7fafc; padding:12px; border-radius:6px; font-size:0.9rem; overflow-x:auto;'>from fastapi import FastAPI\nimport asyncio\nimport time\n\napp = FastAPI()\n\n# Fonction de prédiction simulée (lourde, en asynchrone)\nasync def predict_async(input_data):\n    # Simule un appel à un service externe (ex: base de données vectorielle)\n    await asyncio.sleep(0.1)  # 100ms de latence externe\n    # Simulation d'un calcul de prédiction\n    await asyncio.sleep(0.05)  # 50ms de calcul\n    return {\"prediction\": 0.95, \"processing_time\": 0.15}\n\n@app.post(\"/predict\")\nasync def predict(data: dict):\n    start = time.time()\n    # Lancement de plusieurs opérations asynchrones en parallèle\n    results = await asyncio.gather(\n        predict_async(data),\n        # Autres appels asynchrones\n        # fetch_embedding(data),\n    )\n    return {\"results\": results, \"total_time\": time.time() - start}</pre>",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

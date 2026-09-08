@@ -1,0 +1,166 @@
+[
+  {
+    "intitule": "Construction d'un Modèle de Prédiction du Churn pour un Opérateur Téléphonique",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous êtes data scientist dans un opérateur de téléphonie mobile au Cameroun. L'entreprise souhaite réduire son taux de désabonnement (churn) en identifiant les clients à risque de partir. Vous disposez d'un dataset contenant des informations sur les clients et leur comportement sur les 12 derniers mois.</p><p><strong>Description des données :</strong></p><ul><li><strong>id_client</strong> : Identifiant unique du client</li><li><strong>age</strong> : Âge du client</li><li><strong>genre</strong> : Homme/Femme</li><li><strong>region</strong> : Région du Cameroun (Douala, Yaoundé, etc.)</li><li><strong>type_contrat</strong> : Prépayé ou Postpayé</li><li><strong>duree_abonnement</strong> : Nombre de mois depuis la souscription</li><li><strong>nb_appels</strong> : Nombre d'appels sur 12 mois</li><li><strong>duree_appels</strong> : Durée totale des appels (en minutes)</li><li><strong>nb_sms</strong> : Nombre de SMS sur 12 mois</li><li><strong>volume_data</strong> : Volume de données utilisées (en Mo)</li><li><strong>montant_depense</strong> : Montant total dépensé (en FCFA)</li><li><strong>nb_reclamations</strong> : Nombre de réclamations au service client</li><li><strong>nb_jours_sans_activite</strong> : Nombre de jours sans activité (appel, SMS, data)</li><li><strong>churn</strong> : Variable cible (1 si le client a résilié, 0 sinon)</li></ul>",
+      "images": [
+        "Schéma d'un pipeline de prédiction du churn : Préparation des données → Analyse exploratoire → Feature engineering → Modélisation (Random Forest, XGBoost) → Évaluation → Déploiement"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analysez les variables disponibles et identifiez les 5 caractéristiques (features) les plus susceptibles d'être prédictives du churn. Justifiez votre choix en vous basant sur la connaissance métier.",
+        "niveau": "medium",
+        "reponse": "<p><strong>Top 5 des caractéristiques prédictives du churn :</strong></p><ol><li><strong>nb_jours_sans_activite</strong> : L'inactivité est le signal le plus fort de churn. Un client qui n'appelle pas, n'envoie pas de SMS et n'utilise pas de data pendant plusieurs jours a un risque élevé de partir.</li><li><strong>nb_reclamations</strong> : Un client qui se plaint souvent au service client est plus susceptible de quitter l'opérateur, surtout si les réclamations ne sont pas résolues.</li><li><strong>duree_abonnement</strong> : Les clients récents ont souvent un taux de churn plus élevé que les clients fidèles. La courbe de rétention suit généralement une forme en U (très récents et très anciens).</li><li><strong>montant_depense (ou ARPU)</strong> : Une baisse significative des dépenses peut être un signal avant-coureur de churn. Les clients qui réduisent leur consommation avant de partir.</li><li><strong>volume_data / nb_appels</strong> : Une forte utilisation est généralement corrélée à une plus grande fidélité. Les clients qui utilisent beaucoup les services sont plus 'engagés'.</li></ol>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposez au moins 3 nouvelles variables (feature engineering) que vous pourriez créer à partir des données existantes pour améliorer le modèle.",
+            "niveau": "hard",
+            "reponse": "<p><strong>Nouvelles variables proposées :</strong></p><ol><li><strong>ARPU (Average Revenue Per User) :</strong> \( ARPU = \\frac{montant\\_depense}{duree\\_abonnement} \) — Mesure le revenu moyen par mois, permet de détecter les clients qui dépensent moins que la moyenne.</li><li><strong>Ratio d'utilisation :</strong> \( ratio = \\frac{volume\\_data}{nb\\_appels + 1} \) — Un client qui utilise beaucoup de data mais peu d'appels peut avoir un profil différent (ex: utilisateur de WhatsApp/Internet).</li><li><strong>Baisse des dépenses (delta) :</strong> \( baisse = montant\\_depense\\_dernier\\_mois - montant\\_depense\\_moyen \) — Une baisse récente des dépenses est un signal fort de churn.</li><li><strong>Densité d'utilisation :</strong> \( densite = \\frac{jours\\_actifs}{duree\\_abonnement} \) — Mesure la régularité d'utilisation. Un client qui a une faible densité est plus à risque.</li><li><strong>Temps depuis la dernière réclamation :</strong> \( recency\\_reclamation = date\\_actuelle - date\\_derniere\\_reclamation \) — Si une réclamation est récente et non résolue, le risque de churn augmente.</li></ol>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Expliquez pourquoi il est important de traiter le déséquilibre des classes dans un problème de prédiction du churn.",
+            "niveau": "medium",
+            "reponse": "<p><strong>Pourquoi le déséquilibre des classes est important :</strong></p><ul><li>Dans la plupart des entreprises, le taux de churn est faible (ex: 5-10%). Cela signifie que la classe 'churn' (1) est minoritaire par rapport à la classe 'non-churn' (0).</li><li>Un modèle entraîné sur des données déséquilibrées aura tendance à prédire la classe majoritaire (non-churn) pour presque tous les clients, ce qui donne une fausse impression de bonne performance (ex: 95% de précision).</li><li>Le modèle échouera à identifier les clients qui partent, ce qui est le but principal de l'analyse.</li></ul><p><strong>Solutions :</strong></p><ul><li><strong>Oversampling :</strong> Dupliquer les exemples de la classe minoritaire (SMOTE).</li><li><strong>Undersampling :</strong> Supprimer des exemples de la classe majoritaire.</li><li><strong>Pondération des classes :</strong> Donner plus de poids aux erreurs sur la classe minoritaire.</li><li><strong>Utilisation de métriques adaptées :</strong> Précision, Rappel, F1-score, AUC-ROC plutôt que l'accuracy.</li></ul>"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Élaborez une stratégie de déploiement et de monitoring du modèle de prédiction du churn en production. Décrivez les étapes et les outils que vous utiliseriez.",
+        "niveau": "hard",
+        "reponse": "<p><strong>Stratégie de déploiement et de monitoring :</strong></p><p><strong>1. Déploiement du modèle :</strong></p><ul><li><strong>API de prédiction :</strong> Déployer le modèle via une API (FastAPI) qui prend les caractéristiques d'un client en entrée et retourne une probabilité de churn.</li><li><strong>Conteneurisation :</strong> Utiliser Docker pour empaqueter le modèle et l'API.</li><li><strong>Orchestration :</strong> Déployer sur Kubernetes pour la scalabilité et la haute disponibilité.</li><li><strong>Pipeline de données :</strong> Utiliser Airflow pour orchestrer l'extraction des données (CRM) et les prédictions batch.</li></ul><p><strong>2. Monitoring :</strong></p><ul><li><strong>Performance du modèle :</strong> <ul><li>Suivre l'évolution de l'accuracy, du F1-score et de l'AUC chaque semaine.</li><li>Détecter le Data Drift (changement de distribution des features).</li><li>Détecter le Concept Drift (la relation features → churn change).</li></ul></li><li><strong>Métriques opérationnelles :</strong> <ul><li>Latence de l'API (temps de réponse).</li><li>Nombre de requêtes par jour.</li><li>Taux d'erreur de l'API.</li></ul></li></ul><p><strong>3. Alerte et action :</strong></p><ul><li>Configurer des alertes Prometheus/Grafana si : <ul><li>Le F1-score descend en dessous d'un seuil (ex: 0.7).</li><li>Le nombre de clients à risque (probabilité > 0.8) augmente soudainement.</li><li>La latence de l'API dépasse 500ms.</li></ul></li><li>Automatiser le ré-entraînement (pipeline CI/CD) pour mettre à jour le modèle chaque semaine avec les nouvelles données.</li></ul>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse des Facteurs de Churn",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un opérateur de téléphonie mobile au Cameroun a collecté des données sur ses clients sur 12 mois. Un data scientist a entraîné un modèle de prédiction du churn et a obtenu les résultats suivants pour l'importance des variables :</p><ul><li>nb_jours_sans_activite : 28%</li><li>duree_abonnement : 18%</li><li>nb_reclamations : 15%</li><li>montant_depense : 12%</li><li>volume_data : 10%</li><li>nb_appels : 8%</li><li>age : 5%</li><li>genre : 2%</li><li>region : 2%</li></ul>",
+      "images": [
+        "Graphique à barres montrant l'importance des variables pour la prédiction du churn, avec nb_jours_sans_activite en tête, suivi de duree_abonnement et nb_reclamations"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analysez l'importance des variables présentée. Identifiez les 3 facteurs les plus influents sur le churn et expliquez pourquoi ils sont importants pour un opérateur téléphonique.",
+        "niveau": "easy",
+        "reponse": "<p><strong>Top 3 des facteurs influents :</strong></p><ol><li><strong>nb_jours_sans_activite (28%)</strong> : C'est le facteur le plus important. Plus un client reste longtemps sans utiliser les services (appels, SMS, data), plus il est susceptible de quitter l'opérateur. Un client inactif est un client qui se désengage.</li><li><strong>duree_abonnement (18%)</strong> : La durée de l'abonnement est un indicateur de fidélité. Les clients récents (moins de 3 mois) quittent souvent rapidement s'ils ne sont pas satisfaits. Les clients très anciens peuvent aussi partir pour des raisons de prix.</li><li><strong>nb_reclamations (15%)</strong> : Un client qui se plaint souvent au service client est un client insatisfait. Les réclamations fréquentes (surtout si elles sont non résolues) augmentent significativement le risque de churn.</li></ol><p><strong>Implications pour l'entreprise :</strong></p><ul><li>Identifier les clients inactifs pour lancer des campagnes de réactivation (offres, promotions).</li><li>Surveiller les clients récents avec un onboarding renforcé.</li><li>Résoudre rapidement les réclamations pour éviter la frustration.</li></ul>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi les variables démographiques (age, genre, region) ont-elles une importance si faible dans ce modèle ? Comment interpréter ce résultat ?",
+            "niveau": "medium",
+            "reponse": "<p><strong>Analyse de la faible importance des variables démographiques :</strong></p><ul><li><strong>Le comportement est plus important que la démographie :</strong> Les variables comportementales (inactivité, durée d'abonnement, réclamations) capturent mieux le risque de churn que les caractéristiques statiques comme l'âge ou le genre.</li><li><strong>Possibilité de corrélation :</strong> Il est possible que les variables démographiques soient corrélées avec les variables comportementales (ex: les jeunes utilisent plus de data, les hommes appellent moins).</li><li><strong>Implication :</strong> L'opérateur doit se concentrer sur les signaux comportementaux plutôt que sur la démographie pour détecter le churn.</li></ul><p><strong>Limite :</strong> Ces résultats peuvent être spécifiques à ce dataset. Dans d'autres contextes (ex: banque, assurance), la démographie peut jouer un rôle plus important.</p>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Proposez des actions marketing ciblées pour chaque facteur identifié dans le top 3 pour réduire le churn.",
+            "niveau": "medium",
+            "reponse": "<p><strong>Actions marketing par facteur :</strong></p><p><strong>Facteur 1 : nb_jours_sans_activite</strong></p><ul><li><strong>Action :</strong> Envoyer un SMS de réactivation après 7 jours d'inactivité avec une offre de bienvenue (ex: 500 Mo de data gratuite).</li><li><strong>Action :</strong> Offrir un bonus de recharge pour les clients qui n'ont pas rechargé depuis 15 jours.</li></ul><p><strong>Facteur 2 : duree_abonnement</strong></p><ul><li><strong>Action :</strong> Pour les clients récents (moins de 3 mois), proposer un programme de bienvenue avec des avantages progressifs.</li><li><strong>Action :</strong> Pour les clients anciens (plus de 24 mois), proposer une remise de fidélité ou un upgrade de forfait.</li></ul><p><strong>Facteur 3 : nb_reclamations</strong></p><ul><li><strong>Action :</strong> Mettre en place un système de suivi des réclamations avec appel de suivi après 48h.</li><li><strong>Action :</strong> Offrir une compensation (data, crédit) aux clients qui ont eu une réclamation non résolue.</li><li><strong>Action :</strong> Analyser les causes des réclamations pour améliorer le service (couverture réseau, facturation).</li></ul>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Évaluation d'un Modèle de Churn",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un data scientist a construit un modèle de prédiction du churn pour une banque camerounaise. Voici la matrice de confusion obtenue sur l'ensemble de test (10 000 clients) :</p><table style='border-collapse: collapse; width: 80%; margin: 10px auto;'><tr><td style='border:1px solid #ccc; padding:8px;'></td><td style='border:1px solid #ccc; padding:8px; text-align:center;'><strong>Prédit Non-Churn</strong></td><td style='border:1px solid #ccc; padding:8px; text-align:center;'><strong>Prédit Churn</strong></td></tr><tr><td style='border:1px solid #ccc; padding:8px;'><strong>Réel Non-Churn</strong></td><td style='border:1px solid #ccc; padding:8px; text-align:center;'>8 500</td><td style='border:1px solid #ccc; padding:8px; text-align:center;'>500</td></tr><tr><td style='border:1px solid #ccc; padding:8px;'><strong>Réel Churn</strong></td><td style='border:1px solid #ccc; padding:8px; text-align:center;'>800</td><td style='border:1px solid #ccc; padding:8px; text-align:center;'>200</td></tr></table><p>Le taux de churn réel dans cette population est de 10% (1 000 clients ont réellement quitté la banque).</p>",
+      "images": [
+        "Matrice de confusion illustrant les vrais positifs, faux positifs, vrais négatifs et faux négatifs pour le modèle de churn"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "À partir de la matrice de confusion, calculez les métriques suivantes : Accuracy, Precision (pour la classe Churn), Recall (pour la classe Churn), et F1-score. Interprétez chaque métrique.",
+        "niveau": "hard",
+        "reponse": "<p><strong>Calculs :</strong></p><ul><li><strong>Accuracy :</strong> \( \\frac{8500 + 200}{10000} = \\frac{8700}{10000} = 0.87 \) (87%)</li><li><strong>Precision (Churn) :</strong> \( \\frac{VP}{VP + FP} = \\frac{200}{200 + 500} = \\frac{200}{700} \\approx 0.286 \) (28.6%)</li><li><strong>Recall (Churn) :</strong> \( \\frac{VP}{VP + FN} = \\frac{200}{200 + 800} = \\frac{200}{1000} = 0.20 \) (20%)</li><li><strong>F1-score :</strong> \( 2 \\times \\frac{Precision \\times Recall}{Precision + Recall} = 2 \\times \\frac{0.286 \\times 0.20}{0.286 + 0.20} \\approx 0.235 \) (23.5%)</li></ul><p><strong>Interprétation :</strong></p><ul><li><strong>Accuracy (87%) :</strong> Le modèle est précis dans l'ensemble, mais cette métrique est trompeuse car elle est dominée par la classe majoritaire (Non-Churn).</li><li><strong>Precision (28.6%) :</strong> Lorsque le modèle prédit qu'un client va partir, il n'a raison que dans 28.6% des cas. Il y a beaucoup de faux positifs.</li><li><strong>Recall (20%) :</strong> Le modèle ne capture que 20% des clients qui partent réellement. 80% des clients partants ne sont pas détectés (faux négatifs).</li><li><strong>F1-score (23.5%) :</strong> La performance globale du modèle sur la classe churn est faible. Le modèle n'est pas encore suffisamment performant pour une utilisation en production.</li></ul>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Sachant que le coût d'acquisition d'un nouveau client (CAC) est de 50 000 FCFA et que la valeur à vie d'un client (LTV) est de 200 000 FCFA, estimez l'impact financier de la détection de churn par ce modèle.",
+            "niveau": "hard",
+            "reponse": "<p><strong>Impact financier du modèle :</strong></p><ul><li><strong>Nombre de churn réels :</strong> 1 000 clients</li><li><strong>Clients churn détectés (Recall) :</strong> 200 clients (20% des churn réels)</li><li><strong>Clients churn non détectés :</strong> 800 clients</li><li><strong>Coût du churn non détecté :</strong> 800 clients × LTV (200 000 FCFA) = 160 000 000 FCFA</li><li><strong>Coût du churn détecté (si on peut sauver 50% avec une action) :</strong> 200 clients × 50% × 200 000 FCFA = 20 000 000 FCFA récupérés</li><li><strong>Bénéfice total du modèle :</strong> 20 000 000 FCFA - Coût de la campagne de réactivation</li></ul><p><strong>Conclusion :</strong> Le modèle actuel détecte seulement 20% des churn. En améliorant le Recall à 50%, on pourrait récupérer environ 50 000 000 FCFA supplémentaires. L'investissement dans l'amélioration du modèle est donc justifié.</p>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Proposez des stratégies pour améliorer le Recall du modèle (capacité à détecter les clients qui partent).",
+            "niveau": "medium",
+            "reponse": "<p><strong>Stratégies pour améliorer le Recall :</strong></p><ol><li><strong>Rééquilibrage des classes :</strong> Utiliser SMOTE (oversampling) ou des poids de classe pour donner plus d'importance à la classe churn pendant l'entraînement.</li><li><strong>Changement du seuil de décision :</strong> Par défaut, un seuil de 0.5 est utilisé. Pour améliorer le Recall, on peut abaisser le seuil (ex: 0.3), ce qui permettra de détecter plus de clients partants, au prix de plus de faux positifs.</li><li><strong>Feature engineering :</strong> Ajouter des variables temporelles (ex: évolution des dépenses, tendances) qui peuvent capturer des signaux précoces de churn.</li><li><strong>Modèles plus complexes :</strong> Utiliser XGBoost, LightGBM ou des réseaux de neurones qui peuvent capturer des relations non linéaires.</li><li><strong>Intégration de données externes :</strong> Ajouter des données sur la satisfaction client (NPS), les retours sur les réseaux sociaux, ou la qualité de service.</li></ol>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse des Causes de Churn par Segment",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Une entreprise de e-commerce camerounaise a constaté une augmentation de son taux de churn. Le data scientist a réalisé une analyse segmentée des causes de churn. Voici les résultats pour 3 segments de clients :</p><table style='border-collapse: collapse; width: 90%; margin: 10px auto; font-size:0.9rem;'><tr style='background:#f7fafc;'><th style='border:1px solid #ccc; padding:8px;'>Segment</th><th style='border:1px solid #ccc; padding:8px;'>Taille</th><th style='border:1px solid #ccc; padding:8px;'>Taux de Churn</th><th style='border:1px solid #ccc; padding:8px;'>Raisons principales</th></tr><tr><td style='border:1px solid #ccc; padding:8px;'>Clients Premium</td><td style='border:1px solid #ccc; padding:8px;'>500</td><td style='border:1px solid #ccc; padding:8px;'>15%</td><td style='border:1px solid #ccc; padding:8px;'>Prix trop élevé (60%), Qualité de service (30%)</td></tr><tr><td style='border:1px solid #ccc; padding:8px;'>Clients Occasionnels</td><td style='border:1px solid #ccc; padding:8px;'>2 000</td><td style='border:1px solid #ccc; padding:8px;'>8%</td><td style='border:1px solid #ccc; padding:8px;'>Manque d'engagement (50%), Offres concurrentes (30%)</td></tr><tr><td style='border:1px solid #ccc; padding:8px;'>Nouveaux Clients</td><td style='border:1px solid #ccc; padding:8px;'>800</td><td style='border:1px solid #ccc; padding:8px;'>25%</td><td style='border:1px solid #ccc; padding:8px;'>Onboarding difficile (40%), Produit pas adapté (35%)</td></tr></table>",
+      "images": [
+        "Graphique à barres comparant les taux de churn par segment avec les causes principales identifiées pour chaque segment"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Calculez le nombre total de clients perdus dans chaque segment. Identifiez le segment qui contribue le plus au churn en valeur absolue.",
+        "niveau": "easy",
+        "reponse": "<p><strong>Calculs :</strong></p><ul><li><strong>Clients Premium :</strong> 500 × 15% = <strong>75 clients</strong></li><li><strong>Clients Occasionnels :</strong> 2 000 × 8% = <strong>160 clients</strong></li><li><strong>Nouveaux Clients :</strong> 800 × 25% = <strong>200 clients</strong></li></ul><p><strong>Total des clients perdus :</strong> 75 + 160 + 200 = <strong>435 clients</strong></p><p><strong>Segment contribuant le plus :</strong> Les <strong>Nouveaux Clients</strong> avec 200 clients perdus, soit 46% du total des churn. Viennent ensuite les Clients Occasionnels (37%) et les Clients Premium (17%).</p><p><strong>Conclusion :</strong> Bien que le taux de churn soit plus élevé chez les Nouveaux Clients (25%), c'est aussi le segment sur lequel l'entreprise doit concentrer ses efforts car il représente le plus grand nombre de clients perdus.</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposez des actions spécifiques pour chaque segment afin de réduire le churn.",
+            "niveau": "medium",
+            "reponse": "<p><strong>Actions par segment :</strong></p><p><strong>1. Clients Premium :</strong></p><ul><li><strong>Action :</strong> Offrir des remises personnalisées ou des programmes de fidélité pour compenser le prix élevé.</li><li><strong>Action :</strong> Améliorer la qualité de service avec un support client dédié (hotline premium).</li><li><strong>Action :</strong> Proposer des services exclusifs (livraison gratuite, avant-premières).</li></ul><p><strong>2. Clients Occasionnels :</strong></p><ul><li><strong>Action :</strong> Mettre en place des campagnes de réengagement (offres de bienvenue, bons de réduction).</li><li><strong>Action :</strong> Analyser les offres des concurrents pour ajuster le positionnement.</li><li><strong>Action :</strong> Créer un programme de parrainage pour encourager l'engagement.</li></ul><p><strong>3. Nouveaux Clients :</strong></p><ul><li><strong>Action :</strong> Améliorer l'onboarding avec un guide d'utilisation et un assistant personnalisé.</li><li><strong>Action :</strong> Offrir une période d'essai avec un support renforcé.</li><li><strong>Action :</strong> Proposer des recommandations de produits basées sur le premier achat (cross-sell).</li><li><strong>Action :</strong> Envoyer des emails de bienvenue et des conseils d'utilisation pendant les 2 premières semaines.</li></ul>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Calculez le Coût d'Acquisition Client (CAC) moyen si l'entreprise a dépensé 20 000 000 FCFA en marketing et a acquis 1 000 clients. Comparez-le avec la LTV moyenne de 150 000 FCFA. L'investissement marketing est-il rentable ?",
+            "niveau": "hard",
+            "reponse": "<p><strong>Calcul du CAC :</strong></p><p>\( CAC = \\frac{Coût\\_total\\_marketing}{Nombre\\_de\\_clients\\_acquis} = \\frac{20\\ 000\\ 000}{1\\ 000} = 20\\ 000 \\text{ FCFA} \)</p><p><strong>Comparaison CAC vs LTV :</strong></p><ul><li><strong>CAC :</strong> 20 000 FCFA</li><li><strong>LTV :</strong> 150 000 FCFA</li><li><strong>Ratio LTV/CAC :</strong> \( \\frac{150\\ 000}{20\\ 000} = 7.5 \)</li></ul><p><strong>Conclusion :</strong> L'investissement marketing est rentable. Un ratio LTV/CAC de 7.5 est excellent (généralement, on vise > 3). Cela signifie que chaque client apporte 7.5 fois ce qu'il a coûté à acquérir.</p><p><strong>Attention :</strong> Ce calcul ne prend pas en compte le churn. Si le taux de churn moyen est de 15% (comme pour les Premium), la LTV réelle pourrait être plus faible. Il faudrait calculer la LTV ajustée : \( LTV\\_ajustee = LTV \\times \\frac{1}{1 + taux\\_de\\_churn} \)</p>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Identification des Facteurs de Risque de Churn",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Une entreprise de télécommunications souhaite identifier les clients à risque de churn. Elle a collecté des données sur ses clients et les a analysées.</p>",
+      "images": [
+        "Graphique montrant l'évolution des dépenses d'un client au cours des 6 derniers mois, avec une chute brutale le 4ème mois précédant le churn"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Définissez le concept de 'churn client' et expliquez pourquoi sa prédiction est importante pour une entreprise.",
+        "niveau": "easy",
+        "reponse": "<p><strong>Définition du churn client :</strong></p><p>Le churn client (ou taux de désabonnement) est le pourcentage de clients qui mettent fin à leur relation avec une entreprise sur une période donnée (généralement un mois, un trimestre ou un an). C'est l'inverse du taux de rétention.</p><p><strong>Pourquoi prédire le churn est important :</strong></p><ol><li><strong>Coût de remplacement :</strong> Acquérir un nouveau client coûte 5 à 7 fois plus cher que de fidéliser un client existant (CAC élevé).</li><li><strong>Revenue :</strong> Les clients fidèles génèrent des revenus récurrents et ont une LTV plus élevée.</li><li><strong>Personnalisation :</strong> En identifiant les clients à risque, l'entreprise peut lancer des campagnes de réactivation ciblées.</li><li><strong>Amélioration du produit :</strong> Analyser les causes de churn permet d'améliorer le produit ou le service.</li><li><strong>Avantage concurrentiel :</strong> Une bonne rétention est un avantage concurrentiel majeur, surtout dans des marchés matures.</li></ol>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Identifiez au moins 5 signes avant-coureurs de churn (comportements ou événements) qu'un data scientist peut détecter dans les données.",
+            "niveau": "easy",
+            "reponse": "<p><strong>Signes avant-coureurs de churn :</strong></p><ol><li><strong>Baisse d'activité :</strong> Diminution de la fréquence d'utilisation (moins d'appels, moins de connexions).</li><li><strong>Réduction des dépenses :</strong> Baisse du montant dépensé (ARPU en diminution).</li><li><strong>Inactivité prolongée :</strong> Plusieurs jours/semaines sans aucune interaction.</li><li><strong>Réclamations répétées :</strong> Multiples appels au service client (insatisfaction).</li><li><strong>Comparaison avec des concurrents :</strong> Le client consulte des offres concurrentes (ex: pages web visitées).</li><li><strong>Changement de comportement :</strong> Passage d'un forfait premium à un forfait moins cher (downgrade).</li><li><strong>Expiration de contrat :</strong> Proximité de la fin d'un abonnement ou d'un engagement.</li><li><strong>Retards de paiement :</strong> Factures en retard ou impayées.</li></ol>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Expliquez la différence entre le 'churn volontaire' et

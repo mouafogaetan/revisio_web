@@ -1,0 +1,142 @@
+[
+  {
+    "intitule": "Comprendre les Fonctions Stockées en SQL",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<div style='background-color: #f0f7ff; padding: 15px; border-radius: 8px; color: #1a1a2e; margin-bottom: 15px;'><strong>Contexte :</strong> Les fonctions stockées permettent d'encapsuler des traitements réutilisables directement dans la base de données. Elles sont particulièrement utiles pour effectuer des calculs complexes, des transformations de données ou des validations métier qui doivent être exécutées par plusieurs applications.</div><p>Dans un système de gestion de bibliothèque, vous devez développer des fonctions pour automatiser certaines opérations récurrentes.</p>",
+      "images": [
+        "Schéma du modèle de données d'une bibliothèque avec les tables Livre, Emprunt, Adherent.",
+        "Exemple de code SQL pour la création d'une fonction stockée."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Définissez une fonction stockée et expliquez en quoi elle se distingue d'une procédure stockée.",
+        "niveau": "easy",
+        "reponse": "Une fonction stockée est un objet de base de données qui encapsule une série d'instructions SQL et retourne une valeur unique (ou une table). Elle peut être appelée à l'intérieur d'une requête SELECT, comme une fonction intégrée. Contrairement à une procédure stockée, une fonction :<br>- Retourne obligatoirement une valeur (ou une table).<br>- Peut être utilisée dans des expressions SQL (ex: SELECT ma_fonction(...) FROM ...).<br>- Ne peut pas modifier les données de la base (sauf si déclarée avec 'MODIFIES SQL DATA', mais c'est déconseillé pour une fonction).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Créez une fonction stockée qui calcule le nombre total d'emprunts effectués par un adhérent donné (identifié par son ID). Utilisez la syntaxe SQL appropriée.",
+        "niveau": "medium",
+        "reponse": "<div style='background: #f8f9fa; padding: 10px; border-radius: 5px;'><code>CREATE FUNCTION nb_emprunts_adhérent(p_id_adherent INT)<br>RETURNS INT<br>DETERMINISTIC<br>READS SQL DATA<br>BEGIN<br>    DECLARE total INT;<br>    SELECT COUNT(*) INTO total<br>    FROM Emprunt<br>    WHERE id_adherent = p_id_adherent;<br>    RETURN total;<br>END;</code></div><p>Cette fonction prend en paramètre un identifiant d'adhérent, compte le nombre d'emprunts dans la table Emprunt pour cet adhérent, et retourne le résultat.</p><p>On utilise <code>READS SQL DATA</code> pour indiquer que la fonction lit mais ne modifie pas les données.</p>",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Quelle est la différence entre les mots-clés DETERMINISTIC et NOT DETERMINISTIC dans la définition d'une fonction ?",
+            "niveau": "medium",
+            "reponse": "DETERMINISTIC indique que la fonction retourne toujours le même résultat pour les mêmes paramètres d'entrée, ce qui permet au SGBD d'optimiser les appels (ex: en mettant en cache le résultat). NOT DETERMINISTIC signifie que le résultat peut varier (ex: une fonction qui utilise la date courante). Si une fonction est déclarée DETERMINISTIC alors qu'elle ne l'est pas, cela peut causer des résultats incorrects."
+          }
+        ]
+      },
+      {
+        "numero": 3,
+        "texte": "Évaluez l'impact d'utiliser une fonction stockée plutôt qu'une requête SQL directe pour le calcul du nombre d'emprunts. Discutez des avantages et des inconvénients.",
+        "niveau": "hard",
+        "reponse": "<p><strong>Avantages :</strong></p><ul><li><strong>Réutilisabilité :</strong> La fonction peut être appelée depuis n'importe quelle application ou requête.</li><li><strong>Centralisation :</strong> La logique métier est centralisée dans la base de données, facilitant la maintenance (une seule modification si la règle change).</li><li><strong>Sécurité :</strong> On peut donner des droits d'exécution sur la fonction sans donner d'accès direct à la table Emprunt.</li></ul><p><strong>Inconvénients :</strong></p><ul><li><strong>Performance :</strong> Si la fonction est appelée pour chaque ligne d'une requête (ex: dans un SELECT avec plusieurs lignes), cela peut être plus lent qu'une seule requête SQL bien optimisée.</li><li><strong>Portabilité :</strong> La syntaxe des fonctions stockées varie selon les SGBD (MySQL, PostgreSQL, SQL Server, etc.), ce qui réduit la portabilité du code.</li><li><strong>Débogage :</strong> Le débogage des fonctions stockées est souvent moins aisé que celui du code applicatif.</li></ul>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 4,
+        "texte": "Proposez une fonction stockée qui retourne une table (table-valued function) listant les livres qui ont plus de $N$ emprunts, où $N$ est un paramètre. Expliquez son utilisation.",
+        "niveau": "hard",
+        "reponse": "<p>Certains SGBD permettent de retourner une table. Voici un exemple pour PostgreSQL :</p><div style='background: #f8f9fa; padding: 10px; border-radius: 5px;'><code>CREATE FUNCTION livres_populaires(N INT)<br>RETURNS TABLE(id_livre INT, titre VARCHAR(200), nb_emprunts BIGINT)<br>LANGUAGE SQL<br>AS $$<br>    SELECT l.id_livre, l.titre, COUNT(e.id_emprunt) AS nb_emprunts<br>    FROM Livre l<br>    JOIN Emprunt e ON l.id_livre = e.id_livre<br>    GROUP BY l.id_livre, l.titre<br>    HAVING COUNT(e.id_emprunt) >= N<br>    ORDER BY nb_emprunts DESC;<br>$$;</code></div><p>Cette fonction peut être utilisée comme une table dans une requête :</p><div style='background: #f8f9fa; padding: 10px; border-radius: 5px;'><code>SELECT * FROM livres_populaires(5);</code></div><p>Cette approche permet de créer des interfaces dynamiques et paramétrables tout en centralisant la logique métier.</p>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation des Requêtes avec des Fonctions Stockées",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<div style='background-color: #f0fff4; padding: 15px; border-radius: 8px; color: #1a1a2e; margin-bottom: 15px;'><strong>Contexte :</strong> Vous êtes ingénieur de données dans une entreprise de vente en ligne. Le système de gestion des commandes est basé sur une base de données relationnelle. L'équipe commerciale souhaite obtenir des indicateurs de performance, comme le montant total des ventes d'un client, le nombre de commandes, et le panier moyen, pour chaque client.</div><p>Les requêtes actuelles sont lentes car elles impliquent des calculs complexes sur des millions de commandes. Vous proposez d'utiliser des fonctions stockées pour optimiser ces calculs.</p>",
+      "images": [
+        "Modèle de données d'une base de vente en ligne avec les tables Client, Commande, LigneCommande, Produit.",
+        "Comparaison des temps d'exécution entre une requête SQL directe et une fonction stockée."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analysez les avantages d'utiliser une fonction stockée pour calculer le panier moyen d'un client, par rapport à une requête SQL exécutée dans l'application. Considérez les aspects de performance et de maintenance.",
+        "niveau": "hard",
+        "reponse": "<p><strong>Avantages en termes de performance :</strong></p><ul><li><strong>Réduction des allers-retours :</strong> Le calcul est effectué côté serveur, réduisant le nombre de requêtes et le volume de données transférées.</li><li><strong>Optimisation par le SGBD :</strong> Le SGBD peut optimiser l'exécution de la fonction, notamment en utilisant les index et les statistiques.</li><li><strong>Mise en cache :</strong> Si la fonction est marquée DETERMINISTIC et que les données ne changent pas souvent, le SGBD peut mettre en cache le résultat.</li></ul><p><strong>Avantages en termes de maintenance :</strong></p><ul><li>La logique métier (calcul du panier moyen) est centralisée dans la base. Si la formule change (ex: exclusion des remboursements), on modifie la fonction une seule fois.</li><li>Toutes les applications utilisent la même logique, garantissant la cohérence des données.</li></ul>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Dans quels cas serait-il préférable de ne PAS utiliser une fonction stockée ?",
+            "niveau": "hard",
+            "reponse": "Il est préférable de ne pas utiliser une fonction stockée lorsque :<br>- La logique est très simple et appelée rarement (coût de développement supérieur au gain).<br>- La fonction doit être portable sur plusieurs SGBD (ex: migration future).<br>- La logique nécessite des appels à des services externes (API, web services) ou des opérations complexes ne pouvant pas être exprimées en SQL pur.<br>- La charge de la base de données est déjà élevée et on préfère déporter les calculs vers l'application (scale-out)."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Créez une fonction stockée qui retourne le montant total des commandes d'un client pour une année donnée. La fonction prendra en paramètre l'ID du client et l'année.",
+        "niveau": "medium",
+        "reponse": "<div style='background: #f8f9fa; padding: 10px; border-radius: 5px;'><code>CREATE FUNCTION montant_total_commandes(p_id_client INT, p_annee INT)<br>RETURNS DECIMAL(10,2)<br>READS SQL DATA<br>BEGIN<br>    DECLARE total DECIMAL(10,2);<br>    SELECT SUM(c.montant_total) INTO total<br>    FROM Commande c<br>    WHERE c.id_client = p_id_client<br>    AND YEAR(c.date_commande) = p_annee;<br>    RETURN COALESCE(total, 0);<br>END;</code></div><p>Cette fonction somme le montant total des commandes d'un client pour une année spécifique. La fonction <code>COALESCE</code> permet de retourner 0 si le client n'a pas de commandes pour cette année.</p>",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Comment pourriez-vous optimiser cette fonction en termes de performance ?",
+            "niveau": "hard",
+            "reponse": "Pour optimiser cette fonction :<br>- Ajouter un index sur <code>(id_client, date_commande)</code> pour accélérer le filtrage et le groupement.<br>- Utiliser <code>DECLARE total DECIMAL(10,2) DEFAULT 0;</code> pour éviter le <code>COALESCE</code>.<br>- Si le résultat est fréquemment demandé, envisager une vue matérialisée ou une table de cache qui stocke ces totaux par client et année, mise à jour par des triggers ou des jobs programmés."
+          }
+        ]
+      },
+      {
+        "numero": 3,
+        "texte": "Proposez une stratégie pour déployer et maintenir ces fonctions stockées dans un environnement de production avec plusieurs environnements (développement, test, production).",
+        "niveau": "very hard",
+        "reponse": "<p><strong>Stratégie de déploiement et de maintenance :</strong></p><ol><li><strong>Versionnement :</strong> Stocker les scripts de création des fonctions dans un dépôt Git (comme le reste du code applicatif). Chaque modification est une nouvelle version.</li><li><strong>Scripts de migration :</strong> Utiliser des scripts de migration (ex: avec Flyway, Liquibase) pour appliquer les changements de manière contrôlée et reproductible. Les scripts peuvent être numérotés (V1__create_functions.sql, V2__update_functions.sql).</li><li><strong>Environnements séparés :</strong> Appliquer les scripts d'abord sur un environnement de développement, puis de test, avant de les déployer en production. Vérifier les performances et les résultats à chaque étape.</li><li><strong>Rollback :</strong> Prévoir des scripts de rollback pour pouvoir revenir à la version précédente si un problème est détecté en production.</li><li><strong>Tests automatisés :</strong> Écrire des tests unitaires pour valider les fonctions sur des données de test (ex: avec des assertions sur les résultats).</li><li><strong>Documentation :</strong> Documenter chaque fonction (son but, ses paramètres, sa valeur de retour, ses dépendances) dans un wiki ou un README.</li></ol>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Fonctions Stockées et Sécurité des Données",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<div style='background-color: #fff8f0; padding: 15px; border-radius: 8px; color: #1a1a2e; margin-bottom: 15px;'><strong>Contexte :</strong> Une plateforme de streaming souhaite protéger l'accès aux données sensibles de ses utilisateurs (historique de visionnage, préférences). L'application frontale doit pouvoir récupérer des recommandations personnalisées sans avoir accès direct aux données brutes.</div><p>Vous proposez d'utiliser des fonctions stockées pour encapsuler la logique de recommandation et contrôler l'accès aux données.</p>",
+      "images": [
+        "Schéma d'architecture avec une base de données, des fonctions stockées et des applications ayant des droits différents.",
+        "Exemple de définition de droits d'accès sur une fonction stockée."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez comment les fonctions stockées peuvent renforcer la sécurité des données dans ce contexte. Comparez avec un accès direct aux tables.",
+        "niveau": "medium",
+        "reponse": "<p><strong>Renforcement de la sécurité :</strong></p><ul><li><strong>Principe du moindre privilège :</strong> On peut donner aux applications uniquement le droit d'exécuter les fonctions, sans droit d'accès direct aux tables sensibles. La fonction est créée avec <code>SQL SECURITY DEFINER</code>, ce qui permet à la fonction de s'exécuter avec les privilèges de son créateur (qui a accès aux tables), tout en exposant uniquement les résultats autorisés.</li><li><strong>Filtrage des données :</strong> La fonction ne retourne que les données autorisées (ex: recommandations pour l'utilisateur courant). Elle peut inclure des vérifications de sécurité, comme l'ID de l'utilisateur connecté, pour s'assurer que l'application ne peut pas accéder aux données d'un autre utilisateur.</li><li><strong>Abstraction :</strong> La fonction masque la structure des tables sous-jacentes. Si la structure évolue, seule la fonction doit être modifiée, sans impacter les applications.</li></ul><p><strong>Comparaison avec l'accès direct :</strong> Avec un accès direct, l'application aurait besoin d'un accès en lecture aux tables, ce qui exposerait potentiellement toutes les données. Les fonctions permettent un contrôle granulaire des données exposées.</p>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Créez une fonction stockée sécurisée qui retourne les 5 dernières recommandations pour un utilisateur donné. La fonction doit vérifier que l'utilisateur qui fait la requête est bien celui pour qui les recommandations sont demandées. Utilisez les concepts de SQL SECURITY DEFINER.",
+        "niveau": "very hard",
+        "reponse": "<div style='background: #f8f9fa; padding: 10px; border-radius: 5px;'><code>CREATE FUNCTION get_recommandations(p_id_utilisateur INT)<br>RETURNS TABLE(titre VARCHAR(200), score DECIMAL(5,2))<br>READS SQL DATA<br>SQL SECURITY DEFINER<br>BEGIN<br>    -- Vérification que l'utilisateur demandé correspond à l'utilisateur connecté<br>    DECLARE user_id INT;<br>    SET user_id = (SELECT id_utilisateur FROM sessions WHERE session_id = CURRENT_SESSION_ID());<br>    IF p_id_utilisateur != user_id THEN<br>        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Accès non autorisé aux données d'un autre utilisateur.';<br>    END IF;<br><br>    RETURN QUERY<br>    SELECT r.titre, r.score<br>    FROM recommandations r<br>    WHERE r.id_utilisateur = p_id_utilisateur<br>    ORDER BY r.score DESC<br>    LIMIT 5;<br>END;</code></div><p>Cette fonction vérifie que l'ID utilisateur passé en paramètre correspond à celui de la session active (via une variable de session). En utilisant <code>SQL SECURITY DEFINER</code>, la fonction s'exécute avec les droits du propriétaire, mais l'application appelante n'a besoin que du droit d'exécution, pas d'accès aux tables.</p>",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Pourquoi est-il important de ne pas exposer directement les données brutes via la fonction ?",
+            "niveau": "medium",
+            "reponse": "Exposer les données brutes (ex: l'historique complet des visionnages) via la fonction augmenterait les risques de fuite de données. La fonction doit n'exposer que les informations nécessaires (recommandations) et effectuer des contrôles d'accès stricts. Cela permet de réduire la surface d'attaque et de se conformer aux réglementations sur la protection des données (RGPD, etc.)."
+          }
+        ]
+      },
+      {
+        "numero": 3,
+        "texte": "Proposez des tests de sécurité pour valider que la fonction ne peut pas être exploitée pour accéder aux données d'autres utilisateurs.",
+        "niveau": "very hard",
+        "reponse": "<p><strong>Tests de sécurité à réaliser :</strong></p><ol><li><strong>Test d'autorisation :</strong> Se connecter avec un utilisateur A et appeler la fonction avec l'ID de l'utilisateur B. La fonction doit lever une erreur ou ne retourner aucune donnée.</li><li><strong>Test d'injection SQL :</strong> Tenter d'injecter du SQL dans le paramètre <code>p_id_utilisateur</code> (ex: en utilisant une valeur comme '1 OR 1=1'). La fonction doit utiliser des paramètres typés ou des requêtes préparées pour éviter les injections.</li><li><strong>Test de contournement :</strong> Tenter d'appeler la fonction depuis un contexte différent (ex: une autre session) ou avec des privilèges élevés pour voir si les données d'autres utilisateurs sont accessibles.</li><li><strong>Test de performance :</strong> Simuler un grand nombre d'appels avec différents IDs pour vérifier que la fonction ne cause pas de fuite de données via des messages d'erreur ou des temps de réponse variables.</li></ol>",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

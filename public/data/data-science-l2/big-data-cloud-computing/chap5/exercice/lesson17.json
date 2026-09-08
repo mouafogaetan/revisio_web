@@ -1,0 +1,191 @@
+[
+  {
+    "intitule": "Identification des Opérateurs Airflow",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Cet exercice vous permet de vous familiariser avec les différents opérateurs avancés d'Apache Airflow et leurs cas d'usage.</p>",
+      "images": [
+        "Capture d'écran de l'interface Airflow montrant un DAG avec différentes tâches de couleurs différentes",
+        "Schéma représentant les flux de données entre différents systèmes (Spark, base de données, email, Slack)"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifiez l'opérateur Airflow à utiliser pour soumettre un job Spark et décrivez ses paramètres essentiels.",
+        "niveau": "easy",
+        "reponse": "L'opérateur à utiliser est <code>SparkSubmitOperator</code>. Les paramètres essentiels sont : <code>application</code> (chemin vers le fichier JAR/Python), <code>conn_id</code> (connexion Spark), <code>total_executor_cores</code>, <code>executor_memory</code>, et <code>driver_memory</code>.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comparez <code>SparkSubmitOperator</code> et <code>BashOperator</code> pour l'exécution de scripts Spark. Quels sont les avantages du premier ?",
+            "niveau": "medium",
+            "reponse": "<code>SparkSubmitOperator</code> est spécialisé pour Spark : il gère automatiquement la configuration du cluster, les logs, et les retours d'état. <code>BashOperator</code> est générique mais nécessite de gérer manuellement toutes ces configurations. <code>SparkSubmitOperator</code> offre aussi une meilleure intégration avec l'écosystème Airflow."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Énumérez les opérateurs Airflow pour les bases de données relationnelles et décrivez leurs paramètres communs.",
+        "niveau": "easy",
+        "reponse": "Les opérateurs pour bases de données sont : <code>PostgresOperator</code>, <code>MySqlOperator</code>, <code>SqliteOperator</code>, <code>MSSQLOperator</code>. Leurs paramètres communs sont : <code>sql</code> (requête à exécuter), <code>conn_id</code> (identifiant de connexion), et <code>parameters</code> (paramètres de la requête).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Notification de Pipeline avec Email et Slack",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous gérez un pipeline de données qui s'exécute toutes les nuits. Ce pipeline est composé de plusieurs étapes : ingestion des données, transformation, et chargement. Vous devez configurer les notifications pour informer les équipes concernées.</p>",
+      "images": [
+        "Diagramme de pipeline avec trois étapes (Ingestion, Transformation, Chargement) et des flèches de dépendance",
+        "Capture d'écran d'une notification Slack avec un message de succès d'exécution de pipeline"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créez une tâche Airflow avec <code>EmailOperator</code> qui envoie un email de notification à l'équipe data lorsque l'étape de transformation est terminée.",
+        "niveau": "medium",
+        "reponse": "Voici un exemple de tâche :\n<pre style='background:#1a1a2e; color:#ecf0f1; padding:10px; border-radius:5px; overflow-x:auto;'>email_task = EmailOperator(\n    task_id='notify_transform',\n    to='data-team@company.com',\n    subject='Transformation terminée',\n    html_content='<p>La transformation des données est terminée avec succès.</p>',\n    dag=dag\n)</pre>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez comment configurer la connexion SMTP pour que <code>EmailOperator</code> puisse envoyer des emails.",
+            "niveau": "medium",
+            "reponse": "La configuration SMTP se fait dans <code>airflow.cfg</code> ou via des variables d'environnement. Les paramètres clés sont : <code>smtp_host</code>, <code>smtp_port</code>, <code>smtp_user</code>, <code>smtp_password</code>, <code>smtp_starttls</code>, et <code>smtp_ssl</code>. On peut aussi configurer le <code>email_backend</code> pour utiliser un service comme SendGrid."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Créez une tâche avec <code>SlackOperator</code> qui envoie un message sur un canal Slack à chaque succès du pipeline complet. Le message doit mentionner le nombre d'enregistrements traités.",
+        "niveau": "hard",
+        "reponse": "Exemple de tâche Slack :\n<pre style='background:#1a1a2e; color:#ecf0f1; padding:10px; border-radius:5px; overflow-x:auto;'>slack_task = SlackWebhookOperator(\n    task_id='slack_notify',\n    http_conn_id='slack_connection',\n    message='Pipeline terminé avec succès ! Nombre de lignes traitées : {{ ti.xcom_pull(task_ids=\\'count_task\\') }}',\n    channel='#data-alerts',\n    dag=dag\n)</pre>",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Comment utiliser les XComs pour transmettre des informations dynamiques comme le nombre d'enregistrements de la tâche précédente ?",
+            "niveau": "very hard",
+            "reponse": "Les XComs permettent de partager des données entre tâches. Une tâche peut pousser une valeur avec <code>task_instance.xcom_push(key='records_count', value=count)</code>. Une autre tâche peut récupérer cette valeur avec <code>task_instance.xcom_pull(task_ids='source_task', key='records_count')</code>. Dans les templates, on utilise <code>{{ ti.xcom_pull(task_ids='source_task') }}</code>."
+          }
+        ]
+      },
+      {
+        "numero": 3,
+        "texte": "Créez un DAG qui exécute d'abord une tâche Spark, puis envoie une notification Slack si la tâche échoue, et une notification Email si la tâche réussit.",
+        "niveau": "very hard",
+        "reponse": "Voici la structure du DAG :\n<pre style='background:#1a1a2e; color:#ecf0f1; padding:10px; border-radius:5px; overflow-x:auto;'>with DAG(...) as dag:\n    spark_task = SparkSubmitOperator(task_id='spark_job', ...)\n    slack_on_failure = SlackWebhookOperator(task_id='slack_failure', ...)\n    email_on_success = EmailOperator(task_id='email_success', ...)\n    spark_task >> [slack_on_failure, email_on_success]\n    # Utiliser les callbacks on_failure_callback et on_success_callback</pre>",
+        "sousQuestions": [
+          {
+            "numero": "3.a",
+            "texte": "Quelle approche utilisez-vous pour différencier les notifications de succès et d'échec ? Expliquez avec des callbacks ou des branches.",
+            "niveau": "very hard",
+            "reponse": "Deux approches sont possibles : 1) Utiliser les callbacks <code>on_success_callback</code> et <code>on_failure_callback</code> du DAG ou de la tâche. 2) Utiliser <code>BranchPythonOperator</code> pour vérifier l'état de la tâche et exécuter la notification appropriée. Les callbacks sont plus simples et recommandés pour ce type de cas d'usage."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Pipeline de données avec Opérateurs Variés",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous travaillez pour une entreprise de e-commerce. Chaque matin, un pipeline doit : 1) Extraire les données de vente de la veille depuis une base PostgreSQL, 2) Transformer et agréger les données avec Spark, 3) Charger les résultats dans une base MySQL, 4) Envoyer un rapport par email à l'équipe commerciale.</p>",
+      "images": [
+        "Diagramme du pipeline avec les étapes : PostgreSQL (extraction) → Spark (transformation) → MySQL (chargement) → Email (notification)",
+        "Schéma de la base PostgreSQL avec les tables 'ventes' et 'produits'"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créez la tâche d'extraction des données avec <code>PostgresOperator</code>. La requête doit récupérer les ventes de la veille et les exporter dans un fichier CSV dans le répertoire temporaire d'Airflow.",
+        "niveau": "hard",
+        "reponse": "Voici la tâche d'extraction :\n<pre style='background:#1a1a2e; color:#ecf0f1; padding:10px; border-radius:5px; overflow-x:auto;'>extract_task = PostgresOperator(\n    task_id='extract_sales',\n    postgres_conn_id='postgres_default',\n    sql=\"\"\"\n    COPY (\n        SELECT * FROM ventes WHERE date = CURRENT_DATE - INTERVAL '1 day'\n    ) TO '/tmp/ventes_yesterday.csv' WITH CSV HEADER;\n    \"\"\",\n    dag=dag\n)</pre>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quelles considérations de sécurité et de performance faut-il prendre en compte pour cette extraction ?",
+            "niveau": "hard",
+            "reponse": "Sécurité : utiliser un utilisateur avec des droits en lecture seule, ne pas stocker les identifiants en clair (utiliser les connexions Airflow). Performance : si les données sont volumineuses, utiliser COPY avec des paramètres de performance, ou utiliser une extraction par lots. Aussi, éviter d'exporter trop de colonnes si elles ne sont pas nécessaires."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Créez la tâche de transformation avec <code>SparkSubmitOperator</code>. Le script Spark doit lire le fichier CSV, agréger les ventes par catégorie de produit, et écrire le résultat dans un fichier Parquet.",
+        "niveau": "hard",
+        "reponse": "Tâche Spark :\n<pre style='background:#1a1a2e; color:#ecf0f1; padding:10px; border-radius:5px; overflow-x:auto;'>spark_task = SparkSubmitOperator(\n    task_id='transform_sales',\n    application='/scripts/aggregate_sales.py',\n    conn_id='spark_default',\n    total_executor_cores=4,\n    executor_memory='4g',\n    driver_memory='2g',\n    dag=dag\n)</pre>",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Proposez des optimisations pour ce traitement Spark si les données atteignent plusieurs téraoctets.",
+            "niveau": "very hard",
+            "reponse": "Optimisations : partitionner les données par date, utiliser des formats columnaires comme Parquet, augmenter le nombre de partitions, utiliser le broadcast join pour les petites tables, optimiser les paramètres Spark (spark.sql.shuffle.partitions, spark.default.parallelism), utiliser le dynamic allocation pour gérer les ressources, et gérer le cache pour les données réutilisées."
+          }
+        ]
+      },
+      {
+        "numero": 3,
+        "texte": "Créez la tâche de chargement avec <code>MySqlOperator</code> pour charger les résultats dans une table MySQL. Assurez-vous que la table est mise à jour et non dupliquée.",
+        "niveau": "hard",
+        "reponse": "Tâche de chargement :\n<pre style='background:#1a1a2e; color:#ecf0f1; padding:10px; border-radius:5px; overflow-x:auto;'>load_task = MySqlOperator(\n    task_id='load_to_mysql',\n    mysql_conn_id='mysql_default',\n    sql=\"\"\"\n    TRUNCATE TABLE sales_aggregated;\n    LOAD DATA INFILE '/tmp/aggregated_sales.parquet' INTO TABLE sales_aggregated;\n    \"\"\",\n    dag=dag\n)</pre>",
+        "sousQuestions": [
+          {
+            "numero": "3.a",
+            "texte": "Quelle approche utiliseriez-vous pour gérer les erreurs de chargement et assurer la cohérence des données ?",
+            "niveau": "very hard",
+            "reponse": "Approches : 1) Utiliser des transactions avec BEGIN/COMMIT et ROLLBACK en cas d'erreur. 2) Charger dans une table temporaire puis renommer la table (opération atomique). 3) Utiliser des colonnes de version pour gérer les mises à jour. 4) Mettre en place un mécanisme de retry avec <code>retries</code> et <code>retry_delay</code> dans la tâche. 5) Utiliser les XComs pour notifier les tâches suivantes en cas d'échec."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Orchestration d'Alertes Multi-Canaux",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous devez mettre en place un système d'alerte pour un pipeline critique. Les alertes doivent être envoyées sur Slack pour les erreurs critiques, par email pour les erreurs non critiques, et un résumé quotidien doit être envoyé à la direction.</p>",
+      "images": [
+        "Arbre de décision des alertes : Critiques → Slack, Non critiques → Email, Quotidien → Direction",
+        "Capture d'écran d'un dashboard de monitoring Airflow avec des alertes"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Utilisez <code>SlackWebhookOperator</code> pour créer une alerte critique qui mentionne le DAG et la tâche ayant échoué. Utilisez les variables de template Airflow pour dynamiser le message.",
+        "niveau": "hard",
+        "reponse": "Exemple d'alerte critique :\n<pre style='background:#1a1a2e; color:#ecf0f1; padding:10px; border-radius:5px; overflow-x:auto;'>slack_critical = SlackWebhookOperator(\n    task_id='slack_critical_alert',\n    http_conn_id='slack_conn',\n    message=\"\"\":red_circle: *ALERTE CRITIQUE*\nDAG : {{ dag.dag_id }}\nTâche : {{ task.task_id }}\nDate : {{ ds }}\nErreur : {{ ti.xcom_pull(key='error_message') }}\nLogs : {{ ti.log_url }}\"\"\",\n    dag=dag\n)</pre>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment automatiser l'envoi de cette alerte uniquement en cas d'échec de la tâche ?",
+            "niveau": "hard",
+            "reponse": "Deux méthodes : 1) Utiliser le paramètre <code>on_failure_callback</code> de la tâche : <code>on_failure_callback=slack_critical.execute</code>. 2) Utiliser <code>BranchPythonOperator</code> après la tâche pour vérifier son état et exécuter l'alerte si nécessaire. La première méthode est plus propre et native Airflow."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Créez une tâche de résumé quotidien avec <code>EmailOperator</code> qui envoie un résumé des exécutions du jour à la direction. Le résumé doit inclure le nombre de DAGs réussis, échoués, et le temps d'exécution total.",
+        "niveau": "very hard",
+        "reponse": "Tâche de résumé :\n<pre style='background:#1a1a2e; color:#ecf0f1; padding:10px; border-radius:5px; overflow-x:auto;'>summary_task = PythonOperator(\n    task_id='generate_summary',\n    python_callable=generate_summary_report,\n    dag=dag\n)\n\ndef generate_summary_report():\n    # Récupérer les métriques depuis la base Airflow\n    # Générer un rapport HTML\n    # Envoyer l'email via EmailOperator\n    pass</pre>",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Comment récupérer les métriques d'exécution des DAGs depuis la base de données Airflow ?",
+            "niveau": "very hard",
+            "reponse": "Airflow stocke les métriques dans les tables : <code>dag_run</code> (exécutions des DAGs), <code>task_instance</code> (exécutions des tâches), <code>dag</code> (configuration des DAGs). On peut interroger ces tables avec SQLAlchemy depuis un <code>PythonOperator</code>. Exemple : <code>session.query(DagRun).filter(DagRun.execution_date >= start_date).all()</code>. Il faut configurer la connexion à la base de données Airflow."
+          }
+        ]
+      }
+    ]
+  }
+]

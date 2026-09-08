@@ -1,0 +1,214 @@
+[
+  {
+    "intitule": "Analyse d'une séquence d'accès mémoire avec FIFO et LRU",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un système utilise la mémoire virtuelle avec une table des pages. Chaque page fait 4 Ko. La mémoire physique ne contient que 3 cadres de page disponibles. Une séquence d'accès aux pages suivante est observée :</p><p>Pages référencées : 1, 2, 3, 4, 1, 2, 5, 1, 2, 3, 4, 5</p><p>Le système utilise initialement trois cadres vides. On souhaite comparer deux algorithmes de remplacement de pages : FIFO (First In, First Out) et LRU (Least Recently Used).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Calculer le nombre de défauts de page (page faults) pour l'algorithme FIFO.",
+        "niveau": "medium",
+        "reponse": "9 défauts de page.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Décrire l'état des cadres après chaque accès en utilisant FIFO.",
+            "niveau": "medium",
+            "reponse": "Accès 1 : [1] (défaut)\nAccès 2 : [1,2] (défaut)\nAccès 3 : [1,2,3] (défaut)\nAccès 4 : [4,2,3] (défaut, sortie de 1)\nAccès 1 : [4,1,3] (défaut, sortie de 2)\nAccès 2 : [4,1,2] (défaut, sortie de 3)\nAccès 5 : [5,1,2] (défaut, sortie de 4)\nAccès 1 : [5,1,2] (succès)\nAccès 2 : [5,1,2] (succès)\nAccès 3 : [5,3,2] (défaut, sortie de 5)\nAccès 4 : [5,3,4] (défaut, sortie de 1)\nAccès 5 : [5,3,4] (succès)"
+          },
+          {
+            "numero": "1.b",
+            "texte": "En déduire le nombre total de défauts de page.",
+            "niveau": "easy",
+            "reponse": "9 défauts de page."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Calculer le nombre de défauts de page pour l'algorithme LRU.",
+        "niveau": "medium",
+        "reponse": "8 défauts de page.",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Décrire l'évolution de la mémoire et la page remplacée à chaque défaut.",
+            "niveau": "medium",
+            "reponse": "Accès 1 : [1] défaut\nAccès 2 : [1,2] défaut\nAccès 3 : [1,2,3] défaut\nAccès 4 : [4,2,3] défaut (1 est la moins récemment utilisée)\nAccès 1 : [4,1,3] défaut (2 est la moins récemment utilisée)\nAccès 2 : [4,1,2] défaut (3 est la moins récemment utilisée)\nAccès 5 : [5,1,2] défaut (4 est la moins récemment utilisée)\nAccès 1 : [5,1,2] succès\nAccès 2 : [5,1,2] succès\nAccès 3 : [3,1,2] défaut (5 est la moins récemment utilisée)\nAccès 4 : [3,4,2] défaut (1 est la moins récemment utilisée)\nAccès 5 : [3,4,5] défaut (2 est la moins récemment utilisée)"
+          },
+          {
+            "numero": "2.b",
+            "texte": "Comparer les performances de FIFO et LRU sur cette séquence. Justifier.",
+            "niveau": "medium",
+            "reponse": "LRU (8 défauts) est légèrement meilleur que FIFO (9 défauts). LRU évite de remplacer une page qui sera réutilisée prochainement, contrairement à FIFO qui a souffert de l'anomalie de Bélady (remplacement d'une page utile)."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Compréhension du mécanisme de page fault",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Un programme tente d'accéder à une adresse virtuelle <code>0x00A3F7C2</code>. La MMU consulte la table des pages et constate que le bit de présence (<i>present bit</i>) de l'entrée correspondante est à 0.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer précisément ce qui se passe à partir de ce moment dans un système d'exploitation moderne.",
+        "niveau": "medium",
+        "reponse": "Le processeur génère une exception de défaut de page (page fault). Le contrôle passe au gestionnaire de défaut de page du noyau. Celui-ci vérifie la validité de l'adresse, puis déclenche un chargement depuis le swap ou le fichier mappé en mémoire.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Identifier le type d'exception déclenchée par le processeur.",
+            "niveau": "easy",
+            "reponse": "Une exception de type \"page fault\" (défaut de page)."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Décrire les quatre actions principales du noyau lors de la résolution d'un défaut de page valide.",
+            "niveau": "medium",
+            "reponse": "1. Trouver un cadre de page libre en RAM.\n2. Lancer une opération disque pour lire la page manquante.\n3. Pendant l'attente, bloquer le processus et exécuter un autre.\n4. Mettre à jour la table des pages (bit de présence=1) et relancer l'instruction fautive."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Implémentation de l'algorithme de la seconde chance (Second Chance)",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Un système utilise l'algorithme de remplacement \"Second Chance\" (ou horloge) avec 4 cadres. Au départ, les cadres contiennent les pages [7, 0, 1, 2] avec les bits de référence suivants (bit R = 1 si la page a été récemment accédée) : page7(R=1), page0(R=0), page1(R=1), page2(R=0). La main de l'horloge pointe sur le cadre contenant la page 7.</p><p>On accède successivement aux pages : 3, 0, 4, 2, 1, 5.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Simuler l'évolution de l'état des cadres (page et bit R) et de la position de la main après chaque accès.",
+        "niveau": "hard",
+        "reponse": "Voir ci-dessous la simulation détaillée.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Détailler les étapes pour l'accès à la page 3 (premier accès).",
+            "niveau": "hard",
+            "reponse": "Main pointe sur 7 (R=1) -> seconde chance: R=0, main avance sur 0. Main sur 0 (R=0) -> remplacée par 3 (R=1). Main avance sur 1. Etat final: [3(R=1), 0(R=0), 1(R=1), 2(R=0)], main sur 1."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Donner l'état complet après chaque accès (page et bit R) et le nombre de défauts.",
+            "niveau": "hard",
+            "reponse": "Initial: [7(1),0(0),1(1),2(0)] main=7\nAccès 3 : défaut -> [3(1),0(0),1(1),2(0)] main=1\nAccès 0 : succès -> met R=1 -> [3(1),0(1),1(1),2(0)] main=1\nAccès 4 : défaut -> main parcourt : 1(1)->0, 2(0)->remplace par 4(1) -> [3(1),0(1),4(1),2(0)] main=2\nAccès 2 : succès -> [3(1),0(1),4(1),2(1)] main=2\nAccès 1 : succès -> R=1 déjà, pas de changement\nAccès 5 : défaut -> main parcourt: 2(1)->0, 3(1)->0, 0(1)->0, 4(1)->0, revient sur 2(0)->remplace par 5(1) -> [3(0),0(0),4(0),5(1)] main=3\nTotal: 3 défauts (pages 3,4,5)."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Avantages et limites de la mémoire virtuelle",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>On considère un système avec une mémoire physique de 4 Go et des processus ayant chacun besoin de 6 Go d'espace d'adressage. La mémoire virtuelle est activée avec pagination sur disque (swap).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Justifier l'intérêt de la mémoire virtuelle dans cette configuration.",
+        "niveau": "medium",
+        "reponse": "La mémoire virtuelle permet d'exécuter des processus dont l'espace d'adressage total (6 Go) dépasse la RAM physique (4 Go), en chargeant uniquement les pages nécessaires en mémoire et en plaçant le reste sur le disque (swap).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Identifier deux avantages majeurs de la mémoire virtuelle au-delà du dépassement de capacité.",
+            "niveau": "easy",
+            "reponse": "1. Isolation entre processus (chaque processus a son propre espace d'adressage).\n2. Simplification de la gestion mémoire pour les développeurs (adressage linéaire, pas de ré-allocation manuelle)."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Expliquer le phénomène de thrashing et comment l'éviter.",
+            "niveau": "hard",
+            "reponse": "Le thrashing survient quand le système passe plus de temps à échanger des pages qu'à exécuter des instructions (taux de défauts de page très élevé). Solutions : réduire le degré de multiprogrammation, ajouter de la RAM, ou ajuster l'algorithme de remplacement."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Calcul de l'adresse physique en pagination",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un système utilise une pagination avec des pages de taille 4 Ko (soit $2^{12}$ octets). Une table des pages donne pour une page virtuelle donnée le numéro de cadre physique. Soit une adresse virtuelle : <code>0x00008A4F</code>. La table des pages indique que la page virtuelle n° <code>0x8</code> (8 en décimal) est mappée sur le cadre physique n° <code>0x12</code> (18 en décimal).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Calculer l'adresse physique correspondante.",
+        "niveau": "medium",
+        "reponse": "L'adresse physique est 0x00012A4F.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Décomposer l'adresse virtuelle en numéro de page et déplacement.",
+            "niveau": "easy",
+            "reponse": "Taille page = 4 Ko = 12 bits de déplacement. Adresse 0x8A4F = 0x8 (numéro page) << 12 | 0xA4F (déplacement = 0xA4F = 2639 décimal)."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Appliquer la traduction à l'aide de la table des pages.",
+            "niveau": "medium",
+            "reponse": "Numéro cadre = 0x12 = 18. Adresse physique = (18 << 12) + 0xA4F = 0x12000 + 0xA4F = 0x12A4F."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Problème de synthèse : conception d'un remplacement hybride",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous êtes ingénieur système. Vous devez concevoir un algorithme de remplacement pour un serveur de base de données ayant deux exigences : (1) résister aux accès séquentiels (scan de grande table) sans polluer le cache, et (2) protéger les pages fréquemment utilisées.</p><p>L'algorithme classique LRU échoue sur les scans séquentiels (remplace les pages utiles).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposer une modification de LRU ou un algorithme connu répondant à ces contraintes.",
+        "niveau": "very hard",
+        "reponse": "Propositions : LRU-2 (compte deux références), algorithme à deux caches (2Q : hot queue et cold queue), ou algorithme Clock avec bit de référence amélioré et compteur d'âge.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Justifier pourquoi LRU standard est inadapté aux scans séquentiels.",
+            "niveau": "hard",
+            "reponse": "Lors d'un scan séquentiel, chaque nouvelle page lue devient la plus récemment utilisée, poussant hors du cache des pages qui étaient très récentes mais qui seront réutilisées. Le cache finit par ne contenir que les pages du scan, au détriment des données chaudes."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Décrire le fonctionnement de l'algorithme 2Q (deux files) et expliquer comment il résout le problème.",
+            "niveau": "very hard",
+            "reponse": "2Q utilise une petite FIFO pour les pages nouvelles (A1in), une FIFO pour les pages qui ont été référencées deux fois (A1out), et une LRU pour les pages chaudes (Am). Une page lue va d'abord dans A1in ; une seconde référence la promeut dans Am. Les pages de scan, lues une fois, restent dans A1in et sont évincées rapidement sans polluer Am. Les pages fréquentes sont protégées dans Am."
+          },
+          {
+            "numero": "1.c",
+            "texte": "Évaluer quel serait le comportement de votre algorithme sur une séquence : A A A B C D E F G H I ... (pages A très chaude, puis scan B à Z sans répétition).",
+            "niveau": "very hard",
+            "reponse": "A serait promue dans Am après sa seconde référence et y resterait. Les pages B, C, D... passent par A1in, une seule référence, donc ne montent jamais en Am. Elles sont évincées de A1in par FIFO. A reste dans Am et sert les accès suivants. Résultat : cache protégé pour A et non pollué."
+          }
+        ]
+      }
+    ]
+  }
+]

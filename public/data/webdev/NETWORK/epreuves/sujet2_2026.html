@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+  "matiere": "Initiation aux Réseaux informatiques",
+  "classe": "Développement Web",
+  "sequence": "Évaluation Séquentielle n°2",
+  "anneeScolaire": "2025-2026",
+  "exercices": [
+    {
+      "titre": "Exercice 1 : QCM sur les Fondamentaux",
+      "points": "4 pts",
+      "enonce": "<div style='background-color: #ebf8ff; color: #2a4365; padding: 15px; border-radius: 8px; margin-bottom: 15px;'><strong>📌 Consigne :</strong> Pour chaque question, choisissez la ou les bonnes r\u00e9ponses.</div>",
+      "questions": [
+        {
+          "question": "1) Le mod\u00e8le OSI est compos\u00e9 de combien de couches ? <br> a) 4 couches <br> b) 5 couches <br> c) 7 couches <br> d) 9 couches",
+          "reponse": "R\u00e9ponse : c) 7 couches. Le mod\u00e8le OSI (Open Systems Interconnection) est un mod\u00e8le de r\u00e9f\u00e9rence compos\u00e9 de 7 couches, allant de la couche physique (1) \u00e0 la couche application (7). Il sert de cadre p\u00e9dagogique pour comprendre les communications r\u00e9seau [citation:1]."
+        },
+        {
+          "question": "2) La couche de transport du mod\u00e8le TCP/IP est responsable de : <br> a) L'adressage physique des machines <br> b) La fiabilit\u00e9 de la transmission des donn\u00e9es <br> c) La gestion des adresses IP <br> d) L'affichage des pages web",
+          "reponse": "R\u00e9ponse : b) La fiabilit\u00e9 de la transmission des donn\u00e9es. La couche de transport (TCP/UDP) assure la segmentation des donn\u00e9es et, dans le cas de TCP, garantit une livraison fiable et ordonn\u00e9e des paquets entre les applications [citation:3]."
+        },
+        {
+          "question": "3) Un r\u00e9seau de type LAN (Local Area Network) couvre g\u00e9n\u00e9ralement : <br> a) Une ville enti\u00e8re <br> b) Une zone g\u00e9ographique restreinte (b\u00e2timent, campus) <br> c) Le monde entier <br> d) Quelques m\u00e8tres maximum",
+          "reponse": "R\u00e9ponse : b) Une zone g\u00e9ographique restreinte (b\u00e2timent, campus). Un LAN est un r\u00e9seau local qui connecte des ordinateurs dans une zone limit\u00e9e comme une maison, une \u00e9cole ou un bureau, ce qui le distingue des r\u00e9seaux MAN (ville) et WAN (monde)."
+        },
+        {
+          "question": "4) L'adresse MAC est une adresse : <br> a) Logique et configurable <br> b) Physique et unique, grav\u00e9e dans la carte r\u00e9seau <br> c) Utilis\u00e9e uniquement sur Internet <br> d) De 32 bits",
+          "reponse": "R\u00e9ponse : b) Physique et unique, grav\u00e9e dans la carte r\u00e9seau. L'adresse MAC (Media Access Control) est une adresse physique de 48 bits attribu\u00e9e \u00e0 chaque interface r\u00e9seau et utilis\u00e9e pour la communication au niveau de la couche liaison (couche 2 du mod\u00e8le OSI)."
+        },
+        {
+          "question": "5) Le protocole ARP (Address Resolution Protocol) sert \u00e0 : <br> a) Traduire un nom de domaine en adresse IP <br> b) Traduire une adresse IP en adresse MAC <br> c) Router les paquets entre r\u00e9seaux <br> d) Configurer les adresses IP dynamiquement",
+          "reponse": "R\u00e9ponse : b) Traduire une adresse IP en adresse MAC. ARP est utilis\u00e9 pour d\u00e9couvrir l'adresse MAC d'une machine \u00e0 partir de son adresse IP, ce qui est n\u00e9cessaire pour la communication au niveau de la couche liaison dans un r\u00e9seau local [citation:1]."
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 2 : Le Masque de Sous-Réseau",
+      "points": "6 pts",
+      "enonce": "<div style='background-color: #ebf8ff; color: #2a4365; padding: 15px; border-radius: 8px; margin-bottom: 15px;'><strong>📌 Consigne :</strong> Vous \u00eates un administrateur r\u00e9seau. On vous a attribu\u00e9 l'adresse r\u00e9seau <code>192.168.10.0/24</code>. Votre organisation doit cr\u00e9er <strong>4 sous-r\u00e9seaux</strong> distincts, chacun capable d'accueillir un nombre \u00e9quivalent d'h\u00f4tes.</div>",
+      "questions": [
+        {
+          "question": "1) D\u00e9terminez le nouveau masque de sous-r\u00e9seau en notation CIDR et d\u00e9cimale point\u00e9e.",
+          "reponse": "R\u00e9ponse : Pour cr\u00e9er 4 sous-r\u00e9seaux, on a besoin de <strong>2 bits</strong> (2<sup>2</sup> = 4). Le masque initial \u00e9tait /24 (255.255.255.0). On ajoute 2 bits, donc le nouveau masque est <strong>/26</strong>.<br>En d\u00e9cimale point\u00e9e : <strong>255.255.255.192</strong> (car 26 bits \u00e0 1 signifient que les 2 derniers bits du 4e octet sont \u00e0 1, soit 128 + 64 = 192) [citation:2]."
+        },
+        {
+          "question": "2) Calculez l'adresse r\u00e9seau et l'adresse de broadcast pour le <strong>premier sous-r\u00e9seau</strong>.",
+          "reponse": "R\u00e9ponse : <br> <strong>Adresse r\u00e9seau :</strong> 192.168.10.0 <br> <strong>Adresse de broadcast :</strong> 192.168.10.63 <br> <strong>Plage d'h\u00f4tes :</strong> 192.168.10.1 \u00e0 192.168.10.62. <br> La m\u00e9thode consiste \u00e0 soustraire le dernier octet du masque de 256 (256 - 192 = 64), ce qui donne le nombre d'adresses par sous-r\u00e9seau. Les sous-r\u00e9seaux sont donc 0, 64, 128, 192 [citation:2]."
+        },
+        {
+          "question": "3) Le troisi\u00e8me sous-r\u00e9seau (en commen\u00e7ant par 0) peut-il accueillir au moins 50 h\u00f4tes ? Justifiez.",
+          "reponse": "R\u00e9ponse : Oui, il peut accueillir 62 h\u00f4tes. <br> Le nombre d'h\u00f4tes par sous-r\u00e9seau est calcul\u00e9 par la formule 2<sup>nombre de bits d'h\u00f4te</sup> - 2. <br> Avec un masque /26, il reste 6 bits pour les h\u00f4tes (32 - 26 = 6). <br> 2<sup>6</sup> - 2 = 64 - 2 = <strong>62 h\u00f4tes valides</strong>. <br> Comme 62 est sup\u00e9rieur \u00e0 50, le sous-r\u00e9seau r\u00e9pond bien aux besoins [citation:4]."
+        },
+        {
+          "question": "4) Un ordinateur du deuxi\u00e8me sous-r\u00e9seau a l'adresse IP 192.168.10.100. Quel est le masque de sous-r\u00e9seau associ\u00e9 et l'adresse r\u00e9seau de ce m\u00eame sous-r\u00e9seau ?",
+          "reponse": "R\u00e9ponse : Le masque est /26 (255.255.255.192). <br> L'adresse r\u00e9seau du deuxi\u00e8me sous-r\u00e9seau (le premier est .0) est <strong>192.168.10.64</strong>. <br> Le deuxi\u00e8me sous-r\u00e9seau couvre la plage 192.168.10.64 \u00e0 192.168.10.127. L'IP 192.168.10.100 fait bien partie de cette plage [citation:4]."
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 3 : Le Routage",
+      "points": "6 pts",
+      "enonce": "<div style='background-color: #ebf8ff; color: #2a4365; padding: 15px; border-radius: 8px; margin-bottom: 15px;'><strong>📌 Consigne :</strong> Trois routeurs (R1, R2, R3) sont interconnect\u00e9s pour former un r\u00e9seau. Un ing\u00e9nieur r\u00e9seau constate que les routes ne sont pas correctement configur\u00e9es pour que les machines du r\u00e9seau puissent communiquer. R\u00e9pondez aux questions suivantes.</div>",
+      "questions": [
+        {
+          "question": "1) Quelle est la diff\u00e9rence fondamentale entre le <strong>routage statique</strong> et le <strong>routage dynamique</strong> ?",
+          "reponse": "R\u00e9ponse : Le routage statique n\u00e9cessite une configuration manuelle des routes dans la table de routage de chaque routeur [citation:1]. Le routage dynamique utilise des protocoles (comme RIP, OSPF, BGP) pour \u00e9changer automatiquement des informations entre routeurs et construire la table de routage de mani\u00e8re dynamique [citation:5]."
+        },
+        {
+          "question": "2) Un routeur poss\u00e8de dans sa table de routage une route statique vers le r\u00e9seau <code>10.1.0.0/16</code> avec la passerelle <code>192.168.1.1</code>. Que signifie cette configuration ?",
+          "reponse": "R\u00e9ponse : Cela signifie que pour atteindre le r\u00e9seau 10.1.0.0/16, le routeur devra envoyer les paquets \u00e0 l'interface de la passerelle 192.168.1.1 [citation:1]. Cette route a \u00e9t\u00e9 configur\u00e9e manuellement par l'administrateur."
+        },
+        {
+          "question": "3) Expliquez le r\u00f4le du protocole NAT (Network Address Translation) sur un routeur domestique.",
+          "reponse": "R\u00e9ponse : NAT permet de traduire les adresses IP priv\u00e9es d'un r\u00e9seau local (LAN) en une adresse IP publique unique lors de la communication avec Internet [citation:7]. Cela permet \u00e0 plusieurs machines d'un m\u00eame r\u00e9seau de partager une seule adresse IP publique et r\u00e9sout en partie la p\u00e9nurie d'adresses IPv4."
+        },
+        {
+          "question": "4) Un administrateur a d\u00e9ploy\u00e9 un serveur DHCP sur le r\u00e9seau. Quel est l'avantage de cette configuration par rapport \u00e0 des adresses IP statiques ?",
+          "reponse": "R\u00e9ponse : DHCP (Dynamic Host Configuration Protocol) permet d'attribuer automatiquement des adresses IP aux ordinateurs du r\u00e9seau [citation:5]. Cela \u00e9vite de configurer manuellement chaque machine, r\u00e9duit les erreurs et facilite la gestion des adresses IP, notamment lors de l'ajout ou du d\u00e9part de nouvelles machines [citation:5]."
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 4 : Simulation avec Packet Tracer",
+      "points": "4 pts",
+      "enonce": "<div style='background-color: #ebf8ff; color: #2a4365; padding: 15px; border-radius: 8px; margin-bottom: 15px;'><strong>📌 Consigne :</strong> Lisez attentivement le sc\u00e9nario suivant et r\u00e9pondez aux questions.</div><div style='background-color: #f7fafc; color: #2d3748; padding: 15px; border-radius: 8px; margin-bottom: 15px;'><p><strong>Sc\u00e9nario :</strong></p><p>Vous utilisez Cisco Packet Tracer pour simuler un petit r\u00e9seau. Vous avez :</p><ul><li>Un routeur (R1) avec l'interface G0/0 connect\u00e9e \u00e0 un switch (S1).</li><li>Trois ordinateurs (PC1, PC2, PC3) connect\u00e9s \u00e0 S1.</li><li>Un serveur DNS et un serveur Web connect\u00e9s \u00e0 S1.</li><li>Adresse du r\u00e9seau : <code>10.10.10.0/24</code>.</li><li>Le routeur R1 a pour adresse IP <code>10.10.10.1/24</code>.</li></ul></div>",
+      "questions": [
+        {
+          "question": "1) Quelle commande utilisez-vous dans l'invite de commandes de PC1 pour v\u00e9rifier la connectivit\u00e9 avec le routeur R1 ? Expliquez le r\u00e9sultat attendu.",
+          "reponse": "R\u00e9ponse : La commande est <strong>ping 10.10.10.1</strong> [citation:1]. Le r\u00e9sultat attendu est une s\u00e9rie de r\u00e9ponses de la part du routeur, indiquant que la communication est \u00e9tablie. Chaque r\u00e9ponse contient le temps de r\u00e9ponse (RTT) et confirme que le paquet est bien arriv\u00e9 \u00e0 destination [citation:9]."
+        },
+        {
+          "question": "2) Les ordinateurs ne parviennent pas \u00e0 acc\u00e9der au serveur Web par son nom de domaine (ex: www.monsite.com). Quelle est la cause la plus probable ?",
+          "reponse": "R\u00e9ponse : La cause la plus probable est que le <strong>serveur DNS</strong> n'est pas correctement configur\u00e9 ou que les ordinateurs ne connaissent pas son adresse IP [citation:5]. La r\u00e9solution de noms de domaine en adresse IP n\u00e9cessite un serveur DNS fonctionnel et configur\u00e9 sur les postes clients."
+        },
+        {
+          "question": "3) Si vous souhaitez voir le chemin exact emprunt\u00e9 par un paquet entre PC1 et un autre r\u00e9seau, quel outil de Packet Tracer utiliseriez-vous et pourquoi ?",
+          "reponse": "R\u00e9ponse : J'utiliserais le <strong>mode Simulation</strong> de Packet Tracer [citation:7]. Ce mode permet de visualiser le trafic paquet par paquet, d'observer le chemin emprunt\u00e9, les couches travers\u00e9es et les protocoles utilis\u00e9s \u00e0 chaque \u00e9tape. C'est un outil p\u00e9dagogique tr\u00e8s puissant pour comprendre le fonctionnement du r\u00e9seau."
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 5 : Les Protocoles Applicatifs",
+      "points": "4 pts",
+      "enonce": "<div style='background-color: #ebf8ff; color: #2a4365; padding: 15px; border-radius: 8px; margin-bottom: 15px;'><strong>📌 Consigne :</strong> R\u00e9pondez aux questions suivantes sur les protocoles de la couche application.</div>",
+      "questions": [
+        {
+          "question": "1) Un d\u00e9veloppeur souhaite envoyer un fichier volumineux vers un serveur distant. Quel protocole recommandez-vous et pourquoi ?",
+          "reponse": "R\u00e9ponse : Je recommande <strong>SFTP (SSH File Transfer Protocol)</strong> ou <strong>SCP (Secure Copy)</strong> [citation:5]. Ces protocoles utilisent SSH (port 22) pour chiffrer la connexion, ce qui garantit la s\u00e9curit\u00e9 des donn\u00e9es transf\u00e9r\u00e9es. Contrairement au FTP classique (ports 20 et 21) qui transmet les donn\u00e9es en clair, SFTP assure l'int\u00e9grit\u00e9 et la confidentialit\u00e9 du fichier."
+        },
+        {
+          "question": "2) Un utilisateur souhaite se connecter \u00e0 un serveur Linux pour ex\u00e9cuter des commandes \u00e0 distance. Quel protocole doit-il utiliser ?",
+          "reponse": "R\u00e9ponse : Il doit utiliser le protocole <strong>SSH (Secure Shell)</strong> sur le port 22 [citation:5]. SSH remplace les protocoles non s\u00e9curis\u00e9s comme Telnet et offre un acc\u00e8s distant chiffr\u00e9 \u00e0 un shell de commandes, avec authentification par mot de passe ou par cl\u00e9 publique."
+        },
+        {
+          "question": "3) Expliquez la diff\u00e9rence entre les protocoles POP3 et IMAP pour la r\u00e9ception d'emails.",
+          "reponse": "R\u00e9ponse : <br> <strong>POP3</strong> (Post Office Protocol version 3) t\u00e9l\u00e9charge les emails du serveur vers le client et les supprime g\u00e9n\u00e9ralement du serveur. Les emails sont consultables uniquement depuis l'appareil sur lequel ils ont \u00e9t\u00e9 t\u00e9l\u00e9charg\u00e9s. <br> <strong>IMAP</strong> (Internet Message Access Protocol) synchronise les emails entre le serveur et le client. Les emails restent sur le serveur et sont accessibles depuis plusieurs appareils, avec une synchronisation des dossiers et des statuts de lecture."
+        }
+      ]
+    }
+  ]
+};
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

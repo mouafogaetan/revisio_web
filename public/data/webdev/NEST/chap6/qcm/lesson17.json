@@ -1,0 +1,123 @@
+[
+  {
+    "questionText": "Dans NestJS, quel est l'ordre d'exécution correct des composants suivants lors du traitement d'une requête HTTP ?",
+    "options": [
+      "Guard → Middleware → Interceptor → Pipe → Controller",
+      "Middleware → Guard → Interceptor → Pipe → Controller",
+      "Interceptor → Middleware → Guard → Pipe → Controller",
+      "Pipe → Guard → Middleware → Interceptor → Controller"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium",
+    "explanation": "L'ordre standard dans NestJS est : Middleware (exécuté en premier, niveau Express) → Guard (vérification authentification/autorisation) → Interceptor (avant la méthode, peut transformer la requête) → Pipe (validation/transformation des données) → Controller (exécution du handler). Les Interceptors ont également une partie après le contrôleur."
+  },
+  {
+    "questionText": "Quelle est la principale différence fonctionnelle entre un middleware et un guard dans NestJS ?",
+    "options": [
+      "Un middleware peut modifier la réponse, un guard non.",
+      "Un guard a accès au contexte d'exécution (ExecutionContext) et peut décider d'autoriser ou bloquer la requête, tandis qu'un middleware est plus bas niveau et ne connaît pas le handler cible.",
+      "Les middlewares sont exécutés uniquement en production, les guards en développement.",
+      "Un guard ne peut pas être injecté avec des dépendances, contrairement au middleware."
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium",
+    "explanation": "La différence clé est que le guard reçoit un `ExecutionContext` qui lui donne accès à la classe et à la méthode du handler. Il peut ainsi prendre des décisions basées sur les métadonnées (ex: rôles requis). Un middleware est plus bas niveau (basé sur Express) et ne connaît pas le contrôleur cible. Les deux peuvent avoir des dépendances injectées."
+  },
+  {
+    "questionText": "Pour créer un middleware personnalisé dans NestJS, quelle interface doit être implémentée ?",
+    "options": [
+      "NestMiddleware",
+      "NestModule",
+      "MiddlewareConsumer",
+      "InjectableMiddleware"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "easy",
+    "explanation": "Un middleware personnalisé doit implémenter l'interface `NestMiddleware` qui contient la méthode `use(req, res, next)`. Cette interface provient de `@nestjs/common`. Le middleware peut ensuite être enregistré via `MiddlewareConsumer` dans le module."
+  },
+  {
+    "questionText": "Voici un extrait de code d'un middleware de logging. Quelle fonction doit être appelée pour passer la requête au prochain middleware/guard ?\n\n```typescript\n@Injectable()\nexport class LoggerMiddleware implements NestMiddleware {\n  use(req: Request, res: Response, next: Function) {\n    console.log(`Requête ${req.method} sur ${req.url}`);\n    // ???
+  }\n}\n```",
+    "options": [
+      "`return;`",
+      "`next(req, res);`",
+      "`next();`",
+      "`res.send();`"
+    ],
+    "correctAnswer": 2,
+    "difficulty": "easy",
+    "explanation": "La fonction `next()` doit être appelée pour passer la main au middleware suivant ou au guard. Sans appel à `next()`, la requête reste bloquée et le client ne reçoit jamais de réponse. La signature standard est `use(req, res, next: Function)` et `next()` ne prend généralement pas de paramètres."
+  },
+  {
+    "questionText": "Dans un module NestJS, comment configurer un middleware pour qu'il s'applique uniquement à certaines routes spécifiques ?",
+    "options": [
+      "En utilisant `@Middleware()` dans le contrôleur",
+      "En implémentant `configure()` dans la classe du module avec `MiddlewareConsumer`",
+      "En ajoutant le middleware dans `providers` du module",
+      "En utilisant `@UseMiddleware()` sur les méthodes du contrôleur"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium",
+    "explanation": "La méthode `configure(consumer: MiddlewareConsumer)` dans la classe du module permet de configurer les middlewares. On peut utiliser `consumer.apply(LoggerMiddleware).forRoutes('users')` pour appliquer le middleware à une route spécifique, ou `.exclude()` pour exclure certaines routes."
+  },
+  {
+    "questionText": "Parmi les composants suivants, lequel N'A PAS accès à l'objet de réponse (`Response`) pour le modifier directement ?",
+    "options": [
+      "Guard",
+      "Interceptor",
+      "Middleware",
+      "Exception Filter"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "hard",
+    "explanation": "Les guards sont conçus uniquement pour autoriser ou bloquer l'accès. Ils ne doivent pas modifier la requête ou la réponse. Ils retournent un booléen (ou une promesse de booléen). Les middlewares, interceptors et exception filters peuvent accéder et modifier la réponse (bien que ce soit déconseillé pour les interceptors qui sont mieux adaptés à la transformation)."
+  },
+  {
+    "questionText": "Quel est l'avantage d'utiliser un interceptor plutôt qu'un middleware pour transformer la réponse d'un contrôleur ?",
+    "options": [
+      "Les interceptors sont plus rapides que les middlewares.",
+      "Les interceptors ont accès au résultat du contrôleur (valeurs retournées) et peuvent le modifier après exécution.",
+      "Les middlewares ne peuvent pas être asynchrones.",
+      "Les interceptors ne nécessitent pas d'injection de dépendances."
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium",
+    "explanation": "Les interceptors s'exécutent après le contrôleur et reçoivent le résultat retourné (`data`). Ils peuvent transformer ce résultat (ex: envelopper dans un objet standard, exclure des champs, ajouter des métadonnées). Les middlewares s'exécutent avant le contrôleur et n'ont pas accès à la valeur de retour (sauf en interceptant `res.send`, ce qui est moins propre)."
+  },
+  {
+    "questionText": "Dans l'ordre d'exécution, où se situe un exception filter par rapport au middleware et au guard ?",
+    "options": [
+      "Avant le middleware",
+      "Entre le guard et l'interceptor",
+      "Après l'interceptor (capture les exceptions du contrôleur et des couches suivantes)",
+      "Après la réponse envoyée au client"
+    ],
+    "correctAnswer": 2,
+    "difficulty": "medium",
+    "explanation": "Les exception filters sont les derniers maillons : ils capturent les exceptions lancées n'importe où dans le cycle (contrôleur, service, pipe, interceptor). Ils s'exécutent après l'interceptor (post-handler) et permettent de formater la réponse d'erreur. Ils ne s'exécutent pas si la réponse est déjà envoyée."
+  },
+  {
+    "questionText": "On souhaite créer un middleware qui s'applique à toutes les routes commençant par `/admin`. Quelle configuration est correcte dans le module ?",
+    "options": [
+      "`consumer.apply(AdminMiddleware).forRoutes('admin/*')`",
+      "`consumer.apply(AdminMiddleware).forRoutes({ path: 'admin', method: RequestMethod.ALL })`",
+      "`consumer.apply(AdminMiddleware).exclude('admin')`",
+      "`consumer.apply(AdminMiddleware).forRoutes('admin')`"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "hard",
+    "explanation": "La méthode `forRoutes()` accepte un objet avec `path` et `method`. `path` peut être une chaîne (ex: 'admin') qui correspond au début de la route (toutes les routes commençant par /admin seront couvertes car NestJS fait correspondre le préfixe). Pour être explicite sur la méthode HTTP, on utilise `method: RequestMethod.ALL`. L'option 0 utilise un pattern invalide (NestJS n'utilise pas `*` comme Express)."
+  },
+  {
+    "questionText": "Quel décorateur permet d'appliquer un middleware à une méthode de contrôleur spécifique, sans passer par la configuration dans le module ?",
+    "options": [
+      "`@UseInterceptors()`",
+      "`@UseGuards()`",
+      "`@UseMiddleware()` (N'est pas disponible nativement dans NestJS)",
+      "`@ApplyMiddleware()`"
+    ],
+    "correctAnswer": 2,
+    "difficulty": "hard",
+    "explanation": "NestJS ne possède pas de décorateur `@UseMiddleware()` au niveau des contrôleurs ou des méthodes. Les middlewares doivent être configurés de manière déclarative dans le module via `MiddlewareConsumer`. C'est une différence importante par rapport aux guards (`@UseGuards`) et interceptors (`@UseInterceptors`) qui peuvent s'appliquer directement sur les contrôleurs/méthodes."
+  }
+]

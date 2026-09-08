@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+  "matiere": "Géographie",
+  "classe": "Première",
+  "sequence": "Séquence 1",
+  "anneeScolaire": "2025-2026",
+  "exercices": [
+    {
+      "titre": "MAÎTRISE DES SAVOIRS ET SAVOIR-FAIRE",
+      "points": "10 pts",
+      "enonce": "<div style='background-color: #f8f9fa; padding: 20px; border-radius: 8px; color: #212529;'>\n  <p style='font-weight: bold;'>Document 1 : Évolution de la population mondiale (1950-2020)</p>\n  <div style='background-color: #e9ecef; padding: 10px; border-radius: 5px; margin: 10px 0;'>\n    <p>« La population mondiale a connu une croissance sans précédent depuis les années 1950, passant de 2,5 milliards à plus de 7,8 milliards en 2020. Cette croissance s'explique par une baisse spectaculaire de la mortalité, notamment infantile, grâce aux progrès de la médecine et à l'amélioration des conditions d'hygiène et d'alimentation. Cependant, l'augmentation du nombre d'hommes sur terre n'est pas homogène. L'Afrique connaît une croissance démographique particulièrement forte alors que l'Europe voit sa population stagner, voire diminuer dans certains pays. »</p>\n  </div>\n  <p style='font-weight: bold;'>Document 2 : Les migrations internationales</p>\n  <div style='background-color: #e9ecef; padding: 10px; border-radius: 5px; margin: 10px 0;'>\n    <p>« Les mouvements migratoires sont des phénomènes complexes qui touchent toutes les régions du monde. Ils sont souvent provoqués par la pauvreté, les conflits armés ou les catastrophes environnementales. Les pays du Sud sont les principaux pourvoyeurs de migrants, tandis que les pays du Nord, en particulier les pays européens et les États-Unis, sont les principales terres d'accueil. Les conséquences de ces migrations sont multiples : elles peuvent être une source de développement économique pour les pays d'origine, grâce aux transferts de fonds, mais elles peuvent aussi provoquer une 'fuite des cerveaux' dans les pays les plus pauvres. Dans les pays d'accueil, les migrants contribuent souvent à la croissance économique, mais ils peuvent aussi être source de tensions sociales. »</p>\n  </div>\n</div>",
+      "questions": [
+        {
+          "question": "<p style='font-weight: bold; color: #0056b3;'>A. Vérification des savoirs (4 pts)</p><p>1. Définis les concepts suivants : <strong>accroissement naturel</strong> et <strong>migration</strong>. (2 pts)</p><p>2. Cite trois facteurs qui expliquent la forte croissance démographique en Afrique. (2 pts)</p>",
+          "reponse": "<p><strong>1. Accroissement naturel :</strong> C'est la différence entre le nombre de naissances et le nombre de décès dans une population donnée au cours d'une période donnée. Il est généralement exprimé en pourcentage ou en taux pour mille.</p><p><strong>Migration :</strong> C'est le déplacement d'une personne ou d'un groupe de personnes d'un lieu vers un autre, avec l'intention de s'y installer, de manière temporaire ou permanente. Ce déplacement peut être interne à un pays ou international.</p><p><strong>2. Trois facteurs de la croissance démographique en Afrique :</strong></p><ul><li>La <strong>baisse de la mortalité infantile</strong> et l'augmentation de l'espérance de vie grâce aux progrès médicaux.</li><li>Le <strong>maintien d'un taux de natalité élevé</strong> dans de nombreuses régions.</li><li>Les <strong>traditions culturelles et religieuses</strong> favorables à la famille nombreuse.</li></ul>"
+        },
+        {
+          "question": "<p style='font-weight: bold; color: #0056b3;'>B. Analyse de documents et savoir-faire (6 pts)</p><p>1. D'après le document 1, quelles sont les deux principales causes de l'explosion démographique mondiale depuis 1950 ? (2 pts)</p><p>2. Le document 2 mentionne que les migrations ont des effets positifs et négatifs. (4 pts)</p><p>&nbsp;&nbsp;&nbsp; a) Cite un effet positif des migrations pour les pays de départ et un pour les pays d'accueil.</p><p>&nbsp;&nbsp;&nbsp; b) Cite un effet négatif des migrations pour les pays de départ et un pour les pays d'accueil.</p>",
+          "reponse": "<p><strong>1. Les deux principales causes d'après le document 1 :</strong></p><ul><li>La <strong>baisse de la mortalité</strong>, en particulier la mortalité infantile.</li><li>Les <strong>progrès de la médecine</strong> et l'amélioration des conditions d'hygiène et d'alimentation.</li></ul><p><strong>2. Effets des migrations :</strong></p><p><strong>a) Effets positifs :</strong></p><ul><li><strong>Pour le pays de départ :</strong> Les <strong>transferts de fonds</strong> envoyés par les migrants à leurs familles restées au pays, qui contribuent à l'économie locale.</li><li><strong>Pour le pays d'accueil :</strong> L'<strong>apport de main-d'œuvre</strong> dans des secteurs en pénurie, contribuant à la croissance économique.</li></ul><p><strong>b) Effets négatifs :</strong></p><ul><li><strong>Pour le pays de départ :</strong> La <strong>fuite des cerveaux</strong>, c'est-à-dire l'émigration des personnes les plus qualifiées, qui freine le développement.</li><li><strong>Pour le pays d'accueil :</strong> Les <strong>tensions sociales</strong> et le rejet de l'immigration par une partie de la population locale.</li></ul>"
+        }
+      ]
+    },
+    {
+      "titre": "DÉVELOPPEMENT CONSTRUIT",
+      "points": "10 pts",
+      "enonce": "<div style='background-color: #f8f9fa; padding: 20px; border-radius: 8px; color: #212529;'>\n  <p style='font-weight: bold;'>Sujet : Les problèmes démographiques dans le monde : enjeux et solutions.</p>\n  <p style='margin-top: 15px;'>À partir de vos connaissances et des documents, vous répondrez à la question suivante sous forme d'un développement construit d'environ une page.</p>\n  <p style='margin-top: 10px;'>Après avoir montré les inégalités démographiques entre les pays du Nord et du Sud, vous analyserez les problèmes posés par une forte croissance démographique dans les pays en développement (surpopulation, pression sur les ressources, chômage) avant de présenter les politiques démographiques mises en place (natalistes ou malthusiennes) pour y faire face.</p>\n</div>",
+      "questions": [
+        {
+          "question": "<p>Rédigez un développement construit répondant au sujet. Votre devoir devra être structuré avec une introduction, un développement en deux ou trois parties et une conclusion.</p>",
+          "reponse": "<p><strong>Introduction :</strong></p><p>La croissance démographique mondiale connaît des rythmes très inégaux selon les régions. Tandis que les pays du Nord voient leur population stagner ou vieillir, les pays du Sud, notamment en Afrique et en Asie, connaissent une croissance rapide. Cette situation inégalitaire pose de nombreux défis, tant sur le plan économique, social qu'environnemental. Cette analyse portera d'abord sur les inégalités démographiques mondiales, puis sur les problèmes engendrés par la surpopulation dans les pays en développement, avant d'aborder les différentes politiques démographiques mises en œuvre.</p><p><strong>Développement :</strong></p><p><strong>1. Des inégalités démographiques marquées</strong></p><ul><li><strong>Les pays du Nord</strong> ont achevé leur transition démographique. Leur taux de natalité est faible, parfois inférieur au seuil de renouvellement des générations, ce qui entraîne un vieillissement de la population et une pression sur les systèmes de retraite.</li><li><strong>Les pays du Sud</strong> sont encore dans une phase de transition, avec un taux de natalité élevé et une mortalité en baisse. Ils concentrent l'essentiel de la croissance démographique mondiale, avec des pays comme le Nigéria ou l'Inde dont la population augmente rapidement.</li><li><strong>Les inégalités</strong> se manifestent aussi par des densités de population très différentes, allant des zones désertiques ou polaires presque vides aux mégapoles surpeuplées d'Asie du Sud-Est.</li></ul><p><strong>2. Les problèmes liés à la surpopulation dans les pays en développement</strong></p><ul><li><strong>Pression sur les ressources naturelles :</strong> La croissance démographique entraîne une demande accrue en nourriture, en eau et en énergie, ce qui peut conduire à la dégradation des sols et à la raréfaction des ressources.</li><li><strong>Chômage et pauvreté :</strong> Les économies des pays du Sud peinent à créer suffisamment d'emplois pour absorber une population active toujours plus nombreuse. Cela alimente la pauvreté et favorise l'exode rural et l'émigration.</li><li><strong>Problèmes urbains :</strong> L'afflux de population vers les villes provoque une urbanisation rapide et souvent anarchique, avec la multiplication des bidonvilles, des problèmes de logement, de transport et de pollution.</li></ul><p><strong>3. Les politiques démographiques : des réponses contrastées</strong></p><ul><li><strong>Les politiques natalistes :</strong> Certains pays, comme la France ou la Russie, encouragent la natalité pour compenser le vieillissement de leur population. Elles proposent des aides financières, des congés parentaux allongés et des services de garde d'enfants.</li><li><strong>Les politiques malthusiennes :</strong> D'autres pays, comme la Chine avec sa politique de l'enfant unique (aujourd'hui assouplie) ou l'Inde, cherchent à limiter la croissance démographique pour préserver leurs ressources. Ces politiques peuvent inclure des campagnes de sensibilisation, la distribution de contraceptifs ou des incitations financières.</li><li><strong>Les limites des politiques :</strong> Ces politiques sont souvent difficiles à mettre en œuvre et peuvent heurter les valeurs culturelles ou religieuses. La Chine, par exemple, a dû assouplir sa politique de l'enfant unique face aux déséquilibres démographiques et au vieillissement accéléré de sa population.</li></ul><p><strong>Conclusion :</strong></p><p>Les problèmes démographiques sont au cœur des enjeux du développement mondial. Les inégalités de croissance entre le Nord et le Sud appellent des réponses adaptées aux spécificités de chaque région. Si les politiques natalistes ou malthusiennes peuvent offrir des solutions, elles doivent s'accompagner d'investissements dans la santé, l'éducation et le développement économique pour être véritablement efficaces et durables.</p>"
+        }
+      ]
+    }
+  ]
+};
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

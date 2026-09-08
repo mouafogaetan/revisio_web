@@ -1,0 +1,171 @@
+[
+  {
+    "intitule": "Création de DataFrames à partir de Sources",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Les DataFrames PySpark peuvent être créés à partir de différentes sources de données.</p><p><strong>Consigne :</strong> Écrivez le code PySpark pour :</p><ol><li>Créer un DataFrame à partir d'une liste Python contenant des tuples <code>(nom, age, ville)</code>.</li><li>Lire un fichier CSV nommé <code>employes.csv</code> en utilisant la première ligne comme en-tête.</li></ol>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez le code PySpark pour créer les deux DataFrames décrits.",
+        "niveau": "easy",
+        "reponse": "# 1. À partir d'une liste Python\ndata = [(\"Alice\", 25, \"Douala\"), (\"Bob\", 30, \"Yaoundé\")]\ncolonnes = [\"Nom\", \"Age\", \"Ville\"]\ndf_liste = spark.createDataFrame(data, colonnes)\n\n# 2. À partir d'un fichier CSV\ndf_csv = spark.read.option(\"header\", \"true\").csv(\"employes.csv\")",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Sélection et Filtrage de Données",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Soit un DataFrame <code>df_ventes</code> contenant les colonnes : <code>id_produit, nom_produit, categorie, prix, quantite, date_vente</code>.</p><p><strong>Consigne :</strong> Écrivez les instructions PySpark pour :</p><ol><li>Sélectionner les colonnes <code>nom_produit</code> et <code>prix</code>.</li><li>Filtrer les ventes dont la catégorie est \"Électronique\" et le prix est supérieur à 100.</li></ol>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le code PySpark pour réaliser ces opérations.",
+        "niveau": "easy",
+        "reponse": "# Sélection de colonnes\ndf_ventes.select(\"nom_produit\", \"prix\")\n\n# Filtrage\ndf_ventes.filter((df_ventes.categorie == \"Électronique\") & (df_ventes.prix > 100))",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion de Données Manquantes",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Le DataFrame <code>df_etudiants</code> contient des données d'étudiants avec des valeurs manquantes dans la colonne <code>note</code>.</p><p><strong>Consigne :</strong> Écrivez le code PySpark pour :</p><ol><li>Compter le nombre de valeurs manquantes dans la colonne <code>note</code>.</li><li>Remplacer les valeurs manquantes par la moyenne des notes existantes.</li><li>Supprimer les lignes où la colonne <code>nom</code> est manquante.</li></ol>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez les instructions PySpark pour gérer les données manquantes.",
+        "niveau": "medium",
+        "reponse": "from pyspark.sql.functions import col, avg, isnan, when\n\n# 1. Compter les valeurs manquantes\ndf_etudiants.filter(col(\"note\").isNull()).count()\n\n# 2. Remplacer par la moyenne\nmoyenne = df_etudiants.select(avg(\"note\")).collect()[0][0]\ndf_etudiants = df_etudiants.fillna({\"note\": moyenne})\n\n# 3. Supprimer les lignes avec nom null\ndf_etudiants = df_etudiants.filter(col(\"nom\").isNotNull())",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Agrégation et GroupBy",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous disposez d'un DataFrame <code>df_ventes</code> contenant les colonnes : <code>region, mois, montant</code>.</p><p><strong>Consigne :</strong> Utilisez PySpark pour calculer :</p><ol><li>Le chiffre d'affaires total par région.</li><li>Le montant moyen des ventes par mois.</li><li>Le nombre total de ventes par région et par mois.</li></ol>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le code PySpark pour réaliser ces calculs d'agrégation.",
+        "niveau": "medium",
+        "reponse": "from pyspark.sql.functions import sum, avg, count\n\n# 1. CA total par région\ndf_ventes.groupBy(\"region\").agg(sum(\"montant\").alias(\"ca_total\"))\n\n# 2. Montant moyen par mois\ndf_ventes.groupBy(\"mois\").agg(avg(\"montant\").alias(\"moyenne_montant\"))\n\n# 3. Nombre de ventes par région et mois\ndf_ventes.groupBy(\"region\", \"mois\").agg(count(\"*\").alias(\"nb_ventes\"))",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Manipulation de Colonnes avec withColumn",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Soit un DataFrame <code>df_produits</code> avec les colonnes : <code>nom, prix_ht, tva</code>.</p><p><strong>Consigne :</strong> Utilisez <code>withColumn</code> pour :</p><ol><li>Créer une colonne <code>prix_ttc</code> qui est <code>prix_ht * (1 + tva/100)</code>.</li><li>Ajouter une colonne <code>categorie_prix</code> : \"Économique\" si prix_ht < 50, \"Standard\" si prix_ht entre 50 et 150, \"Premium\" sinon.</li></ol>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le code PySpark pour ajouter ces colonnes au DataFrame.",
+        "niveau": "medium",
+        "reponse": "from pyspark.sql.functions import col, when\n\n# 1. Prix TTC\ndf_produits = df_produits.withColumn(\"prix_ttc\", col(\"prix_ht\") * (1 + col(\"tva\") / 100))\n\n# 2. Catégorie de prix\ndf_produits = df_produits.withColumn(\n    \"categorie_prix\",\n    when(col(\"prix_ht\") < 50, \"Économique\")\n    .when((col(\"prix_ht\") >= 50) & (col(\"prix_ht\") <= 150), \"Standard\")\n    .otherwise(\"Premium\")\n)",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Jointures entre DataFrames",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous avez deux DataFrames :</p><ul><li><code>df_commande</code> : <code>id_commande, id_client, date, montant</code></li><li><code>df_client</code> : <code>id_client, nom, email, ville</code></li></ul><p><strong>Consigne :</strong> Écrivez les requêtes PySpark pour :</p><ol><li>Effectuer une jointure interne pour obtenir les commandes avec les informations clients.</li><li>Effectuer une jointure externe gauche pour obtenir tous les clients et leurs commandes (incluant les clients sans commandes).</li><li>Calculer le montant total des commandes par ville.</li></ol>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez le code PySpark pour réaliser ces opérations.",
+        "niveau": "hard",
+        "reponse": "# 1. Jointure interne\ndf_commande.join(df_client, df_commande.id_client == df_client.id_client, \"inner\")\n\n# 2. Jointure externe gauche\ndf_commande.join(df_client, df_commande.id_client == df_client.id_client, \"left\")\n\n# 3. Montant total par ville\ndf_commande.join(df_client, \"id_client\", \"inner\")\n    .groupBy(\"ville\")\n    .agg(sum(\"montant\").alias(\"total_ventes_ville\"))",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse des Ventes par Catégorie",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Une entreprise de distribution vous confie son fichier de ventes. Le DataFrame <code>df_ventes</code> contient : <code>id_vente, id_produit, categorie, quantite, prix_unitaire, date_vente, region</code>.</p><p><strong>Consigne :</strong> Utilisez PySpark pour :</p><ol><li>Nettoyer les données : supprimer les lignes avec <code>quantite <= 0</code> ou <code>prix_unitaire <= 0</code>.</li><li>Calculer le chiffre d'affaires total par catégorie.</li><li>Identifier la catégorie la plus performante en termes de CA.</li><li>Pour la catégorie la plus performante, analyser l'évolution mensuelle des ventes.</li></ol>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Développez le code PySpark pour répondre à l'ensemble des besoins.",
+        "niveau": "hard",
+        "reponse": "from pyspark.sql.functions import col, sum, month, to_date\n\n# 1. Nettoyage\ndf_propre = df_ventes.filter((col(\"quantite\") > 0) & (col(\"prix_unitaire\") > 0))\n\n# 2. CA par catégorie\ndf_ca_categorie = df_propre.withColumn(\"ca\", col(\"quantite\") * col(\"prix_unitaire\")) \\\n    .groupBy(\"categorie\") \\\n    .agg(sum(\"ca\").alias(\"ca_total\"))\n\n# 3. Catégorie la plus performante\nmeilleure_categorie = df_ca_categorie.orderBy(col(\"ca_total\").desc()).first()[\"categorie\"]\n\n# 4. Évolution mensuelle\ndf_evolution = df_propre.filter(col(\"categorie\") == meilleure_categorie) \\\n    .withColumn(\"mois\", month(to_date(col(\"date_vente\")))) \\\n    .withColumn(\"ca\", col(\"quantite\") * col(\"prix_unitaire\")) \\\n    .groupBy(\"mois\") \\\n    .agg(sum(\"ca\").alias(\"ca_mensuel\")) \\\n    .orderBy(\"mois\")",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation des Performances des DataFrames",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous travaillez sur un pipeline de données avec PySpark. Le traitement d'un DataFrame de 500 GB est très lent. Vous observez :</p><ul><li>De nombreuses jointures entre des DataFrames de grande taille.</li><li>Des transformations répétées sur les mêmes données.</li><li>Une utilisation mémoire importante.</li></ul><p><strong>Consigne :</strong> Proposez des stratégies d'optimisation pour améliorer les performances de ce pipeline. Justifiez chaque suggestion.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifiez les problèmes de performance et proposez des solutions concrètes.",
+        "niveau": "very hard",
+        "reponse": "Solutions possibles :\n1. Utiliser le cache/persist pour les DataFrames utilisés plusieurs fois.\n2. Utiliser des jointures broadcast pour les petites tables.\n3. Optimiser le partitionnement (repartition/coalesce).\n4. Éviter les transformations coûteuses comme les cross joins.\n5. Utiliser des formats de fichiers colonnaires (Parquet) avec partitionnement.\n6. Ajuster les paramètres Spark (spark.sql.shuffle.partitions).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment utiliser EXPLAIN pour analyser le plan d'exécution et identifier les goulots d'étranglement ?",
+            "niveau": "hard",
+            "reponse": "EXPLAIN affiche le plan d'exécution physique et logique. On peut identifier les opérations coûteuses comme les shuffles, les scans complets de tables, et vérifier si le pushdown de prédicats est appliqué. La commande df.explain(true) donne un affichage détaillé."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "ETL avec DataFrames PySpark",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous devez implémenter un pipeline ETL (Extract, Transform, Load) avec PySpark :</p><ul><li><strong>Extract :</strong> Lire des fichiers CSV depuis HDFS.</li><li><strong>Transform :</strong> Nettoyer les données, ajouter des colonnes calculées, agréger par région.</li><li><strong>Load :</strong> Sauvegarder les résultats en format Parquet partitionné par région.</li></ul><p>Les données brutes contiennent : <code>id_transaction, id_client, montant, date, region</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le code PySpark complet pour ce pipeline ETL.",
+        "niveau": "very hard",
+        "reponse": "from pyspark.sql.functions import col, year, month, sum\n\n# 1. Extract\ndf_brut = spark.read.option(\"header\", \"true\").csv(\"hdfs://chemin/donnees.csv\")\n\n# 2. Transform\n# Nettoyage\ndf_propre = df_brut.filter(col(\"montant\") > 0).dropDuplicates([\"id_transaction\"])\n\n# Ajout de colonnes\ndf_transform = df_propre.withColumn(\"annee\", year(col(\"date\"))) \\\n    .withColumn(\"mois\", month(col(\"date\")))\n\n# Agrégation par région\ndf_agrege = df_transform.groupBy(\"region\", \"annee\", \"mois\") \\\n    .agg(sum(\"montant\").alias(\"ca_total\"),\n         count(\"*\").alias(\"nb_transactions\"))\n\n# 3. Load\ndf_agrege.write.partitionBy(\"region\").parquet(\"hdfs://chemin/sortie.parquet\")",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

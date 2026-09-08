@@ -1,0 +1,121 @@
+[
+  {
+    "intitule": "Configuration et première requête GET",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous débutez avec Flutter et devez effectuer une requête HTTP vers une API publique. L'API 'JSONPlaceholder' (https://jsonplaceholder.typicode.com/posts/1) renvoie les données d'un article au format JSON.</p>",
+      "images": [
+        "Capture d'écran de la structure du fichier pubspec.yaml montrant l'ajout de la dépendance http",
+        "Capture d'écran d'une requête GET dans le navigateur affichant le JSON renvoyé par JSONPlaceholder"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez les étapes pour ajouter le package `http` à un projet Flutter.",
+        "niveau": "easy",
+        "reponse": "1. Ouvrir le fichier `pubspec.yaml`. 2. Dans la section `dependencies`, ajouter la ligne `http: ^1.1.0`. 3. Exécuter la commande `flutter pub get` dans le terminal pour installer le package. 4. Importer le package dans le fichier Dart avec `import 'package:http/http.dart' as http;`.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez la différence entre `http.get()` et `http.post()`.",
+        "niveau": "medium",
+        "reponse": "`http.get()` est utilisé pour récupérer des données depuis un serveur sans les modifier. `http.post()` est utilisé pour envoyer de nouvelles données au serveur, par exemple pour créer un nouvel enregistrement. GET est considéré comme 'sécurisé' et 'idempotent' (plusieurs appels identiques ont le même effet), tandis que POST ne l'est pas (chaque appel peut créer une nouvelle ressource).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Écrivez le code Dart/Flutter pour effectuer une requête GET vers 'https://jsonplaceholder.typicode.com/posts/1', puis affichez le titre de l'article (champ 'title') dans la console.",
+        "niveau": "hard",
+        "reponse": "```dart\nimport 'package:http/http.dart' as http;\nimport 'dart:convert';\n\nvoid fetchPost() async {\n  try {\n    final response = await http.get(Uri.parse('https://jsonplaceholder.typicode.com/posts/1'));\n    if (response.statusCode == 200) {\n      final Map<String, dynamic> data = jsonDecode(response.body);\n      print('Titre de l\\'article : ${data['title']}');\n    } else {\n      print('Erreur HTTP : ${response.statusCode}');\n    }\n  } catch (e) {\n    print('Exception attrapée : $e');\n  }\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Application météo locale",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous développez une application météo pour les villes du Cameroun (Yaoundé, Douala, Garoua). Vous utilisez une API gratuite comme 'Open-Meteo' (https://api.open-meteo.com/v1/forecast?latitude=3.8667&longitude=11.5167&current_weather=true) qui renvoie la température actuelle.</p>",
+      "images": [
+        "Icône d'une application météo affichant la température et une icône de soleil pour la ville de Douala",
+        "Capture d'écran d'une requête GET sur Open-Meteo montrant les données JSON de température"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifiez les informations essentielles à extraire de la réponse JSON de l'API Open-Meteo pour afficher la température.",
+        "niveau": "easy",
+        "reponse": "Il faut extraire l'objet `current_weather`, puis à l'intérieur, la valeur associée à la clé `temperature`.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Concevez une fonction asynchrone `getTemperatureForCity(double latitude, double longitude)` qui retourne un `Future<double>` représentant la température actuelle. Gérez les erreurs possibles (réseau, code HTTP).",
+        "niveau": "hard",
+        "reponse": "```dart\nFuture<double> getTemperatureForCity(double latitude, double longitude) async {\n  final url = 'https://api.open-meteo.com/v1/forecast?latitude=$latitude&longitude=$longitude&current_weather=true';\n  try {\n    final response = await http.get(Uri.parse(url));\n    if (response.statusCode == 200) {\n      final data = jsonDecode(response.body);\n      return data['current_weather']['temperature'];\n    } else {\n      throw Exception('Erreur HTTP: ${response.statusCode}');\n    }\n  } catch (e) {\n    rethrow; // ou retourner une valeur par défaut comme -999.0\n  }\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Expliquez pourquoi vous avez utilisé `async` et `await` dans cette fonction.",
+            "niveau": "medium",
+            "reponse": "Les requêtes réseau sont des opérations asynchrones (elles prennent du temps). `async` marque la fonction comme asynchrone, permettant d'utiliser `await` pour attendre la réponse de `http.get()` sans bloquer le reste de l'application. Cela garantit une interface fluide."
+          }
+        ]
+      },
+      {
+        "numero": 3,
+        "texte": "Évaluez les risques d'effectuer des requêtes HTTP sans gestion d'erreur dans une application mobile. Proposez une amélioration pour l'utilisateur.",
+        "niveau": "very hard",
+        "reponse": "Risques : L'application peut planter (crash) si une exception non capturée se produit. L'utilisateur ne comprend pas pourquoi les données ne s'affichent pas, ce qui mène à une mauvaise expérience utilisateur. Amélioration : Utiliser un bloc `try-catch` autour de l'appel API, afficher un `SnackBar` ou un dialogue d'erreur à l'utilisateur, et implémenter un mécanisme de réessai (bouton 'Réessayer').",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Debugging d'une application de blog",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Un élève a écrit le code pour créer un nouvel article sur un blog via une API REST. La requête échoue systématiquement. Voici son code :</p><pre><code>void createPost(String title, String body) async {\n  final response = await http.post(\n    Uri.parse('https://jsonplaceholder.typicode.com/posts'),\n    body: {'title': title, 'body': body, 'userId': '1'},\n  );\n  if (response.statusCode == 201) {\n    print('Succès !');\n  } else {\n    print('Erreur');\n  }\n}\n</code></pre>",
+      "images": [
+        "Capture d'écran d'une erreur 400 (Bad Request) dans la console de débogage de VS Code",
+        "Schéma d'une requête POST montrant l'en-tête 'Content-Type: application/json'"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analysez ce code. Expliquez pourquoi la requête pourrait échouer alors que l'URL et les paramètres semblent corrects.",
+        "niveau": "medium",
+        "reponse": "Le problème principal est l'absence d'en-tête `Content-Type`. L'API attend probablement des données au format JSON, mais le code envoie les données sous forme de formulaire (`application/x-www-form-urlencoded`). De plus, l'API JSONPlaceholder pour une requête POST attend un corps au format JSON.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Corrigez le code en ajoutant l'en-tête approprié pour envoyer les données au format JSON.",
+        "niveau": "hard",
+        "reponse": "```dart\nvoid createPost(String title, String body) async {\n  final response = await http.post(\n    Uri.parse('https://jsonplaceholder.typicode.com/posts'),\n    headers: {'Content-Type': 'application/json'},\n    body: jsonEncode({'title': title, 'body': body, 'userId': 1}),\n  );\n  if (response.statusCode == 201) {\n    print('Succès !');\n  } else {\n    print('Erreur ${response.statusCode}: ${response.body}');\n  }\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Justifiez l'utilisation de `jsonEncode()` dans votre correction.",
+            "niveau": "medium",
+            "reponse": "`jsonEncode()` convertit un objet Dart (`Map`) en une chaîne de caractères JSON. Cela est nécessaire car l'en-tête `Content-Type: application/json` indique que le corps de la requête doit être une chaîne JSON valide, et non des données encodées en formulaire."
+          }
+        ]
+      },
+      {
+        "numero": 3,
+        "texte": "Proposez une refactorisation de cette fonction pour suivre le principe de séparation des responsabilités (couche de service et couche UI).",
+        "niveau": "very hard",
+        "reponse": "Couche Service (PostService) :\n```dart\nclass PostService {\n  Future<Map<String, dynamic>> createPost(String title, String body) async {\n    final response = await http.post(...);\n    if (response.statusCode == 201) return jsonDecode(response.body);\n    throw Exception('Échec de la création');\n  }\n}\n```\nCouche UI (StatefulWidget ou avec Provider) :\n```dart\n// Dans un ViewModel ou directement dans le widget\nvoid onSaveButtonPressed() async {\n  setState(() => _isLoading = true);\n  try {\n    final newPost = await _postService.createPost(_titleController.text, _bodyController.text);\n    ScaffoldMessenger.of(context).showSnackBar(...);\n  } catch (e) { ... } finally { setState(() => _isLoading = false); }\n}\n```\nCela améliore la testabilité, la maintenabilité et la réutilisabilité du code.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

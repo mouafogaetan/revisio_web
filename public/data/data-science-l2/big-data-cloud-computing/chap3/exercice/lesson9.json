@@ -1,0 +1,148 @@
+[
+  {
+    "intitule": "Compréhension des Concepts de Spark Streaming",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Cet exercice vise à évaluer votre compréhension des concepts fondamentaux de Spark Streaming abordés dans la leçon.</p><p><strong>Contexte :</strong> Spark Streaming est un module clé d'Apache Spark pour le traitement de données en temps réel. Il repose sur le concept de micro-batches pour traiter les flux de données.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez le principe de fonctionnement de Spark Streaming en utilisant le concept de 'micro-batches'.",
+        "niveau": "medium",
+        "reponse": "Spark Streaming fonctionne en divisant le flux de données entrant en une série de petits lots (micro-batches) de données. Chaque micro-batch est ensuite traité comme un petit ensemble de données résilientes distribuées (RDD) en utilisant le moteur de traitement par lots de Spark. Les résultats de chaque micro-batch sont ensuite émis en sortie. Cette approche permet d'offrir une faible latence tout en bénéficiant de la tolérance aux pannes et de la scalabilité de Spark.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez la notion de 'fenêtre de temps' (time window) dans le contexte de Spark Streaming.",
+            "niveau": "medium",
+            "reponse": "Une fenêtre de temps dans Spark Streaming permet d'effectuer des calculs sur un intervalle de données plus large que le micro-batch individuel. Elle spécifie la durée des données à inclure dans chaque calcul (window length) et la fréquence à laquelle le calcul est effectué (slide interval). Cela permet d'effectuer des agrégations comme des moyennes mobiles sur des périodes plus longues."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Comparez Spark Streaming avec un système de traitement de flux basé sur des enregistrements individuels (comme Apache Flink).",
+            "niveau": "hard",
+            "reponse": "Spark Streaming traite les données par lots (micro-batches), ce qui introduit une latence inhérente (quelques centaines de millisecondes à quelques secondes). Flink traite les données en continu, enregistrement par enregistrement, offrant une latence plus faible (millisecondes). Spark Streaming est plus simple à utiliser et à intégrer avec l'écosystème Spark, tandis que Flink offre un véritable traitement de flux (streaming natif) avec des garanties de précision d'état (exactly-once semantics) plus robustes."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Citez et expliquez deux sources de données courantes que Spark Streaming peut consommer.",
+        "niveau": "easy",
+        "reponse": "1. **Apache Kafka** : Kafka est une plateforme de messagerie distribuée qui est la source la plus courante pour Spark Streaming. Kafka permet de publier et de s'abonner à des flux de données en temps réel. Spark Streaming peut lire des données à partir de topics Kafka en utilisant le connecteur Kafka intégré. 2. **Fichiers (Système de fichiers)** : Spark Streaming peut lire des données depuis un répertoire de fichiers (par exemple, sur HDFS ou S3). Il surveille le répertoire pour détecter de nouveaux fichiers et les traite à mesure qu'ils apparaissent.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Discutez de l'importance des concepts de 'lazy evaluation' et de 'DAG' dans le contexte des micro-batches de Spark Streaming.",
+        "niveau": "hard",
+        "reponse": "La 'lazy evaluation' (évaluation paresseuse) et le DAG (Directed Acyclic Graph) sont au cœur de l'efficacité de Spark Streaming. Pour chaque micro-batch, Spark construit un DAG des transformations à appliquer sur les données. Grâce à la lazy evaluation, le DAG n'est pas exécuté immédiatement mais optimisé avant d'être lancé, ce qui permet des optimisations comme le 'pipelining' des transformations et le 'predicate pushdown'. Cela assure que chaque micro-batch est traité de la manière la plus efficace possible, en minimisant le passage des données entre les nœuds.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Application de Spark Streaming à un Cas Pratique",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous êtes Data Engineer dans une entreprise de transport. Votre mission est de développer un système de monitoring en temps réel pour analyser les données de géolocalisation des véhicules. Vous devez utiliser Apache Spark Streaming pour traiter un flux de données.</p><p><strong>Données :</strong> Chaque enregistrement contient : <code>vehicule_id, timestamp, latitude, longitude, vitesse, etat (en_mouvement, à_l_arrêt, en_panne)</code>.</p><p><strong>Objectifs :</strong></p><ul><li>Détecter les véhicules en panne en temps réel.</li><li>Calculer la vitesse moyenne par véhicule sur une fenêtre de 5 minutes.</li><li>Alerter si un véhicule dépasse une vitesse de 150 km/h.</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez les étapes principales de l'implémentation de ce pipeline de données avec Spark Streaming. Structuez votre réponse en phases (Extraction, Transformation, Chargement).",
+        "niveau": "medium",
+        "reponse": "**1. Phase d'Extraction (Source) :** Configuration d'une source de streaming, par exemple en lisant un topic Kafka contenant les données de géolocalisation. On crée un objet `DataStream` en spécifiant le serveur Kafka, le topic et le format des messages (JSON par exemple).\n**2. Phase de Transformation :** On applique les transformations sur le DStream :\n   - **Filtrage des pannes :** `filter(_.etat == 'en_panne')` pour isoler les véhicules en panne.\n   - **Calcul de la vitesse moyenne :** On utilise `map` pour extraire `(vehicule_id, vitesse)`, puis `reduceByKeyAndWindow` avec une fenêtre de 5 minutes pour calculer la moyenne.\n   - **Détection des excès de vitesse :** `filter(_.vitesse > 150)`.\n**3. Phase de Chargement (Sink) :** On écrit les résultats dans des sinks appropriés :\n   - Les véhicules en panne sont écrits dans une table de monitoring.\n   - Les vitesses moyennes sont écrites dans une base de données (par exemple, Cassandra).\n   - Les alertes d'excès de vitesse sont envoyées à un système de notification (ex: envoi d'un email ou message Slack).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pour le calcul de la vitesse moyenne sur une fenêtre de 5 minutes, décrivez la configuration de la fenêtre (window length et slide interval). Justifiez votre choix.",
+            "niveau": "hard",
+            "reponse": "Pour calculer la vitesse moyenne sur les 5 dernières minutes avec une mise à jour toutes les minutes, on configurera : `windowLength = 5 minutes` et `slideInterval = 1 minute`. Cela signifie que chaque minute, Spark Streaming calculera la vitesse moyenne sur les 5 minutes de données les plus récentes. Ce choix est pertinent pour avoir une vue quasi continue de l'évolution des vitesses, avec un suivi régulier sans attendre 5 minutes pour avoir une mise à jour."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "En vous basant sur l'exemple du WordCount en MapReduce, proposez une analogie de la phase de 'Map' et de 'Reduce' dans ce contexte de streaming.",
+        "niveau": "medium",
+        "reponse": "L'analogie avec MapReduce est la suivante :\n- **Phase 'Map'** : Dans notre cas, elle correspond à l'étape de préparation des données. Par exemple, on 'mappe' chaque enregistrement de géolocalisation pour en extraire des paires clé-valeur. On pourrait mapper : `(vehicule_id, 1)` pour compter les enregistrements, ou `(vehicule_id, vitesse)` pour calculer des statistiques.\n- **Phase 'Reduce'** : Elle correspond aux agrégations effectuées sur les fenêtres de temps. On utilise des opérations comme `reduceByKeyAndWindow` pour agréger les données par véhicule sur la fenêtre de 5 minutes, ce qui est similaire à la réduction par clé. On peut par exemple réduire pour calculer la somme des vitesses et le nombre d'enregistrements, puis calculer la moyenne.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation et Tolérance aux Pannes dans Spark Streaming",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Cet exercice avancé aborde les aspects d'optimisation et de tolérance aux pannes de Spark Streaming.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez le mécanisme de 'checkpointing' dans Spark Streaming et son rôle pour la tolérance aux pannes.",
+        "niveau": "medium",
+        "reponse": "Le 'checkpointing' est un mécanisme crucial pour la tolérance aux pannes dans Spark Streaming. Il consiste à stocker périodiquement l'état du système (les métadonnées et les données de l'application) dans un système de fichiers fiable (comme HDFS ou S3). En cas de panne du Driver ou d'un Executor, le checkpoint permet de récupérer l'état du streaming et de reprendre le traitement là où il s'était arrêté, minimisant ainsi la perte de données et assurant une reprise automatique (auto-recovery). Il existe deux types de checkpoint : le checkpoint de métadonnées (configuration, DAG) et le checkpoint de données (état des transformations avec état).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quelle est la différence entre un checkpoint de métadonnées et un checkpoint de données ?",
+            "niveau": "medium",
+            "reponse": "Le **checkpoint de métadonnées** stocke des informations sur la configuration de l'application (comme la durée du batch, les sources, etc.) et les opérations (le DAG). Il est nécessaire pour restaurer le Driver en cas de panne. Le **checkpoint de données**, quant à lui, stocke l'état des transformations avec état (comme `updateStateByKey`). Il est nécessaire pour les opérations qui maintiennent un état entre les micro-batches, afin de pouvoir le restaurer et éviter de perdre des informations."
+          },
+          {
+            "numero": "1.b",
+            "texte": "En plus du checkpointing, citez une autre stratégie pour améliorer la tolérance aux pannes dans un pipeline de streaming.",
+            "niveau": "easy",
+            "reponse": "Une autre stratégie est la **reprise automatique (auto-recovery)** du Driver. Avec des gestionnaires de cluster comme YARN ou Kubernetes, si le Driver tombe en panne, le cluster manager peut automatiquement le redémarrer. Combiné avec le checkpointing, cela permet une reprise complète et automatisée du pipeline sans intervention humaine."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Pour optimiser les performances de votre application Spark Streaming, quelles configurations et bonnes pratiques recommanderiez-vous ?",
+        "niveau": "hard",
+        "reponse": "1. **Taille du micro-batch (batch interval)** : Choisir un intervalle de temps adapté. Trop petit, le système surcharge ; trop grand, la latence augmente. Il faut trouver un équilibre. 2. **Parallélisme** : Augmenter le nombre de partitions des données (par exemple, le nombre de partitions de Kafka). Ajuster `spark.streaming.blockInterval` et `spark.streaming.receiver.maxRate` si nécessaire. 3. **Sérialisation** : Utiliser la sérialisation Kryo (qui est plus rapide que la sérialisation Java). 4. **Gestion de la mémoire** : Configurer correctement la mémoire des Executors (`spark.executor.memory`), et optimiser l'utilisation du cache. 5. **Traitement avec état (Stateful)** : Pour les opérations avec état (comme `updateStateByKey`), utiliser des checkpoints mais limiter leur fréquence pour ne pas surcharger le stockage. 6. **Backpressure** : Activer le backpressure (`spark.streaming.backpressure.enabled`) pour que le système s'adapte automatiquement au volume de données entrant.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Projet d'Analyse de Sentiments en Temps Réel",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous travaillez pour une grande entreprise de médias sociaux. Votre mission est de développer un système d'analyse de sentiments en temps réel sur les tweets. Vous devez utiliser Spark Streaming pour traiter un flux de tweets et classifier leur sentiment (positif, négatif, neutre).</p><p><strong>Contraintes :</strong></p><ul><li>Le flux de tweets est reçu via Apache Kafka.</li><li>Vous avez un modèle de Machine Learning pré-entraîné (par exemple, un modèle de classification avec Spark MLlib) pour analyser le sentiment.</li><li>Vous devez afficher les statistiques de sentiments toutes les 30 secondes.</li><li>Vous devez gérer la tolérance aux pannes et assurer la reprise en cas d'échec.</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez l'architecture complète de votre solution, en détaillant chaque composant et son rôle.",
+        "niveau": "very hard",
+        "reponse": "**1. Source (Kafka) :** Le flux de tweets est publié sur un topic Kafka. Spark Streaming se connecte à Kafka en tant que consommateur en utilisant le connecteur Spark-Kafka.\n**2. Traitement (Spark Streaming) :**\n   - **Reception :** Création d'un `DataStream` à partir de Kafka (lecture des messages JSON).\n   - **Prétraitement :** Nettoyage des tweets (suppression des URLs, des mentions, des hashtags, arrêt de la ponctuation).\n   - **Transformation ML :** Application du modèle de classification pour chaque tweet. On peut soit faire un traitement par batch (appel du modèle sur chaque micro-batch), soit utiliser une fonction UDF (User Defined Function) pour l'inférence.\n   - **Agrégation en fenêtre :** Utilisation de `window` (30 secondes) pour compter les sentiments positifs, négatifs et neutres.\n**3. Sinks :**\n   - Les résultats agrégés sont écrits dans une base de données (ex: Redis ou InfluxDB) pour un tableau de bord en temps réel.\n   - Les tweets individuels avec leur sentiment peuvent être stockés dans un Data Lake (S3) pour analyse ultérieure.\n**4. Tolérance aux pannes :**\n   - **Checkpointing :** Activé pour enregistrer l'état des transformations (pour la reprise).\n   - **Gestion de Kafka :** Utilisation de l'offset de Kafka pour ne pas perdre de messages en cas de panne. Spark Streaming gère automatiquement le commit des offsets.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment géreriez-vous l'application du modèle de Machine Learning (ML) au sein du pipeline, en prenant en compte la performance et l'utilisation des ressources ?",
+            "niveau": "very hard",
+            "reponse": "Le modèle ML peut être chargé une seule fois (au niveau du Driver) et distribué aux Executors. Pour optimiser les performances, on peut utiliser les UDF (User Defined Functions) ou, dans le cas de Spark, diffuser le modèle via un `broadcast` pour le rendre accessible à tous les nœuds. On peut aussi utiliser `mapPartitions` pour charger le modèle une fois par partition et l'appliquer à tous les enregistrements de cette partition, ce qui réduit les surcharges. Pour les modèles lourds, on peut envisager d'utiliser des serveurs de ML dédiés (comme TensorFlow Serving) et faire des appels asynchrones depuis Spark, mais cela peut introduire de la latence."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Proposez des métriques à surveiller pour évaluer les performances et la santé de votre pipeline en production.",
+            "niveau": "hard",
+            "reponse": "1. **Latence de bout en bout** : Temps entre la réception d'un tweet et l'affichage du résultat dans le tableau de bord. 2. **Taux de traitement** : Nombre de tweets traités par seconde. 3. **Taille des micro-batches** : Suivre la durée d'exécution de chaque micro-batch pour ajuster la taille du batch interval. 4. **Utilisation des ressources** : CPU, mémoire et réseau des Executors. 5. **Taux d'erreur** : Pourcentage de tweets mal classifiés ou de requêtes qui échouent. 6. **Dérive des données (data drift)** : Surveiller l'évolution de la distribution des tweets (longueur, langage, etc.) pour ré-entraîner le modèle si nécessaire."
+          }
+        ]
+      }
+    ]
+  }
+]

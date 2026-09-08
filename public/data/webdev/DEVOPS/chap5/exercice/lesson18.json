@@ -1,0 +1,146 @@
+[
+  {
+    "intitule": "Orchestration d'une application web avec Docker Compose",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous êtes DevOps dans une startup camerounaise qui développe une application de e-commerce appelée \"AfriShop\". L'application se compose de :</p><ul><li>Un frontend React (port 3000)</li><li>Un backend Node.js (port 5000) qui se connecte à une base de données</li><li>Une base de données PostgreSQL (port 5432)</li><li>Un cache Redis (port 6379)</li><li>Un reverse proxy Nginx (port 80) pour rediriger les requêtes vers frontend/backend</li></ul><p>Vous devez orchestrer tous ces services avec Docker Compose.</p>",
+      "images": [
+        "Diagramme d'architecture d'une application web avec frontend React, backend Node.js, base de données PostgreSQL, cache Redis et reverse proxy Nginx"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire le fichier docker-compose.yml complet pour orchestrer les 5 services (frontend, backend, postgres, redis, nginx). Spécifier les ports exposés, les dépendances entre services, les volumes pour persister les données PostgreSQL et les variables d'environnement nécessaires pour que le backend se connecte à PostgreSQL et Redis.",
+        "niveau": "hard",
+        "reponse": "```yaml\nversion: '3.8'\n\nservices:\n  postgres:\n    image: postgres:15\n    container_name: afrishop_postgres\n    environment:\n      POSTGRES_USER: afrishop\n      POSTGRES_PASSWORD: secretpassword\n      POSTGRES_DB: afrishop_db\n    volumes:\n      - postgres_data:/var/lib/postgresql/data\n    ports:\n      - \"5432:5432\"\n    networks:\n      - afrishop_network\n    restart: unless-stopped\n\n  redis:\n    image: redis:7-alpine\n    container_name: afrishop_redis\n    ports:\n      - \"6379:6379\"\n    networks:\n      - afrishop_network\n    restart: unless-stopped\n\n  backend:\n    image: node:18-alpine\n    container_name: afrishop_backend\n    working_dir: /app\n    volumes:\n      - ./backend:/app\n    environment:\n      - DB_HOST=postgres\n      - DB_PORT=5432\n      - DB_USER=afrishop\n      - DB_PASSWORD=secretpassword\n      - DB_NAME=afrishop_db\n      - REDIS_HOST=redis\n      - REDIS_PORT=6379\n    ports:\n      - \"5000:5000\"\n    depends_on:\n      - postgres\n      - redis\n    networks:\n      - afrishop_network\n    command: sh -c \"npm install && npm start\"\n    restart: unless-stopped\n\n  frontend:\n    image: node:18-alpine\n    container_name: afrishop_frontend\n    working_dir: /app\n    volumes:\n      - ./frontend:/app\n    ports:\n      - \"3000:3000\"\n    depends_on:\n      - backend\n    networks:\n      - afrishop_network\n    command: sh -c \"npm install && npm start\"\n    restart: unless-stopped\n\n  nginx:\n    image: nginx:alpine\n    container_name: afrishop_nginx\n    ports:\n      - \"80:80\"\n    volumes:\n      - ./nginx.conf:/etc/nginx/nginx.conf:ro\n    depends_on:\n      - frontend\n      - backend\n    networks:\n      - afrishop_network\n    restart: unless-stopped\n\nvolumes:\n  postgres_data:\n\nnetworks:\n  afrishop_network:\n    driver: bridge\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Donner les commandes Docker Compose pour : a) Démarrer tous les services en arrière-plan b) Voir les logs du service backend c) Arrêter tous les services d) Supprimer tous les conteneurs, réseaux et volumes",
+        "niveau": "easy",
+        "reponse": "a) `docker-compose up -d`\nb) `docker-compose logs backend`\nc) `docker-compose down`\nd) `docker-compose down -v`",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Analyser la configuration ci-dessus et expliquer pourquoi on utilise des volumes Docker pour PostgreSQL et non pour le code du backend.",
+        "niveau": "medium",
+        "reponse": "Les volumes Docker sont utilisés pour PostgreSQL afin de persister les données de la base de données. Sans volume, les données seraient perdues lorsque le conteneur est supprimé (données client, commandes, produits, etc.). Pour le code du backend, on utilise un bind mount (./backend:/app) qui monte le code source local dans le conteneur, ce qui permet de modifier le code en développement sans reconstruire l'image. En production, on utiliserait plutôt une image Docker construite avec le code à l'intérieur pour des raisons de performance et de sécurité.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Diagnostic des problèmes de connectivité avec Docker Compose",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un développeur junior vous signale que l'application AfriShop ne fonctionne pas. Voici le fichier docker-compose.yml qu'il a écrit :</p>\n<pre><code>\nversion: '3.8'\nservices:\n  backend:\n    build: ./backend\n    ports:\n      - \"3000:3000\"\n    environment:\n      - DB_HOST=localhost\n      - DB_PORT=5432\n    depends_on:\n      - postgres\n  postgres:\n    image: postgres:15\n    environment:\n      POSTGRES_PASSWORD: secret\n    ports:\n      - \"5432:5432\"\n</code></pre>\n<p>Le backend ne parvient pas à se connecter à PostgreSQL (erreur : <code>ECONNREFUSED 127.0.0.1:5432</code>).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier et justifier l'erreur de configuration dans ce fichier docker-compose.yml.",
+        "niveau": "medium",
+        "reponse": "L'erreur est que `DB_HOST=localhost` dans le service backend. Dans Docker Compose, chaque service a son propre réseau isolé. Le service backend ne peut pas accéder au service postgres via 'localhost' car localhost à l'intérieur du conteneur backend pointe vers lui-même, pas vers le conteneur postgres. La bonne configuration est d'utiliser le nom du service comme nom d'hôte : `DB_HOST=postgres`.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposer la correction du fichier docker-compose.yml.",
+            "niveau": "easy",
+            "reponse": "Remplacer `DB_HOST=localhost` par `DB_HOST=postgres`."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Expliquer comment Docker Compose gère la résolution de noms entre services.",
+            "niveau": "medium",
+            "reponse": "Docker Compose crée automatiquement un réseau par défaut pour tous les services définis dans le fichier. Sur ce réseau, chaque service peut être atteint par son nom de service (tel que défini dans docker-compose.yml). Le DNS interne de Docker résout ces noms vers l'adresse IP du conteneur correspondant. Ainsi, le backend peut joindre le service postgres en utilisant 'postgres' comme nom d'hôte."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Décrire la commande à exécuter pour vérifier si les deux conteneurs communiquent bien après correction.",
+        "niveau": "easy",
+        "reponse": "`docker exec -it <nom_conteneur_backend> sh` puis à l'intérieur : `ping postgres` ou `nc -zv postgres 5432` (telnet/netcat). On peut aussi exécuter directement : `docker exec <backend_container> ping postgres`.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation des performances avec docker-compose.yml",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Votre application utilise docker-compose.yml avec 6 services. Après déploiement en production sur un serveur OVH à Douala, les utilisateurs se plaignent de lenteurs. Vous observez que :</p><ul><li>Le service backend utilise 100% CPU toutes les 2 minutes pendant 30 secondes</li><li>La base de données (MySQL) n'a pas de cache configuré</li><li>Tous les services utilisent 'restart: always' sans politique de ressources</li><li>Les logs s'accumulent dans les conteneurs depuis 3 mois</li></ul>",
+      "images": [
+        "Graphe montrant des pics CPU réguliers sur le service backend",
+        "Dashboard de monitoring avec alertes de performance"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposer des améliorations concrètes dans le fichier docker-compose.yml pour résoudre ces problèmes : limites de ressources CPU/mémoire, politique de logs, cache pour MySQL.",
+        "niveau": "hard",
+        "reponse": "```yaml\nversion: '3.8'\n\nservices:\n  backend:\n    image: monapp/backend\n    deploy:\n      resources:\n        limits:\n          cpus: '0.75'\n          memory: 512M\n        reservations:\n          cpus: '0.25'\n          memory: 256M\n    logging:\n      driver: \"json-file\"\n      options:\n        max-size: \"10m\"\n        max-file: \"3\"\n    restart: unless-stopped\n\n  mysql:\n    image: mysql:8\n    command: --query_cache_size=268435456 --query_cache_type=1 --innodb_buffer_pool_size=1G\n    deploy:\n      resources:\n        limits:\n          memory: 2G\n    logging:\n      driver: \"json-file\"\n      options:\n        max-size: \"10m\"\n        max-file: \"3\"\n    restart: unless-stopped\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer pourquoi on utilise 'deploy.resources' plutôt que 'cpus' et 'mem_limit' (ancienne syntaxe).",
+            "niveau": "medium",
+            "reponse": "L'ancienne syntaxe (cpus:, mem_limit:) est dépréciée depuis Docker Compose v3 et ne fonctionne qu'en mode Swarm. La syntaxe 'deploy.resources' est standardisée pour Docker Compose v3 et fonctionne aussi avec Docker Swarm. Elle offre plus de finesse avec les notions de 'limits' (limite absolue) et 'reservations' (ressources garanties)."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Justifier le choix de 'max-size: 10m' et 'max-file: 3' pour la politique de logs.",
+            "niveau": "easy",
+            "reponse": "Cette configuration limite chaque fichier de log à 10 mégaoctets et conserve au maximum 3 fichiers (rotation). Ainsi, un conteneur ne peut pas utiliser plus de 30 Mo d'espace disque pour ses logs. Cela évite que les logs remplissent tout le disque du serveur après plusieurs mois d'exécution."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Donner la commande Docker Compose pour appliquer ces changements sans arrêter les conteneurs existants.",
+        "niveau": "easy",
+        "reponse": "`docker-compose up -d --no-recreate` (recrée uniquement les services dont la configuration a changé) ou `docker-compose up -d --force-recreate` (recrée tous les services, plus sûr mais avec un temps d'arrêt minimal).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Docker Compose en environnement de production vs développement",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Votre équipe utilise le même fichier docker-compose.yml en développement (sur poste de travail) et en production (sur serveur Ubuntu 22.04). Voici des extraits :</p>\n<pre><code>\n# Développement (docker-compose.override.yml)\nversion: '3.8'\nservices:\n  backend:\n    volumes:\n      - ./backend:/app\n    command: npm run dev\n  frontend:\n    volumes:\n      - ./frontend:/app\n    command: npm start\n\n# Production (docker-compose.yml)\nversion: '3.8'\nservices:\n  backend:\n    image: monapp/backend:latest\n    command: node server.js\n</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analyser les différences entre les deux environnements et expliquer pourquoi on utilise docker-compose.override.yml en développement.",
+        "niveau": "medium",
+        "reponse": "En développement, on utilise des bind mounts (./backend:/app) pour pouvoir modifier le code source en direct sans reconstruire l'image, et 'npm run dev' pour le rechargement automatique. En production, on utilise une image pré-construite avec le code à l'intérieur (monapp/backend:latest) et on exécute 'node server.js' directement pour des performances optimales.\n\nDocker Compose fusionne automatiquement docker-compose.yml et docker-compose.override.yml, ce qui permet d'avoir une configuration de base commune (ports, réseaux, dépendances) et des configurations spécifiques à l'environnement sans dupliquer le fichier principal.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quelle commande utiliser en production pour ignorer le fichier override ?",
+            "niveau": "easy",
+            "reponse": "`docker-compose -f docker-compose.yml up -d` (sans le -f, Compose charge automatiquement docker-compose.override.yml s'il existe). On peut aussi renommer le fichier override ou définir la variable d'environnement COMPOSE_FILE."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Proposer une autre approche pour gérer les environnements (développement, staging, production) avec Docker Compose.",
+            "niveau": "medium",
+            "reponse": "Utiliser plusieurs fichiers de composition :\n- docker-compose.yml (configuration de base, tous environnements confondus)\n- docker-compose.dev.yml (variables dev, bind mounts, hot reload)\n- docker-compose.staging.yml (environnement de test, métriques)\n- docker-compose.prod.yml (variables prod, healthchecks, logging)\n\nEt les combiner : `docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d`"
+          }
+        ]
+      }
+    ]
+  }
+]

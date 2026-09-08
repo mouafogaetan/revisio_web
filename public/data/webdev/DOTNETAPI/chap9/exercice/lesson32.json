@@ -1,0 +1,66 @@
+[
+  {
+    "intitule": "Audit de sécurité : Identifier les failles",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous reprenez une API .NET 8 existante. En analysant le code, vous constatez l’absence de validation des entrées utilisateur sur certains endpoints, et l’utilisation de requêtes SQL brutes pour une fonction de recherche avancée. De plus, les en-têtes de sécurité HTTP sont absents.<br><br><strong>Travail à faire :</strong> En vous basant sur les notions de la leçon 32 (protection contre les injections SQL, validation des entrées, en-têtes de sécurité), listez les risques encourus et proposez les corrections adaptées au contexte ASP.NET Core.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez pourquoi l’absence de validation des entrées utilisateur est critique, puis décrivez comment y remédier dans un contrôleur d’API.",
+        "niveau": "medium",
+        "reponse": "L’absence de validation expose l’API aux attaques par injection (SQL, script, etc.). Dans ASP.NET Core, on corrige en utilisant les attributs de validation (ex : [Required], [StringLength]) sur les DTO, et en activant la validation automatique via [ApiController]. Il faut aussi ne jamais faire confiance aux données brutes des requêtes.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "L’équipe utilise encore `ExecuteSqlRaw()` pour des recherches. Évaluez le danger et proposez une alternative sécurisée.",
+        "niveau": "hard",
+        "reponse": "`ExecuteSqlRaw()` est dangereux car il permet des injections SQL si les paramètres sont concaténés. L’alternative est d’utiliser `FromSqlRaw()` avec des paramètres SQL (ou `FromSqlInterpolated`) ou, mieux, d’utiliser LINQ (ex : `Where(p => p.Name.Contains(searchTerm))`) qui protège automatiquement.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Citez trois en-têtes de sécurité recommandés pour une API et expliquez brièvement comment les activer dans .NET Core.",
+        "niveau": "easy",
+        "reponse": "1. `X-Content-Type-Options: nosniff` (empêche le MIME sniffing) ; 2. `Strict-Transport-Security` (force HTTPS) ; 3. `X-Frame-Options: DENY` (anti-clickjacking). On peut les ajouter via un middleware personnalisé ou via le package `Microsoft.AspNetCore.HeaderPropagation` et `app.Use(async (context, next) => { context.Response.Headers.Add(...); await next(); })`.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Renforcer l’API contre les attaques courantes",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous devez sécuriser une API .NET 8 qui gère des données sensibles. L’API est consommée par un front-end React. Elle utilise déjà l’authentification JWT mais aucun autre mécanisme de sécurité.</p>\n<p><strong>Consigne :</strong> Proposez une stratégie complète (middleware, configurations) pour :</p>\n<ul>\n<li>Empêcher les attaques CSRF (spécifique à l’utilisation du JWT).</li>\n<li>Valider systématiquement les entrées utilisateur.</li>\n<li>Ajouter un jeu d’en-têtes de sécurité.</li>\n<li>Protéger contre les injections SQL (sans modifier tout le code).</li>\n</ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Justifiez pourquoi, avec JWT stocké en localStorage ou sessionStorage, l’API n’est pas vulnérable au CSRF classique. Quelle serait la vraie menace dans ce cas ?",
+        "niveau": "hard",
+        "reponse": "Le CSRF classique exploite les cookies de session automatiquement envoyés par le navigateur. Avec JWT stocké dans le localStorage, le token n’est pas automatiquement joint aux requêtes cross-origin. La vraie menace devient le XSS (cross-site scripting) qui peut voler le JWT. Pour s’en protéger, il faut implémenter un Content Security Policy (CSP) robuste et utiliser `HttpOnly` + cookies sécurisés (et donc revenir à un cookie-based JWT) pour une protection CSRF+XSS.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposez un extrait de `Program.cs` ajoutant au moins trois en-têtes de sécurité et expliquant chaque ajout.",
+        "niveau": "medium",
+        "reponse": "```csharp\napp.Use(async (context, next) =>\n{\n    context.Response.Headers.Add(\"X-Content-Type-Options\", \"nosniff\");\n    context.Response.Headers.Add(\"X-Frame-Options\", \"DENY\");\n    context.Response.Headers.Add(\"Content-Security-Policy\", \"default-src 'self'\");\n    await next();\n});\n```\n- `X-Content-Type-Options` empêche le navigateur d’interpréter un fichier comme un autre type MIME.\n- `X-Frame-Options` évite l’inclusion de l’API dans un iframe (clickjacking).\n- `CSP` limite les sources de contenu exécutable (réduit XSS).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Évaluez l’affirmation suivante : « Avec Entity Framework Core, l’API est automatiquement protégée contre toutes les injections SQL ». Corrigez ou nuancez cette affirmation.",
+        "niveau": "medium",
+        "reponse": "C’est faux en partie. EF Core protège les requêtes LINQ et les requêtes paramétrées via `FromSqlInterpolated`. Mais si un développeur utilise `ExecuteSqlRaw()` avec concaténation de chaînes, l’injection SQL redevient possible. Donc EF Core n’est sécurisé que si on l’utilise correctement.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

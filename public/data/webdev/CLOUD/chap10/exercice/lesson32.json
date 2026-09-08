@@ -1,0 +1,102 @@
+[
+  {
+    "intitule": "Reconnaître les bonnes pratiques d’intégration d’IaC dans un pipeline CI/CD",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous travaillez dans une équipe qui déploie une application web sur AWS. L’équipe commence à utiliser Terraform pour gérer l’infrastructure. On vous demande d’expliquer à un collègue les bonnes pratiques pour intégrer Terraform dans un pipeline CI/CD (par exemple GitHub Actions, GitLab CI, ou AWS CodePipeline).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier trois bonnes pratiques essentielles lorsqu’on utilise Terraform dans un pipeline CI/CD.",
+        "niveau": "easy",
+        "reponse": "1. Ne jamais stocker le fichier `terraform.tfstate` localement ; utiliser un backend distant (S3 + DynamoDB, Azure Storage, GCS). 2. Toujours exécuter `terraform plan` dans le pipeline pour détecter les changements avant application. 3. Utiliser `terraform apply -auto-approve` uniquement après validation manuelle (environnement de production) ou automatique (environnement de développement).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyser un pipeline CI/CD Terraform existant",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Voici les étapes d’un pipeline CI/CD utilisant Terraform :</p><ul><li>Étape 1 : Vérification du formatage (`terraform fmt -check`)</li><li>Étape 2 : Initialisation (`terraform init`)</li><li>Étape 3 : Validation (`terraform validate`)</li><li>Étape 4 : Planification (`terraform plan -out=tfplan`)</li><li>Étape 5 : Application manuelle (`terraform apply tfplan`)</li></ul><p>Ce pipeline est exécuté pour les environnements `dev`, `staging` et `prod`.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer pourquoi l’étape 5 est manuelle pour l’environnement `prod` mais pourrait être automatique pour `dev`.",
+        "niveau": "medium",
+        "reponse": "En production, une validation manuelle permet d’éviter des changements accidentels ou non testés qui pourraient causer une interruption de service. En développement, les risques sont moindres et l’automatisation accélère le cycle d’itération.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer une amélioration pour gérer plusieurs environnements (dev, staging, prod) sans dupliquer le code Terraform.",
+        "niveau": "medium",
+        "reponse": "Utiliser les workspaces Terraform (`terraform workspace new dev`) ou les fichiers `terraform.tfvars` avec des variables d’environnement (`-var-file=\"dev.tfvars\"`). Une autre approche est d’utiliser des dossiers séparés (`env/dev`, `env/prod`) avec des backends différents.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Créer un module Terraform réutilisable pour une application web standard",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>En tant que Cloud Engineer, vous devez standardiser le déploiement d’applications web simples composées de :</p><ul><li>Un bucket S3 (AWS) ou Cloud Storage (GCP) pour héberger les fichiers statiques</li><li>Une distribution CloudFront (AWS) ou CDN (GCP/Azure)</li><li>Un jeu de tags standardisés (Environment, Project, Owner)</li></ul><p>Écrire la structure d’un module Terraform réutilisable (fichiers principaux et variables essentielles) pour AWS.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédiger le contenu minimal de `variables.tf` et `main.tf` pour ce module (nom du bucket, environnement, tags).",
+        "niveau": "hard",
+        "reponse": "**variables.tf** :\n```hcl\nvariable \"bucket_name\" {\n  description = \"Nom unique du bucket S3\"\n  type        = string\n}\n\nvariable \"environment\" {\n  description = \"Environnement (dev, staging, prod)\"\n  type        = string\n}\n\nvariable \"project_name\" {\n  description = \"Nom du projet\"\n  type        = string\n}\n\nvariable \"owner\" {\n  description = \"Propriétaire de la ressource\"\n  type        = string\n}\n```\n\n**main.tf** :\n```hcl\nresource \"aws_s3_bucket\" \"static_site\" {\n  bucket = var.bucket_name\n  tags = {\n    Environment = var.environment\n    Project     = var.project_name\n    Owner       = var.owner\n  }\n}\n\nresource \"aws_s3_bucket_website_configuration\" \"site\" {\n  bucket = aws_s3_bucket.static_site.id\n  index_document {\n    suffix = \"index.html\"\n  }\n}\n\nresource \"aws_cloudfront_distribution\" \"cdn\" {\n  origin {\n    domain_name = aws_s3_bucket.static_site.bucket_regional_domain_name\n    origin_id   = var.bucket_name\n  }\n  enabled = true\n  default_root_object = \"index.html\"\n  tags = {\n    Environment = var.environment\n    Project     = var.project_name\n    Owner       = var.owner\n  }\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer comment intégrer ce module dans un pipeline CI/CD pour qu’il soit appelé pour chaque environnement avec des valeurs différentes.",
+        "niveau": "hard",
+        "reponse": "Dans le pipeline, on peut appeler le module avec des fichiers `dev.tfvars`, `staging.tfvars`, `prod.tfvars`. Exemple : `terraform apply -var-file=\"dev.tfvars\"`. Chaque appel au module dans la configuration racine utilisera des valeurs différentes pour `bucket_name`, `environment`, etc. Le pipeline peut itérer sur les environnements et exécuter `terraform init` puis `apply` dans chaque dossier d’environnement ou avec des workspaces.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Diagnostiquer un échec d’intégration Terraform dans un pipeline",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Un pipeline CI/CD échoue à l’étape `terraform plan`. Le message d’erreur indique : <code>Error: Error acquiring the state lock. State lock ID: 1234567890. Lock info: Operation unauthorized</code>.</p><p>Le pipeline utilise un backend S3 avec DynamoDB pour le verrouillage d’état.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Interpréter la cause probable de cette erreur et proposer une correction concrète dans la configuration CI/CD.",
+        "niveau": "very hard",
+        "reponse": "L’erreur indique que le pipeline n’a pas les droits suffisants pour lire/écrire le verrou (DynamoDB) ou pour accéder à la table de lock. Cause probable : les identifiants AWS utilisés par le pipeline n’ont pas la permission `dynamodb:PutItem`, `dynamodb:DeleteItem`, `dynamodb:GetItem` sur la table de lock. Correction : ajouter une politique IAM au rôle du pipeline autorisant ces actions sur la table DynamoDB spécifique.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Donner un exemple de politique IAM minimale pour résoudre ce problème.",
+            "niveau": "very hard",
+            "reponse": "```json\n{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [\n    {\n      \"Effect\": \"Allow\",\n      \"Action\": [\n        \"dynamodb:GetItem\",\n        \"dynamodb:PutItem\",\n        \"dynamodb:DeleteItem\"\n      ],\n      \"Resource\": \"arn:aws:dynamodb:us-east-1:123456789012:table/terraform-locks\"\n    }\n  ]\n}\n```"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Si le lock existe réellement à cause d’un précédent pipeline interrompu, décrire la procédure sécurisée pour le forcer sans risque.",
+        "niveau": "very hard",
+        "reponse": "1. Vérifier d’abord qu’aucun pipeline ou utilisateur n’exécute réellement Terraform (ex: `aws dynamodb get-item --table-name terraform-locks --key '{\"LockID\": {\"S\": \"mon-bucket/mon-état\"}}'`). 2. Si le lock est orphelin, utiliser `terraform force-unlock <LOCK_ID>` en local avec les mêmes identifiants et backend. 3. Ne jamais supprimer manuellement l’entrée DynamoDB sans comprendre l’origine du lock, pour éviter une corruption d’état.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

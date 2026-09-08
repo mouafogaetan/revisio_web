@@ -1,0 +1,188 @@
+[
+  {
+    "intitule": "Comprendre la configuration d'Axios pour la communication avec l'API",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Axios est une bibliothèque HTTP qui permet à l'application React Native de communiquer avec le backend NestJS. Une configuration correcte est essentielle pour assurer la fiabilité des échanges de données.</p><p>En vous basant sur les objectifs de la leçon 5, répondez aux questions suivantes.</p>",
+      "images": [
+        "Schéma illustrant le flux de communication entre l'application mobile (React Native) et le backend (NestJS) via Axios. Les flèches montrent les requêtes HTTP avec le token JWT et les réponses avec les données."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Quels sont les trois paramètres de configuration de base d'une instance Axios ?",
+        "niveau": "easy",
+        "reponse": "1. <code>baseURL</code> : L'URL de base de l'API (ex: <code>https://api.sawamart.com</code>)\n2. <code>timeout</code> : Le délai d'attente maximal en millisecondes avant d'abandonner la requête\n3. <code>headers</code> : Les en-têtes HTTP par défaut (ex: <code>Content-Type: application/json</code>)",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi est-il important de définir un <code>timeout</code> dans la configuration d'Axios ?",
+            "niveau": "easy",
+            "reponse": "Le <code>timeout</code> permet d'éviter que l'application reste bloquée indéfiniment en attente d'une réponse du serveur. Si le serveur ne répond pas dans le délai imparti, la requête est annulée et une erreur est levée, permettant à l'application de gérer l'échec (afficher un message d'erreur, réessayer, etc.)."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Analyser le rôle des intercepteurs dans la gestion de l'authentification",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Les intercepteurs sont des mécanismes puissants qui permettent d'intercepter et de modifier les requêtes et les réponses HTTP. Dans l'application, ils sont utilisés pour gérer automatiquement le token JWT et les erreurs d'authentification.</p><p>Analyser le fonctionnement de ces intercepteurs à travers les questions suivantes.</p>",
+      "images": [
+        "Diagramme de séquence montrant une requête avec interception : La requête part avec l'intercepteur qui ajoute le token JWT. La réponse arrive et si c'est un 401, l'intercepteur gère le refresh token et relance la requête."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 2,
+        "texte": "Décrivez le rôle de l'intercepteur de requête et de l'intercepteur de réponse dans le service Axios.",
+        "niveau": "medium",
+        "reponse": "**Intercepteur de requête :**\n- S'exécute avant l'envoi de chaque requête HTTP\n- Ajoute automatiquement le token JWT dans le header <code>Authorization</code> si l'utilisateur est authentifié\n- Permet de modifier les données de la requête avant l'envoi\n\n**Intercepteur de réponse :**\n- S'exécute après la réception de la réponse\n- Gère les erreurs 401 (token expiré) en tentant un refresh token\n- Transforme les données de réponse si nécessaire\n- Centralise la gestion des erreurs",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Expliquez comment l'intercepteur de réponse gère l'erreur 401 et le mécanisme de refresh token.",
+            "niveau": "hard",
+            "reponse": "1. L'intercepteur de réponse détecte une erreur 401 (token expiré)\n2. Il vérifie si un token de rafraîchissement est disponible dans le store\n3. Si oui, il appelle l'API <code>/auth/refresh</code> avec le refresh token\n4. Si le refresh est réussi, il met à jour les tokens dans le store et rejoue la requête originale\n5. Si le refresh échoue, il déconnecte l'utilisateur et le redirige vers l'écran de connexion\n6. Les requêtes multiples en échec sont mises en file d'attente pendant le processus de refresh pour éviter les appels multiples"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Configurer Axios pour l'upload d'images avec multipart/form-data",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>L'application permet aux utilisateurs d'uploader des images pour leurs produits, leur profil et dans le chat. Ces uploads nécessitent l'utilisation de <code>multipart/form-data</code>.</p><p>Réaliser l'exercice ci-dessous en utilisant les concepts de la leçon.</p>",
+      "images": [
+        "Interface d'upload d'image dans l'application montrant un formulaire avec un champ de sélection de fichiers et une prévisualisation de l'image sélectionnée."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 3,
+        "texte": "Écrivez la configuration nécessaire pour permettre l'upload d'images via Axios en utilisant <code>multipart/form-data</code>.",
+        "niveau": "medium",
+        "reponse": "**Configuration et code d'upload :**\n\n1. **Création du FormData :**\n```typescript\nconst formData = new FormData();\nformData.append('name', productName);\nformData.append('price', price.toString());\nformData.append('image', {\n  uri: imageUri,\n  type: 'image/jpeg',\n  name: 'product.jpg',\n} as any);\n```\n\n2. **Configuration de la requête Axios :**\n```typescript\nawait api.post('/products', formData, {\n  headers: {\n    'Content-Type': 'multipart/form-data',\n  },\n  onUploadProgress: (progressEvent) => {\n    const percent = Math.round(\n      (progressEvent.loaded * 100) / progressEvent.total\n    );\n    // Mettre à jour la barre de progression\n  },\n});\n```\n\n3. **Gestion des erreurs spécifiques :**\n- Taille de fichier trop grande\n- Format de fichier non supporté\n- Erreur réseau pendant l'upload",
+        "sousQuestions": [
+          {
+            "numero": "3.a",
+            "texte": "Pourquoi est-il nécessaire d'utiliser <code>multipart/form-data</code> pour l'upload d'images ?",
+            "niveau": "medium",
+            "reponse": "Le type <code>multipart/form-data</code> est spécifiquement conçu pour envoyer des fichiers binaires (images, vidéos, etc.) via HTTP. Contrairement à <code>application/json</code>, il permet de transporter des données binaires en les encodant en plusieurs parties (parts). C'est la méthode standard recommandée par la spécification HTML et largement supportée par les APIs backend."
+          },
+          {
+            "numero": "3.b",
+            "texte": "Comment gérer la progression de l'upload d'image pour améliorer l'expérience utilisateur ?",
+            "niveau": "hard",
+            "reponse": "1. Utiliser le callback <code>onUploadProgress</code> d'Axios pour suivre la progression\n2. Afficher une barre de progression avec le pourcentage\n3. Gérer l'état de chargement dans le store (<code>isUploading</code>, <code>uploadProgress</code>)\n4. Désactiver les interactions pendant l'upload\n5. Afficher un message de succès ou d'erreur à la fin\n6. Permettre l'annulation de l'upload avec <code>CancelToken</code> d'Axios\n7. Compresser automatiquement les images avant l'upload pour réduire le temps de transfert (utiliser <code>expo-image-manipulator</code>)"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Développer un système de gestion d'erreurs avec les intercepteurs Axios",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Une application robuste doit gérer correctement les erreurs réseau, les erreurs serveur, et les erreurs de validation. Les intercepteurs Axios peuvent centraliser cette gestion.</p><p>Développer une solution complète de gestion d'erreurs en utilisant les intercepteurs.</p>",
+      "images": [
+        "Interface utilisateur montrant différentes erreurs : un toast pour une erreur réseau, un modal pour une erreur serveur, et un affichage de validation pour les champs de formulaire."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 4,
+        "texte": "Concevez un système de gestion d'erreurs unifié utilisant les intercepteurs Axios et le store Zustand.",
+        "niveau": "hard",
+        "reponse": "**Architecture du système de gestion d'erreurs :**\n\n1. **Intercepteur de réponse** :\n```typescript\napi.interceptors.response.use(\n  (response) => response,\n  async (error) => {\n    if (error.code === 'ECONNABORTED') {\n      // Timeout\n      errorStore.setError({\n        type: 'timeout',\n        message: 'La requête a pris trop de temps',\n      });\n    } else if (!error.response) {\n      // Erreur réseau\n      errorStore.setError({\n        type: 'network',\n        message: 'Problème de connexion réseau',\n      });\n    } else {\n      const { status, data } = error.response;\n      errorStore.setError({\n        type: 'server',\n        status,\n        message: data.message || 'Erreur serveur',\n      });\n    }\n    return Promise.reject(error);\n  }\n);\n```\n\n2. **Store d'erreurs** :\n```typescript\ninterface ErrorStore {\n  error: ErrorState | null;\n  setError: (error: ErrorState) => void;\n  clearError: () => void;\n  showToast: (message: string, type: 'error' | 'success' | 'info') => void;\n}\n```\n\n3. **Types d'erreurs gérés** :\n- 400 : Erreur de validation\n- 401 : Token expiré (refresh token)\n- 403 : Permissions insuffisantes\n- 404 : Ressource non trouvée\n- 422 : Erreur de validation\n- 500 : Erreur interne du serveur\n- Réseau : Connexion perdue\n- Timeout : Délai dépassé",
+        "sousQuestions": [
+          {
+            "numero": "4.a",
+            "texte": "Écrivez un intercepteur qui gère spécifiquement les erreurs de validation (422) pour afficher des messages personnalisés par champ.",
+            "niveau": "hard",
+            "reponse": "```typescript\n// intercepteur de gestion des erreurs de validation\napi.interceptors.response.use(\n  (response) => response,\n  async (error) => {\n    if (error.response?.status === 422) {\n      const errors = error.response.data.errors;\n      \n      // Transformer les erreurs pour le formulaire\n      const fieldErrors = {};\n      errors.forEach((err) => {\n        fieldErrors[err.field] = err.message;\n      });\n      \n      // Mettre à jour le store\n      validationStore.setFieldErrors(fieldErrors);\n      \n      // Afficher un toast pour le premier champ en erreur\n      const firstField = Object.keys(fieldErrors)[0];\n      if (firstField) {\n        errorStore.showToast(fieldErrors[firstField], 'error');\n      }\n    }\n    \n    return Promise.reject(error);\n  }\n);\n\n// Dans le formulaire\nconst FieldError = ({ field }) => {\n  const error = validationStore.errors[field];\n  return error ? <Text style={styles.error}>{error}</Text> : null;\n};\n```"
+          },
+          {
+            "numero": "4.b",
+            "texte": "Proposez une stratégie pour gérer les erreurs réseau et les tentatives de reprise (retry) des requêtes.",
+            "niveau": "very hard",
+            "reponse": "**Stratégie de retry avec backoff exponentiel :**\n\n1. **Configuration des retries :**\n```typescript\nconst RETRY_CONFIG = {\n  maxRetries: 3,\n  baseDelay: 1000, // 1 seconde\n  maxDelay: 10000, // 10 secondes\n  retryableStatuses: [408, 429, 500, 502, 503, 504],\n  retryableErrors: ['ECONNABORTED', 'ECONNRESET', 'ENETUNREACH'],\n};\n```\n\n2. **Interceptor avec retry :**\n```typescript\napi.interceptors.response.use(\n  (response) => response,\n  async (error) => {\n    const config = error.config;\n    if (!config._retry) {\n      config._retry = 0;\n    }\n\n    const shouldRetry = \n      RETRY_CONFIG.retryableStatuses.includes(error.response?.status) ||\n      RETRY_CONFIG.retryableErrors.includes(error.code);\n\n    if (shouldRetry && config._retry < RETRY_CONFIG.maxRetries) {\n      config._retry++;\n      \n      // Backoff exponentiel avec jitter\n      const delay = Math.min(\n        RETRY_CONFIG.baseDelay * Math.pow(2, config._retry - 1) * \n        (0.5 + Math.random() * 0.5),\n        RETRY_CONFIG.maxDelay\n      );\n      \n      // Afficher un message de tentative\n      errorStore.showToast(\n        `Tentative ${config._retry}/${RETRY_CONFIG.maxRetries}...`,\n        'info'\n      );\n      \n      await new Promise((resolve) => setTimeout(resolve, delay));\n      return api(config);\n    }\n    \n    return Promise.reject(error);\n  }\n);\n```\n\n3. **Gestion des requêtes en file d'attente :**\n- Utiliser un système de queue pour les requêtes en échec pendant la reconnexion\n- Synchroniser automatiquement les données hors ligne lors du retour de la connexion"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Évaluer les stratégies de gestion de cache avec Axios",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Pour améliorer les performances et réduire la bande passante, il est important de mettre en cache certaines données (catégories, listes de produits, etc.) du côté client.</p><p>Évaluer les différentes stratégies de cache avec Axios à travers les questions suivantes.</p>",
+      "images": [
+        "Schéma d'une application avec un cache réparti entre AsyncStorage, le cache en mémoire et les intercepteurs Axios. Les requêtes passent par le cache avant d'aller au serveur."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 5,
+        "texte": "Évaluez les avantages et inconvénients de trois stratégies de cache différentes pour une application e-commerce mobile.",
+        "niveau": "hard",
+        "reponse": "**1. Cache en mémoire (Zustand store) :**\n- Avantages : Rapide, réactif, facile à implémenter\n- Inconvénients : Perdu lors du rechargement de l'application\n- Use case : Données temporaires de la session (recherches récentes)\n\n**2. Cache local (AsyncStorage/MMKV) :**\n- Avantages : Persistant, rapide, accessible hors ligne\n- Inconvénients : Espace limité, gestion de l'expiration\n- Use case : Données de référence (catégories, paramètres)\n\n**3. Cache HTTP (Axios caching) :**\n- Avantages : Automatique avec les headers HTTP (ETag, Cache-Control)\n- Inconvénients : Moins de contrôle, dépend du backend\n- Use case : Données statiques ou semi-statiques",
+        "sousQuestions": [
+          {
+            "numero": "5.a",
+            "texte": "Proposez une stratégie de cache combinée pour l'application Sawamart qui minimise les appels API tout en assurant des données fraîches.",
+            "niveau": "very hard",
+            "reponse": "**Stratégie de cache multi-niveaux :**\n\n1. **Niveau 1 - Cache HTTP (Entête) :**\n   - Utiliser <code>ETag</code> et <code>Cache-Control</code> pour les données peu volatiles\n   - Configurer Axios pour utiliser ces entêtes automatiquement\n\n2. **Niveau 2 - Cache en mémoire :**\n   - Stocker les données fréquemment utilisées dans le store Zustand\n   - Invalider le cache lors des mutations (création, modification, suppression)\n\n3. **Niveau 3 - Cache persistant :**\n   - Utiliser MMKV pour un stockage performant\n   - Stocker avec un timestamp d'expiration\n   - TTL : 5 min pour les catégories, 1 min pour les prix, 24h pour les paramètres\n\n4. **Stratégie de mise à jour :**\n   - Afficher d'abord le cache, puis rafraîchir en arrière-plan\n   - Utiliser <code>useFocusEffect</code> pour rafraîchir au retour sur l'écran\n   - Forcer le rafraîchissement sur <code>pull-to-refresh</code>\n\n5. **Invalidation intelligente :**\n   - Invalider par type de ressource\n   - Invalider par dépendance (ex: si un produit est modifié, invalider le cache de la catégorie)\n   - Utiliser des tags de cache (ex: 'products:category:123')"
+          },
+          {
+            "numero": "5.b",
+            "texte": "Évaluez l'impact d'un cache mal configuré sur l'expérience utilisateur et proposez des solutions.",
+            "niveau": "hard",
+            "reponse": "**Impacts d'un cache mal configuré :**\n\n1. **Données obsolètes :**\n   - Les utilisateurs voient des produits indisponibles\n   - Prix périmés\n   - Solution : Invalider le cache lors des mutations, utiliser des TTL courts\n\n2. **Fragmentation du cache :**\n   - Les données sont incohérentes entre les écrans\n   - Solution : Centraliser la logique de cache, utiliser des clés uniques\n\n3. **Problèmes d'espace :**\n   - Accumulation excessive de données\n   - Solution : Mettre en place une limite de taille, supprimer les données les plus anciennes (LRU)\n\n4. **Données manquantes :**\n   - Cache empty ou expiré\n   - Solution : Fallback automatique vers l'API, afficher des squelettes de chargement\n\n5. **Rafraîchissement infini :**\n   - Le cache est constamment invalidé\n   - Solution : Implementer un mécanisme de debounce, utiliser des conditions de rafraîchissement\n\n**Solutions recommandées :**\n1. Utiliser <code>react-query</code> ou <code>tanstack-query</code> pour une gestion professionnelle du cache\n2. Mettre en place un système de versionnement du cache\n3. Forcer un rafraîchissement complet lors des mises à jour majeures de l'application\n4. Afficher un indicateur de fraîcheur des données (âge des données)"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Concevoir une solution pour les appels API hors ligne",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Dans un contexte camerounais où la couverture réseau peut être instable, il est crucial de permettre aux utilisateurs de continuer à utiliser l'application hors ligne.</p><p>Concevoir une solution complète pour gérer les appels API en mode hors ligne.</p>",
+      "images": [
+        "Schéma d'un système de file d'attente hors ligne avec AsyncStorage. Les actions sont stockées en file d'attente et synchronisées automatiquement lorsque la connexion est rétablie."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 6,
+        "texte": "Concevez un système de file d'attente pour les appels API hors ligne dans l'application Sawamart.",
+        "niveau": "very hard",
+        "reponse": "**Architecture du système hors ligne :**\n\n1. **Queue Manager :**\n```typescript\nclass OfflineQueueManager {\n  private queue: QueuedRequest[] = [];\n  private isProcessing = false;\n\n  async addToQueue(request: QueuedRequest) {\n    this.queue.push({\n      ...request,\n      timestamp: Date.now(),\n      retries: 0,\n    });\n    await this.persistQueue();\n    if (this.isOnline) {\n      this.processQueue();\n    }\n  }\n\n  async processQueue() {\n    if (this.isProcessing || !this.isOnline) return;\n    this.isProcessing = true;\n    for (const request of this.queue) {\n      await this.processRequest(request);\n    }\n    this.isProcessing = false;\n    await this.persistQueue();\n  }\n}\n```\n\n2. **Stockage persistant :**\n- Utiliser AsyncStorage pour stocker la file d'attente\n- Sauvegarder chaque requête avec ses données, l'endpoint, la méthode\n- Conserver les métadonnées (timestamp, retries, priority)\n\n3. **Détection de connexion :**\n```typescript\n// Hook de détection de connexion\nimport NetInfo from '@react-native-community/netinfo';\n\nuseEffect(() => {\n  const unsubscribe = NetInfo.addEventListener((state) => {\n    const isConnected = state.isConnected;\n    const isWifi = state.type === 'wifi';\n    \n    if (isConnected && wasOffline) {\n      // Traiter la file d'attente\n      queueManager.processQueue();\n    }\n    setOnlineStatus(isConnected);\n  });\n  return unsubscribe;\n}, []);\n```\n\n4. **Priorisation :**\n- Priorité haute : Messages de chat, actions de paiement\n- Priorité moyenne : Création de produits, modification de profil\n- Priorité basse : Logs, interactions\n\n5. **Gestion des conflits :**\n- Détecter les conflits de données lors de la synchronisation\n- Utiliser des versions (versioning) ou des timestamps\n- Afficher un message en cas de conflit\n\n6. **Feedback utilisateur :**\n- Badge indiquant le nombre d'actions en attente\n- Message de confirmation après synchronisation\n- Indicateur de progression lors de la synchronisation en arrière-plan",
+        "sousQuestions": [
+          {
+            "numero": "6.a",
+            "texte": "Comment gérer les actions critiques (comme les paiements) hors ligne ?",
+            "niveau": "very hard",
+            "reponse": "**Gestion des actions critiques hors ligne :**\n\n1. **Double vérification :**\n   - Pour les paiements, toujours vérifier en ligne d'abord\n   - Si hors ligne, bloquer les transactions et afficher un message\n\n2. **File d'attente avec verrouillage :**\n```typescript\n// Actions de paiement\nconst initiatePayment = async (paymentData) => {\n  if (!isOnline) {\n    // Stocker la demande mais la bloquer\n    queueManager.addToQueue({\n      id: 'payment_' + Date.now(),\n      type: 'payment',\n      data: paymentData,\n      requiresOnline: true, // La requête nécessite une connexion\n    });\n    showToast(\n      'Votre demande sera traitée dès que la connexion sera rétablie',\n      'info'\n    );\n    return;\n  }\n  // Traitement normal\n  return await paymentService.pay(paymentData);\n};\n```\n\n3. **Sécurité :**\n   - Chiffrer les données sensibles dans la file d'attente\n   - TTL pour les actions (expiration après 24h)\n   - Limiter le nombre de retries\n\n4. **Notification utilisateur :**\n   - Envoyer une notification push lorsque la transaction est traitée\n   - Afficher un badge sur l'écran de wallet\n   - Permettre à l'utilisateur de suivre l'état de la transaction"
+          },
+          {
+            "numero": "6.b",
+            "texte": "Proposez une solution pour gérer l'optimistic update avec la file d'attente hors ligne.",
+            "niveau": "very hard",
+            "reponse": "**Optimistic Update avec File d'Attente :**\n\n1. **Principe :**\n   - Mettre à jour l'UI immédiatement (optimistiquement)\n   - Ajouter la requête à la file d'attente\n   - Si succès : confirmer l'update\n   - Si échec : rollback de l'UI et afficher une erreur\n\n2. **Implémentation :**\n```typescript\nconst sendOptimisticMessage = async (message) => {\n  // ID temporaire pour le message\n  const tempId = 'temp_' + Date.now();\n  \n  // Mise à jour optimiste du store\n  chatStore.addMessage({\n    id: tempId,\n    ...message,\n    status: 'sending',\n  });\n\n  // Ajout à la file d'attente\n  await queueManager.addToQueue({\n    id: tempId,\n    type: 'message',\n    endpoint: '/chat/messages',\n    method: 'POST',\n    data: message,\n    onSuccess: (response) => {\n      // Mettre à jour avec l'ID réel\n      chatStore.updateMessage(tempId, {\n        id: response.id,\n        status: 'sent',\n      });\n    },\n    onError: (error) => {\n      // Rollback\n      chatStore.removeMessage(tempId);\n      showToast('Message non envoyé', 'error');\n    },\n    optimisticId: tempId,\n  });\n};\n```\n\n3. **Gestion des conflits :**\n   - En cas de conflit (ex: message modifié), présenter les deux versions à l'utilisateur\n   - Permettre à l'utilisateur de choisir ou de conserver la dernière version\n   - Maintenir un historique des changements\n\n4. **Visualisation :**\n   - Afficher les messages en attente avec un style différent (opacité, indicateur)\n   - Badge indiquant le nombre de messages en file d'attente\n   - Animation de synchronisation lors de l'envoi"
+          }
+        ]
+      }
+    ]
+  }
+]

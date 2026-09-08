@@ -1,0 +1,120 @@
+[
+  {
+    "intitule": "Analyse du Composant WithdrawalScreen",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous devez concevoir l'écran de retrait pour l'application mobile e-commerce. Cet écran permet aux utilisateurs de retirer leurs fonds du wallet vers leur compte Mobile Money.</p><p><strong>Spécifications fonctionnelles :</strong></p><ul><li>L'utilisateur doit pouvoir saisir le montant à retirer</li><li>Le système doit calculer et afficher les frais de transaction (2.5%)</li><li>Le montant net reçu doit être affiché en temps réel</li><li>L'utilisateur doit confirmer avec son mot de passe</li><li>L'historique des retraits doit être affiché avec leur statut</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez la structure du composant <code>WithdrawalScreen</code> et ses principaux éléments UI.",
+        "niveau": "medium",
+        "reponse": "<p>Le composant <code>WithdrawalScreen</code> est structuré en plusieurs sections :</p><ul><li><strong>Header</strong> : Titre \"Retrait d'argent\" avec bouton de retour</li><li><strong>BalanceDisplay</strong> : Affiche le solde disponible du wallet</li><li><strong>AmountInput</strong> : Champ de saisie du montant avec validation (montant minimum, maximum)</li><li><strong>FeeSimulation</strong> : Affiche la simulation des frais (2.5%) et le net reçu</li><li><strong>WithdrawButton</strong> : Bouton d'action pour initier le retrait</li><li><strong>PasswordModal</strong> : Modal pour la vérification du mot de passe</li><li><strong>HistoryList</strong> : FlatList affichant l'historique des retraits avec statuts</li></ul><p>Le composant utilise le store <code>withdrawalStore</code> pour gérer l'état et les appels API.</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez pourquoi il est important d'afficher les frais de transaction avant la confirmation du retrait.",
+            "niveau": "easy",
+            "reponse": "L'affichage des frais de transaction est important car :<br><br><ul><li><strong>Transparence</strong> : L'utilisateur sait exactement combien il va recevoir</li><li><strong>Confiance</strong> : Évite les surprises et renforce la confiance dans la plateforme</li><li><strong>Prise de décision</strong> : Permet à l'utilisateur de décider s'il veut procéder ou non</li><li><strong>Conformité</strong> : Obligation légale dans de nombreux pays d'informer les utilisateurs des frais</li></ul>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Proposez trois validations à effectuer sur le montant saisi par l'utilisateur.",
+            "niveau": "medium",
+            "reponse": "<p><strong>Trois validations essentielles :</strong></p><ul><li><strong>Montant minimum</strong> : Vérifier que le montant est supérieur au minimum autorisé (ex: 1000 FCFA)</li><li><strong>Montant maximum</strong> : Vérifier que le montant ne dépasse pas le plafond journalier ou le solde disponible</li><li><strong>Solde suffisant</strong> : Vérifier que le montant + les frais ≤ solde disponible</li></ul><pre style='background:#2d2d2d; color:#f8f8f2; padding:12px; border-radius:6px; font-size:0.8em;'>\nconst validateAmount = (amount, balance) => {\n  if (amount < MIN_WITHDRAWAL) {\n    return 'Le montant minimum est de 1000 FCFA';\n  }\n  if (amount > MAX_WITHDRAWAL) {\n    return 'Le montant maximum est de 500000 FCFA';\n  }\n  if (amount + (amount * 0.025) > balance) {\n    return 'Solde insuffisant pour couvrir le retrait et les frais';\n  }\n  return null;\n};\n</pre>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Implémentation du Store de Retraits",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous devez implémenter le store Zustand pour la gestion des retraits dans l'application.</p><p><strong>Spécifications :</strong></p><ul><li>Gérer l'état du formulaire de retrait (montant, frais, net)</li><li>Gérer la liste des retraits avec pagination</li><li>Gérer les états de chargement et d'erreur</li><li>Implémenter les actions : initier un retrait, rafraîchir l'historique, récupérer les détails</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le code complet du <code>withdrawalStore</code> avec toutes les actions nécessaires, en utilisant TypeScript et les middlewares Zustand appropriés.",
+        "niveau": "very hard",
+        "reponse": "<pre style='background:#2d2d2d; color:#f8f8f2; padding:12px; border-radius:6px; font-size:0.75em; overflow-x:auto;'>\nimport { create } from 'zustand';\nimport { devtools } from 'zustand/middleware';\nimport { Withdrawal, WithdrawalRequest, WithdrawalResponse, PaginatedResponse } from '../types';\nimport { withdrawalService } from '../services/api';\n\ninterface WithdrawalState {\n  // États du formulaire\n  amount: string;\n  fee: number;\n  netAmount: number;\n  isLoading: boolean;\n  isSubmitting: boolean;\n  error: string | null;\n  \n  // Historique des retraits\n  withdrawals: Withdrawal[];\n  totalWithdrawals: number;\n  page: number;\n  hasMore: boolean;\n  \n  // Détail d'un retrait\n  selectedWithdrawal: Withdrawal | null;\n  \n  // Actions\n  setAmount: (amount: string) => void;\n  calculateFeeAndNet: (amount: number) => { fee: number; net: number };\n  validateWithdrawal: () => Promise<WithdrawalResponse>;\n  initiateWithdrawal: (password: string) => Promise<Withdrawal>;\n  fetchWithdrawals: (page?: number, refresh?: boolean) => Promise<void>;\n  fetchWithdrawalDetail: (id: string) => Promise<Withdrawal>;\n  refreshHistory: () => Promise<void>;\n  clearError: () => void;\n  resetForm: () => void;\n}\n\nconst FEE_RATE = 0.025; // 2.5%\n\nexport const useWithdrawalStore = create<WithdrawalState>()(\n  devtools(\n    (set, get) => ({\n      // État initial\n      amount: '',\n      fee: 0,\n      netAmount: 0,\n      isLoading: false,\n      isSubmitting: false,\n      error: null,\n      withdrawals: [],\n      totalWithdrawals: 0,\n      page: 0,\n      hasMore: true,\n      selectedWithdrawal: null,\n\n      setAmount: (amount: string) => {\n        const numAmount = parseFloat(amount) || 0;\n        const { fee, net } = get().calculateFeeAndNet(numAmount);\n        set({\n          amount,\n          fee,\n          netAmount: net,\n          error: null,\n        });\n      },\n\n      calculateFeeAndNet: (amount: number) => {\n        const fee = amount * FEE_RATE;\n        const net = amount - fee;\n        return { fee, net };\n      },\n\n      validateWithdrawal: async () => {\n        const { amount, fee, netAmount } = get();\n        const numAmount = parseFloat(amount);\n        \n        if (!amount || isNaN(numAmount) || numAmount <= 0) {\n          throw new Error('Veuillez saisir un montant valide');\n        }\n        \n        return {\n          amount: numAmount,\n          fee,\n          netAmount,\n        };\n      },\n\n      initiateWithdrawal: async (password: string) => {\n        const { amount, validateWithdrawal } = get();\n        \n        try {\n          set({ isSubmitting: true, error: null });\n          \n          // Valider le formulaire\n          const validation = await validateWithdrawal();\n          \n          // Appel API\n          const request: WithdrawalRequest = {\n            amount: validation.amount,\n            password,\n          };\n          \n          const response = await withdrawalService.initiate(request);\n          \n          // Mettre à jour l'historique\n          set((state) => ({\n            withdrawals: [response, ...state.withdrawals],\n            isSubmitting: false,\n            amount: '',\n            fee: 0,\n            netAmount: 0,\n          }));\n          \n          return response;\n        } catch (error) {\n          set({ \n            error: error.message || 'Erreur lors du retrait',\n            isSubmitting: false,\n          });\n          throw error;\n        }\n      },\n\n      fetchWithdrawals: async (page = 1, refresh = false) => {\n        const { isLoading, hasMore } = get();\n        \n        if (isLoading) return;\n        if (!refresh && page > 1 && !hasMore) return;\n\n        set({ isLoading: true, error: null });\n        \n        try {\n          const response: PaginatedResponse<Withdrawal> = \n            await withdrawalService.getHistory(page, 20);\n          \n          set((state) => ({\n            withdrawals: refresh ? response.data : [...state.withdrawals, ...response.data],\n            totalWithdrawals: response.meta.total,\n            page: response.meta.currentPage,\n            hasMore: response.meta.hasNextPage,\n            isLoading: false,\n          }));\n        } catch (error) {\n          set({ \n            error: error.message || 'Erreur lors du chargement de l\\'historique',\n            isLoading: false,\n          });\n        }\n      },\n\n      fetchWithdrawalDetail: async (id: string) => {\n        set({ isLoading: true, error: null });\n        \n        try {\n          const withdrawal = await withdrawalService.getDetail(id);\n          set({ \n            selectedWithdrawal: withdrawal,\n            isLoading: false,\n          });\n          return withdrawal;\n        } catch (error) {\n          set({ \n            error: error.message || 'Erreur lors du chargement des détails',\n            isLoading: false,\n          });\n          throw error;\n        }\n      },\n\n      refreshHistory: async () => {\n        await get().fetchWithdrawals(1, true);\n      },\n\n      clearError: () => {\n        set({ error: null });\n      },\n\n      resetForm: () => {\n        set({\n          amount: '',\n          fee: 0,\n          netAmount: 0,\n          error: null,\n        });\n      },\n    }),\n    { name: 'WithdrawalStore' }\n  )\n);\n</pre>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez le rôle de la fonction <code>calculateFeeAndNet</code> et pourquoi elle est séparée des autres actions.",
+            "niveau": "medium",
+            "reponse": "La fonction <code>calculateFeeAndNet</code> a un rôle spécifique : elle calcule les frais et le montant net à partir du montant saisi par l'utilisateur.<br><br><strong>Pourquoi elle est séparée :</strong><ul><li><strong>Réutilisabilité</strong> : Elle peut être utilisée à la fois pour la simulation et pour la validation</li><li><strong>Testabilité</strong> : Une fonction pure est plus facile à tester unitairement</li><li><strong>Séparation des responsabilités</strong> : Le calcul est isolé de la logique d'état</li><li><strong>Performance</strong> : Elle est appelée à chaque changement de montant, donc elle doit être rapide et sans effet de bord</li></ul>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Analysez la gestion des erreurs dans ce store. Comment les erreurs sont-elles propagées aux composants UI ?",
+            "niveau": "hard",
+            "reponse": "<p><strong>Gestion des erreurs dans le store :</strong></p><ul><li><strong>Capture des erreurs</strong> : Toutes les actions asynchrones utilisent <code>try/catch</code> pour capturer les erreurs</li><li><strong>Stockage local</strong> : Les erreurs sont stockées dans le champ <code>error</code> du store</li><li><strong>Propagation</strong> : Les actions lancent l'erreur pour que les composants puissent la gérer</li></ul><p><strong>Propagation aux composants UI :</strong></p><pre style='background:#2d2d2d; color:#f8f8f2; padding:12px; border-radius:6px; font-size:0.8em;'>\n// Dans le composant\nconst { error, initiateWithdrawal, clearError } = useWithdrawalStore();\n\nconst handleWithdraw = async () => {\n  try {\n    await initiateWithdrawal(password);\n    // Succès → navigation ou toast\n  } catch (err) {\n    // L'erreur est déjà dans le store, on peut l'afficher\n    showToast(error);\n  }\n};\n\n// Affichage du message d'erreur\n{error && <ErrorBanner message={error} onDismiss={clearError} />}\n</pre><p><strong>Bonnes pratiques :</strong></p><ul><li>Les erreurs sont affichées dans des composants UI dédiés (banner, toast, modal)</li><li>Un bouton permet de fermer/dismisser l'erreur</li><li>Les erreurs sont différenciées par type (validation, réseau, serveur)</li></ul>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Simulation et Gestion des Frais de Retrait",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans le cadre de l'application, vous devez implémenter le système de simulation des frais de retrait.</p><p><strong>Règle de calcul :</strong> Les frais de retrait sont de 2.5% du montant, avec un minimum de 100 FCFA et un maximum de 2500 FCFA.</p><p><strong>Exemple :</strong> Pour un retrait de 50 000 FCFA, les frais sont de 1 250 FCFA (2.5%), le net reçu est de 48 750 FCFA.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémentez la fonction de calcul des frais qui respecte les règles ci-dessus. Écrivez les tests unitaires pour valider les cas suivants : montant de 5000 FCFA, 50000 FCFA, 200000 FCFA.",
+        "niveau": "hard",
+        "reponse": "<p><strong>Implémentation de la fonction de calcul :</strong></p><pre style='background:#2d2d2d; color:#f8f8f2; padding:12px; border-radius:6px; font-size:0.8em;'>\nconst FEE_RATE = 0.025;\nconst MIN_FEE = 100;\nconst MAX_FEE = 2500;\n\nconst calculateWithdrawalFees = (amount: number): { fee: number; net: number } => {\n  if (amount <= 0) {\n    return { fee: 0, net: 0 };\n  }\n\n  // Calcul du taux de base\n  let fee = amount * FEE_RATE;\n  \n  // Application des bornes minimum et maximum\n  fee = Math.max(fee, MIN_FEE);\n  fee = Math.min(fee, MAX_FEE);\n  \n  // Arrondi à l'entier supérieur\n  fee = Math.ceil(fee);\n  \n  const net = amount - fee;\n  \n  return { fee, net };\n};\n</pre><p><strong>Tests unitaires avec Jest :</strong></p><pre style='background:#2d2d2d; color:#f8f8f2; padding:12px; border-radius:6px; font-size:0.8em;'>\ndescribe('calculateWithdrawalFees', () => {\n  test('Montant de 5000 FCFA → frais minimum de 100 FCFA', () => {\n    const result = calculateWithdrawalFees(5000);\n    expect(result.fee).toBe(100); // 2.5% = 125 → min 100\n    expect(result.net).toBe(4900);\n  });\n\n  test('Montant de 50000 FCFA → frais de 1250 FCFA', () => {\n    const result = calculateWithdrawalFees(50000);\n    expect(result.fee).toBe(1250); // 2.5% = 1250\n    expect(result.net).toBe(48750);\n  });\n\n  test('Montant de 200000 FCFA → frais maximum de 2500 FCFA', () => {\n    const result = calculateWithdrawalFees(200000);\n    expect(result.fee).toBe(2500); // 2.5% = 5000 → max 2500\n    expect(result.net).toBe(197500);\n  });\n\n  test('Montant de 0 FCFA → frais de 0', () => {\n    const result = calculateWithdrawalFees(0);\n    expect(result.fee).toBe(0);\n    expect(result.net).toBe(0);\n  });\n});\n</pre>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez pourquoi l'utilisation de <code>Math.ceil</code> est importante pour les frais de transaction.",
+            "niveau": "easy",
+            "reponse": "L'utilisation de <code>Math.ceil</code> pour les frais de transaction est importante car :<br><br><ul><li><strong>Précision monétaire</strong> : Les transactions financières utilisent généralement des entiers (FCFA) sans décimales</li><li><strong>Évitement des erreurs d'arrondi</strong> : Les calculs en virgule flottante peuvent produire des résultats comme 124.999999, qui deviendraient 124 avec un arrondi standard</li><li><strong>Transparence</strong> : Un utilisateur préfère payer 1250 FCFA plutôt que 1249.99 FCFA qui semble moins cohérent</li><li><strong>Conformité</strong> : Les systèmes bancaires fonctionnent avec des unités monétaires entières</li></ul>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Proposez une fonction de formatage pour afficher les montants en FCFA avec le symbole et la séparation des milliers.",
+            "niveau": "easy",
+            "reponse": "<pre style='background:#2d2d2d; color:#f8f8f2; padding:12px; border-radius:6px; font-size:0.8em;'>\nconst formatCurrency = (amount: number): string => {\n  return new Intl.NumberFormat('fr-FR', {\n    style: 'currency',\n    currency: 'XAF',\n    minimumFractionDigits: 0,\n    maximumFractionDigits: 0,\n  }).format(amount);\n};\n\n// Exemples d'utilisation\nformatCurrency(1250) // \"1 250 FCFA\"\nformatCurrency(48750) // \"48 750 FCFA\"\nformatCurrency(197500) // \"197 500 FCFA\"\n</pre><p>Alternativement, on peut utiliser une fonction personnalisée :</p><pre style='background:#2d2d2d; color:#f8f8f2; padding:12px; border-radius:6px; font-size:0.8em;'>\nconst formatCurrency = (amount: number): string => {\n  const formatted = amount.toString().replace(/\\B(?=(\\d{3})+(?!\\d))/g, ' ');\n  return `${formatted} FCFA`;\n};\n</pre><p>Cette fonction est plus légère que l'API Intl et donne le même résultat.</p>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion de l'Historique des Retraits",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>L'écran de retrait doit afficher l'historique des retraits de l'utilisateur avec leur statut.</p><p><strong>Statuts possibles :</strong></p><ul><li><strong>PENDING</strong> : En attente de validation</li><li><strong>PROCESSING</strong> : En cours de traitement</li><li><strong>COMPLETED</strong> : Retrait effectué</li><li><strong>FAILED</strong> : Retrait échoué</li><li><strong>CANCELLED</strong> : Retrait annulé</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevez le composant <code>WithdrawalHistoryItem</code> qui affiche chaque retrait avec son statut. Incluez les styles appropriés pour chaque statut.",
+        "niveau": "medium",
+        "reponse": "<pre style='background:#2d2d2d; color:#f8f8f2; padding:12px; border-radius:6px; font-size:0.8em;'>\nimport React from 'react';\nimport { View, Text, StyleSheet } from 'react-native';\nimport { Withdrawal } from '../../types';\n\ninterface WithdrawalHistoryItemProps {\n  withdrawal: Withdrawal;\n}\n\nconst getStatusConfig = (status: string) => {\n  switch (status) {\n    case 'PENDING':\n      return { label: 'En attente', color: '#FFA500', icon: '⏳' };\n    case 'PROCESSING':\n      return { label: 'En cours', color: '#4A90D9', icon: '🔄' };\n    case 'COMPLETED':\n      return { label: 'Terminé', color: '#4CAF50', icon: '✅' };\n    case 'FAILED':\n      return { label: 'Échoué', color: '#F44336', icon: '❌' };\n    case 'CANCELLED':\n      return { label: 'Annulé', color: '#9E9E9E', icon: '⛔' };\n    default:\n      return { label: status, color: '#757575', icon: '📌' };\n  }\n};\n\nconst formatCurrency = (amount: number) => {\n  return `${amount.toLocaleString('fr-FR')} FCFA`;\n};\n\nconst formatDate = (date: string) => {\n  return new Date(date).toLocaleDateString('fr-FR', {\n    day: '2-digit',\n    month: '2-digit',\n    year: 'numeric',\n    hour: '2-digit',\n    minute: '2-digit',\n  });\n};\n\nexport const WithdrawalHistoryItem: React.FC<WithdrawalHistoryItemProps> = ({ withdrawal }) => {\n  const statusConfig = getStatusConfig(withdrawal.status);\n\n  return (\n    <View style={styles.container}>\n      <View style={styles.leftSection}>\n        <View style={[styles.statusIcon, { backgroundColor: statusConfig.color + '20' }]}>\n          <Text style={styles.iconText}>{statusConfig.icon}</Text>\n        </View>\n        <View style={styles.details}>\n          <Text style={styles.amount}>{formatCurrency(withdrawal.amount)}</Text>\n          <Text style={styles.date}>{formatDate(withdrawal.createdAt)}</Text>\n        </View>\n      </View>\n      <View style={[styles.statusBadge, { backgroundColor: statusConfig.color + '20' }]}>\n        <Text style={[styles.statusText, { color: statusConfig.color }]}>\n          {statusConfig.label}\n        </Text>\n      </View>\n    </View>\n  );\n};\n\nconst styles = StyleSheet.create({\n  container: {\n    flexDirection: 'row',\n    justifyContent: 'space-between',\n    alignItems: 'center',\n    padding: 16,\n    backgroundColor: '#FFFFFF',\n    borderRadius: 12,\n    marginHorizontal: 16,\n    marginVertical: 4,\n    shadowColor: '#000',\n    shadowOffset: { width: 0, height: 2 },\n    shadowOpacity: 0.05,\n    shadowRadius: 4,\n    elevation: 2,\n  },\n  leftSection: {\n    flexDirection: 'row',\n    alignItems: 'center',\n  },\n  statusIcon: {\n    width: 44,\n    height: 44,\n    borderRadius: 22,\n    justifyContent: 'center',\n    alignItems: 'center',\n    marginRight: 12,\n  },\n  iconText: {\n    fontSize: 20,\n  },\n  details: {\n    flexDirection: 'column',\n  },\n  amount: {\n    fontSize: 16,\n    fontWeight: '600',\n    color: '#1A1A1A',\n  },\n  date: {\n    fontSize: 12,\n    color: '#757575',\n    marginTop: 2,\n  },\n  statusBadge: {\n    paddingHorizontal: 12,\n    paddingVertical: 4,\n    borderRadius: 12,\n  },\n  statusText: {\n    fontSize: 12,\n    fontWeight: '500',\n  },\n});\n</pre>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez comment vous géreriez le rafraîchissement de l'historique (pull-to-refresh).",
+            "niveau": "medium",
+            "reponse": "<p><strong>Gestion du pull-to-refresh :</strong></p><pre style='background:#2d2d2d; color:#f8f8f2; padding:12px; border-radius:6px; font-size:0.8em;'>\nimport { useCallback } from 'react';\nimport { RefreshControl, FlatList } from 'react-native';\nimport { useWithdrawalStore } from '../stores/withdrawalStore';\n\nexport const WithdrawalHistoryList = () => {\n  const { withdrawals, isLoading, refreshHistory } = useWithdrawalStore();\n  \n  const onRefresh = useCallback(async () => {\n    await refreshHistory();\n  }, [refreshHistory]);\n\n  return (\n    <FlatList\n      data={withdrawals}\n      renderItem={({ item }) => <WithdrawalHistoryItem withdrawal={item} />}\n      keyExtractor={(item) => item.id}\n      refreshControl={\n        <RefreshControl\n          refreshing={isLoading}\n          onRefresh={onRefresh}\n          tintColor=\"#4CAF50\"\n          colors={['#4CAF50']}\n        />\n      }\n      onEndReached={() => {\n        const { hasMore, fetchWithdrawals } = useWithdrawalStore.getState();\n        if (hasMore && !isLoading) {\n          fetchWithdrawals(withdrawals.length / 20 + 1);\n        }\n      }}\n      onEndReachedThreshold={0.3}\n    />\n  );\n};\n</pre><p><strong>Fonctionnalités :</strong></p><ul><li>Le <code>RefreshControl</code> est intégré à la FlatList</li><li>L'état <code>isLoading</code> du store contrôle l'animation</li><li>La fonction <code>refreshHistory</code> recharge la première page</li><li>Le chargement infini est géré par <code>onEndReached</code></li></ul>"
+          }
+        ]
+      }
+    ]
+  }
+]

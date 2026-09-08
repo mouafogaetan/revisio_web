@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+  "matiere": "Info 1ère CD",
+  "classe": "Première",
+  "sequence": "Séquence 5",
+  "anneeScolaire": "2025-2026",
+  "exercices": [
+    {
+      "titre": "EXERCICE I : MAÎTRISE DES CONNAISSANCES (4 points)",
+      "points": "4 pts",
+      "enonce": "<div style='font-size: 1.05rem; line-height: 1.8; background: #f8faff; padding: 15px; border-radius: 8px; margin-bottom: 10px; color: #1a1a2e;'><p style='margin-top: 0;'><strong>Consigne :</strong> Réponds par Vrai ou Faux aux affirmations suivantes. Justifie ta réponse en une phrase.</p></div>",
+      "questions": [
+        {
+          "question": "<div style='margin-bottom: 15px; color: #1a1a2e;'><span style='font-weight: bold;'>1.</span> JavaScript est un langage de programmation qui s'exécute côté serveur pour rendre les pages web dynamiques.</div>",
+          "reponse": "<div style='background: #eef5e6; padding: 10px 15px; border-radius: 6px; color: #1a3c34;'><span style='font-weight: bold;'>Faux.</span> JavaScript est un langage <strong>côté client</strong> qui s'exécute dans le navigateur de l'utilisateur pour rendre les pages web interactives.</div>"
+        },
+        {
+          "question": "<div style='margin-bottom: 15px; color: #1a1a2e;'><span style='font-weight: bold;'>2.</span> La fonction <code>prompt()</code> en JavaScript affiche une boîte de dialogue et renvoie la valeur saisie par l'utilisateur, toujours sous forme de nombre.</div>",
+          "reponse": "<div style='background: #eef5e6; padding: 10px 15px; border-radius: 6px; color: #1a3c34;'><span style='font-weight: bold;'>Faux.</span> La fonction <code>prompt()</code> renvoie toujours une <strong>chaîne de caractères</strong>, même si l'utilisateur a saisi un nombre. Il faut la convertir avec <code>parseInt()</code> ou <code>parseFloat()</code> pour obtenir un nombre.</div>"
+        },
+        {
+          "question": "<div style='margin-bottom: 15px; color: #1a1a2e;'><span style='font-weight: bold;'>3.</span> Pour intégrer du code JavaScript dans une page HTML, on utilise la balise <code>&lt;SCRIPT&gt;</code> avec l'attribut <code>language='Javascript'</code>.</div>",
+          "reponse": "<div style='background: #eef5e6; padding: 10px 15px; border-radius: 6px; color: #1a3c34;'><span style='font-weight: bold;'>Vrai.</span> La balise <code>&lt;SCRIPT&gt;</code> permet d'intégrer du code JavaScript dans une page HTML, et l'attribut <code>language='Javascript'</code> indique au navigateur le langage utilisé.</div>"
+        },
+        {
+          "question": "<div style='margin-bottom: 15px; color: #1a1a2e;'><span style='font-weight: bold;'>4.</span> La fonction <code>parseInt()</code> permet de convertir une chaîne de caractères en nombre entier, par exemple <code>parseInt(\"3.14\")</code> retourne 3.</div>",
+          "reponse": "<div style='background: #eef5e6; padding: 10px 15px; border-radius: 6px; color: #1a3c34;'><span style='font-weight: bold;'>Vrai.</span> La fonction <code>parseInt()</code> convertit une chaîne en nombre entier en ignorant la partie décimale.</div>"
+        }
+      ]
+    },
+    {
+      "titre": "EXERCICE II : APPLICATION DES CONNAISSANCES (5 points)",
+      "points": "5 pts",
+      "enonce": "<div style='font-size: 1.05rem; line-height: 1.8; background: #f8faff; padding: 15px; border-radius: 8px; margin-bottom: 10px; color: #1a1a2e;'><p style='margin-top: 0;'><strong>Consigne :</strong> Relie chaque fonction JavaScript à son rôle en écrivant la lettre correspondante dans le tableau.</p></div>",
+      "questions": [
+        {
+          "question": "<div style='margin-bottom: 20px; color: #1a1a2e;'><p><strong>Fonctions JavaScript :</strong></p><ul style='list-style: none; padding-left: 5px;'><li style='margin-bottom: 5px;'>1. <code>parseFloat()</code></li><li style='margin-bottom: 5px;'>2. <code>prompt()</code></li><li style='margin-bottom: 5px;'>3. <code>document.write()</code></li><li style='margin-bottom: 5px;'>4. <code>parseInt()</code></li></ul><p style='margin-top: 15px;'><strong>Rôles :</strong></p><ul style='list-style: none; padding-left: 5px;'><li style='margin-bottom: 5px;'>A. Convertit une chaîne de caractères en nombre entier.</li><li style='margin-bottom: 5px;'>B. Convertit une chaîne de caractères en nombre décimal.</li><li style='margin-bottom: 5px;'>C. Affiche une boîte de dialogue pour saisir une valeur.</li><li style='margin-bottom: 5px;'>D. Écrit du texte directement dans la page web.</li></ul></div>",
+          "reponse": "<div style='background: #eef5e6; padding: 10px 15px; border-radius: 6px; color: #1a3c34;'><table style='width: 100%; border-collapse: collapse; color: #1a3c34;'><thead><tr style='background: #d4e2c0;'><th style='padding: 6px; border: 1px solid #a0b88a;'>Fonction</th><th style='padding: 6px; border: 1px solid #a0b88a;'>Rôle</th></tr></thead><tbody><tr><td style='padding: 6px; border: 1px solid #a0b88a;'>1. <code>parseFloat()</code></td><td style='padding: 6px; border: 1px solid #a0b88a;'>B</td></tr><tr><td style='padding: 6px; border: 1px solid #a0b88a;'>2. <code>prompt()</code></td><td style='padding: 6px; border: 1px solid #a0b88a;'>C</td></tr><tr><td style='padding: 6px; border: 1px solid #a0b88a;'>3. <code>document.write()</code></td><td style='padding: 6px; border: 1px solid #a0b88a;'>D</td></tr><tr><td style='padding: 6px; border: 1px solid #a0b88a;'>4. <code>parseInt()</code></td><td style='padding: 6px; border: 1px solid #a0b88a;'>A</td></tr></tbody></table></div>"
+        }
+      ]
+    },
+    {
+      "titre": "EXERCICE III : ANALYSE ET RÉSOLUTION DE PROBLÈMES (6 points)",
+      "points": "6 pts",
+      "enonce": "<div style='font-size: 1.05rem; line-height: 1.8; background: #f8faff; padding: 15px; border-radius: 8px; margin-bottom: 10px; color: #1a1a2e;'><p style='margin-top: 0;'><strong>Consigne :</strong> Lis attentivement les situations suivantes, puis réponds aux questions.</p></div>",
+      "questions": [
+        {
+          "question": "<div style='margin-bottom: 15px; color: #1a1a2e;'><span style='font-weight: bold;'>Situation 1 :</span> <strong>(2 points)</strong> Tu souhaites créer une page web qui demande à l'utilisateur son âge et affiche un message personnalisé.<br><br>a) Quelle fonction JavaScript utilises-tu pour demander l'âge à l'utilisateur ?</div>",
+          "reponse": "<div style='background: #eef5e6; padding: 10px 15px; border-radius: 6px; color: #1a3c34;'>Pour demander l'âge à l'utilisateur, on utilise la fonction <strong><code>prompt()</code></strong> qui affiche une boîte de dialogue de saisie.</div>"
+        },
+        {
+          "question": "<div style='margin-bottom: 15px; color: #1a1a2e;'><span style='font-weight: bold;'>b)</span> Si tu veux vérifier que l'utilisateur a bien saisi un nombre, quelle fonction utilises-tu pour convertir la valeur saisie ?</div>",
+          "reponse": "<div style='background: #eef5e6; padding: 10px 15px; border-radius: 6px; color: #1a3c34;'>Pour convertir la chaîne de caractères saisie en nombre, on utilise <strong><code>parseInt()</code></strong> (pour un entier) ou <strong><code>parseFloat()</code></strong> (pour un nombre décimal).</div>"
+        },
+        {
+          "question": "<div style='margin-bottom: 15px; color: #1a1a2e;'><span style='font-weight: bold;'>Situation 2 :</span> <strong>(2 points)</strong> Tu dois écrire du texte dans une page web à l'aide de JavaScript.<br><br>Quelle fonction utilises-tu ? Donne un exemple d'utilisation en écrivant \"Bonjour à tous !\".</div>",
+          "reponse": "<div style='background: #eef5e6; padding: 10px 15px; border-radius: 6px; color: #1a3c34;'>On utilise la fonction <strong><code>document.write()</code></strong>. Exemple : <br><code>document.write(\"Bonjour à tous !\");</code></div>"
+        },
+        {
+          "question": "<div style='margin-bottom: 15px; color: #1a1a2e;'><span style='font-weight: bold;'>Situation 3 :</span> <strong>(2 points)</strong> Une page web doit afficher une alerte si l'utilisateur clique sur un bouton.<br><br>Quel événement JavaScript dois-tu utiliser pour détecter le clic sur ce bouton ?</div>",
+          "reponse": "<div style='background: #eef5e6; padding: 10px 15px; border-radius: 6px; color: #1a3c34;'>L'événement à utiliser est <strong><code>onClick</code></strong>. Il est déclenché lorsque l'utilisateur clique sur un élément (comme un bouton).</div>"
+        }
+      ]
+    },
+    {
+      "titre": "EXERCICE IV : PRODUCTION ÉCRITE (5 points)",
+      "points": "5 pts",
+      "enonce": "<div style='font-size: 1.05rem; line-height: 1.8; background: #f8faff; padding: 15px; border-radius: 8px; margin-bottom: 10px; color: #1a1a2e;'><p style='margin-top: 0;'><strong>Consigne :</strong> Rédige un développement structuré (introduction, développement, conclusion) en une dizaine de lignes répondant au sujet suivant :</p><div style='background: #f0f3f9; padding: 15px; border-radius: 6px; margin: 10px 0; border-left: 4px solid #2c3e50; color: #1a1a2e;'><p style='font-weight: bold; margin: 0;'>Sujet : Explique l'importance de JavaScript dans la création de pages web interactives et le rôle des fonctions de conversion <code>parseInt()</code> et <code>parseFloat()</code>.</p></div></div>",
+      "questions": [
+        {
+          "question": "<div style='color: #1a1a2e;'><p style='font-size: 0.95rem; color: #4a4a6a;'><em>Votre production doit comporter une introduction présentant le sujet, un développement structuré en paragraphes, et une conclusion.</em></p></div>",
+          "reponse": "<div style='background: #eef5e6; padding: 10px 15px; border-radius: 6px; color: #1a3c34;'><p><strong>Éléments de corrigé :</strong></p><ul style='padding-left: 20px;'><li><strong>Introduction :</strong> Présente JavaScript comme un langage côté client essentiel pour rendre les pages web dynamiques et interactives.</li><li><strong>Développement :</strong> <ul style='padding-left: 20px;'><li><strong>1. Rôle de JavaScript :</strong> Permet de réagir aux actions de l'utilisateur (clics, saisies), de modifier le contenu dynamiquement (sans rechargement), de valider les formulaires et de créer des animations.</li><li><strong>2. Rôle des fonctions de conversion :</strong> <code>parseInt()</code> et <code>parseFloat()</code> sont essentielles pour convertir les chaînes de caractères renvoyées par <code>prompt()</code> en nombres, afin d'effectuer des calculs mathématiques. <code>parseInt()</code> renvoie un entier, <code>parseFloat()</code> un nombre décimal.</li><li><strong>3. Exemple concret :</strong> Pour un calculateur de somme, on utilise <code>prompt()</code> pour saisir deux nombres, puis <code>parseInt()</code> pour les convertir et effectuer l'addition avant d'afficher le résultat avec <code>document.write()</code>.</li></ul></li><li><strong>Conclusion :</strong> Souligne que JavaScript est incontournable pour une expérience utilisateur interactive, et que les fonctions de conversion sont la clé pour manipuler correctement les données saisies par l'utilisateur.</li></ul></div>"
+        }
+      ]
+    }
+  ]
+};
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

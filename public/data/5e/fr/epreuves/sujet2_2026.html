@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+  "matiere": "Français",
+  "classe": "Cinquième",
+  "sequence": "Séquence 2",
+  "anneeScolaire": "2025-2026",
+  "exercices": [
+    {
+      "titre": "Compréhension écrite : Lire et analyser une description",
+      "points": "5 pts",
+      "enonce": "<div style='font-family: Arial, sans-serif; padding: 10px;'><p>Lis attentivement le texte suivant, extrait d'un récit d'aventure, et réponds aux questions.</p><div style='background-color: #f2f2f2; padding: 15px; border-radius: 8px; color: #000000; margin: 15px 0;'><p><em>« L'île était un véritable écrin de verdure. Des cocotiers aux longues feuilles effilées se penchaient paresseusement vers une mer d'un bleu si pur qu'elle semblait peinte. Le sable de la plage, d'une blancheur éclatante, crissait sous les pas. L'air, chargé d'embruns et du parfum sucré des fleurs tropicales, enveloppait tout d'une douceur enivrante. Au loin, la montagne, tapissée d'une jungle dense et mystérieuse, dressait sa crête altière vers le ciel. On n'entendait que le murmure des vagues et le chant lointain d'oiseaux inconnus. C'était un lieu d'une beauté sauvage et paisible, un véritable paradis sur terre. »</em></p></div></div>",
+      "questions": [
+        {
+          "question": "<p> <strong>Identifiez</strong> le type de texte présenté. Justifiez votre réponse en relevant au moins trois indices.</p>",
+          "reponse": "<p>Il s'agit d'un <strong>texte descriptif</strong>. Les indices sont :<br>- La présence de nombreux <strong>adjectifs qualificatifs</strong> qui décrivent les éléments (ex: effilées, pur, éclatante).<br>- L'emploi de <strong>verbes d'état</strong> (sembler, était, dressait) et de compléments circonstanciels de lieu.<br>- L'absence d'actions ou d'événements, le texte vise à faire voir un lieu.</p>"
+        },
+        {
+          "question": "<p> <strong>Relevez</strong> les champs lexicaux dominants de ce texte. <strong>Citez</strong> au moins trois mots pour chacun d'eux.</p>",
+          "reponse": "<p>Deux champs lexicaux dominants sont :<br>- <strong>La nature et le paysage</strong> : verdure, cocotiers, mer, sable, jungle, vagues.<br>- <strong>Les sensations et l'atmosphère</strong> : embruns, parfum, douceur, murmure, chant, paisible.</p>"
+        },
+        {
+          "question": "<p> <strong>Analysez</strong> l'effet produit par la comparaison suivante : <span style='font-style: italic;'>« une mer d'un bleu si pur qu'elle semblait peinte. »</span></p>",
+          "reponse": "<p>Cette comparaison a pour effet de <strong>magnifier</strong> le lieu. En comparant la mer à une œuvre peinte, le narrateur souligne la <strong>perfection</strong> et la <strong>beauté irréelle</strong> du paysage, comme s'il était trop beau pour être vrai. Cela crée une image forte et poétique.</p>"
+        },
+        {
+          "question": "<p> Par quel <strong>point de vue narratif</strong> ce texte est-il écrit ? <strong>Expliquez</strong> votre réponse.</p>",
+          "reponse": "<p>Le texte est écrit selon un <strong>point de vue externe</strong>, ou focalisation externe. Le narrateur est extérieur à la scène et se contente de décrire ce qu'il voit comme une caméra, sans exprimer les pensées ou les sentiments d'un personnage. On n'a pas accès à l'intériorité des personnages, mais seulement à la description objective du décor.</p>"
+        }
+      ]
+    },
+    {
+      "titre": "Connaissances grammaticales : La phrase complexe",
+      "points": "4 pts",
+      "enonce": "<div style='font-family: Arial, sans-serif; padding: 10px;'><p><strong>Relisez</strong> le texte de l'exercice 1 et répondez aux questions suivantes.</p></div>",
+      "questions": [
+        {
+          "question": "<p> <strong>Identifier</strong> les deux propositions de la phrase : « Le sable de la plage, d'une blancheur éclatante, crissait sous les pas. » et <strong>précisez</strong> le type de subordination.</p>",
+          "reponse": "<p>Phrase simple : il n'y a qu'une seule proposition, donc pas de subordination. La phrase est une phrase simple, même si elle contient des expansions du nom (<em>« de la plage »</em> et <em>« d'une blancheur éclatante »</em>).</p>"
+        },
+        {
+          "question": "<p> <strong>Relevez</strong> une phrase complexe dans ce texte et <strong>justifiez</strong> votre choix.</p>",
+          "reponse": "<p>Exemple : <span style='font-style: italic;'>« Des cocotiers aux longues feuilles effilées se penchaient paresseusement vers une mer d'un bleu si pur qu'elle semblait peinte. »</span> C'est une phrase complexe car elle est constituée de deux propositions : une proposition principale (<em>« Des cocotiers [...] se penchaient paresseusement vers une mer d'un bleu si pur »</em>) et une proposition subordonnée circonstancielle de conséquence (<em>« qu'elle semblait peinte »</em>).</p>"
+        },
+        {
+          "question": "<p> <strong>Transformez</strong> la phrase suivante en phrase complexe en utilisant un indicateur de temps de votre choix : « L'air, chargé d'embruns, enveloppait tout d'une douceur enivrante. »</p>",
+          "reponse": "<p>Réponse possible : <span style='font-style: italic;'>« Quand l'air, chargé d'embruns, enveloppait tout d'une douceur enivrante, on avait l'impression d'être dans un rêve. »</span> (On peut aussi proposer une phrase avec <em>« Alors que »</em>, <em>« Pendant que »</em>, etc.)</p>"
+        }
+      ]
+    },
+    {
+      "titre": "Connaissances lexicales : Homophones et famille de mots",
+      "points": "3 pts",
+      "enonce": "<div style='font-family: Arial, sans-serif; padding: 10px;'><p>Complète les phrases suivantes.</p></div>",
+      "questions": [
+        {
+          "question": "<p> <strong>Distinguer</strong> les homophones <span style='font-weight: bold;'>mer / mère / maire</span> : <br>« La ________ est calme aujourd'hui. » / « Ma ________ m'attend à la maison. » / « Le ________ a inauguré le marché. »</p>",
+          "reponse": "<p><strong>mer</strong> (étendue d'eau salée) : « La <strong>mer</strong> est calme aujourd'hui. »<br><strong>mère</strong> (parente) : « Ma <strong>mère</strong> m'attend à la maison. »<br><strong>maire</strong> (édile) : « Le <strong>maire</strong> a inauguré le marché. »</p>"
+        },
+        {
+          "question": "<p> <strong>Former</strong> des mots de la même famille que le verbe <span style='font-weight: bold;'>peindre</span> en utilisant un préfixe ou un suffixe.</p>",
+          "reponse": "<p>Mots de la famille de <strong>peindre</strong> : <em>peinture</em>, <em>peintre</em>, <em>peinturier</em>, <em>repaintre</em>, <em>dépeindre</em>.</p>"
+        }
+      ]
+    },
+    {
+      "titre": "Expression écrite : Rédiger une description",
+      "points": "5 pts",
+      "enonce": "<div style='font-family: Arial, sans-serif; padding: 10px;'><p><strong>À votre tour !</strong></p><p>Rédigez une description d'environ 120 mots d'un lieu que vous aimez ou que vous connaissez bien (votre quartier, votre maison, un lieu de vacances, l'école...).</p><p>Pour réussir, pensez à :</p><ul><li>Utiliser <strong>le présent de l'indicatif</strong> pour décrire.</li><li>Employer des <strong>adjectifs qualificatifs</strong> pour caractériser.</li><li>Indiquer la <strong>position</strong> des éléments (à gauche, au fond, près de...).</li><li>Ajouter des <strong>comparaisons</strong> pour rendre votre texte plus vivant.</li></ul></div>",
+      "questions": [
+        {
+          "question": "<p> Rédigez votre description sur votre copie.</p>",
+          "reponse": "<p><strong>Réponse modèle :</strong></p><p>« Mon école est un bâtiment imposant, avec ses murs blancs et ses larges fenêtres. Elle est située au cœur de la ville, près du marché animé. Le matin, la cour de récréation grouille de vie. Les élèves, tel un essaim d'abeilles, s'y pressent avant la cloche. L'air y est souvent empli du parfum des beignets de maïs vendus par les petites mamans. La salle de classe, elle, est un univers plus calme. Le tableau noir couvre presque tout un mur, comme une toile prête à accueillir le savoir. Les rangées de tables et de chaises sont alignées au cordeau, et le soleil, quand il entre par la fenêtre, danse sur les cahiers ouverts. Ce lieu mêle l'effervescence de la vie extérieure à la concentration studieuse du travail. »</p>"
+        }
+      ]
+    }
+  ]
+};
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

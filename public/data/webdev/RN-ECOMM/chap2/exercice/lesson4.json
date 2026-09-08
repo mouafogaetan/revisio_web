@@ -1,0 +1,138 @@
+[
+  {
+    "intitule": "Maîtrise des Stores Spécialisés Zustand",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous développez une application mobile e-commerce avec React Native et Zustand. Vous devez créer plusieurs stores spécialisés pour gérer différentes fonctionnalités de l'application.</p><p><strong>Questions :</strong></p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifiez la syntaxe correcte pour créer un store Zustand de gestion des favoris avec une action toggle.",
+        "niveau": "easy",
+        "reponse": "<p><strong>Store de favoris correct :</strong></p><pre style='background-color: #1e293b; color: #e2e8f0; padding: 0.75rem; border-radius: 6px;'>import { create } from 'zustand';\n\ninterface FavoriteStore {\n  favorites: string[];\n  toggleFavorite: (productId: string) => void;\n  isFavorite: (productId: string) => boolean;\n}\n\nexport const useFavoriteStore = create&lt;FavoriteStore&gt;((set, get) => ({\n  favorites: [],\n  toggleFavorite: (productId) => {\n    const { favorites } = get();\n    const exists = favorites.includes(productId);\n    set({\n      favorites: exists \n        ? favorites.filter(id => id !== productId)\n        : [...favorites, productId]\n    });\n  },\n  isFavorite: (productId) => {\n    return get().favorites.includes(productId);\n  }\n}));</pre></p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quel est l'avantage d'utiliser une méthode <code>isFavorite</code> dans le store plutôt que de vérifier directement dans le composant ?",
+            "niveau": "easy",
+            "reponse": "<p>La méthode <code>isFavorite</code> encapsule la logique de vérification dans le store. Cela permet de :</p><ul><li>Réutiliser la logique à travers plusieurs composants</li><li>Éviter la duplication de code</li><li>Faciliter les tests unitaires</li><li>Modifier la logique de vérification sans changer tous les composants</li></ul>"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez le rôle du store de notifications (<code>notificationStore</code>) dans une application e-commerce.",
+        "niveau": "easy",
+        "reponse": "<p>Le store de notifications gère l'état des notifications de l'application :</p><ul><li><strong>Compteur non lu</strong> : Affiche le nombre de notifications non lues sur l'icône des notifications</li><li><strong>Liste des notifications</strong> : Stocke les notifications reçues (push, in-app, système)</li><li><strong>Gestion des lectures</strong> : Permet de marquer des notifications comme lues</li><li><strong>Filtrage</strong> : Permet de filtrer les notifications par type (message, commande, litige, etc.)</li><li><strong>Persistance</strong> : Sauvegarde l'état pour le conserver entre les sessions</li></ul><p>Il est essentiel pour offrir une expérience utilisateur réactive et informée.</p>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Décrivez comment structurer un store de chat (<code>chatStore</code>) pour gérer efficacement les messages et les chats.",
+        "niveau": "medium",
+        "reponse": "<p><strong>Structure du store de chat :</strong></p><pre style='background-color: #1e293b; color: #e2e8f0; padding: 0.75rem; border-radius: 6px;'>interface ChatStore {\n  chats: Chat[];\n  currentChat: Chat | null;\n  messages: Record&lt;string, Message[]&gt;;\n  unreadCount: Record&lt;string, number&gt;;\n  isLoading: boolean;\n  pagination: PaginationState;\n  \n  // Actions\n  setChats: (chats: Chat[]) => void;\n  setCurrentChat: (chatId: string) => void;\n  addMessage: (chatId: string, message: Message) => void;\n  markAsRead: (chatId: string) => void;\n  loadMoreMessages: (chatId: string) => Promise&lt;void&gt;;\n  reset: () => void;\n}</pre><p><strong>Points clés :</strong></p><ul><li>Les messages sont indexés par <code>chatId</code> pour une recherche rapide</li><li>Le compteur non lu permet d'optimiser l'affichage des badges</li><li>La pagination est gérée pour éviter le chargement de trop de données</li><li>Les actions sont typées pour assurer la sécurité des données</li></ul>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse des Stores pour une Application E-commerce",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous devez analyser et améliorer les stores d'une application e-commerce existante. Un développeur a créé les stores suivants mais ils présentent des problèmes de performance et de structure.</p><p><strong>Questions :</strong></p>",
+      "images": [
+        "Diagramme de flux montrant les interactions entre les différents stores (favoriteStore, notificationStore, chatStore, walletStore) et les composants UI."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analysez le code du <code>favoriteStore</code> ci-dessous et identifiez les problèmes potentiels. Proposez des améliorations.",
+        "niveau": "medium",
+        "reponse": "<p><strong>Code analysé :</strong></p><pre style='background-color: #1e293b; color: #e2e8f0; padding: 0.75rem; border-radius: 6px;'>export const useFavoriteStore = create((set, get) => ({\n  favorites: [],\n  addFavorite: (id) => set({ favorites: [...get().favorites, id] }),\n  removeFavorite: (id) => set({ favorites: get().favorites.filter(f => f !== id) }),\n  toggleFavorite: (id) => {\n    if (get().favorites.includes(id)) {\n      get().removeFavorite(id);\n    } else {\n      get().addFavorite(id);\n    }\n  }\n}));</pre><p><strong>Problèmes identifiés :</strong></p><ul><li><strong>Manque de typage</strong> : Aucun type TypeScript défini</li><li><strong>Références circulaires</strong> : <code>toggleFavorite</code> appelle <code>removeFavorite</code> et <code>addFavorite</code> qui appellent à leur tour <code>get()</code></li><li><strong>Performance</strong> : <code>get()</code> est appelé plusieurs fois dans <code>toggleFavorite</code></li><li><strong>Manque de persistance</strong> : Les favoris ne sont pas sauvegardés</li></ul><p><strong>Améliorations proposées :</strong></p><pre style='background-color: #1e293b; color: #e2e8f0; padding: 0.75rem; border-radius: 6px;'>interface FavoriteStore {\n  favorites: string[];\n  toggleFavorite: (productId: string) => void;\n  isFavorite: (productId: string) => boolean;\n  clearFavorites: () => void;\n}\n\nexport const useFavoriteStore = create&lt;FavoriteStore&gt;()(\n  persist(\n    (set, get) => ({\n      favorites: [],\n      toggleFavorite: (productId) => {\n        const { favorites } = get();\n        const isExist = favorites.includes(productId);\n        set({ \n          favorites: isExist \n            ? favorites.filter(id => id !== productId)\n            : [...favorites, productId]\n        });\n      },\n      isFavorite: (productId) => get().favorites.includes(productId),\n      clearFavorites: () => set({ favorites: [] }),\n    }),\n    { name: 'favorites-storage' }\n  )\n);</pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Évaluez l'architecture du store de wallet (<code>walletStore</code>) et proposez des optimisations pour les transactions.",
+        "niveau": "hard",
+        "reponse": "<p><strong>Architecture optimisée :</strong></p><pre style='background-color: #1e293b; color: #e2e8f0; padding: 0.75rem; border-radius: 6px;'>interface WalletStore {\n  balance: number;\n  transactions: Transaction[];\n  isLoading: boolean;\n  error: string | null;\n  \n  // Actions\n  fetchBalance: () => Promise&lt;void&gt;;\n  fetchTransactions: (page?: number) => Promise&lt;void&gt;;\n  addTransaction: (transaction: Transaction) => void;\n  updateBalance: (amount: number) => void;\n  reset: () => void;\n}\n\nexport const useWalletStore = create&lt;WalletStore&gt;((set, get) => ({\n  balance: 0,\n  transactions: [],\n  isLoading: false,\n  error: null,\n  \n  fetchBalance: async () => {\n    set({ isLoading: true, error: null });\n    try {\n      const balance = await walletService.getBalance();\n      set({ balance, isLoading: false });\n    } catch (error) {\n      set({ error: error.message, isLoading: false });\n    }\n  },\n  \n  fetchTransactions: async (page = 1) => {\n    set({ isLoading: true, error: null });\n    try {\n      const transactions = await walletService.getTransactions(page);\n      set(state => ({\n        transactions: page === 1 \n          ? transactions \n          : [...state.transactions, ...transactions],\n        isLoading: false\n      }));\n    } catch (error) {\n      set({ error: error.message, isLoading: false });\n    }\n  },\n  \n  addTransaction: (transaction) => {\n    set(state => ({\n      transactions: [transaction, ...state.transactions],\n      balance: state.balance + transaction.amount\n    }));\n  },\n  \n  updateBalance: (amount) => {\n    set(state => ({ balance: state.balance + amount }));\n  },\n  \n  reset: () => set({ balance: 0, transactions: [], isLoading: false, error: null })\n}));</pre><p><strong>Optimisations :</strong></p><ul><li><strong>Gestion de la pagination</strong> : Chargement infini des transactions</li><li><strong>Gestion des erreurs</strong> : Messages d'erreur clairs pour l'utilisateur</li><li><strong>État de chargement</strong> : Indicateur pour les opérations asynchrones</li><li><strong>Mise à jour optimiste</strong> : <code>addTransaction</code> met à jour l'UI immédiatement</li><li><strong>Persistance optionnelle</strong> : On peut persister le solde mais pas l'historique complet</li></ul>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Implémentation d'un Store de Gestion des Litiges",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>La plateforme Sawamart permet aux utilisateurs d'ouvrir des litiges lorsqu'une transaction ne se déroule pas comme prévu. Vous devez implémenter un store Zustand pour gérer les litiges avec des fonctionnalités avancées.</p><p><strong>Questions :</strong></p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevez un store de litiges (<code>disputeStore</code>) avec les fonctionnalités suivantes :\n- Liste des litiges (ouverts, assignés, résolus)\n- Création d'un litige\n- Assignation d'un litige à un assistant\n- Résolution d'un litige\n- Gestion des quotas de litiges gratuits\n- Filtrage par statut et type",
+        "niveau": "very hard",
+        "reponse": "<p><strong>Store complet de litiges :</strong></p><pre style='background-color: #1e293b; color: #e2e8f0; padding: 0.75rem; border-radius: 6px;'>import { create } from 'zustand';\n\nexport enum DisputeStatus {\n  OPEN = 'open',\n  REVIEW = 'review',\n  ESCALATED = 'escalated',\n  RESOLVED = 'resolved',\n  REJECTED = 'rejected'\n}\n\nexport enum DisputeType {\n  NON_RECEIPT = 'non_receipt',\n  DAMAGED = 'damaged',\n  NOT_AS_DESCRIBED = 'not_as_described',\n  FRAUD = 'fraud',\n  OTHER = 'other'\n}\n\ninterface Dispute {\n  id: string;\n  chatId: string;\n  buyerId: string;\n  sellerId: string;\n  type: DisputeType;\n  description: string;\n  status: DisputeStatus;\n  assignedTo?: string;\n  resolvedBy?: string;\n  resolution?: string;\n  createdAt: Date;\n  updatedAt: Date;\n}\n\ninterface DisputeStore {\n  disputes: Dispute[];\n  currentDispute: Dispute | null;\n  isLoading: boolean;\n  error: string | null;\n  filters: {\n    status: DisputeStatus | null;\n    type: DisputeType | null;\n    dateRange: { start: Date; end: Date } | null;\n  };\n  stats: {\n    total: number;\n    open: number;\n    review: number;\n    resolved: number;\n    freeQuotaRemaining: number;\n  };\n\n  // Actions\n  fetchDisputes: (filters?: Partial&lt;DisputeStore['filters']&gt;) => Promise&lt;void&gt;;\n  fetchDisputeDetail: (id: string) => Promise&lt;void&gt;;\n  createDispute: (data: { chatId: string; type: DisputeType; description: string }) => Promise&lt;void&gt;;\n  assignDispute: (id: string, assistantId: string) => Promise&lt;void&gt;;\n  resolveDispute: (id: string, resolution: string) => Promise&lt;void&gt;;\n  rejectDispute: (id: string, reason: string) => Promise&lt;void&gt;;\n  setFilter: (key: keyof DisputeStore['filters'], value: any) => void;\n  clearFilters: () => void;\n  reset: () => void;\n  \n  // Helpers\n  getDisputesByStatus: (status: DisputeStatus) => Dispute[];\n  getAvailableQuota: () => number;\n}\n\nexport const useDisputeStore = create&lt;DisputeStore&gt;((set, get) => ({\n  disputes: [],\n  currentDispute: null,\n  isLoading: false,\n  error: null,\n  filters: {\n    status: null,\n    type: null,\n    dateRange: null,\n  },\n  stats: {\n    total: 0,\n    open: 0,\n    review: 0,\n    resolved: 0,\n    freeQuotaRemaining: 0,\n  },\n\n  fetchDisputes: async (filters = {}) => {\n    set({ isLoading: true, error: null });\n    try {\n      const currentFilters = { ...get().filters, ...filters };\n      const disputes = await disputeService.getDisputes(currentFilters);\n      const stats = await disputeService.getStats(currentFilters);\n      set({\n        disputes,\n        stats,\n        filters: currentFilters as DisputeStore['filters'],\n        isLoading: false,\n      });\n    } catch (error) {\n      set({ error: error.message, isLoading: false });\n    }\n  },\n\n  fetchDisputeDetail: async (id) => {\n    set({ isLoading: true, error: null });\n    try {\n      const dispute = await disputeService.getDisputeDetail(id);\n      set({ currentDispute: dispute, isLoading: false });\n    } catch (error) {\n      set({ error: error.message, isLoading: false });\n    }\n  },\n\n  createDispute: async (data) => {\n    set({ isLoading: true, error: null });\n    try {\n      const newDispute = await disputeService.createDispute(data);\n      set(state => ({\n        disputes: [newDispute, ...state.disputes],\n        isLoading: false,\n        // Mettre à jour les stats\n        stats: {\n          ...state.stats,\n          total: state.stats.total + 1,\n          open: state.stats.open + 1,\n          freeQuotaRemaining: state.stats.freeQuotaRemaining - 1,\n        }\n      }));\n    } catch (error) {\n      set({ error: error.message, isLoading: false });\n    }\n  },\n\n  assignDispute: async (id, assistantId) => {\n    set({ isLoading: true, error: null });\n    try {\n      const updated = await disputeService.assignDispute(id, assistantId);\n      set(state => ({\n        disputes: state.disputes.map(d => d.id === id ? updated : d),\n        currentDispute: state.currentDispute?.id === id ? updated : state.currentDispute,\n        isLoading: false,\n        stats: {\n          ...state.stats,\n          open: state.stats.open - 1,\n          review: state.stats.review + 1,\n        }\n      }));\n    } catch (error) {\n      set({ error: error.message, isLoading: false });\n    }\n  },\n\n  resolveDispute: async (id, resolution) => {\n    set({ isLoading: true, error: null });\n    try {\n      const resolved = await disputeService.resolveDispute(id, resolution);\n      set(state => ({\n        disputes: state.disputes.map(d => d.id === id ? resolved : d),\n        currentDispute: state.currentDispute?.id === id ? resolved : state.currentDispute,\n        isLoading: false,\n        stats: {\n          ...state.stats,\n          review: state.stats.review - 1,\n          resolved: state.stats.resolved + 1,\n        }\n      }));\n    } catch (error) {\n      set({ error: error.message, isLoading: false });\n    }\n  },\n\n  rejectDispute: async (id, reason) => {\n    set({ isLoading: true, error: null });\n    try {\n      const rejected = await disputeService.rejectDispute(id, reason);\n      set(state => ({\n        disputes: state.disputes.map(d => d.id === id ? rejected : d),\n        currentDispute: state.currentDispute?.id === id ? rejected : state.currentDispute,\n        isLoading: false,\n        stats: {\n          ...state.stats,\n          open: state.stats.open - 1,\n        }\n      }));\n    } catch (error) {\n      set({ error: error.message, isLoading: false });\n    }\n  },\n\n  setFilter: (key, value) => {\n    set(state => ({\n      filters: { ...state.filters, [key]: value }\n    }));\n    // Recharger les litiges avec les nouveaux filtres\n    get().fetchDisputes();\n  },\n\n  clearFilters: () => {\n    set({\n      filters: {\n        status: null,\n        type: null,\n        dateRange: null,\n      }\n    });\n    get().fetchDisputes();\n  },\n\n  reset: () => {\n    set({\n      disputes: [],\n      currentDispute: null,\n      isLoading: false,\n      error: null,\n      filters: {\n        status: null,\n        type: null,\n        dateRange: null,\n      },\n      stats: {\n        total: 0,\n        open: 0,\n        review: 0,\n        resolved: 0,\n        freeQuotaRemaining: 0,\n      },\n    });\n  },\n\n  getDisputesByStatus: (status) => {\n    return get().disputes.filter(d => d.status === status);\n  },\n\n  getAvailableQuota: () => {\n    return get().stats.freeQuotaRemaining;\n  },\n}));</pre>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment gérez-vous le quota de litiges gratuits dans ce store ?",
+            "niveau": "hard",
+            "reponse": "<p>Le quota de litiges gratuits est géré dans <code>stats.freeQuotaRemaining</code>.</p><p><strong>Mécanisme :</strong></p><ul><li>Lors de la création d'un litige, le quota est décrémenté</li><li>Le store peut vérifier le quota disponible via <code>getAvailableQuota()</code></li><li>L'UI peut bloquer la création d'un litige si le quota est à 0</li><li>Le backend peut également vérifier le quota pour éviter les abus</li><li>Le quota peut être réinitialisé périodiquement (ex: mensuellement)</li></ul>",
+            "niveau": "medium"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Comment optimiser les performances pour une liste de litiges de plusieurs centaines d'éléments ?",
+            "niveau": "hard",
+            "reponse": "<p><strong>Optimisations de performance :</strong></p><ul><li><strong>Pagination</strong> : Utiliser <code>fetchDisputes</code> avec un paramètre <code>page</code></li><li><strong>Mise en cache</strong> : Utiliser <code>zustand/middleware</code> avec <code>persist</code> pour le cache des données fréquemment consultées</li><li><strong>Virtualisation</strong> : Utiliser <code>FlatList</code> avec <code>windowSize</code> pour ne render que les éléments visibles</li><li><strong>Memoization</strong> : Utiliser <code>useMemo</code> et <code>useCallback</code> dans les composants</li><li><strong>Filtrage côté serveur</strong> : Utiliser les filtres du store pour limiter les données envoyées</li></ul>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion des Transactions et des Dépôts",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>L'application Sawamart gère les transactions financières des utilisateurs. Vous devez créer des stores pour gérer les dépôts et les retraits.</p><p><strong>Questions :</strong></p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevez le store <code>depositStore</code> pour gérer les dépôts mobile money avec les fonctionnalités suivantes :\n- Initiation d'un dépôt\n- Consultation de l'historique des dépôts\n- Validation d'un dépôt\n- Annulation d'un dépôt\n- Gestion du statut du dépôt (PENDING, PAID, VALIDATED, REJECTED)",
+        "niveau": "hard",
+        "reponse": "<p><strong>Store de dépôts :</strong></p><pre style='background-color: #1e293b; color: #e2e8f0; padding: 0.75rem; border-radius: 6px;'>interface DepositStore {\n  deposits: Deposit[];\n  currentDeposit: Deposit | null;\n  isLoading: boolean;\n  error: string | null;\n  stats: {\n    total: number;\n    pending: number;\n    validated: number;\n    rejected: number;\n  };\n\n  // Actions\n  initiateDeposit: (amount: number, phoneNumber: string) => Promise&lt;Deposit&gt;;\n  fetchDeposits: (page?: number) => Promise&lt;void&gt;;\n  fetchDepositDetail: (id: string) => Promise&lt;void&gt;;\n  markAsPaid: (id: string) => Promise&lt;void&gt;;\n  cancelDeposit: (id: string) => Promise&lt;void&gt;;\n  validateDeposit: (id: string, adminId: string) => Promise&lt;void&gt;;\n  rejectDeposit: (id: string, reason: string) => Promise&lt;void&gt;;\n  reset: () => void;\n}\n\nexport const useDepositStore = create&lt;DepositStore&gt;((set, get) => ({\n  deposits: [],\n  currentDeposit: null,\n  isLoading: false,\n  error: null,\n  stats: {\n    total: 0,\n    pending: 0,\n    validated: 0,\n    rejected: 0,\n  },\n\n  initiateDeposit: async (amount, phoneNumber) => {\n    set({ isLoading: true, error: null });\n    try {\n      const deposit = await depositService.initiateDeposit({ amount, phoneNumber });\n      set(state => ({\n        deposits: [deposit, ...state.deposits],\n        currentDeposit: deposit,\n        isLoading: false,\n        stats: {\n          ...state.stats,\n          total: state.stats.total + 1,\n          pending: state.stats.pending + 1,\n        }\n      }));\n      return deposit;\n    } catch (error) {\n      set({ error: error.message, isLoading: false });\n      throw error;\n    }\n  },\n\n  fetchDeposits: async (page = 1) => {\n    set({ isLoading: true, error: null });\n    try {\n      const { deposits, stats } = await depositService.getDeposits(page);\n      set(state => ({\n        deposits: page === 1 ? deposits : [...state.deposits, ...deposits],\n        stats,\n        isLoading: false\n      }));\n    } catch (error) {\n      set({ error: error.message, isLoading: false });\n    }\n  },\n\n  fetchDepositDetail: async (id) => {\n    set({ isLoading: true, error: null });\n    try {\n      const deposit = await depositService.getDepositDetail(id);\n      set({ currentDeposit: deposit, isLoading: false });\n    } catch (error) {\n      set({ error: error.message, isLoading: false });\n    }\n  },\n\n  markAsPaid: async (id) => {\n    set({ isLoading: true, error: null });\n    try {\n      const updated = await depositService.markAsPaid(id);\n      set(state => ({\n        deposits: state.deposits.map(d => d.id === id ? updated : d),\n        currentDeposit: state.currentDeposit?.id === id ? updated : state.currentDeposit,\n        isLoading: false\n      }));\n    } catch (error) {\n      set({ error: error.message, isLoading: false });\n    }\n  },\n\n  cancelDeposit: async (id) => {\n    set({ isLoading: true, error: null });\n    try {\n      const cancelled = await depositService.cancelDeposit(id);\n      set(state => ({\n        deposits: state.deposits.map(d => d.id === id ? cancelled : d),\n        currentDeposit: state.currentDeposit?.id === id ? cancelled : state.currentDeposit,\n        isLoading: false,\n        stats: {\n          ...state.stats,\n          pending: state.stats.pending - 1,\n        }\n      }));\n    } catch (error) {\n      set({ error: error.message, isLoading: false });\n    }\n  },\n\n  validateDeposit: async (id, adminId) => {\n    set({ isLoading: true, error: null });\n    try {\n      const validated = await depositService.validateDeposit(id, adminId);\n      set(state => ({\n        deposits: state.deposits.map(d => d.id === id ? validated : d),\n        currentDeposit: state.currentDeposit?.id === id ? validated : state.currentDeposit,\n        isLoading: false,\n        stats: {\n          ...state.stats,\n          pending: state.stats.pending - 1,\n          validated: state.stats.validated + 1,\n        }\n      }));\n    } catch (error) {\n      set({ error: error.message, isLoading: false });\n    }\n  },\n\n  rejectDeposit: async (id, reason) => {\n    set({ isLoading: true, error: null });\n    try {\n      const rejected = await depositService.rejectDeposit(id, reason);\n      set(state => ({\n        deposits: state.deposits.map(d => d.id === id ? rejected : d),\n        currentDeposit: state.currentDeposit?.id === id ? rejected : state.currentDeposit,\n        isLoading: false,\n        stats: {\n          ...state.stats,\n          pending: state.stats.pending - 1,\n          rejected: state.stats.rejected + 1,\n        }\n      }));\n    } catch (error) {\n      set({ error: error.message, isLoading: false });\n    }\n  },\n\n  reset: () => {\n    set({\n      deposits: [],\n      currentDeposit: null,\n      isLoading: false,\n      error: null,\n      stats: {\n        total: 0,\n        pending: 0,\n        validated: 0,\n        rejected: 0,\n      },\n    });\n  },\n}));</pre>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation des Stores pour une Grande Échelle",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>L'application Sawamart connaît une croissance rapide avec des milliers d'utilisateurs simultanés. Vous devez optimiser les stores pour améliorer les performances et réduire la consommation de mémoire.</p><p><strong>Questions :</strong></p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez une stratégie d'optimisation pour le <code>chatStore</code> qui peut contenir des centaines de messages par chat.",
+        "niveau": "very hard",
+        "reponse": "<p><strong>Stratégies d'optimisation :</strong></p><ol><li><strong>Pagination des messages</strong><pre style='background-color: #1e293b; color: #e2e8f0; padding: 0.75rem; border-radius: 6px;'>interface MessagePagination {\n  [chatId: string]: {\n    messages: Message[];\n    hasMore: boolean;\n    page: number;\n  };\n}</pre></li><li><strong>Limitation des données stockées</strong><ul><li>Ne stocker que les derniers 50 messages par défaut</li><li>Charger les messages plus anciens à la demande (scroll)</li><li>Utiliser <code>VirtualizedList</code> pour le rendu des messages</li></ul></li><li><strong>Mise en cache intelligente</strong><pre style='background-color: #1e293b; color: #e2e8f0; padding: 0.75rem; border-radius: 6px;'>const chatStore = create((set, get) => ({\n  messages: {},\n  unreadCount: {},\n  loadMessages: async (chatId, page = 1) => {\n    const key = `${chatId}-${page}`;\n    if (get().cache[key]) {\n      return get().cache[key];\n    }\n    const messages = await chatService.getMessages(chatId, page);\n    set(state => ({\n      cache: { ...state.cache, [key]: messages }\n    }));\n    return messages;\n  }\n}));</pre></li><li><strong>Élagage des données</strong><ul><li>Supprimer les messages trop anciens du store</li><li>Ne stocker que les chats actifs</li></ul></li><li><strong>Utilisation de <code>useShallow</code></strong> pour éviter les re-rendus inutiles</li></ol>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Évaluez l'impact de la persistance des stores sur les performances et proposez une stratégie de persistance sélective.",
+        "niveau": "hard",
+        "reponse": "<p><strong>Impact de la persistance :</strong></p><ul><li><strong>Performance de lecture</strong> : Chargement plus lent au démarrage</li><li><strong>Performance d'écriture</strong> : Réduction des performances lors des mises à jour fréquentes</li><li><strong>Consommation mémoire</strong> : Augmentation de l'utilisation du stockage

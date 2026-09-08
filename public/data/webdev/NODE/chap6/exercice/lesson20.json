@@ -1,0 +1,127 @@
+[
+  {
+    "intitule": "Manipuler et vérifier un JWT manuellement",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Un token JWT est composé de trois parties séparées par des points : <code>xxxxx.yyyyy.zzzzz</code>. À partir du token suivant : <code>eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c</code></p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décoder le header du token (première partie) en utilisant la taxonomie de Bloom : Identifier les algorithmes déclarés.",
+        "niveau": "easy",
+        "reponse": "Le header décodé est : { \"alg\": \"HS256\", \"typ\": \"JWT\" }. L'algorithme utilisé est HS256 (HMAC avec SHA-256).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Extraire et interpréter le payload (deuxième partie) en listant les claims présents. Calculer l’âge approximatif du token si l’on suppose que la date actuelle est le 20 janvier 2023.",
+        "niveau": "medium",
+        "reponse": "Payload décodé : { \"sub\": \"1234567890\", \"name\": \"John Doe\", \"iat\": 1516239022 }. iat correspond au timestamp 1516239022 (soit le 18 janvier 2018). Le token a environ 5 ans (différence avec 20 janvier 2023 ≈ 5 ans et 2 jours).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Sécuriser une route avec un middleware JWT",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous développez une API Node.js/Express pour une application de gestion de tâches. Vous avez déjà généré un JWT lors de la connexion. Écrivez un middleware <code>authenticateToken</code> qui :</p><ul><li>récupère le token depuis l’en-tête <code>Authorization: Bearer &lt;token&gt;</code></li><li>vérifie sa validité avec une clé secrète <code>process.env.ACCESS_TOKEN_SECRET</code></li><li>en cas de succès, attache l’utilisateur décodé à <code>req.user</code> et appelle <code>next()</code></li><li>en cas d’erreur, renvoie une réponse HTTP 401 ou 403 selon le cas</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémenter le code du middleware authenticateToken en respectant les bonnes pratiques (utilisation de try/catch ou de callback selon la bibliothèque JWT utilisée). Justifier le choix du code d’erreur (401 vs 403).",
+        "niveau": "hard",
+        "reponse": "Code possible avec jsonwebtoken : \n\n```js\nconst jwt = require('jsonwebtoken');\n\nfunction authenticateToken(req, res, next) {\n  const authHeader = req.headers['authorization'];\n  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN\n\n  if (!token) {\n    return res.sendStatus(401); // Unauthorized : token manquant\n  }\n\n  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {\n    if (err) {\n      return res.sendStatus(403); // Forbidden : token invalide\n    }\n    req.user = user;\n    next();\n  });\n}\n```\n\n401 : absence de token ou format incorrect. 403 : token présent mais invalide (expiré, signature erronée).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Modifier le middleware pour qu’il accepte également le token via un cookie sécurisé nommé 'auth_token' (priorité au cookie si les deux existent).",
+        "niveau": "hard",
+        "reponse": "```js\nfunction authenticateToken(req, res, next) {\n  let token = null;\n  // Priorité au cookie\n  if (req.cookies && req.cookies.auth_token) {\n    token = req.cookies.auth_token;\n  } else {\n    const authHeader = req.headers['authorization'];\n    token = authHeader && authHeader.split(' ')[1];\n  }\n\n  if (!token) return res.sendStatus(401);\n\n  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {\n    if (err) return res.sendStatus(403);\n    req.user = user;\n    next();\n  });\n}\n```\nIl faut avoir configuré `cookie-parser` au préalable.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Générer un JWT avec des claims personnalisés et une expiration",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans une API de e-commerce, après validation des identifiants (email/mot de passe), vous devez générer un token JWT contenant :</p><ul><li><code>userId</code> (issu de la base de données)</li><li><code>role</code> ('admin', 'client', 'vendeur')</li><li>une expiration à 2 heures</li><li>un claim <code>storeId</code> uniquement pour les vendeurs</li></ul><p>La clé secrète est stockée dans <code>process.env.JWT_SECRET</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire la fonction <code>generateAccessToken(user)</code> qui prend un objet utilisateur et retourne un token JWT signé avec les claims appropriés. Utiliser la taxonomie de Bloom pour créer (synthèse) cette fonction.",
+        "niveau": "medium",
+        "reponse": "```js\nconst jwt = require('jsonwebtoken');\n\nfunction generateAccessToken(user) {\n  const payload = {\n    userId: user.id,\n    role: user.role\n  };\n  if (user.role === 'vendeur') {\n    payload.storeId = user.storeId;\n  }\n  return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '2h' });\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer pourquoi il ne faut jamais inclure de données sensibles comme le mot de passe ou le numéro de carte bancaire dans un JWT, même si il est signé.",
+        "niveau": "easy",
+        "reponse": "Le JWT est seulement signé, pas chiffré (par défaut). Le payload est encodé en Base64URL, donc lisible par n’importe qui. Pour des données sensibles, il faudrait utiliser JWE (chiffrement) ou stocker ces données côté serveur et ne mettre qu’un identifiant opaque dans le token.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Diagnostiquer et corriger des erreurs d’authentification JWT",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Un étudiant a implémenté l’authentification JWT mais constate que les requêtes protégées échouent parfois. Voici des extraits de son code et les erreurs rencontrées.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Cas 1 : L’erreur <code>JsonWebTokenError: invalid signature</code>. Citer au moins deux causes possibles et proposer une solution pour chaque.",
+        "niveau": "medium",
+        "reponse": "Causes : 1) La clé secrète utilisée pour vérifier le token est différente de celle utilisée pour le signer. Solution : uniformiser la variable d’environnement JWT_SECRET. 2) Le token a été modifié (par exemple un espace ou caractère ajouté lors du transport). Solution : nettoyer le token (trim()) et vérifier l’en-tête Authorization.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Cas 2 : L’erreur <code>TokenExpiredError: jwt expired</code> alors que l’utilisateur était actif. Que manque-t-il dans l’architecture ? Proposer un mécanisme de refresh token simple.",
+        "niveau": "hard",
+        "reponse": "Il manque un système de rafraîchissement des tokens. Solution : lors de la connexion, générer un access token (courte durée : 15 min) et un refresh token (longue durée, stocké en base ou httpOnly cookie). Le refresh token permet d’obtenir un nouvel access token sans que l’utilisateur se reconnecte. Implémentation : endpoint /refreshToken qui vérifie le refresh token et renvoie un nouvel access token.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Mettre en place une authentification JWT stateless dans un chat temps réel",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous devez sécuriser un chat en ligne utilisant Socket.IO côté serveur. Les clients reçoivent d’abord un JWT depuis l’API REST classique. Ensuite, ils se connectent au WebSocket. Socket.IO permet de passer un token dans <code>auth</code> lors de la connexion.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire le code côté serveur Socket.IO qui vérifie le JWT à la connexion (middleware) et attache l’utilisateur au socket. Si le token est invalide, la connexion doit être rejetée.",
+        "niveau": "very hard",
+        "reponse": "```js\nconst jwt = require('jsonwebtoken');\nconst io = require('socket.io')(server);\n\nio.use((socket, next) => {\n  const token = socket.handshake.auth.token;\n  if (!token) {\n    return next(new Error('Authentication error: token missing'));\n  }\n  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {\n    if (err) return next(new Error('Authentication error: invalid token'));\n    socket.user = user;\n    next();\n  });\n});\n\nio.on('connection', (socket) => {\n  console.log(`User ${socket.user.userId} connected`);\n  // ... rooms, messages, etc.\n});\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Quel avantage cet usage stateless de JWT apporte-t-il par rapport à une solution de session classique (avec session stockée en mémoire/Redis) dans un environnement de serveurs multiples (cluster, horizontal scaling) ?",
+        "niveau": "medium",
+        "reponse": "Avec JWT, chaque serveur peut vérifier le token de manière autonome sans appeler une base de données ou un cache centralisé (Redis). Cela simplifie le scaling horizontal : aucune session partagée n’est nécessaire. L’inconvénient est la difficulté à révoquer un token avant son expiration (sauf à maintenir une blacklist).",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

@@ -1,0 +1,118 @@
+[
+  {
+    "intitule": "Diagnostiquer et corriger une erreur asynchrone dans une route Express",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un développeur a écrit le code suivant pour une API Express. La route <code>/user/:id</code> doit retourner un utilisateur depuis une base de données fictive. Cependant, en cas d'utilisateur introuvable, le serveur plante avec une erreur non gérée. <br> Analysez le code, expliquez pourquoi le serveur plante et proposez une correction en utilisant un middleware de gestion d'erreurs et <code>try/catch</code> ou <code>express-async-errors</code>.</p><pre><code>const express = require('express');\nconst app = express();\n\nconst findUserById = (id) => {\n  return new Promise((resolve, reject) => {\n    setTimeout(() => {\n      if (id === '123') {\n        resolve({ id: '123', name: 'Alice' });\n      } else {\n        reject(new Error('Utilisateur non trouvé'));\n      }\n    }, 100);\n  });\n};\n\napp.get('/user/:id', async (req, res) => {\n  const user = await findUserById(req.params.id);\n  res.json(user);\n});\n\napp.listen(3000);\n</code></pre></p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier le problème principal dans ce code et expliquer pourquoi il provoque un crash du serveur.",
+        "niveau": "easy",
+        "reponse": "Le problème est que la fonction asynchrone dans la route utilise `await` sans être entourée d’un bloc `try/catch`. Si la promesse est rejetée (utilisateur non trouvé), l’exception n’est pas capturée. Express ne gère pas les erreurs asynchrones par défaut, ce qui entraîne un rejet de promesse non traité et potentiellement un crash.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer une correction du code en utilisant un bloc `try/catch` et en appelant `next(error)`.",
+        "niveau": "medium",
+        "reponse": "Il faut encapsuler `await findUserById` dans un `try/catch` et passer l’erreur à `next`. La route corrigée :\n\n```js\napp.get('/user/:id', async (req, res, next) => {\n  try {\n    const user = await findUserById(req.params.id);\n    res.json(user);\n  } catch (error) {\n    next(error);\n  }\n});\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Rédiger un middleware de gestion d’erreurs qui envoie une réponse JSON avec un statut 404 si l’erreur a le message 'Utilisateur non trouvé', et un statut 500 pour les autres erreurs.",
+        "niveau": "hard",
+        "reponse": "```js\napp.use((err, req, res, next) => {\n  if (err.message === 'Utilisateur non trouvé') {\n    return res.status(404).json({ error: err.message });\n  }\n  console.error(err);\n  res.status(500).json({ error: 'Erreur interne du serveur' });\n});\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Audit de sécurité d’une API Express : gestion des erreurs et divulgation d’informations",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous travaillez pour une entreprise camerounaise de e-commerce. Lors d’un test de pénétration sur l’API, vous remarquez qu’une requête malformée renvoie une erreur avec la stack trace complète (fichiers, lignes, chemins absolus).</p><p>En production, cette pratique est dangereuse. Rédigez un middleware de gestion d’erreurs qui :</p><ul><li>En développement (`process.env.NODE_ENV === 'development'`) renvoie la pile d’erreur détaillée (stack trace).</li><li>En production (`'production'`) renvoie uniquement un message générique `\"Erreur interne\"` avec un code 500.</li><li>Gère aussi les erreurs 404 pour les routes non trouvées.</li><li>Utilisez les verbes de Bloom : <strong>concevoir</strong> (pour le middleware) et <strong>justifier</strong> (pour l’explication).</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevoir le code complet du middleware de gestion d’erreurs personnalisé en respectant les consignes.",
+        "niveau": "hard",
+        "reponse": "```js\n// Middleware 404 pour les routes non trouvées\napp.use((req, res, next) => {\n  res.status(404).json({ error: 'Route non trouvée' });\n});\n\n// Middleware de gestion d’erreurs (après toutes les routes)\napp.use((err, req, res, next) => {\n  const status = err.status || 500;\n  if (process.env.NODE_ENV === 'development') {\n    return res.status(status).json({\n      error: err.message,\n      stack: err.stack\n    });\n  }\n  // production\n  res.status(status).json({ error: 'Erreur interne du serveur' });\n});\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Justifier pourquoi il est crucial de ne pas afficher la stack trace en production, en vous appuyant sur les risques de sécurité.",
+        "niveau": "medium",
+        "reponse": "La stack trace révèle des informations sensibles : chemins absolus du serveur, structure des fichiers, versions de bibliothèques, noms de fonctions internes. Un attaquant peut utiliser ces données pour préparer des attaques ciblées (injection, exploitation de vulnérabilités connues, reconnaissance du système).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Créer un middleware de journalisation des erreurs pour un serveur Express",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans le cadre de la maintenance d’une API Node.js, vous devez mettre en place une surveillance des erreurs. Écrire un middleware de gestion d’erreurs qui :</p><ul><li>Enregistre chaque erreur dans un fichier `error.log` avec la date, l’URL, la méthode HTTP et le message d’erreur.</li><li>Passe l’erreur au middleware suivant.</li><li>N’interrompt pas l’exécution des autres middlewares d’erreur.</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémenter la fonction `logErrorMiddleware` en utilisant le module `fs` de Node.js pour écrire dans le fichier de façon asynchrone.",
+        "niveau": "medium",
+        "reponse": "```js\nconst fs = require('fs');\nconst path = require('path');\nconst logFile = path.join(__dirname, 'error.log');\n\nconst logErrorMiddleware = (err, req, res, next) => {\n  const logEntry = `${new Date().toISOString()} - ${req.method} ${req.originalUrl} - ${err.message}\\n`;\n  fs.appendFile(logFile, logEntry, (err) => {\n    if (err) console.error('Erreur lors de l\\'écriture du log', err);\n  });\n  next(err); // on transmet l'erreur au prochain middleware\n};\n\n// Placer ce middleware avant le dernier qui envoie la réponse\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer pourquoi il faut utiliser `next(err)` et non `res.send()` dans ce middleware spécifique.",
+            "niveau": "easy",
+            "reponse": "Ce middleware a uniquement pour but de journaliser l’erreur. En appelant `next(err)`, on permet au middleware suivant (généralement celui qui formate la réponse client) de prendre le relais. Si on envoyait une réponse ici, le flux serait interrompu et on ne pourrait pas envoyer une réponse standardisée plus tard.",
+            "reponse": "Ce middleware a uniquement pour but de journaliser l’erreur. En appelant `next(err)`, on permet au middleware suivant (généralement celui qui formate la réponse client) de prendre le relais. Si on envoyait une réponse ici, le flux serait interrompu et on ne pourrait pas envoyer une réponse standardisée plus tard."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Adapter une API Express existante pour gérer les erreurs asynchrones sans try/catch répétitifs",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous reprenez un projet Express contenant plus de 50 routes asynchrones, toutes écrites sans `try/catch` ni `next(err)`. Le code actuel plante à la première erreur de base de données.</p><p>Proposez une solution moderne pour résoudre ce problème avec un minimum de modifications du code existant. Vous devez :</p><ul><li>Choisir une bibliothèque (ex: `express-async-errors`).</li><li>Démontrer son fonctionnement avec un exemple avant/après.</li><li>Discuter des limites de cette approche par rapport au `try/catch` explicite.</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Installer et configurer la bibliothèque `express-async-errors`. Montrer le code d’une route avant correction (qui plante) et après correction.",
+        "niveau": "hard",
+        "reponse": "Avant :\n```js\napp.get('/data', async (req, res) => {\n  const data = await db.query('SELECT ...'); // erreur possible\n  res.json(data);\n});\n```\nAprès installation (`npm install express-async-errors`) et ajout en haut du fichier principal :\n```js\nrequire('express-async-errors');\n// les routes restent identiques, mais les erreurs asynchrones sont automatiquement passées à next(err)\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer quel mécanisme `express-async-errors` utilise pour capturer les erreurs asynchrones sans `try/catch`.",
+            "niveau": "hard",
+            "reponse": "La bibliothèque modifie (patch) le comportement de `express.Router` et `app` en enveloppant les fonctions de gestionnaires de routes. Elle intercepte les promesses rejetées et appelle automatiquement `next(reason)`, ce qui évite d’écrire `try/catch` dans chaque route asynchrone.",
+            "reponse": "La bibliothèque modifie (patch) le comportement de `express.Router` et `app` en enveloppant les fonctions de gestionnaires de routes. Elle intercepte les promesses rejetées et appelle automatiquement `next(reason)`, ce qui évite d’écrire `try/catch` dans chaque route asynchrone."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Citer une situation où cette approche échoue et où un `try/catch` explicite reste nécessaire.",
+            "niveau": "medium",
+            "reponse": "Elle ne gère pas les erreurs survenues à l’intérieur d’un `setTimeout` ou `setInterval` non promisifié, ni les erreurs émises par des EventEmitters sans promesse. Pour ces cas, un `try/catch` ou un `.catch(next)` manuel est requis.",
+            "reponse": "Elle ne gère pas les erreurs survenues à l’intérieur d’un `setTimeout` ou `setInterval` non promisifié, ni les erreurs émises par des EventEmitters sans promesse. Pour ces cas, un `try/catch` ou un `.catch(next)` manuel est requis."
+          }
+        ]
+      }
+    ]
+  }
+]

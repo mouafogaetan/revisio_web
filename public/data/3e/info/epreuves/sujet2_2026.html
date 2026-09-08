@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+  "matiere": "Informatique",
+  "classe": "Troisième",
+  "sequence": "Séquence 2",
+  "anneeScolaire": "2025-2026",
+  "exercices": [
+    {
+      "titre": "EXERCICE I : MAÎTRISE DES CONNAISSANCES (4 points)",
+      "points": "4 pts",
+      "enonce": "<div style='font-size: 1.05rem; line-height: 1.8; background: #f8faff; padding: 15px; border-radius: 8px; margin-bottom: 10px; color: #1a1a2e;'><p style='margin-top: 0;'><strong>Consigne :</strong> Réponds par Vrai ou Faux aux affirmations suivantes. Justifie ta réponse en une phrase.</p></div>",
+      "questions": [
+        {
+          "question": "<div style='margin-bottom: 15px; color: #1a1a2e;'><span style='font-weight: bold;'>1.</span> La RAM est une mémoire volatile, ce qui signifie qu'elle perd son contenu lorsque l'ordinateur est éteint.</div>",
+          "reponse": "<div style='background: #eef5e6; padding: 10px 15px; border-radius: 6px; color: #1a3c34;'><span style='font-weight: bold;'>Vrai.</span> La RAM (Random Access Memory) est une mémoire volatile : les données qu'elle contient sont effacées lorsque l'alimentation électrique est coupée.</div>"
+        },
+        {
+          "question": "<div style='margin-bottom: 15px; color: #1a1a2e;'><span style='font-weight: bold;'>2.</span> L'architecture Von Neumann repose sur le principe de programme enregistré, où les données et les instructions sont stockées dans des mémoires séparées.</div>",
+          "reponse": "<div style='background: #eef5e6; padding: 10px 15px; border-radius: 6px; color: #1a3c34;'><span style='font-weight: bold;'>Faux.</span> Dans l'architecture de Von Neumann, les <strong>données et les instructions partagent la même mémoire</strong> (bus unique). C'est l'architecture Harvard qui les sépare.</div>"
+        },
+        {
+          "question": "<div style='margin-bottom: 15px; color: #1a1a2e;'><span style='font-weight: bold;'>3.</span> Une donnée structurée est une donnée organisée selon un modèle prédéfini (comme un tableau ou une base de données).</div>",
+          "reponse": "<div style='background: #eef5e6; padding: 10px 15px; border-radius: 6px; color: #1a3c34;'><span style='font-weight: bold;'>Vrai.</span> Les données structurées sont organisées selon une structure prédéfinie, ce qui facilite leur recherche et leur traitement (exemples : tableaux, bases de données).</div>"
+        },
+        {
+          "question": "<div style='margin-bottom: 15px; color: #1a1a2e;'><span style='font-weight: bold;'>4.</span> Un algorithme est une suite ordonnée d'instructions qui permet de résoudre un problème.</div>",
+          "reponse": "<div style='background: #eef5e6; padding: 10px 15px; border-radius: 6px; color: #1a3c34;'><span style='font-weight: bold;'>Vrai.</span> Un algorithme se définit comme une séquence finie et ordonnée d'opérations ou d'instructions visant à résoudre un problème.</div>"
+        }
+      ]
+    },
+    {
+      "titre": "EXERCICE II : APPLICATION DES CONNAISSANCES (5 points)",
+      "points": "5 pts",
+      "enonce": "<div style='font-size: 1.05rem; line-height: 1.8; background: #f8faff; padding: 15px; border-radius: 8px; margin-bottom: 10px; color: #1a1a2e;'><p style='margin-top: 0;'><strong>Consigne :</strong> Relie chaque composant à son rôle en écrivant la lettre correspondante dans le tableau.</p></div>",
+      "questions": [
+        {
+          "question": "<div style='margin-bottom: 20px; color: #1a1a2e;'><p><strong>Composants :</strong></p><ul style='list-style: none; padding-left: 5px;'><li style='margin-bottom: 5px;'>1. Processeur (CPU)</li><li style='margin-bottom: 5px;'>2. Carte mère</li><li style='margin-bottom: 5px;'>3. Disque dur (HDD)</li><li style='margin-bottom: 5px;'>4. ROM (Mémoire Morte)</li></ul><p style='margin-top: 15px;'><strong>Rôles :</strong></p><ul style='list-style: none; padding-left: 5px;'><li style='margin-bottom: 5px;'>A. Stockage permanent des données et des programmes (même hors tension).</li><li style='margin-bottom: 5px;'>B. Cerveau de l'ordinateur, il exécute les instructions et traite les données.</li><li style='margin-bottom: 5px;'>C. Contient le BIOS/UEFI, elle conserve des informations essentielles même lorsque l'ordinateur est éteint.</li><li style='margin-bottom: 5px;'>D. Carte principale qui relie tous les composants entre eux.</li></ul></div>",
+          "reponse": "<div style='background: #eef5e6; padding: 10px 15px; border-radius: 6px; color: #1a3c34;'><table style='width: 100%; border-collapse: collapse; color: #1a3c34;'><thead><tr style='background: #d4e2c0;'><th style='padding: 6px; border: 1px solid #a0b88a;'>Composant</th><th style='padding: 6px; border: 1px solid #a0b88a;'>Rôle</th></tr></thead><tbody><tr><td style='padding: 6px; border: 1px solid #a0b88a;'>1. Processeur (CPU)</td><td style='padding: 6px; border: 1px solid #a0b88a;'>B</td></tr><tr><td style='padding: 6px; border: 1px solid #a0b88a;'>2. Carte mère</td><td style='padding: 6px; border: 1px solid #a0b88a;'>D</td></tr><tr><td style='padding: 6px; border: 1px solid #a0b88a;'>3. Disque dur (HDD)</td><td style='padding: 6px; border: 1px solid #a0b88a;'>A</td></tr><tr><td style='padding: 6px; border: 1px solid #a0b88a;'>4. ROM</td><td style='padding: 6px; border: 1px solid #a0b88a;'>C</td></tr></tbody></table></div>"
+        }
+      ]
+    },
+    {
+      "titre": "EXERCICE III : ANALYSE ET RÉSOLUTION DE PROBLÈMES (6 points)",
+      "points": "6 pts",
+      "enonce": "<div style='font-size: 1.05rem; line-height: 1.8; background: #f8faff; padding: 15px; border-radius: 8px; margin-bottom: 10px; color: #1a1a2e;'><p style='margin-top: 0;'><strong>Consigne :</strong> Lis attentivement les situations suivantes, puis réponds aux questions.</p></div>",
+      "questions": [
+        {
+          "question": "<div style='margin-bottom: 15px; color: #1a1a2e;'><span style='font-weight: bold;'>Situation 1 :</span> <strong>(2 points)</strong> Un informaticien doit intervenir sur un ordinateur dont le disque dur est corrompu par des virus. Il a besoin d'organiser le disque et de préparer les partitions.<br><br>a) Quelle opération de maintenance dois-tu effectuer pour effacer toutes les données et préparer le disque à recevoir un nouveau système de fichiers ?</div>",
+          "reponse": "<div style='background: #eef5e6; padding: 10px 15px; border-radius: 6px; color: #1a3c34;'>Il faut effectuer un <strong>formatage</strong> du disque. Le formatage efface les données et crée une nouvelle structure de fichiers (comme NTFS ou FAT32) sur le disque.</div>"
+        },
+        {
+          "question": "<div style='margin-bottom: 15px; color: #1a1a2e;'><span style='font-weight: bold;'>b)</span> Avant de formater, l'informaticien veut diviser le disque en trois parties. Comment s'appelle cette opération ?</div>",
+          "reponse": "<div style='background: #eef5e6; padding: 10px 15px; border-radius: 6px; color: #1a3c34;'>Cette opération s'appelle le <strong>partitionnement</strong>. Il permet de diviser un disque physique en plusieurs parties logiques indépendantes.</div>"
+        },
+        {
+          "question": "<div style='margin-bottom: 15px; color: #1a1a2e;'><span style='font-weight: bold;'>Situation 2 :</span> <strong>(2 points)</strong> Un élève dispose des données suivantes : <br>\\( 01000001 \\), \\( 01000010 \\), \\( 01000011 \\) en binaire.<br><br>Sachant qu'en code ASCII, \\( 01000001_2 = 65_{10} = 'A' \\), \\( 01000010_2 = 66_{10} = 'B' \\), \\( 01000011_2 = 67_{10} = 'C' \\) :<br><br>a) Quelles lettres sont représentées par ces codes binaires ?</div>",
+          "reponse": "<div style='background: #eef5e6; padding: 10px 15px; border-radius: 6px; color: #1a3c34;'>Les codes binaires représentent les lettres : <strong>A</strong>, <strong>B</strong> et <strong>C</strong>.</div>"
+        },
+        {
+          "question": "<div style='margin-bottom: 15px; color: #1a1a2e;'><span style='font-weight: bold;'>b)</span> En utilisant le code ASCII, que donne la conversion de la chaîne \\( 01001000 01001001 \\) ? <br><em>(Indice : \\( 01001000_2 = 72_{10} \\) correspond à la lettre 'H', et \\( 01001001_2 = 73_{10} \\) correspond à la lettre 'I').</em></div>",
+          "reponse": "<div style='background: #eef5e6; padding: 10px 15px; border-radius: 6px; color: #1a3c34;'>La conversion donne la chaîne <strong>HI</strong> (H pour le premier code et I pour le second).</div>"
+        },
+        {
+          "question": "<div style='margin-bottom: 15px; color: #1a1a2e;'><span style='font-weight: bold;'>Situation 3 :</span> <strong>(2 points)</strong> Voici un extrait d'algorithme en LDA :<br><br><strong>Algorithme CalculMoyenne</strong><br><strong>VAR</strong> note1, note2, note3, moyenne : Réel<br><strong>DÉBUT</strong><br>Ecrire(\"Entrez la première note : \")<br>Lire(note1)<br>Ecrire(\"Entrez la deuxième note : \")<br>Lire(note2)<br>Ecrire(\"Entrez la troisième note : \")<br>Lire(note3)<br>moyenne ← (note1 + note2 + note3) / 3<br>Ecrire(\"La moyenne est : \", moyenne)<br><strong>FIN</strong><br><br>a) Après exécution, quel sera le résultat si l'utilisateur saisit les valeurs 12, 14 et 16 ?</div>",
+          "reponse": "<div style='background: #eef5e6; padding: 10px 15px; border-radius: 6px; color: #1a3c34;'>moyenne = (12 + 14 + 16) / 3 = 42 / 3 = <strong>14</strong>. L'algorithme affichera donc \"La moyenne est : 14\".</div>"
+        },
+        {
+          "question": "<div style='margin-bottom: 15px; color: #1a1a2e;'><span style='font-weight: bold;'>b)</span> Modifie l'algorithme pour qu'il calcule la moyenne de <strong>quatre</strong> notes.</div>",
+          "reponse": "<div style='background: #eef5e6; padding: 10px 15px; border-radius: 6px; color: #1a3c34;'>Il faut ajouter une variable <strong>note4</strong>, modifier la lecture pour inclure note4, et changer la formule en : <br><strong>moyenne ← (note1 + note2 + note3 + note4) / 4</strong>.</div>"
+        }
+      ]
+    },
+    {
+      "titre": "EXERCICE IV : PRODUCTION ÉCRITE (5 points)",
+      "points": "5 pts",
+      "enonce": "<div style='font-size: 1.05rem; line-height: 1.8; background: #f8faff; padding: 15px; border-radius: 8px; margin-bottom: 10px; color: #1a1a2e;'><p style='margin-top: 0;'><strong>Consigne :</strong> Rédige un développement structuré (introduction, développement, conclusion) en une dizaine de lignes répondant au sujet suivant :</p><div style='background: #f0f3f9; padding: 15px; border-radius: 6px; margin: 10px 0; border-left: 4px solid #2c3e50; color: #1a1a2e;'><p style='font-weight: bold; margin: 0;'>Sujet : Explique l'importance de l'architecture de Von Neumann dans le fonctionnement des ordinateurs modernes.</p></div></div>",
+      "questions": [
+        {
+          "question": "<div style='color: #1a1a2e;'><p style='font-size: 0.95rem; color: #4a4a6a;'><em>Votre production doit comporter une introduction présentant le sujet, un développement structuré en paragraphes, et une conclusion.</em></p></div>",
+          "reponse": "<div style='background: #eef5e6; padding: 10px 15px; border-radius: 6px; color: #1a3c34;'><p><strong>Éléments de corrigé :</strong></p><ul style='padding-left: 20px;'><li><strong>Introduction :</strong> Présente l'architecture de Von Neumann comme le modèle fondateur des ordinateurs modernes, basé sur le concept de programme enregistré.</li><li><strong>Développement :</strong> <ul style='padding-left: 20px;'><li><strong>1. Description de l'architecture :</strong> Elle se compose d'une unité centrale de traitement (CPU), d'une mémoire unique (où sont stockés les données et les instructions), et de bus de communication. Le CPU suit le cycle \"Faire, Décoder, Exécuter\" (FETCH-DECODE-EXECUTE).</li><li><strong>2. Importance et principes clés :</strong> Le concept de programme enregistré est fondamental : les instructions sont stockées en mémoire, ce qui permet de les modifier facilement et de réaliser des tâches variées sans changer le matériel. Cette flexibilité est la base de l'informatique moderne.</li><li><strong>3. Limites et héritage :</strong> Bien que ce modèle ait des limites (le goulot d'étranglement de Von Neumann dû à un bus unique pour les données et les instructions), il reste le fondement de presque tous les ordinateurs.</li></ul></li><li><strong>Conclusion :</strong> Souligne que l'architecture de Von Neumann est un concept clé qui a permis l'évolution des ordinateurs vers des machines polyvalentes et programmables, et qu'elle est toujours d'actualité malgré l'émergence d'architectures plus modernes.</li></ul></div>"
+        }
+      ]
+    }
+  ]
+};
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

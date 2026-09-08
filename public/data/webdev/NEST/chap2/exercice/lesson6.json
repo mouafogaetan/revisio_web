@@ -1,0 +1,149 @@
+[
+  {
+    "intitule": "Implémentation des hooks de cycle de vie",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans une application NestJS, on souhaite exécuter certaines actions à différents moments du cycle de vie :</p><ul><li>Au démarrage du module : se connecter à une base de données</li><li>Au démarrage de l'application (après tous les modules) : lancer un cache préliminaire</li><li>À l'arrêt : fermer les connexions proprement</li></ul><p>On utilise les interfaces <code>OnModuleInit</code>, <code>OnApplicationBootstrap</code> et <code>OnApplicationShutdown</code>.</p>",
+      "images": [
+        "Diagramme des hooks de cycle de vie NestJS (ordre d'exécution)",
+        "Logs d'exemple montrant l'exécution séquentielle des hooks"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rappelez l'ordre d'exécution des hooks suivants : OnModuleInit, OnApplicationBootstrap, OnModuleDestroy, OnApplicationShutdown.",
+        "niveau": "easy",
+        "reponse": "1) OnModuleInit (lors de l'initialisation du module), 2) OnApplicationBootstrap (après le démarrage de tous les modules), 3) OnModuleDestroy (lors de la destruction du module, avant l'arrêt), 4) OnApplicationShutdown (lors de l'arrêt de l'application).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Codez un service `DatabaseService` qui implémente OnModuleInit et OnApplicationShutdown pour simuler une connexion et une déconnexion à une base de données.",
+        "niveau": "medium",
+        "reponse": "```typescript\nimport { Injectable, OnModuleInit, OnApplicationShutdown } from '@nestjs/common';\n\n@Injectable()\nexport class DatabaseService implements OnModuleInit, OnApplicationShutdown {\n  private isConnected = false;\n\n  async onModuleInit() {\n    console.log('Connexion à la base de données...');\n    this.isConnected = true;\n    console.log('Base de données connectée');\n  }\n\n  async onApplicationShutdown(signal?: string) {\n    console.log(`Arrêt reçu (signal: ${signal}), fermeture de la connexion...`);\n    this.isConnected = false;\n    console.log('Connexion fermée');\n  }\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquez pourquoi on utilise `OnModuleInit` plutôt que le constructeur pour initialiser des ressources asynchrones (connexions DB, appels API).",
+        "niveau": "medium",
+        "reponse": "Le constructeur ne supporte pas les opérations asynchrones (il ne peut pas être `async`). `OnModuleInit` permet d'exécuter du code asynchrone (`async/await`) et garantit que l'initialisation est terminée avant que l'application ne réponde aux requêtes. C'est essentiel pour les connexions à des bases de données ou des services externes.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion de l'arrêt gracieux (graceful shutdown)",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Dans un environnement de production (ex: Kubernetes, Heroku), l'application peut recevoir un signal d'arrêt (SIGTERM) lors d'un redéploiement ou scaling. Il faut implémenter un arrêt gracieux pour terminer les requêtes en cours avant de fermer l'application.</p><p>NestJS fournit <code>OnApplicationShutdown</code> et la configuration <code>enableShutdownHooks</code>.</p>",
+      "images": [
+        "Schéma d'arrêt gracieux : requêtes en cours terminées avant fermeture",
+        "Logs d'arrêt avec délai d'attente"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez les étapes pour activer les hooks d'arrêt (shutdown hooks) dans une application NestJS.",
+        "niveau": "medium",
+        "reponse": "1) Dans `main.ts`, appeler `app.enableShutdownHooks()` avant `app.listen()`. 2) Implémenter l'interface `OnApplicationShutdown` dans les services concernés. 3) La méthode `onApplicationShutdown(signal: string)` sera automatiquement appelée à la réception de SIGTERM/SIGINT. 4) Y placer la logique de nettoyage (fermeture de connexions, vidage des buffers).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quels signaux sont interceptés par défaut par `enableShutdownHooks()` ?",
+            "niveau": "easy",
+            "reponse": "SIGTERM et SIGINT (Ctrl+C). Sous Windows, il écoute également les événements de fermeture de console."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Concevez un service `OrderProcessor` qui traite des commandes en arrière-plan. Implémentez `OnApplicationShutdown` pour terminer le traitement des commandes en cours avant l'arrêt (timeout de 10 secondes maximum).",
+        "niveau": "hard",
+        "reponse": "```typescript\nimport { Injectable, OnApplicationShutdown, Logger } from '@nestjs/common';\n\n@Injectable()\nexport class OrderProcessor implements OnApplicationShutdown {\n  private readonly logger = new Logger(OrderProcessor.name);\n  private processingOrders = new Set<string>();\n  private shutdownInProgress = false;\n\n  async processOrder(orderId: string) {\n    if (this.shutdownInProgress) {\n      throw new Error('Arrêt en cours, impossible de traiter la commande');\n    }\n    this.processingOrders.add(orderId);\n    try {\n      // Simuler un traitement long\n      await new Promise(resolve => setTimeout(resolve, 5000));\n    } finally {\n      this.processingOrders.delete(orderId);\n    }\n  }\n\n  async onApplicationShutdown(signal: string) {\n    this.logger.log(`Arrêt demandé (${signal}), attente des commandes en cours...`);\n    this.shutdownInProgress = true;\n    \n    const timeout = 10000; // 10 secondes max\n    const startTime = Date.now();\n    \n    while (this.processingOrders.size > 0 && (Date.now() - startTime) < timeout) {\n      this.logger.log(`En attente de ${this.processingOrders.size} commande(s)...`);\n      await new Promise(resolve => setTimeout(resolve, 500));\n    }\n    \n    if (this.processingOrders.size > 0) {\n      this.logger.warn(`Arrêt forcé, ${this.processingOrders.size} commande(s) non terminée(s)`);\n    } else {\n      this.logger.log('Toutes les commandes sont terminées, arrêt propre');\n    }\n  }\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Évaluez l'impact d'un arrêt non gracieux (kill -9 ou crash) sur l'intégrité des données. Proposez une solution alternative (ex: queues, transactions).",
+        "niveau": "very hard",
+        "reponse": "Un arrêt forcé (kill -9) ne permet aucun nettoyage. Les transactions en cours peuvent être incomplètes, causant des incohérences. Solutions : 1) Utiliser des patterns de transaction ACID avec rollback automatique (TypeORM, Prisma). 2) Mettre en place une file d'attente (Bull, RabbitMQ) avec persistance des jobs. 3) Implémenter des checkpoints/état pour permettre la reprise après redémarrage. 4) Utiliser des bases de données avec support d'idempotence pour les opérations critiques.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Ordre d'exécution et dépendances entre modules",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Voici la structure d'une application e-commerce NestJS :</p><pre><code>@Module({\n  imports: [ConfigModule, DatabaseModule, RedisModule],\n})\nexport class AppModule {}\n\n// ConfigModule initialise les variables d'environnement\n// DatabaseModule a besoin de ConfigModule pour se connecter\n// RedisModule a besoin de ConfigModule également\n</code></pre><p>On souhaite que les services soient initialisés dans un ordre précis : d'abord ConfigModule, puis DatabaseModule et RedisModule en parallèle, et enfin CacheService après les deux.</p>",
+      "images": [
+        "Diagramme de dépendances entre modules NestJS",
+        "Flux d'initialisation asynchrone avec OnModuleInit"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez comment l'ordre d'import des modules dans AppModule influence l'initialisation des hooks `OnModuleInit`.",
+        "niveau": "medium",
+        "reponse": "NestJS initialise les modules dans l'ordre d'importation : ConfigModule d'abord, puis DatabaseModule, puis RedisModule. Les hooks `OnModuleInit` sont exécutés dans le même ordre séquentiel. Si DatabaseModule dépend de ConfigModule, il faut s'assurer que ConfigModule est importé avant DatabaseModule pour que sa configuration soit disponible.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposez une solution pour que DatabaseModule et RedisModule s'initialisent en parallèle (ils ne dépendent pas l'un de l'autre) mais après ConfigModule. Utilisez `Promise.all` dans un service de coordination.",
+        "niveau": "very hard",
+        "reponse": "On peut créer un service `InitializationCoordinator` qui implémente `OnModuleInit`. Dans ce service, on injecte `DatabaseService` et `RedisService` (qui exposent leurs méthodes d'initialisation asynchrones). Puis :\n```typescript\n@Injectable()\nexport class InitializationCoordinator implements OnModuleInit {\n  constructor(\n    private dbService: DatabaseService,\n    private redisService: RedisService,\n  ) {}\n\n  async onModuleInit() {\n    await Promise.all([\n      this.dbService.connect(),\n      this.redisService.connect(),\n    ]);\n    console.log('Database et Redis initialisés en parallèle');\n  }\n}\n```\nOn retire la logique d'init des hooks individuels pour éviter les duplications.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Analysez ce code :\n```typescript\n@Injectable()\nexport class CacheService implements OnModuleInit {\n  constructor(private configService: ConfigService) {}\n  \n  async onModuleInit() {\n    console.log('Cache initialisé');\n  }\n}\n```\nQue se passe-t-il si `ConfigService` n'a pas encore fini son `OnModuleInit` (ex: chargement de .env) ? Proposez une correction avec `@Injectable({ eager: true })` ou une autre approche.",
+        "niveau": "very hard",
+        "reponse": "Si ConfigService charge des variables d'environnement de façon asynchrone dans `onModuleInit`, CacheService pourrait accéder à des valeurs non encore définies. Solutions : 1) `@Injectable({ eager: true })` force l'initialisation du provider au démarrage, mais ne résout pas l'ordre asynchrone. 2) Injecter ConfigService dans CacheService mais dans `onModuleInit`, utiliser un mécanisme d'attente : `await this.configService.waitForReady()`. 3) Implémenter `OnModuleInit` dans ConfigService avec un Promise résolu, et dans CacheService, appeler une méthode `this.configService.ensureReady()`. 4) Utiliser un module de configuration synchrone (sans async) avec `ConfigModule.forRoot({ isGlobal: true })`.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Débogage des problèmes de cycle de vie",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un étudiant a écrit le code suivant, mais l'application ne démarre pas correctement. Analysez et corrigez les erreurs.</p><pre><code>// main.ts\nimport { NestFactory } from '@nestjs/core';\nimport { AppModule } from './app.module';\n\nasync function bootstrap() {\n  const app = await NestFactory.create(AppModule);\n  await app.listen(3000);\n}\nbootstrap();\n\n// database.service.ts\n@Injectable()\nexport class DatabaseService implements OnModuleInit {\n  async onModuleInit() {\n    console.log('Connexion DB...');\n    await this.connect();\n  }\n  \n  async connect() {\n    // simulation connexion longue\n    return new Promise(resolve => setTimeout(resolve, 5000));\n  }\n}\n</code></pre><p>Problème : l'application écoute les requêtes AVANT que la base de données soit connectée.</p>",
+      "images": [
+        "Logs montrant 'Connexion DB...' après 'Nest application successfully started'",
+        "Diagramme de timing correct vs incorrect"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifiez le problème et expliquez pourquoi l'application écoute trop tôt.",
+        "niveau": "medium",
+        "reponse": "Le problème est que `app.listen(3000)` n'attend pas la fin des `onModuleInit` des services. Les hooks de cycle de vie s'exécutent en parallèle du démarrage du serveur HTTP. Ainsi, le serveur commence à écouter alors que la connexion DB n'est pas encore établie, ce qui peut causer des erreurs si une requête arrive avant la fin de l'initialisation.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposez une correction pour que le serveur n'écoute qu'après la connexion complète de la base de données.",
+        "niveau": "hard",
+        "reponse": "Deux solutions principales :\n1) Utiliser `app.init()` avant `listen` pour forcer l'exécution complète des hooks d'initialisation :\n```typescript\nconst app = await NestFactory.create(AppModule);\nawait app.init(); // attend tous les OnModuleInit\nawait app.listen(3000);\n```\n2) Implémenter un indicateur de readiness : dans DatabaseService, exposer une promesse `dbReady` et dans `bootstrap`, attendre cette promesse :\n```typescript\nconst dbService = app.get(DatabaseService);\nawait dbService.waitForReady();\nawait app.listen(3000);\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquez l'intérêt de l'option `abortOnError` dans `NestFactory.create()` et comment elle interagit avec les hooks de cycle de vie.",
+        "niveau": "hard",
+        "reponse": "`abortOnError: true` (par défaut) fait que l'application s'arrête complètement (process.exit) si une erreur non gérée survient pendant l'initialisation (y compris dans les hooks). Si `false`, l'application continue de démarrer même en cas d'erreur (à utiliser avec prudence). Pour les hooks critiques (connexion DB), il est préférable de laisser `abortOnError: true` pour éviter qu'une application non fonctionnelle écoute des requêtes.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

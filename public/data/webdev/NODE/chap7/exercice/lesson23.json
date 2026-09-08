@@ -1,0 +1,127 @@
+[
+  {
+    "intitule": "Expliquer l'importance de la validation des données",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Dans une API REST, les données envoyées par le client (corps de la requête, paramètres d'URL, query strings) ne sont pas toujours fiables.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Définir la validation des données dans le contexte d'une API Node.js/Express.",
+        "niveau": "easy",
+        "reponse": "La validation des données est le processus de vérification que les données reçues d'une requête (body, params, query) respectent des règles prédéfinies : type (chaîne, nombre, date...), format (email, UUID...), longueur, présence de champs obligatoires, valeurs autorisées, etc. Elle permet de rejeter les requêtes invalides avant tout traitement.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Justifier pourquoi il ne faut jamais faire confiance aux données envoyées par le client, même si le front-end les valide déjà.",
+        "niveau": "medium",
+        "reponse": "La validation front-end peut être contournée facilement (inspection du code, requêtes HTTP directes via Postman/curl, désactivation du JavaScript). Un attaquant peut envoyer des données malveillantes ou malformées directement à l'API. La validation côté serveur est donc la seule barrière de sécurité fiable pour garantir l'intégrité, la sécurité (injections, XSS) et la robustesse de l'application.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Comparer les bibliothèques Joi et Zod",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous devez choisir une bibliothèque de validation pour un nouveau projet Node.js. Deux options populaires sont Joi et Zod.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Comparer Joi et Zod selon deux critères : la compatibilité TypeScript et l'environnement d'exécution (front-end vs back-end).",
+        "niveau": "medium",
+        "reponse": "Joi : fonctionne uniquement en back-end (Node.js) car il utilise des validateurs spécifiques à Node. Son intégration avec TypeScript est possible mais l'inférence des types n'est pas automatique (il faut déclarer les types manuellement ou utiliser des outils complémentaires). Zod : fonctionne à la fois en back-end et en front-end (universel). Il est conçu pour TypeScript et infère automatiquement les types TypeScript à partir du schéma (type inference).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Citer deux avantages de Zod par rapport à Joi, dans le contexte d'une application full-stack utilisant TypeScript.",
+        "niveau": "hard",
+        "reponse": "Avantage 1 : Unicité de la source de vérité. Avec Zod, le schéma de validation définit à la fois la validation à l'exécution ET le type TypeScript statique. Cela évite la duplication (pas besoin d'écrire un type et un schéma séparément). Avantage 2 : Partage de schémas entre front-end et back-end. On peut définir un schéma Zod dans un monorepo ou un package partagé et l'utiliser côté client (formulaires React par exemple) et côté serveur (API), garantissant une validation cohérente.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Valider un corps de requête avec Joi",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous développez une API Express pour une application e-commerce. L'endpoint <code>POST /api/products</code> reçoit un JSON représentant un nouveau produit.</p><pre><code>{\n  \"name\": \"Smartphone\",\n  \"price\": 599.99,\n  \"category\": \"electronics\",\n  \"stock\": 50,\n  \"isAvailable\": true\n}</code></pre><p>Règles de validation : <ul><li><code>name</code> : chaîne obligatoire, min 3 caractères, max 100</li><li><code>price</code> : nombre obligatoire, strictement positif, max 10000</li><li><code>category</code> : chaîne obligatoire parmi ['electronics', 'clothing', 'books', 'other']</li><li><code>stock</code> : entier obligatoire, entre 0 et 1000</li><li><code>isAvailable</code> : booléen optionnel (par défaut true)</li></ul></p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire un schéma de validation Joi complet respectant toutes les règles ci-dessus.",
+        "niveau": "medium",
+        "reponse": "const Joi = require('joi');\n\nconst productSchema = Joi.object({\n  name: Joi.string().required().min(3).max(100),\n  price: Joi.number().required().positive().max(10000),\n  category: Joi.string().required().valid('electronics', 'clothing', 'books', 'other'),\n  stock: Joi.number().integer().required().min(0).max(1000),\n  isAvailable: Joi.boolean().default(true)\n});",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrire le middleware Express qui utilise ce schéma pour valider <code>req.body</code>. Si la validation échoue, retourner une réponse HTTP 400 avec le message d'erreur détaillé.",
+        "niveau": "hard",
+        "reponse": "const validateProduct = (req, res, next) => {\n  const { error, value } = productSchema.validate(req.body, { abortEarly: false });\n  \n  if (error) {\n    const errors = error.details.map(detail => detail.message);\n    return res.status(400).json({ \n      message: 'Erreur de validation des données',\n      errors: errors \n    });\n  }\n  \n  // Remplacer req.body par la valeur validée (inclut les valeurs par défaut)\n  req.body = value;\n  next();\n};\n\n// Utilisation dans la route\napp.post('/api/products', validateProduct, (req, res) => {\n  // req.body est déjà validé\n  res.status(201).json(req.body);\n});",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Créer un schéma de validation avec Zod",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous devez créer une API d'inscription utilisateur. Le endpoint <code>POST /api/register</code> reçoit :</p><pre><code>{\n  \"email\": \"user@example.com\",\n  \"password\": \"Secret123!\",\n  \"age\": 25,\n  \"newsletter\": true\n}</code></pre><p>Règles : <ul><li><code>email</code> : email valide</li><li><code>password</code> : min 8 caractères, au moins une majuscule, une minuscule, un chiffre</li><li><code>age</code> : nombre entier entre 13 et 120 (obligatoire)</li><li><code>newsletter</code> : booléen optionnel (défaut false)</li><li>Les champs supplémentaires doivent être rejetés (<code>.strict()</code>)</li></ul></p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire un schéma de validation Zod complet avec les règles ci-dessus (incluant la validation du mot de passe par regex).",
+        "niveau": "medium",
+        "reponse": "const z = require('zod');\n\nconst registerSchema = z.object({\n  email: z.string().email('Email invalide'),\n  password: z.string()\n    .min(8, 'Le mot de passe doit contenir au moins 8 caractères')\n    .regex(/[A-Z]/, 'Doit contenir au moins une majuscule')\n    .regex(/[a-z]/, 'Doit contenir au moins une minuscule')\n    .regex(/[0-9]/, 'Doit contenir au moins un chiffre'),\n  age: z.number().int('Doit être un entier').min(13, 'Âge minimum 13 ans').max(120, 'Âge maximum 120 ans'),\n  newsletter: z.boolean().default(false)\n}).strict();",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Créer une fonction <code>validateRegister</code> qui, à partir des données reçues, retourne un objet <code>{ success, data, errors }</code>. En cas d'erreur, les erreurs doivent être formatées comme un tableau de chaînes.",
+        "niveau": "hard",
+        "reponse": "function validateRegister(inputData) {\n  try {\n    const validData = registerSchema.parse(inputData);\n    return {\n      success: true,\n      data: validData,\n      errors: null\n    };\n  } catch (error) {\n    if (error instanceof z.ZodError) {\n      const errors = error.errors.map(err => `${err.path.join('.')} : ${err.message}`);\n      return {\n        success: false,\n        data: null,\n        errors: errors\n      };\n    }\n    return {\n      success: false,\n      data: null,\n      errors: ['Erreur inconnue']\n    };\n  }\n}\n\n// Exemple d'utilisation dans un middleware Express\napp.post('/api/register', (req, res) => {\n  const result = validateRegister(req.body);\n  if (!result.success) {\n    return res.status(400).json({ errors: result.errors });\n  }\n  // result.data contient les données validées\n  res.status(201).json({ message: 'Utilisateur créé', user: result.data });\n});",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Valider les paramètres d'URL et les query strings",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>API de gestion d'articles : endpoint <code>GET /api/posts/:id/comments</code> avec query strings <code>?page=2&limit=10&sort=asc</code>.</p><p>Validation : <ul><li><code>id</code> (paramètre) : entier positif (UUID ou entier, on choisira entier positif pour l'exercice)</li><li><code>page</code> (query) : entier ≥ 1, défaut 1</li><li><code>limit</code> (query) : entier entre 1 et 100, défaut 10</li><li><code>sort</code> (query) : chaîne parmi 'asc', 'desc', défaut 'asc'</li></ul></p><p>Si un paramètre est invalide, retourner <code>400 Bad Request</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire deux schémas de validation distincts (avec Joi ou Zod au choix) : un pour <code>req.params</code> et un pour <code>req.query</code>.",
+        "niveau": "hard",
+        "reponse": "// Version avec Zod\nconst z = require('zod');\n\n// Schéma pour req.params\nconst paramsSchema = z.object({\n  id: z.string().regex(/^\\d+$/, 'ID doit être un entier').transform(Number).pipe(z.number().int().positive('ID doit être positif'))\n});\n\n// Schéma pour req.query\nconst querySchema = z.object({\n  page: z.coerce.number().int().min(1).default(1),\n  limit: z.coerce.number().int().min(1).max(100).default(10),\n  sort: z.enum(['asc', 'desc']).default('asc')\n});\n\n// Middleware de validation combiné\nconst validateGetComments = (req, res, next) => {\n  try {\n    req.params = paramsSchema.parse(req.params);\n    req.query = querySchema.parse(req.query);\n    next();\n  } catch (error) {\n    if (error instanceof z.ZodError) {\n      return res.status(400).json({ \n        message: 'Paramètres invalides', \n        errors: error.errors.map(e => `${e.path.join('.')} : ${e.message}`)\n      });\n    }\n    next(error);\n  }\n};\n\napp.get('/api/posts/:id/comments', validateGetComments, (req, res) => {\n  const { id } = req.params;    // id est un nombre\n  const { page, limit, sort } = req.query;\n  res.json({ id, page, limit, sort });\n});",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer une amélioration pour réutiliser ce pattern de validation avec différents schémas (params, query, body) dans toute l'application.",
+        "niveau": "very hard",
+        "reponse": "// Middleware générique de validation\nconst validate = (schemas) => {\n  return (req, res, next) => {\n    const errors = {};\n    \n    try {\n      if (schemas.body) req.body = schemas.body.parse(req.body);\n    } catch (e) { errors.body = e.errors; }\n    \n    try {\n      if (schemas.query) req.query = schemas.query.parse(req.query);\n    } catch (e) { errors.query = e.errors; }\n    \n    try {\n      if (schemas.params) req.params = schemas.params.parse(req.params);\n    } catch (e) { errors.params = e.errors; }\n    \n    if (Object.keys(errors).length > 0) {\n      return res.status(400).json({ \n        message: 'Erreur(s) de validation', \n        details: errors \n      });\n    }\n    \n    next();\n  };\n};\n\n// Utilisation\napp.post('/api/users/:id', \n  validate({\n    params: z.object({ id: z.string().uuid() }),\n    body: z.object({ name: z.string().min(2), email: z.string().email() })\n  }), \n  (req, res) => { /* ... */ }\n);",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

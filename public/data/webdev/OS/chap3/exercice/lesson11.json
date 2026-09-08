@@ -1,0 +1,145 @@
+[
+  {
+    "intitule": "Identifier les composants de l'adressage paginé",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Dans un système utilisant la pagination, une adresse virtuelle est divisée en deux parties : le <strong>numéro de page</strong> et le <strong>déplacement (offset)</strong>.</p><p>On considère une taille de page de $4\\,Ko$ (soit $2^{12}$ octets).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Calculez le numéro de page et le déplacement pour l'adresse virtuelle $0x8A3F$ (hexadécimal) sachant que la taille de page est de 4 Ko.",
+        "niveau": "medium",
+        "reponse": "Taille de page 4 Ko = 4096 octets = 2^12. En hexadécimal, 4096 = 0x1000.\nL'adresse 0x8A3F se divise : partie haute = 0x8 (8), partie basse = 0xA3F (2623 en décimal).\nNuméro de page = 0x8 = 8, déplacement = 0xA3F = 2623 octets.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Si la taille de page était de 8 Ko ($2^{13}$ octets), combien de bits seraient utilisés pour le déplacement ?",
+            "niveau": "easy",
+            "reponse": "8 Ko = 8192 octets = $2^{13}$, donc le déplacement utilise 13 bits."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Analyser le fonctionnement d'une table des pages",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un système utilise une pagination avec des pages de $2\\,Ko$. La table des pages d'un processus contient les entrées suivantes (numéro de page virtuelle -> numéro de cadre physique) :</p><ul><li>Page 0 → Cadre 5</li><li>Page 1 → Cadre 8</li><li>Page 2 → Cadre 2</li><li>Page 3 → Cadre 9</li></ul><p>Les adresses virtuelles sont sur 16 bits.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Déterminez l'adresse physique correspondant à l'adresse virtuelle $0x0A3F$ (hexadécimal).",
+        "niveau": "hard",
+        "reponse": "Taille de page = 2 Ko = 2048 octets = $2^{11}$, donc déplacement sur 11 bits.\n0x0A3F = 0000 1010 0011 1111 en binaire. Les 5 bits de poids fort (car 16-11=5) donnent le numéro de page : 00010 = 2 (page 2).\nLe déplacement = 0x03F = 63.\nPage 2 correspond au cadre physique 2. Adresse physique = cadre × taille page + déplacement = 2 × 2048 + 63 = 4096 + 63 = 4159 = 0x103F.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Que se passe-t-il si le processus tente d'accéder à l'adresse virtuelle $0xF8A3$ ?",
+            "niveau": "medium",
+            "reponse": "0xF8A3 = 1111 1000 1010 0011. Numéro de page = 11111 = 31. Comme la table des pages ne contient que les pages 0 à 3, cette page virtuelle n'est pas mappée. Le MMU génère une exception de défaut de page (page fault)."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Calculer la taille des structures de pagination",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un système d'exploitation sur une architecture 32 bits utilise une pagination hiérarchique à deux niveaux (x86 classique).</p><ul><li>Adresses virtuelles : 32 bits</li><li>Taille de page : $4\\,Ko$ ($2^{12}$ octets)</li><li>Entrée de table des pages (PTE) : 4 octets</li><li>Entrée de répertoire de pages (PDE) : 4 octets</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décomposez l'adresse virtuelle 32 bits en trois champs (répertoire, table, déplacement). Combien de bits pour chaque champ ?",
+        "niveau": "medium",
+        "reponse": "Déplacement sur 12 bits (taille page 4 Ko = 2^12).\nIl reste 20 bits pour les deux niveaux de la table. En général, le découpage x86 classique est 10 bits pour le répertoire, 10 bits pour la table, 12 bits pour le déplacement.\nSoit : Répertoire = bits 31-22, Table = bits 21-12, Déplacement = bits 11-0.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Calculez la mémoire nécessaire pour stocker une table des pages complète (une table par processus) si un processus utilise la totalité de son espace d'adressage virtuel.",
+            "niveau": "hard",
+            "reponse": "Une table des pages contient 2^10 = 1024 entrées (car 10 bits). Chaque entrée fait 4 octets, soit une table de 4 Ko.\nUn répertoire de pages contient également 1024 entrées (4 Ko).\nChaque processus a un répertoire (4 Ko) + des tables de pages.\nSi un processus utilise tout l'espace (4 Go), il a besoin de 1024 tables de pages (une par entrée de répertoire).\nMémoire totale = répertoire (4 Ko) + 1024 × tables (4 Ko) = 4 Ko + 4096 Ko = 4100 Ko ≈ 4 Mo par processus."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Comparer pagination et segmentation",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>La pagination et la segmentation sont deux techniques de gestion mémoire.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Comparez ces deux techniques selon les critères suivants : fragmentation externe, fragmentation interne, partage de mémoire, protection.",
+        "niveau": "hard",
+        "reponse": "Pagination :\n- Fragmentation externe : inexistante (les cadres sont de taille fixe)\n- Fragmentation interne : présente (dernier cadre partiellement utilisé)\n- Partage : facile (plusieurs processus peuvent partager la même page)\n- Protection : au niveau de la page (bits r/w/x)\n\nSegmentation :\n- Fragmentation externe : présente (les segments de taille variable créent des trous)\n- Fragmentation interne : absente ou faible\n- Partage : possible mais plus complexe\n- Protection : au niveau du segment (base, limite, droits)",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Résoudre un problème de conversion d'adresses avec pagination multi-niveaux",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>On considère une architecture 64 bits simplifiée avec pagination à 3 niveaux :</p><ul><li>Taille de page : $8\\,Ko$ ($2^{13}$ octets)</li><li>Adresse virtuelle : 48 bits</li><li>Entrées de table : 8 octets chacune</li><li>Chaque table contient $2^{11}$ entrées</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Déterminez le nombre de bits pour chaque champ (niveau 1, niveau 2, niveau 3, déplacement) et la mémoire totale nécessaire pour les tables d'un processus qui utilise une seule page virtuelle.",
+        "niveau": "very hard",
+        "reponse": "Déplacement : 13 bits (taille page 8 Ko = 2^13).\nIl reste 48 - 13 = 35 bits pour les 3 niveaux.\nChaque niveau a 11 bits (car 2^11 entrées par table). 3 × 11 = 33 bits.\nIl reste 2 bits inutilisés (bits de poids fort) ou réservés.\nDonc : Niveau 1 (bits 47-37?), Niveau 2 (bits 36-26?), Niveau 3 (bits 25-15?), Déplacement (bits 14-0).\n\nMémoire pour une seule page virtuelle :\n- Table niveau 1 : 1 table × 2^11 entrées × 8 octets = 16 Ko\n- Table niveau 2 : 1 table (celle pointée) × 8 octets × 2048 = 16 Ko\n- Table niveau 3 : 1 table × 16 Ko = 16 Ko\nTotal = 48 Ko (car une seule page virtuelle nécessite une table par niveau sur le chemin).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Si le processus utilise toutes les pages virtuelles possibles, quelle serait la mémoire pour les tables ?",
+            "niveau": "very hard",
+            "reponse": "Maximum :\n- Niveau 1 : 1 table (racine) = 16 Ko\n- Niveau 2 : 2^11 tables = 2048 × 16 Ko = 32 Mo\n- Niveau 3 : 2^11 × 2^11 = 2^22 tables = 4 194 304 tables × 16 Ko = 64 Go.\nTotal théorique ≈ 64,03 Go, mais en pratique, seules les tables nécessaires sont allouées."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Expliquer le rôle de la TLB (Translation Lookaside Buffer)",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>La TLB est un cache matériel utilisé dans la pagination pour accélérer la traduction des adresses.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez le fonctionnement de la TLB et expliquez pourquoi elle améliore les performances.",
+        "niveau": "medium",
+        "reponse": "La TLB (Translation Lookaside Buffer) est une mémoire cache associative qui stocke les traductions récentes (numéro de page virtuelle -> numéro de cadre physique).\nLorsqu'une adresse virtuelle est accédée :\n- On consulte d'abord la TLB (très rapide, matériel).\n- Si la traduction est présente (TLB hit), on obtient immédiatement le cadre physique.\n- Si absente (TLB miss), on parcourt la table des pages en mémoire (plus lent), puis on stocke la traduction dans la TLB.\nSans TLB, chaque accès mémoire nécessiterait 2 ou 3 accès mémoire supplémentaires (pour les tables de pages), dégradant considérablement les performances.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Qu'est-ce qu'un \"TLB shootdown\" dans un système multiprocesseur ?",
+            "niveau": "hard",
+            "reponse": "Dans un système multiprocesseur, chaque CPU a sa propre TLB. Lorsqu'un processus modifie une entrée de table des pages (ex: changement de mapping), il faut invalider l'entrée correspondante dans les TLB de tous les CPU. Cette opération s'appelle un TLB shootdown. Elle est coûteuse car elle nécessite des interruptions inter-processeurs (IPI)."
+          }
+        ]
+      }
+    ]
+  }
+]

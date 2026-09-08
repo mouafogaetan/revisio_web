@@ -1,0 +1,74 @@
+[
+  {
+    "intitule": "Configuration d’une API REST avec authentification JWT",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous devez sécuriser une API .NET Core. À l’aide des connaissances de la leçon, expliquez comment configurer l’authentification JWT dans <code>Program.cs</code> et protéger un endpoint avec <code>[Authorize]</code>. Incluez les étapes d’installation, les services nécéssaires et l’ordre des middlewares.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez la procédure complète pour ajouter l’authentification JWT à une API ASP.NET Core.",
+        "niveau": "medium",
+        "reponse": "1. Installer le package : `dotnet add package Microsoft.AspNetCore.Authentication.JwtBearer`. 2. Dans `Program.cs`, ajouter `builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =&gt; { options.TokenValidationParameters = new TokenValidationParameters { ValidateIssuer = true, ValidateAudience = true, ValidateLifetime = true, ValidateIssuerSigningKey = true, ValidIssuer = builder.Configuration[\"Jwt:Issuer\"], ValidAudience = builder.Configuration[\"Jwt:Audience\"], IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration[\"Jwt:Key\"])) }; });` 3. Ajouter `app.UseAuthentication();` avant `app.UseAuthorization();`. 4. Sur le contrôleur ou l’action, ajouter `[Authorize]`.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Implémentation d’un endpoint CRUD sécurisé",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Dans une application de gestion de tâches, vous devez créer un endpoint <code>POST /api/taches</code> réservé aux utilisateurs ayant le rôle <strong>Admin</strong>. Le corps de la requête contient un JSON avec <code>Titre</code> (string, requis) et <code>Description</code> (string, optionnel).</p><p>Rédigez le code du contrôleur, du DTO, de la méthode d’action avec la validation automatique, l’autorisation par rôle, et l’enregistrement en base via un service injecté. Ajoutez la gestion des erreurs 400 et 401.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez la classe DTO et l’action du contrôleur répondant aux exigences ci-dessus.",
+        "niveau": "hard",
+        "reponse": "```csharp\npublic class TacheCreateDto {\n    [Required]\n    public string Titre { get; set; }\n    public string Description { get; set; }\n}\n\n[ApiController]\n[Route(\"api/[controller]\")]\npublic class TachesController : ControllerBase {\n    private readonly ITacheService _service;\n    public TachesController(ITacheService service) =&gt; _service = service;\n\n    [HttpPost]\n    [Authorize(Roles = \"Admin\")]\n    [ProducesResponseType(201)]\n    [ProducesResponseType(400)]\n    [ProducesResponseType(401)]\n    public async Task&lt;IActionResult&gt; CreerTache([FromBody] TacheCreateDto dto) {\n        if (!ModelState.IsValid) return BadRequest(ModelState);\n        var tache = await _service.AjouterAsync(dto);\n        return CreatedAtAction(nameof(GetTache), new { id = tache.Id }, tache);\n    }\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Implémentation complète d’un endpoint CRUD avec JWT et EF Core",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous développez une API e-commerce. Un client veut pouvoir récupérer la liste des produits (endpoint public) et créer un nouveau produit (endpoint réservé aux admins).</p><p>Écrivez :</p>&lt;ul&gt;&lt;li&gt;Le modèle <code>Produit</code> avec <code>Id, Nom, Prix, Stock</code>&lt;/li&gt;&lt;li&gt;Le <code>DbContext</code> et la configuration de la table&lt;/li&gt;&lt;li&gt;Le contrôleur avec deux actions : <code>GET /api/produits</code> (public) et <code>POST /api/produits</code> (admin uniquement) avec validation des données et réponses HTTP appropriées&lt;/li&gt;&lt;li&gt;L’injection du DbContext dans le contrôleur&lt;/li&gt;&lt;li&gt;La génération du token JWT pour l’admin (endpoint <code>/api/auth/login</code> fictif mais décrivez la logique)&lt;/li&gt;&lt;/ul&gt;",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Fournissez le code complet du contrôleur, du modèle, du DbContext et la logique de génération JWT.",
+        "niveau": "very hard",
+        "reponse": "```csharp\n// Modèle\npublic class Produit {\n    public int Id { get; set; }\n    public string Nom { get; set; }\n    public decimal Prix { get; set; }\n    public int Stock { get; set; }\n}\n\n// DbContext\npublic class AppDbContext : DbContext {\n    public AppDbContext(DbContextOptions&lt;AppDbContext&gt; options) : base(options) { }\n    public DbSet&lt;Produit&gt; Produits { get; set; }\n}\n\n// Contrôleur\n[ApiController]\n[Route(\"api/[controller]\")]\npublic class ProduitsController : ControllerBase {\n    private readonly AppDbContext _context;\n    public ProduitsController(AppDbContext context) =&gt; _context = context;\n\n    [HttpGet]\n    public async Task&lt;IActionResult&gt; Get() =&gt; Ok(await _context.Produits.ToListAsync());\n\n    [HttpPost]\n    [Authorize(Roles = \"Admin\")]\n    public async Task&lt;IActionResult&gt; Post([FromBody] Produit produit) {\n        if (!ModelState.IsValid) return BadRequest();\n        _context.Produits.Add(produit);\n        await _context.SaveChangesAsync();\n        return CreatedAtAction(nameof(Get), new { id = produit.Id }, produit);\n    }\n}\n\n// Généreur JWT (simplifié)\nstring GenerateJwtToken(string username, string role) {\n    var claims = new[] { new Claim(ClaimTypes.Name, username), new Claim(ClaimTypes.Role, role) };\n    var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(\"ma_super_cle_secrete\"));\n    var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);\n    var token = new JwtSecurityToken(issuer: \"monApi\", audience: \"monClient\", claims: claims, expires: DateTime.Now.AddHours(1), signingCredentials: creds);\n    return new JwtSecurityTokenHandler().WriteToken(token);\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Validation et gestion des erreurs dans une API REST",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>À partir de la leçon, expliquez à quoi sert l’attribut <code>[ApiController]</code> dans ASP.NET Core, notamment pour la validation automatique et les réponses d’erreur.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifiez trois comportements automatiques apportés par `[ApiController]`.",
+        "niveau": "easy",
+        "reponse": "1. Validation automatique des modèles : si `ModelState.IsValid` est faux, une réponse 400 est générée automatiquement. 2. Liaison des paramètres depuis le corps (par défaut `[FromBody]` pour les types complexes). 3. Retour automatique des détails du problème (Problem Details) pour les codes d’erreur 4xx.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

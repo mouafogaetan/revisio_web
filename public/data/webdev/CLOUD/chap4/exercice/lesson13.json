@@ -1,0 +1,109 @@
+[
+  {
+    "intitule": "QCM : Les fondamentaux du stockage de fichiers cloud",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Ce questionnaire vise à vérifier votre compréhension des concepts de base du stockage de fichiers partagés dans le cloud (NFS/SMB).</p>",
+      "images": [
+        "Diagramme simple comparant une VM seule avec un volume bloc, versus plusieurs VMs connectées à un serveur de fichiers central",
+        "Icônes des protocoles NFS (souvent associé à Linux) et SMB (souvent associé à Windows)"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifiez le principal cas d'usage d'un système de fichiers partagé (comme NFS ou SMB) dans le cloud.",
+        "niveau": "easy",
+        "reponse": "Permettre à plusieurs machines virtuelles (VMs) de lire et d'écrire simultanément sur les mêmes données, comme un répertoire partagé.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Différenciez cet usage de celui du stockage bloc (ex: EBS, disque managé).",
+            "niveau": "medium",
+            "reponse": "Le stockage bloc est attaché à une seule VM (comme un disque dur interne) et n'est pas nativement accessible en écriture par plusieurs VMs à la fois sans systèmes de fichiers clusterisés complexes. Le stockage fichier est conçu pour le partage multi-VMs."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Sélectionnez la paire de protocoles standard utilisés respectivement par les systèmes Linux et Windows pour le partage de fichiers en réseau.",
+        "niveau": "easy",
+        "reponse": "NFS (Network File System) pour Linux/Unix et SMB (Server Message Block) pour Windows.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Étude de cas : Migration vers un stockage partagé",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous êtes consultant cloud pour une PME camerounaise. Ils hébergent une application web critique (facturation) sur <strong>une seule VM</strong>. Actuellement, les factures générées sont sauvegardées sur le disque local de cette VM. Ils veulent ajouter deux nouvelles VMs pour gérer la charge, mais doivent absolument que les trois serveurs puissent accéder et modifier le même répertoire `factures/` en temps réel. Vous proposez une solution de stockage partagé.</p>",
+      "images": [
+        "Schéma de l'architecture actuelle : une VM unique avec un cadenas (verrou) sur ses données",
+        "Schéma de l'architecture cible : trois VMs connectées par des flèches à un nuage 'Système de fichiers partagé (NFS) au centre'"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Déterminez quel type de stockage cloud (objet, bloc, fichier) est le plus adapté à ce besoin. Justifiez votre réponse.",
+        "niveau": "medium",
+        "reponse": "Le stockage de fichiers (type 'File Storage') est le plus adapté. Justification : Le besoin est d'avoir un système de fichiers POSIX-like accessible en lecture/écriture simultanée par plusieurs VMs, ce que ni le stockage objet (API HTTP, pas un système de fichiers natif) ni le stockage bloc (non partagé) ne peuvent offrir nativement et simplement.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposez un service cloud spécifique pour AWS, Azure et GCP qui correspond à cette solution.",
+            "niveau": "hard",
+            "reponse": "AWS : Amazon EFS (Elastic File System). Azure : Azure Files. GCP : Filestore.",
+            "sousQuestions": []
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Comparez le montage d'un partage NFS (via EFS ou Filestore) sur votre VM Linux avec le montage d'un disque bloc supplémentaire (ex: EBS). Donnez deux différences majeures.",
+        "niveau": "medium",
+        "reponse": "1. **Partage :** Le partage NFS est accessible par plusieurs VMs simultanément ; un disque bloc ne l'est pas. 2. **Performance & latence :** Un disque bloc offre des performances (IOPS, débit) plus prédictibles et une latence plus faible car il est physiquement proche de la VM. Un système de fichiers partagé (NFS) a une latence réseau plus élevée mais une grande flexibilité de partage.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Architecture critique : Conception hybride et tolérance aux pannes",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous concevez une plateforme de traitement vidéo. Cinq VMs traitent des fichiers vidéo bruts (taille 2 Go chacun) et produisent des métadonnées (fichiers JSON de 2 Ko). Les contraintes : <br>- Toutes les VMs doivent lire les vidéos brutes en continu.<br>- Les VMs écrivent leurs métadonnées dans un dossier partagé `exports/`.<br>- Coût et performances optimisés.</p>",
+      "images": [
+        "Diagramme d'architecture avec des VMs connectées à deux types de stockage : un bloc de grande capacité pour les vidéos et un stockage fichier pour les JSON",
+        "Graphique de latence comparant la lecture séquentielle sur stockage bloc vs fichier"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Critiquez l'affirmation suivante : 'Nous allons tout mettre sur un partage NFS, c'est plus simple'. Dites pourquoi ce n'est pas optimal et proposez une architecture mixte.",
+        "niveau": "very hard",
+        "reponse": "Critique : Mettre les vidéos (gros fichiers, lecture séquentielle intensive) sur du NFS est inefficace car NFS ajoute une latence réseau et une surcharge de protocole. Les VMs passeraient leur temps à attendre les données. Proposez : 1. Pour les vidéos : utiliser un **stockage bloc** (ex: EBS, disque managé) attaché à chaque VM, ou un stockage objet comme S3 avec un cache local, ou un système de fichiers parallèles. 2. Pour les métadonnées (JSON, petits fichiers, écritures multiples) : utiliser un **système de fichiers partagé** (NFS/SMB) car le besoin de partage est critique et la taille des fichiers est petite.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez le concept de 'split-brain' et comment un bon stockage de fichiers cloud (EFS, Azure Files, Filestore) l'évite.",
+            "niveau": "hard",
+            "reponse": "Le 'split-brain' survient lorsque deux ou plusieurs serveurs essaient d'écrire simultanément sur la même zone d'un disque sans coordination, corrompant les données. Les solutions de stockage de fichiers cloud managées utilisent un verrouillage distribué et un système de métadonnées centralisé (cluster de contrôleurs) pour garantir la cohérence des écritures concurrentes, évitant ainsi le split-brain.",
+            "sousQuestions": []
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Proposez une commande type (Linux) pour monter un partage NFS nommé `ip-cloud:/partage/factures` sur le point de montage `/mnt/cloud_factures` de votre VM, avec une option garantissant que l'écriture est bien persistée sur le serveur.",
+        "niveau": "hard",
+        "reponse": "```bash\nsudo mount -t nfs -o sync,hard,rsize=1048576,wsize=1048576 ip-cloud:/partage/factures /mnt/cloud_factures\n```\nL'option `sync` force les écritures à être confirmées par le serveur avant que la commande d'écriture ne revienne, garantissant la persistance (au détriment des performances).",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

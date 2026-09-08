@@ -1,0 +1,158 @@
+[
+  {
+    "intitule": "Comprendre le rôle d'un pare-feu avec ACL",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Une ACL (Access Control List) est une série de règles appliquées par un routeur ou un pare-feu pour filtrer le trafic réseau. Associez chaque type de règle à son effet.</p><ul><li><code>permit tcp any any eq 80</code></li><li><code>deny ip 192.168.1.0 0.0.0.255 any</code></li><li><code>permit icmp any any</code></li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez l'effet de chaque règle sur le trafic réseau.",
+        "niveau": "easy",
+        "reponse": "1) Autorise le trafic TCP vers le port 80 (HTTP) depuis n'importe quelle source vers n'importe quelle destination. 2) Interdit tout le trafic IP provenant du réseau 192.168.1.0/24. 3) Autorise les paquets ICMP (ping, traceroute) dans les deux sens.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Ordre des règles ACL",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un administrateur configure cette ACL sur un routeur :</p><pre>1. deny tcp any any eq 22\n2. permit tcp 10.0.0.0 0.255.255.255 any eq 22\n3. permit ip any any</pre><p>Un utilisateur avec l'IP 10.0.0.50 tente de se connecter en SSH (port 22) vers un serveur externe.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "La connexion sera-t-elle autorisée ? Justifiez votre réponse en expliquant l'ordre d'évaluation des règles.",
+        "niveau": "medium",
+        "reponse": "Non, la connexion sera bloquée. La règle 1 (deny tcp any any eq 22) est évaluée en premier et correspond au trafic (port 22), donc le paquet est immédiatement refusé. La règle 2, plus spécifique, n'est jamais atteinte. Correction : placer la règle 2 avant la règle 1.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment corriger cette ACL pour autoriser uniquement le réseau 10.0.0.0/8 en SSH et bloquer tous les autres SSH ?",
+            "niveau": "medium",
+            "reponse": "1. permit tcp 10.0.0.0 0.255.255.255 any eq 22\n2. deny tcp any any eq 22\n3. permit ip any any"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Simuler une attaque et analyser avec Wireshark",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Dans un environnement de formation, vous simulez une attaque ARP spoofing entre deux machines. Vous capturez le trafic avec Wireshark.</p>",
+      "images": [
+        "Capture d'écran Wireshark montrant des paquets ARP avec des adresses MAC dupliquées"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Quels filtres Wireshark utiliseriez-vous pour : a) voir uniquement les paquets ARP ? b) voir le trafic HTTP échangé ? c) détecter une adresse MAC anormalement présente ?",
+        "niveau": "hard",
+        "reponse": "a) Filtre `arp` b) Filtre `http` ou `tcp.port == 80` c) Filtre `arp.duplicate-address-detected` (ou analyser manuellement les réponses ARP avec la même IP mais MAC différente). On peut aussi utiliser `arp.opcode == 2` pour voir les réponses ARP non sollicitées (gratuitous ARP).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment Wireshark peut-il aider à identifier une attaque DDoS par SYN flood ?",
+            "niveau": "hard",
+            "reponse": "Filtrer `tcp.flags.syn == 1 and tcp.flags.ack == 0` (uniquement les SYN). Une augmentation soudaine du nombre de SYN par seconde sans les ACK correspondants indique un SYN flood. On peut aussi utiliser Statistiques → Flux de conversations → onglet IPv4 pour voir les IP sources avec des connexions anormalement élevées."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Diagnostiquer une panne réseau",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un utilisateur se plaint de ne plus avoir accès à Internet. Voici les résultats des commandes exécutées sur sa machine :</p><ul><li><code>ipconfig</code> : IP 169.254.87.23, masque 255.255.0.0, pas de passerelle</li><li><code>ping 127.0.0.1</code> : OK</li><li><code>ping 8.8.8.8</code> : Délai d'attente dépassé</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifiez le problème. Quelle est la cause probable et quelles actions correctives proposez-vous ?",
+        "niveau": "medium",
+        "reponse": "L'adresse IP 169.254.x.x est une APIPA (Auto-configuration IPv4), attribuée lorsque le client ne peut pas contacter un serveur DHCP. Cause probable : câble débranché, serveur DHCP hors service, switch défectueux. Actions : 1) Vérifier le câble réseau / connexion WiFi. 2) Exécuter `ipconfig /renew` (Windows) ou `dhclient` (Linux) pour forcer une demande DHCP. 3) Vérifier le serveur DHCP (ping, redémarrer service). 4) Attribuer une IP statique temporairement si nécessaire.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Configurer un pare-feu pour un serveur web",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous devez configurer un pare-feu pour protéger un serveur web (IP 203.0.113.10). Le serveur doit être accessible en HTTP (80) et HTTPS (443) depuis Internet. L'administration à distance (SSH, port 22) n'est autorisée que depuis le réseau interne 192.168.1.0/24. Tout autre accès entrant doit être bloqué.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez les règles ACL (ordre inclus) pour implémenter cette politique. Expliquez pourquoi l'ordre est important.",
+        "niveau": "hard",
+        "reponse": "Règles (du plus spécifique au plus général) :<br>1. permit tcp 192.168.1.0 0.0.0.255 any eq 22 (SSH admin depuis interne)<br>2. permit tcp any any eq 80 (HTTP public)<br>3. permit tcp any any eq 443 (HTTPS public)<br>4. deny ip any any (blocage par défaut). Ordre important : la règle SSH doit précéder le deny final, mais on place d'abord les règles d'autorisation. Le deny final bloque tout le reste.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Un utilisateur d'Internet tente d'accéder au serveur SSH. Que se passe-t-il ?",
+            "niveau": "easy",
+            "reponse": "La règle 4 (deny ip any any) bloque le paquet car aucune règle d'autorisation ne correspond au port 22 pour une source externe."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Détecter une attaque via les logs du pare-feu",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Voici un extrait des logs d'un pare-feu :</p><pre>2025-01-20 09:15:23 DROP TCP 203.0.113.45:12345 -> 192.168.1.100:22 [SYN]\n2025-01-20 09:15:23 DROP TCP 203.0.113.45:12346 -> 192.168.1.100:22 [SYN]\n2025-01-20 09:15:24 DROP TCP 203.0.113.45:12347 -> 192.168.1.100:22 [SYN]\n...(1000 lignes similaires en 5 secondes)...</pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifiez l'attaque en cours. Quelle est la cible ? Que signifie le flag [SYN] ? Proposez une contre-mesure.",
+        "niveau": "very hard",
+        "reponse": "Attaque : SYN flood (type de DDoS). Cible : la machine interne 192.168.1.100 sur le port 22 (SSH). [SYN] est le premier paquet d'établissement d'une connexion TCP. L'attaquant envoie des SYN sans répondre aux SYN-ACK, saturant la file d'attente. Contre-mesures : 1) Activer SYN cookies sur le serveur. 2) Configurer une règle de rate limiting sur le pare-feu (ex: 'limit 10/sec' par IP source). 3) Contacter le FAI pour un filtrage en amont.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Si le pare-feu était en mode 'allow' par défaut, l'attaque aurait-elle réussi ?",
+            "niveau": "hard",
+            "reponse": "Oui, l'attaque saturerait le serveur cible car les paquets SYN arriveraient jusqu'au serveur. Le pare-feu en mode 'deny' par défaut protège en bloquant les paquets, mais surcharge quand même le pare-feu."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Analyser un flux HTTP avec Wireshark",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous capturez le trafic entre un navigateur et un site web. Vous filtrez avec <code>http</code> dans Wireshark et voyez une requête GET vers <code>/login.php</code> avec des paramètres dans l'URL contenant 'user=admin&password=secret'.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Quel problème de sécurité cela révèle-t-il ? Que devrait faire le développeur du site ?",
+        "niveau": "medium",
+        "reponse": "Le mot de passe est transmis en clair dans l'URL (paramètre GET). Problèmes : 1) Le mot de passe reste dans les logs du serveur, du proxy, du navigateur. 2) Non chiffré (http au lieu de https). Solution : 1) Utiliser HTTPS (TLS) pour chiffrer toute la communication. 2) Utiliser la méthode POST avec les données dans le corps de la requête (au lieu de l'URL). 3) Ne jamais transmettre de mots de passe en clair.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

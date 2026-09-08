@@ -1,0 +1,116 @@
+[
+  {
+    "intitule": "Contrôle d'accès : Création et gestion des utilisateurs",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Dans un système de gestion de base de données (SGBD), la sécurité passe par la gestion fine des utilisateurs. Vous devez créer un environnement pour une petite entreprise avec trois profils : Admin, Chef de projet, et Stagiaire.</p>",
+      "images": [
+        "Schéma d'un serveur de base de données avec trois utilisateurs ayant différents niveaux d'accès (Admin: clé maîtresse, Chef de projet: accès lecture/écriture, Stagiaire: accès lecture seule)"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédigez les commandes SQL permettant de créer les trois utilisateurs suivants : 'Admin' (mot de passe 'Admin123'), 'ChefProjet' (mot de passe 'Projet456'), 'Stagiaire' (mot de passe 'Stag789').",
+        "niveau": "easy",
+        "reponse": "CREATE USER 'Admin'@'localhost' IDENTIFIED BY 'Admin123';\nCREATE USER 'ChefProjet'@'localhost' IDENTIFIED BY 'Projet456';\nCREATE USER 'Stagiaire'@'localhost' IDENTIFIED BY 'Stag789';",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez à quoi sert le paramètre '@localhost' dans la commande CREATE USER.",
+        "niveau": "medium",
+        "reponse": "Le paramètre '@localhost' spécifie l'hôte à partir duquel l'utilisateur peut se connecter. 'localhost' signifie que l'utilisateur ne peut se connecter qu'à partir du serveur lui-même (connexion locale). Pour une connexion à distance, on utiliserait '@%' ou une adresse IP spécifique.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Application du moindre privilège",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous êtes administrateur d'une base de données nommée 'Societe_Vente'. Cette base contient les tables : 'Employes' (salaire, nom, adresse), 'Produits' (prix, stock), et 'Commandes' (montant, date).</p>",
+      "images": [
+        "Diagramme de base de données avec trois tables (Employes, Produits, Commandes) reliées entre elles"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Appliquez le principe du moindre privilège. Attribuez les privilèges appropriés (SELECT, INSERT, UPDATE, DELETE) à l'utilisateur 'ChefProjet' en justifiant chaque choix.",
+        "niveau": "medium",
+        "reponse": "GRANT SELECT, INSERT, UPDATE, DELETE ON Societe_Vente.Commandes TO 'ChefProjet'@'localhost';\nGRANT SELECT, UPDATE ON Societe_Vente.Produits TO 'ChefProjet'@'localhost';\nGRANT SELECT ON Societe_Vente.Employes TO 'ChefProjet'@'localhost';\n\nJustification : Le chef de projet a besoin de gérer les commandes (tous droits). Il doit pouvoir modifier le stock des produits (UPDATE) mais pas créer/supprimer des produits (pas DELETE/INSERT). Il peut voir les employés (SELECT) mais ne doit pas modifier leurs salaires (pas UPDATE).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Rédigez la commande pour retirer (REVOKE) uniquement le droit de modification (UPDATE) sur la colonne 'prix' de la table 'Produits' à l'utilisateur 'ChefProjet'.",
+        "niveau": "hard",
+        "reponse": "REVOKE UPDATE (prix) ON Societe_Vente.Produits FROM 'ChefProjet'@'localhost';",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Audit et correction des vulnérabilités",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Lors d'un audit de sécurité, vous découvrez que l'utilisateur 'Stagiaire' a reçu tous les privilèges sur la base 'Societe_Vente' : <code>GRANT ALL PRIVILEGES ON Societe_Vente.* TO 'Stagiaire'@'%';</code></p>",
+      "images": [
+        "Capture d'écran d'une console montrant une ligne de commande GRANT ALL PRIVILEGES avec une icône d'avertissement rouge"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analysez et expliquez les trois risques majeurs liés à cette attribution excessive de privilèges à un stagiaire.",
+        "niveau": "hard",
+        "reponse": "1. Risque de suppression de données : Le stagiaire peut exécuter DROP TABLE ou DELETE sans restriction.\n2. Risque de modification de structure : Il peut modifier la structure des tables (ALTER) ou créer des index, ce qui peut dégrader les performances.\n3. Risque d'élévation de privilèges : Il peut utiliser GRANT OPTION pour donner ses droits à d'autres utilisateurs malveillants.\n4. Connexion à distance : Le '%' permet une connexion depuis n'importe où, augmentant la surface d'attaque.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Rédigez un script complet pour : 1) Révoquer tous les privilèges existants du stagiaire, 2) Lui donner uniquement le droit de lecture (SELECT) sur la table 'Produits', 3) Appliquer les modifications.",
+        "niveau": "hard",
+        "reponse": "-- 1. Révoquer tous les privilèges existants\nREVOKE ALL PRIVILEGES, GRANT OPTION FROM 'Stagiaire'@'%';\n\n-- 2. Donner uniquement SELECT sur la table Produits\nGRANT SELECT ON Societe_Vente.Produits TO 'Stagiaire'@'%';\n\n-- 3. Appliquer les modifications\nFLUSH PRIVILEGES;",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Schéma de sécurité multicouche",
+    "type": "ressource",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Une banque dispose de trois niveaux d'utilisateurs : <strong>Agent de guichet</strong> (besoin : créer des comptes et enregistrer des dépôts/retraits), <strong>Conseiller client</strong> (besoin : consulter le solde et l'historique des clients, modifier l'adresse), <strong>Auditeur</strong> (besoin : lire toutes les transactions mais jamais modifier/supprimer).</p>",
+      "images": [
+        "Pyramide des privilèges avec trois niveaux : Agent (bas, accès opérationnel restreint), Conseiller (milieu, accès client modifiable), Auditeur (haut, lecture seule globale)"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevez une matrice des privilèges pour la table 'Comptes' (colonnes : idCompte, solde, dateCreation, idClient, adressePostale) et la table 'Transactions' (idTrans, montant, type, date, idCompte). Définissez précisément (SELECT, INSERT, UPDATE, DELETE) pour chaque profil.",
+        "niveau": "very hard",
+        "reponse": "**Agent de guichet :**\n- Comptes : INSERT (créer compte), UPDATE (uniquement solde pour dépôt/retrait), SELECT (idClient pour vérification)\n- Transactions : INSERT (ajouter chaque mouvement), SELECT (vérifier historique rapide)\n\n**Conseiller client :**\n- Comptes : SELECT (toutes colonnes sauf ?), UPDATE (uniquement adressePostale)\n- Transactions : SELECT (historique complet)\n\n**Auditeur :**\n- Comptes : SELECT (toutes colonnes)\n- Transactions : SELECT (toutes colonnes)\n\n(Note : Aucun profil n'a DELETE sur ces tables financières pour respecter la traçabilité.)",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Rédigez la commande GRANT spécifique pour le profil 'Auditeur' selon la matrice ci-dessus.",
+            "niveau": "medium",
+            "reponse": "GRANT SELECT ON Banque.Comptes TO 'Auditeur'@'localhost';\nGRANT SELECT ON Banque.Transactions TO 'Auditeur'@'localhost';"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Pourquoi aucun profil ne se voit attribuer le droit DELETE ? Justifiez avec le principe de non-répudiation.",
+            "niveau": "hard",
+            "reponse": "Dans le domaine bancaire, le droit DELETE violerait le principe de non-répudiation et de traçabilité (audit trail). Toute transaction, même erronée, doit rester dans l'historique pour être corrigée par une transaction inverse (contre-passation). La suppression définitive empêcherait la détection de fraudes ou d'erreurs ultérieurement."
+          }
+        ]
+      }
+    ]
+  }
+]

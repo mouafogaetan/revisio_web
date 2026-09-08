@@ -1,0 +1,175 @@
+[
+  {
+    "intitule": "Configuration de l'environnement de test avec Jest",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous êtes développeur backend sur la plateforme e-commerce <strong>SawaMart</strong>. L'équipe souhaite mettre en place des tests automatisés pour garantir la qualité du code.</p><p>Répondez aux questions suivantes concernant la configuration de Jest dans un projet NestJS :</p><p>Rappel : Dans un projet NestJS, le fichier <code>jest.config.js</code> permet de configurer l'environnement de test.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez pourquoi il est important de configurer <code>jest.config.js</code> avec <code>moduleFileExtensions: ['js', 'json', 'ts']</code>.",
+        "niveau": "easy",
+        "reponse": "Cette configuration permet à Jest de reconnaître et d'exécuter les fichiers avec les extensions .js, .json et .ts. Elle est essentielle car les tests dans un projet NestJS sont écrits en TypeScript. Sans cette configuration, Jest ne pourrait pas trouver ni exécuter les fichiers de test.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Décrivez le rôle de la propriété <code>rootDir</code> dans la configuration Jest.",
+        "niveau": "medium",
+        "reponse": "La propriété <code>rootDir</code> définit le répertoire racine où Jest doit commencer à chercher les fichiers de test. Elle permet de structurer le projet en indiquant à Jest où se trouve la base du code source. Cela évite que Jest scanne des dossiers inutiles comme <code>node_modules</code> et accélère l'exécution des tests.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Pourquoi utiliser <code>testRegex: '.*\\\\.spec\\\\.ts$'</code> plutôt qu'une simple extension ?",
+        "niveau": "hard",
+        "reponse": "Cette configuration utilise une expression régulière qui permet à Jest de n'exécuter que les fichiers dont le nom correspond au pattern <code>*.spec.ts</code>. C'est une bonne pratique car :<br>• Elle permet de séparer clairement les fichiers de test des fichiers source<br>• On peut avoir d'autres fichiers .ts dans le projet qui ne sont pas des tests<br>• Cela respecte la convention de nommage de NestJS où les tests unitaires sont dans des fichiers <code>*.spec.ts</code> et les tests d'intégration dans <code>*.integration-spec.ts</code>.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Tests unitaires d'un service de transaction",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans le cadre du développement de la plateforme e-commerce <strong>SawaMart</strong>, vous devez écrire des tests unitaires pour le <code>WalletService</code> qui gère les opérations financières des utilisateurs.</p><p>Voici un extrait du service à tester :</p><pre style='background:#1a202c; color:#a0aec0; padding:15px; border-radius:8px; font-size:0.8rem;'>\n@Injectable()\nexport class WalletService {\n  constructor(\n    @InjectRepository(Wallet)\n    private walletRepository: Repository&lt;Wallet&gt;,\n  ) {}\n\n  async credit(userId: string, amount: number): Promise&lt;Wallet&gt; {\n    const wallet = await this.walletRepository.findOne({ where: { userId } });\n    if (!wallet) throw new NotFoundException('Wallet not found');\n    \n    wallet.balance += amount;\n    return await this.walletRepository.save(wallet);\n  }\n}\n</pre><p>Vous devez tester la méthode <code>credit</code> qui crédite le wallet d'un utilisateur.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez un test unitaire pour vérifier que la méthode <code>credit</code> augmente correctement le solde du wallet.",
+        "niveau": "medium",
+        "reponse": "```typescript\nit('should increase wallet balance when credit is called', async () => {\n  // Arrange\n  const userId = 'test-user-id';\n  const initialBalance = 1000;\n  const creditAmount = 500;\n  const mockWallet = { id: 'wallet-1', userId, balance: initialBalance };\n  \n  jest.spyOn(walletRepository, 'findOne').mockResolvedValue(mockWallet);\n  jest.spyOn(walletRepository, 'save').mockResolvedValue({ ...mockWallet, balance: initialBalance + creditAmount });\n  \n  // Act\n  const result = await service.credit(userId, creditAmount);\n  \n  // Assert\n  expect(result.balance).toBe(initialBalance + creditAmount);\n  expect(walletRepository.save).toHaveBeenCalledWith(\n    expect.objectContaining({ balance: initialBalance + creditAmount })\n  );\n});\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Justifiez l'utilisation de <code>jest.spyOn</code> plutôt qu'un simple mock de la méthode.",
+            "niveau": "medium",
+            "reponse": "<code>jest.spyOn</code> permet de surveiller (espionner) l'appel d'une méthode réelle tout en pouvant modifier son comportement. Cela offre plus de flexibilité car on peut :<br>• Vérifier que la méthode a bien été appelée (<code>toHaveBeenCalled</code>)<br>• Vérifier avec quels paramètres elle a été appelée<br>• Restaurer le comportement original si nécessaire (<code>mockRestore</code>)<br>• C'est plus proche du fonctionnement réel du code."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Identifiez les cas limites que vous devriez tester pour cette méthode.",
+            "niveau": "hard",
+            "reponse": "Les cas limites à tester sont :<br>• <strong>Wallet non trouvé</strong> : userId inexistant → <code>NotFoundException</code><br>• <strong>Montant négatif</strong> : crédit avec un montant négatif (devrait être refusé)<br>• <strong>Montant zéro</strong> : crédit avec 0 (le solde ne change pas)<br>• <strong>Montant très élevé</strong> : vérifier que le type de données supporte de grands nombres<br>• <strong>Problème de sauvegarde</strong> : simuler une erreur lors de <code>walletRepository.save</code>"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Proposez une stratégie pour tester la méthode <code>debit</code> qui doit décrémenter le solde.",
+        "niveau": "hard",
+        "reponse": "La stratégie de test pour <code>debit</code> doit inclure :<br><br>1. <strong>Test nominal</strong> : Vérifier que le solde diminue correctement<br>2. <strong>Test de solde insuffisant</strong> : Tenter de débiter plus que le solde disponible et vérifier qu'une exception est levée<br>3. <strong>Vérification des appels</strong> : S'assurer que <code>walletRepository.save</code> est appelé avec le nouveau solde<br>4. <strong>Atomicité</strong> : Utiliser un <code>try/catch</code> dans le test pour vérifier qu'en cas d'erreur, le solde n'est pas modifié<br><br>Exemple de test : <br><code>it('should throw error when balance is insufficient', async () => {<br>  const userId = 'test-user-id';<br>  const mockWallet = { id: 'wallet-1', userId, balance: 100 };<br>  jest.spyOn(walletRepository, 'findOne').mockResolvedValue(mockWallet);<br>  await expect(service.debit(userId, 200)).rejects.toThrow('Insufficient balance');<br>});</code>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Tests d'intégration d'un endpoint de paiement",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>L'API de <strong>SawaMart</strong> expose un endpoint <code>POST /deposits/initiate</code> qui permet aux utilisateurs d'initier un dépôt.</p><p>Voici le contrôleur à tester :</p><pre style='background:#1a202c; color:#a0aec0; padding:15px; border-radius:8px; font-size:0.8rem;'>\n@Controller('deposits')\nexport class DepositController {\n  constructor(private depositService: DepositService) {}\n\n  @Post('initiate')\n  @UseGuards(JwtAuthGuard)\n  async initiate(@Req() req, @Body() dto: InitiateDepositDto) {\n    return this.depositService.initiate(req.user.id, dto);\n  }\n}\n</pre><p>Vous devez mettre en place des tests d'intégration pour cet endpoint.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevez un test d'intégration complet pour l'endpoint <code>POST /deposits/initiate</code> en utilisant <code>supertest</code>.",
+        "niveau": "hard",
+        "reponse": "```typescript\nimport { Test, TestingModule } from '@nestjs/testing';\nimport { INestApplication } from '@nestjs/common';\nimport * as request from 'supertest';\nimport { AppModule } from '../src/app.module';\nimport { DataSource } from 'typeorm';\n\ndescribe('DepositController (integration)', () => {\n  let app: INestApplication;\n  let jwtToken: string;\n\n  beforeAll(async () => {\n    const moduleFixture: TestingModule = await Test.createTestingModule({\n      imports: [AppModule],\n    }).compile();\n\n    app = moduleFixture.createNestApplication();\n    await app.init();\n\n    // Login pour obtenir un token JWT\n    const loginResponse = await request(app.getHttpServer())\n      .post('/auth/login')\n      .send({ email: 'test@example.com', password: 'password123' });\n    jwtToken = loginResponse.body.accessToken;\n  });\n\n  afterAll(async () => {\n    await app.get(DataSource).dropDatabase();\n    await app.close();\n  });\n\n  it('should initiate a deposit successfully', async () => {\n    const depositDto = {\n      amount: 10000,\n      phoneNumber: '+237699999999',\n      paymentMethod: 'ORANGE_MONEY'\n    };\n\n    const response = await request(app.getHttpServer())\n      .post('/deposits/initiate')\n      .set('Authorization', `Bearer ${jwtToken}`)\n      .send(depositDto)\n      .expect(201);\n\n    expect(response.body).toHaveProperty('message', 'Demande de dépôt initiée.');\n    expect(response.body).toHaveProperty('depositId');\n    expect(response.body).toHaveProperty('reference');\n    expect(response.body.depositId).toMatch(/^[0-9a-f-]{36}$/); // UUID\n  });\n\n  it('should return 401 when no token is provided', async () => {\n    await request(app.getHttpServer())\n      .post('/deposits/initiate')\n      .send({ amount: 10000, phoneNumber: '+237699999999' })\n      .expect(401);\n  });\n});\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez pourquoi on utilise <code>beforeAll</code> pour obtenir le token JWT plutôt que de le faire dans chaque test.",
+            "niveau": "medium",
+            "reponse": "On utilise <code>beforeAll</code> pour :<br>• Éviter la duplication de code (DRY)<br>• Optimiser les performances en ne faisant qu'une seule requête de login<br>• Garantir que le token est valide pour tous les tests du bloc<br>• Si le token était obtenu dans chaque test, cela ralentirait l'exécution et rendrait les tests moins lisibles."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Décrivez comment vous géreriez les données de test pour éviter les conflits entre les tests.",
+            "niveau": "hard",
+            "reponse": "Pour gérer les données de test :<br>1. <strong>Avant tous les tests (<code>beforeAll</code>)</strong> : Initialiser la base de données avec des données de base (seeds)<br>2. <strong>Avant chaque test (<code>beforeEach</code>)</strong> : Nettoyer les données spécifiques aux tests précédents et insérer des données propres<br>3. <strong>Utiliser des transactions</strong> : Exécuter chaque test dans une transaction et la rollbacker à la fin<br>4. <strong>Générer des données uniques</strong> : Utiliser des IDs uniques (ex: <code>Date.now()</code> + <code>Math.random()</code>) pour éviter les conflits<br>5. <strong>Nettoyer après les tests (<code>afterAll</code>)</strong> : Supprimer toutes les données ou drop la base de test"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Proposez une structure de fichiers pour organiser les tests d'intégration dans le projet.",
+        "niveau": "medium",
+        "reponse": "Une structure recommandée :<br><br>```\nsrc/\n├── modules/\n│   ├── deposit/\n│   │   ├── deposit.module.ts\n│   │   ├── deposit.controller.ts\n│   │   ├── deposit.service.ts\n│   │   ├── dto/\n│   │   └── __tests__/\n│   │       ├── deposit.service.spec.ts       # Tests unitaires\n│   │       └── deposit.controller.integration-spec.ts  # Tests d'intégration\n├── database/\n│   ├── seeds/\n│   │   └── test-data.seed.ts                 # Données de test communes\n│   └── migrations/\ntest/\n├── jest-e2e.json                             # Config pour les tests e2e\n├── setup.ts                                  # Initialisation globale des tests\ntest-data/\n├── factories/                                # Factory pour créer des données\n│   └── user.factory.ts\n└── fixtures/                                 # Données de test statiques\n    └── users.json\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Seeding de données pour les tests",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Pour faciliter les tests sur la plateforme <strong>SawaMart</strong>, l'équipe souhaite mettre en place un système de <strong>seeding</strong> (génération de données de test).</p><p>Vous devez créer des données de test pour les entités suivantes :</p><ul><li><code>User</code> : avec différents rôles (admin, vendeur, acheteur)</li><li><code>Wallet</code> : avec différents soldes</li><li><code>Product</code> : avec différentes catégories</li><li><code>Transaction</code> : avec différents statuts</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevez un fichier <code>test-data.seed.ts</code> qui génère des données de test pour l'ensemble de l'application.",
+        "niveau": "hard",
+        "reponse": "```typescript\nimport { DataSource } from 'typeorm';\nimport { User } from '../src/database/entities/user.entity';\nimport { Wallet } from '../src/database/entities/wallet.entity';\nimport { Product } from '../src/database/entities/product.entity';\nimport { Category } from '../src/database/entities/category.entity';\nimport * as bcrypt from 'bcrypt';\n\nexport class TestDataSeeder {\n  constructor(private dataSource: DataSource) {}\n\n  async seed(): Promise<void> {\n    await this.clearData();\n    await this.seedUsers();\n    await this.seedCategories();\n    await this.seedProducts();\n  }\n\n  private async clearData(): Promise<void> {\n    await this.dataSource.query('TRUNCATE TABLE \"transaction\" CASCADE;');\n    await this.dataSource.query('TRUNCATE TABLE product CASCADE;');\n    await this.dataSource.query('TRUNCATE TABLE category CASCADE;');\n    await this.dataSource.query('TRUNCATE TABLE wallet CASCADE;');\n    await this.dataSource.query('TRUNCATE TABLE \"user\" CASCADE;');\n  }\n\n  private async seedUsers(): Promise<void> {\n    const userRepo = this.dataSource.getRepository(User);\n    const walletRepo = this.dataSource.getRepository(Wallet);\n\n    const users = [\n      { email: 'admin@sawamart.com', password: 'admin123', role: 'admin' },\n      { email: 'seller1@sawamart.com', password: 'seller123', role: 'seller' },\n      { email: 'seller2@sawamart.com', password: 'seller123', role: 'seller' },\n      { email: 'buyer1@example.com', password: 'buyer123', role: 'buyer' },\n      { email: 'buyer2@example.com', password: 'buyer123', role: 'buyer' },\n    ];\n\n    for (const userData of users) {\n      const user = userRepo.create({\n        ...userData,\n        password: await bcrypt.hash(userData.password, 10),\n        isActive: true,\n        createdAt: new Date(),\n      });\n      await userRepo.save(user);\n\n      // Créer un wallet pour chaque utilisateur\n      const wallet = walletRepo.create({\n        userId: user.id,\n        balance: Math.floor(Math.random() * 50000) + 1000,\n        currency: 'XAF',\n      });\n      await walletRepo.save(wallet);\n    }\n  }\n\n  private async seedCategories(): Promise<void> {\n    const categoryRepo = this.dataSource.getRepository(Category);\n    const categories = [\n      { name: 'Électronique', description: 'Téléphones, ordinateurs...' },\n      { name: 'Mode', description: 'Vêtements, chaussures...' },\n      { name: 'Maison', description: 'Meubles, décoration...' },\n      { name: 'Auto', description: 'Pièces détachées, accessoires...' },\n    ];\n    await categoryRepo.save(categoryRepo.create(categories));\n  }\n\n  private async seedProducts(): Promise<void> {\n    const productRepo = this.dataSource.getRepository(Product);\n    const categoryRepo = this.dataSource.getRepository(Category);\n    const categories = await categoryRepo.find();\n\n    const products = [\n      { name: 'iPhone 13', price: 850000, category: categories[0], stock: 10 },\n      { name: 'Samsung Galaxy S21', price: 750000, category: categories[0], stock: 8 },\n      { name: 'T-shirt Nike', price: 15000, category: categories[1], stock: 50 },\n      { name: 'Canapé 3 places', price: 250000, category: categories[2], stock: 5 },\n      { name: 'Pneu Michelin 17\"', price: 120000, category: categories[3], stock: 20 },\n    ];\n\n    for (const productData of products) {\n      const product = productRepo.create({\n        ...productData,\n        status: 'active',\n        createdAt: new Date(),\n      });\n      await productRepo.save(product);\n    }\n  }\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez l'importance du <code>TRUNCATE ... CASCADE</code> dans le seeding.",
+        "niveau": "medium",
+        "reponse": "Le <code>TRUNCATE ... CASCADE</code> est utilisé pour :<br>• Supprimer toutes les données des tables en une seule opération rapide<br>• Réinitialiser les séquences d'auto-incrémentation<br>• Gérer les dépendances de clés étrangères (CASCADE supprime automatiquement les enregistrements liés)<br>• Nettoyer la base de données avant chaque série de tests pour garantir un état de référence<br>• Éviter les conflits de données entre différentes exécutions de tests<br><br>Attention : Il est crucial de l'utiliser dans le bon ordre (des tables les plus référencées aux moins référencées) pour respecter les contraintes d'intégrité référentielle."
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse de la couverture de code",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Après avoir écrit plusieurs tests pour votre API <strong>SawaMart</strong>, vous analysez le rapport de couverture de code généré par Jest.</p><p>Le rapport indique les résultats suivants :</p><ul><li>Statements : 78%</li><li>Branches : 65%</li><li>Functions : 82%</li><li>Lines : 76%</li></ul>",
+      "images": [
+        "graphique à barres montrant la couverture de code avec les métriques : Statements 78%, Branches 65%, Functions 82%, Lines 76%"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Interprétez les résultats du rapport de couverture de code. Que vous disent ces métriques ?",
+        "niveau": "medium",
+        "reponse": "Les métriques indiquent :<br>• <strong>Statements (78%)</strong> : 78% des instructions du code sont exécutées par les tests. Cela signifie que 22% du code n'est pas testé.<br>• <strong>Branches (65%)</strong> : Seulement 65% des branches conditionnelles (if/else, switch, etc.) sont testées. C'est la métrique la plus faible, indiquant que certains cas de figure ne sont pas couverts.<br>• <strong>Functions (82%)</strong> : 82% des fonctions sont appelées au moins une fois pendant les tests.<br>• <strong>Lines (76%)</strong> : 76% des lignes de code sont exécutées.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Identifiez quelle métrique est la plus préoccupante et expliquez pourquoi.",
+            "niveau": "medium",
+            "reponse": "La métrique la plus préoccupante est <strong>Branches (65%)</strong>. C'est souvent la plus difficile à atteindre car elle nécessite de tester toutes les branches possibles d'une condition (if/else, try/catch, etc.). Une couverture de branches faible signifie que certains chemins d'exécution ne sont pas testés, ce qui peut cacher des bugs dans des cas limites (ex: gestion des erreurs, conditions extrêmes)."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Proposez des actions pour améliorer cette métrique.",
+            "niveau": "hard",
+            "reponse": "Pour améliorer la couverture de branches :<br>1. <strong>Identifier les branches non couvertes</strong> : Utiliser l'option <code>--coverage</code> avec Jest pour voir le rapport détaillé par fichier<br>2. <strong>Ajouter des tests pour les cas d'erreur</strong> : Tester les exceptions, les cas de wallet non trouvé, solde insuffisant, etc.<br>3. <strong>Tester les conditions de bord</strong> : Valeurs limites (0, null, undefined, nombres négatifs)<br>4. <strong>Utiliser des <code>describe</code> imbriqués</strong> pour structurer les tests par scénario<br>5. <strong>Mettre en place des tests de mutation</strong> pour vérifier la robustesse des tests"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Discutez de la pertinence de viser 100% de couverture de code. Est-ce toujours une bonne pratique ?",
+        "niveau": "hard",
+        "reponse": "Viser 100% de couverture n'est pas toujours une bonne pratique car :<br><br><strong>Avantages :</strong><br>• Réduit les risques de bugs non détectés<br>• Augmente la confiance dans le code<br>• Facilite les refactorings<br><br><strong>Inconvénients :</strong><br>• Le coût en temps de développement peut être très élevé<br>• Certaines lignes de code (logs, configuration) n'ont pas besoin d'être testées<br>• Peut mener à des tests artificiels qui ne testent que la couverture<br>• Le temps d'exécution des tests peut devenir trop long<br><br><strong>Recommandation :</strong> Viser entre 80% et 90% pour les métriques clés, en se concentrant sur les parties critiques du code (logique métier, paiements, sécurité). Utiliser l'analyse de couverture pour identifier les zones à risques, pas comme un objectif absolu.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

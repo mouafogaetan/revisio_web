@@ -1,0 +1,125 @@
+[
+  {
+    "intitule": "Compréhension du Modèle MapReduce",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Cet exercice vise à évaluer votre compréhension du modèle de programmation MapReduce, de ses phases et de son fonctionnement.</p><p><strong>Contexte :</strong> MapReduce est un modèle de programmation pour le traitement de données à grande échelle. Il se compose de deux phases principales : la phase <strong>Map</strong> et la phase <strong>Reduce</strong>, avec une phase intermédiaire de <strong>Shuffle</strong>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez les trois phases principales d'un job MapReduce (Map, Shuffle, Reduce) en expliquant le rôle de chacune.",
+        "niveau": "easy",
+        "reponse": "1. **Phase Map** : Cette phase prend les données d'entrée et les transforme en une série de paires clé-valeur intermédiaires. La fonction Map est appliquée à chaque enregistrement d'entrée et produit une ou plusieurs paires (clé, valeur). 2. **Phase Shuffle** : C'est une phase intermédiaire automatique qui regroupe et trie les paires clé-valeur intermédiaires par clé. Toutes les valeurs associées à une même clé sont envoyées à un seul réducteur. 3. **Phase Reduce** : Cette phase prend les paires (clé, liste de valeurs) regroupées par le Shuffle et applique la fonction Reduce pour produire un résultat agrégé ou final. La fonction Reduce combine les valeurs pour chaque clé.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez le rôle du 'Partitioner' dans la phase Shuffle.",
+            "niveau": "medium",
+            "reponse": "Le Partitioner est responsable de la répartition des paires clé-valeur intermédiaires entre les différents réducteurs. Il détermine, pour chaque paire clé-valeur, à quel réducteur elle sera envoyée. Par défaut, le partitionneur est basé sur la fonction de hachage de la clé (hash(key) % nombre_de_réducteurs). Le partitionneur est important pour équilibrer la charge entre les réducteurs et pour s'assurer que toutes les valeurs d'une même clé sont envoyées au même réducteur."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Quelle est la différence entre un 'Combiner' et un 'Reducer' ?",
+            "niveau": "medium",
+            "reponse": "Un **Combiner** est une fonction de réduction locale qui s'exécute sur chaque nœud Map après la phase Map et avant le Shuffle. Il permet de réduire la quantité de données transférées lors du Shuffle en agrégeant localement les valeurs pour une même clé. La fonction du Combiner est généralement la même que celle du Reducer (ex: une somme). Le **Reducer**, quant à lui, s'exécute sur les données globales (après le Shuffle) et produit le résultat final agrégé. Le Combiner est une optimisation (optionnelle) qui améliore les performances en réduisant le trafic réseau."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Comparez MapReduce avec Spark en termes de modèle de traitement, de performances et de gestion des données.",
+        "niveau": "hard",
+        "reponse": "**Modèle de traitement** : MapReduce est un modèle par lots (batch) où chaque job est exécuté en deux phases (Map et Reduce) avec écriture intermédiaire sur disque entre les phases. Spark, quant à lui, utilise un modèle de traitement en mémoire (in-memory) avec des RDD (Resilient Distributed Datasets) et un DAG (Directed Acyclic Graph) qui permet de chaîner les transformations et d'éviter les écritures intermédiaires sur disque. **Performances** : Spark est généralement plus rapide que MapReduce pour les workloads itératifs et interactifs grâce à la mise en mémoire cache des données et à l'exécution optimisée des DAGs. MapReduce écrit les résultats intermédiaires sur disque, ce qui le rend plus lent pour les itérations. **Gestion des données** : MapReduce est conçu pour HDFS et son modèle de localité des données. Spark peut s'exécuter sur HDFS, mais aussi sur d'autres systèmes de fichiers et offre une API plus riche (DataFrames, SQL, Streaming, ML).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Analysez le code WordCount suivant en identifiant les fonctions Map et Reduce, puis proposez une modification pour compter les mots en ignorant la casse.",
+        "niveau": "medium",
+        "reponse": "<p>Code WordCount typique en Java :</p><pre style='background-color:#f4f4f4;padding:10px;border-radius:5px;'><code>public static class Map extends MapReduceBase implements Mapper&lt;LongWritable, Text, Text, IntWritable&gt; {<br>  private final static IntWritable one = new IntWritable(1);<br>  private Text word = new Text();<br><br>  public void map(LongWritable key, Text value, OutputCollector&lt;Text, IntWritable&gt; output, Reporter reporter) throws IOException {<br>    String line = value.toString();<br>    StringTokenizer tokenizer = new StringTokenizer(line);<br>    while (tokenizer.hasMoreTokens()) {<br>      word.set(tokenizer.nextToken());<br>      output.collect(word, one);<br>    }<br>  }<br>}<br><br>public static class Reduce extends MapReduceBase implements Reducer&lt;Text, IntWritable, Text, IntWritable&gt; {<br>  public void reduce(Text key, Iterator&lt;IntWritable&gt; values, OutputCollector&lt;Text, IntWritable&gt; output, Reporter reporter) throws IOException {<br>    int sum = 0;<br>    while (values.hasNext()) {<br>      sum += values.next().get();<br>    }<br>    output.collect(key, new IntWritable(sum));<br>  }<br>}</code></pre><p><strong>Fonction Map</strong> : La fonction map lit chaque ligne, la découpe en mots (tokenizer), et émet pour chaque mot une paire (mot, 1). <strong>Fonction Reduce</strong> : La fonction reduce reçoit pour chaque mot la liste des occurrences (1,1,1,...) et calcule la somme (le nombre total d'occurrences).</p><p><strong>Modification pour ignorer la casse</strong> : Dans la fonction Map, avant d'émettre le mot, convertir le mot en minuscules : <code>word.set(tokenizer.nextToken().toLowerCase());</code>. Cela permettra de compter 'Data' et 'data' comme le même mot.</p>",
+        "reponse": "Le code WordCount typique utilise une fonction Map qui émet chaque mot avec la valeur 1, et une fonction Reduce qui additionne ces 1 pour obtenir le compte total. Pour ignorer la casse, il suffit de convertir chaque mot en minuscules dans la fonction Map avant de l'émettre.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Application de MapReduce à l'Analyse de Logs",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous êtes Data Engineer dans une entreprise de e-commerce. Vous disposez de fichiers de logs d'accès à votre site web. Chaque ligne de log est au format :</p><p><code>IP_adresse - - [date] \"requête\" code_statut taille</code></p><p>Exemple : <code>192.168.1.1 - - [15/Jul/2023:10:15:32 +0200] \"GET /page.html HTTP/1.1\" 200 1024</code></p><p>Vous devez utiliser MapReduce pour analyser ces logs et obtenir des statistiques.</p>",
+      "images": [
+        "Exemple de logs d'accès web avec des adresses IP, des dates, des requêtes HTTP, des codes de statut et des tailles."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevez un job MapReduce pour compter le nombre de requêtes par code de statut HTTP (200, 404, 500, etc.). Décrivez précisément les fonctions Map et Reduce.",
+        "niveau": "medium",
+        "reponse": "<p><strong>Fonction Map :</strong> Pour chaque ligne de log, extraire le code de statut HTTP (la 9ème colonne). Émettre une paire <code>(code_statut, 1)</code>. Par exemple, pour la ligne donnée, on émettrait <code>(\"200\", 1)</code>.</p><p><strong>Fonction Reduce :</strong> Pour chaque code de statut, recevoir une liste de 1 et les additionner pour obtenir le nombre total de requêtes pour ce code. Émettre <code>(code_statut, total)</code>.</p><p><strong>Résultat :</strong> On obtient un ensemble de paires (code_statut, nombre_de_requêtes).</p>",
+        "reponse": "Map : extraire le code de statut de chaque ligne et émettre (code_statut, 1). Reduce : additionner les 1 pour chaque code de statut.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposez une optimisation de ce job en utilisant un Combiner pour réduire le trafic réseau. Expliquez comment le Combiner serait implémenté.",
+            "niveau": "hard",
+            "reponse": "Le Combiner peut être utilisé pour agréger partiellement les comptes de codes de statut sur chaque nœud avant le Shuffle. La fonction du Combiner est identique à celle du Reduce : elle additionne les valeurs pour une même clé. Ainsi, au lieu d'envoyer de nombreuses paires (\"200\", 1) depuis chaque nœud, le Combiner enverra une seule paire (\"200\", 200) si 200 requêtes avec le code 200 ont été traitées localement. Cela réduit considérablement le volume de données transférées sur le réseau."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Imaginez maintenant que vous devez analyser les logs pour identifier les adresses IP qui ont généré le plus de trafic (en termes de nombre de requêtes). Concevez un job MapReduce pour répondre à cette question.",
+        "niveau": "medium",
+        "reponse": "<p><strong>Fonction Map :</strong> Pour chaque ligne, extraire l'adresse IP (première colonne). Émettre <code>(IP, 1)</code>.</p><p><strong>Fonction Reduce :</strong> Pour chaque IP, additionner les 1 pour obtenir le nombre total de requêtes de cette IP. Émettre <code>(IP, total_requêtes)</code>.</p><p><strong>Étape supplémentaire :</strong> Pour obtenir les IP les plus actives, on peut soit trier les résultats par nombre de requêtes (ce qui peut être fait avec un second job MapReduce ou avec un outil comme Hadoop), soit utiliser un second job MapReduce pour trouver les top K IP (par exemple, les 10 plus actives).</p>",
+        "reponse": "Map : extraire l'IP et émettre (IP, 1). Reduce : additionner les 1 pour chaque IP pour obtenir le nombre total de requêtes.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "En comparant l'approche MapReduce avec une approche Spark SQL, discutez des avantages et des inconvénients de chaque méthode pour ce type d'analyse.",
+        "niveau": "hard",
+        "reponse": "<p><strong>MapReduce</strong> : Avantages : Simple à implémenter pour des tâches parallèles, robuste et bien adapté aux très grands volumes de données sur HDFS. Inconvénients : Chaque job écrit des résultats intermédiaires sur disque (phase Shuffle), ce qui peut être lent pour des analyses itératives ou interactives. Le code est souvent plus verbeux (Java).</p><p><strong>Spark SQL</strong> : Avantages : Le code est plus concis et expressif (ex: <code>spark.sql(\"SELECT status_code, COUNT(*) FROM logs GROUP BY status_code\")</code>). Les calculs sont effectués en mémoire, ce qui les rend plus rapides, surtout pour les requêtes itératives. Inconvénients : Nécessite un cluster Spark et une gestion de la mémoire ; moins efficace si les données ne tiennent pas en mémoire.</p><p>Pour l'analyse de logs, Spark SQL est souvent préféré pour sa rapidité et sa simplicité d'écriture. MapReduce reste pertinent pour des traitements batch très lourds où la robustesse est primordiale.</p>",
+        "reponse": "MapReduce est plus simple et robuste mais plus lent à cause des écritures sur disque. Spark SQL est plus rapide (calcul en mémoire) et le code est plus concis (requêtes SQL).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Projet : Système de Recommandation avec MapReduce",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous travaillez pour une plateforme de streaming vidéo. Vous souhaitez analyser les données d'écoute des utilisateurs pour proposer des recommandations de films. Les données sont stockées dans un fichier où chaque ligne contient : <code>utilisateur_id, film_id, note (1 à 5), date</code>.</p><p>L'objectif est d'identifier les films les plus appréciés en calculant la note moyenne pour chaque film, mais en se concentrant uniquement sur les films qui ont reçu au moins 10 notes.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevez un job MapReduce en deux étapes pour répondre à ce problème. Décrivez chaque étape (Map et Reduce pour chaque job) et les données qui transitent entre les jobs.",
+        "niveau": "very hard",
+        "reponse": "<p><strong>Job 1 : Calcul des notes moyennes par film</strong></p><ul><li><strong>Map :</strong> Pour chaque ligne, extraire (film_id, note). Émettre <code>(film_id, (note, 1))</code> où la valeur est une paire (somme_des_notes, nombre_de_notes).</li><li><strong>Reduce :</strong> Pour chaque film_id, recevoir une liste de paires (note, 1). Additionner les notes pour obtenir la somme totale des notes et compter le nombre d'occurrences. Émettre <code>(film_id, (somme, count))</code>.</li></ul><p><strong>Job 2 : Filtrage des films avec au moins 10 notes</strong></p><ul><li><strong>Map :</strong> Pour chaque film_id, recevoir (somme, count). Filtrer : si count >= 10, émettre <code>(film_id, moyenne)</code> où moyenne = somme / count. Sinon, ne rien émettre.</li><li><strong>Reduce :</strong> Une fonction d'identité (ou on peut juste laisser passer les valeurs filtrées).</li></ul><p><strong>Données entre les jobs :</strong> Le premier job écrit ses résultats (film_id, (somme, count)) dans un fichier intermédiaire. Le deuxième job lit ce fichier intermédiaire comme entrée.</p>",
+        "reponse": "Job 1 : Map extrait (film_id, note) et émet (film_id, (note, 1)). Reduce calcule la somme et le compte pour chaque film. Job 2 : Map filtre les films avec count >= 10 et émet (film_id, moyenne). Reduce est une fonction identité.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposez une alternative en utilisant un seul job MapReduce avec un Combiner personnalisé. Expliquez comment le Combiner fonctionne.",
+            "niveau": "hard",
+            "reponse": "On peut utiliser un seul job MapReduce où la fonction Map émet (film_id, (note, 1)). Le **Combiner** serait une fonction qui agrège partiellement les paires (note, 1) localement : par exemple, pour les films traités par un même Mapper, le Combiner additionne les notes et les comptes pour chaque film, émettant (film_id, (somme_locale, count_local)). Cela réduit la quantité de données transférées pendant le Shuffle. Le **Reduce** reçoit alors les paires agrégées localement et les combine globalement pour obtenir la somme et le compte totaux pour chaque film, puis filtre les films avec count >= 10 et émet (film_id, moyenne)."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Comment géreriez-vous le problème du 'data skew' si un film a reçu un nombre très élevé de notes par rapport aux autres ?",
+            "niveau": "very hard",
+            "reponse": "Le 'data skew' se produit lorsque les données ne sont pas uniformément réparties entre les réducteurs, ce qui peut entraîner des goulots d'étranglement. Pour gérer cela, on peut : 1. **Utiliser un partitionneur personnalisé** : au lieu de partitionner par hachage de la clé, on peut utiliser une technique de 'salting' qui ajoute un suffixe aléatoire à la clé pour répartir les données. Par exemple, on peut émettre (film_id + '_' + random, note) pour éclater les données, puis faire un second job pour agréger les résultats. 2. **Utiliser des Combinaisons MapReduce** : Dans le job de réduction, on peut utiliser un 'order inversion' design pattern pour effectuer des calculs plus complexes qui équilibrent la charge.",
+            "reponse": "Le 'data skew' peut être géré en utilisant un partitionneur personnalisé ou en ajoutant un suffixe aléatoire à la clé (salting) pour répartir les données, puis en effectuant une seconde agrégation."
+          }
+        ]
+      }
+    ]
+  }
+]

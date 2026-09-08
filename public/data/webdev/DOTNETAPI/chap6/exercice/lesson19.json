@@ -1,0 +1,130 @@
+[
+  {
+    "intitule": "Analyser la structure d’un token JWT généré par ASP.NET Core",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Un élève génère un token JWT dans un endpoint <code>/api/auth/login</code> avec le code suivant :</p><pre><code>var tokenDescriptor = new SecurityTokenDescriptor<br>{<br>    Subject = new ClaimsIdentity(new[]<br>    {<br>        new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),<br>        new Claim(ClaimTypes.Email, user.Email),<br>        new Claim(ClaimTypes.Role, "User")<br>    }),<br>    Expires = DateTime.UtcNow.AddHours(2),<br>    SigningCredentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256Signature)<br>};<br>var tokenHandler = new JwtSecurityTokenHandler();<br>var token = tokenHandler.CreateToken(tokenDescriptor);<br>var tokenString = tokenHandler.WriteToken(token);</code></pre><p>Analysez ce code et répondez aux questions suivantes.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez le rôle de la propriété `Subject` dans un `SecurityTokenDescriptor`.",
+        "niveau": "easy",
+        "reponse": "La propriété `Subject` contient les **claims** (affirmations) qui seront encodés dans le token JWT, comme l’identifiant utilisateur, l’email ou le rôle. Ces claims sont utilisés pour l’authentification et l’autorisation.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Identifiez les trois claims inclus dans l’exemple et expliquez leur utilité.",
+        "niveau": "easy",
+        "reponse": "1. `NameIdentifier` : contient l’ID unique de l’utilisateur (ex: 42).\n2. `Email` : contient l’adresse email de l’utilisateur.\n3. `Role` : contient le rôle (ex: \"User\") pour gérer les autorisations via `[Authorize(Roles=\"User\")]`.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquez à quoi sert la propriété `Expires` et pourquoi il est conseillé d’utiliser `DateTime.UtcNow` plutôt que `DateTime.Now`.",
+        "niveau": "medium",
+        "reponse": "`Expires` définit la date d’expiration du token. Il est conseillé d’utiliser `DateTime.UtcNow` (UTC) pour éviter les problèmes liés aux fuseaux horaires (serveur/client). Une expiration courte (2h) limite les risques en cas de vol du token.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Implémenter un endpoint de login avec génération de JWT",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous devez créer un endpoint <code>/api/auth/login</code> qui accepte un email et un mot de passe, vérifie les identifiants en base de données, puis génère un token JWT contenant l’ID de l’utilisateur, son email et son rôle. Si les identifiants sont incorrects, retournez une réponse <code>401 Unauthorized</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédigez le corps (body) de la méthode `Login` dans un contrôleur API ASP.NET Core, sans la partie validation du mot de passe (supposez un service `IUserService` avec une méthode `ValidateUserAsync`).",
+        "niveau": "medium",
+        "reponse": "<pre><code>[HttpPost(\"login\")]\npublic async Task<IActionResult> Login([FromBody] LoginRequest request)\n{\n    var user = await _userService.ValidateUserAsync(request.Email, request.Password);\n    if (user == null)\n        return Unauthorized(new { message = \"Email ou mot de passe incorrect\" });\n\n    var token = _jwtService.GenerateToken(user);\n    return Ok(new { token });\n}</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrivez la classe `LoginRequest` (DTO) avec les propriétés nécessaires et les attributs de validation.",
+        "niveau": "easy",
+        "reponse": "<pre><code>public class LoginRequest\n{\n    [Required(ErrorMessage = \"L'email est requis\")]\n    [EmailAddress]\n    public string Email { get; set; }\n\n    [Required(ErrorMessage = \"Le mot de passe est requis\")]\n    public string Password { get; set; }\n}</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposez une méthode `GenerateToken(User user)` qui crée le token avec les claims suivants : `NameIdentifier`, `Email`, `Role` et une expiration à 2 heures. Utilisez `SymmetricSecurityKey` et `HmacSha256`.",
+        "niveau": "hard",
+        "reponse": "<pre><code>public string GenerateToken(User user)\n{\n    var tokenHandler = new JwtSecurityTokenHandler();\n    var key = Encoding.ASCII.GetBytes(_configuration[\"Jwt:Secret\"]);\n    var tokenDescriptor = new SecurityTokenDescriptor\n    {\n        Subject = new ClaimsIdentity(new[]\n        {\n            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),\n            new Claim(ClaimTypes.Email, user.Email),\n            new Claim(ClaimTypes.Role, user.Role)\n        }),\n        Expires = DateTime.UtcNow.AddHours(2),\n        Issuer = _configuration[\"Jwt:Issuer\"],\n        Audience = _configuration[\"Jwt:Audience\"],\n        SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)\n    };\n    var token = tokenHandler.CreateToken(tokenDescriptor);\n    return tokenHandler.WriteToken(token);\n}</code></pre>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Déboguer une génération de JWT qui échoue en production",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Un développeur a mis en production une API .NET avec authentification JWT. Les utilisateurs ne parviennent plus à se connecter, mais tout fonctionnait en développement. Voici un extrait du code :</p><pre><code>var key = Encoding.ASCII.GetBytes(\"ma_cle_trop_courte\");\nvar tokenDescriptor = new SecurityTokenDescriptor\n{\n    Subject = new ClaimsIdentity(new[] { new Claim(ClaimTypes.Email, user.Email) }),\n    Expires = DateTime.Now.AddMinutes(30),\n    SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)\n};</code></pre><p>Les logs montrent une exception : <code>IDX10630: The symmetric key has an invalid key size.</code></p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Diagnostiquez la cause de l’exception et proposez une correction (donnez un extrait corrigé).",
+        "niveau": "hard",
+        "reponse": "L’exception se produit car la clé symétrique est trop courte. Pour HMAC-SHA256, la clé doit faire au moins 256 bits (32 caractères ASCII).\n\nCorrection : <pre><code>var key = Encoding.ASCII.GetBytes(\"une_cle_de_32_caracteres_ou_plus_123456\");</code></pre>\nOu mieux : stocker la clé dans la configuration et vérifier sa longueur.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposez deux autres bonnes pratiques pour gérer cette clé en production.",
+            "niveau": "hard",
+            "reponse": "1. Stocker la clé dans `appsettings.Production.json` ou dans les **secrets** (Azure Key Vault, AWS Secrets Manager).\n2. Ne jamais versionner la clé, la générer aléatoirement et la définir via variable d’environnement."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez pourquoi l’utilisation de `DateTime.Now` pour `Expires` pourrait causer un problème en production, et comment le corriger.",
+        "niveau": "medium",
+        "reponse": "`DateTime.Now` utilise le fuseau horaire local du serveur. En production, si le serveur est en UTC (cas fréquent dans les conteneurs), `DateTime.Now` donne l’heure locale (UTC) mais le code peut devenir ambigu. Il faut utiliser `DateTime.UtcNow` pour garantir un comportement déterministe, quelle que soit la configuration du serveur.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Personnaliser les claims JWT pour gérer des permissions fines",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Dans une application de gestion de projets, vous devez générer un token JWT contenant non seulement le rôle de l’utilisateur, mais aussi une liste de projets sur lesquels il a accès en lecture seule, et une autre liste pour les droits d’écriture.</p>\n<p>Par exemple : un utilisateur peut avoir <code>read_projects: [101, 102, 105]</code> et <code>write_projects: [101]</code>.</p>\n<p>Vous devez concevoir le code de génération des claims de manière à ne pas dépasser la taille limite raisonnable du token (éviter les énormes listes).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez une structure de claims pour représenter ces droits. Justifiez votre choix (type de claim, format).",
+        "niveau": "very hard",
+        "reponse": "On peut créer deux claims personnalisés :\n- `read_projects` : valeur JSON sérialisée `\"[101,102,105]\"` (string)\n- `write_projects` : valeur JSON `\"[101]\"`\nOu bien un seul claim `project_rights` avec un objet JSON plus complexe.\nJustification : format compact, facile à parser dans un `AuthorizationHandler`.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrivez la méthode `GenerateTokenWithProjectClaims(User user, List<int> readProjects, List<int> writeProjects)` qui ajoute ces deux claims personnalisés.",
+        "niveau": "very hard",
+        "reponse": "<pre><code>public string GenerateTokenWithProjectClaims(User user, List&lt;int&gt; readProjects, List&lt;int&gt; writeProjects)\n{\n    var claims = new List&lt;Claim&gt;\n    {\n        new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),\n        new Claim(ClaimTypes.Email, user.Email),\n        new Claim(ClaimTypes.Role, user.Role),\n        new Claim(\"read_projects\", JsonSerializer.Serialize(readProjects), JsonClaimValueTypes.Json),\n        new Claim(\"write_projects\", JsonSerializer.Serialize(writeProjects), JsonClaimValueTypes.Json)\n    };\n\n    var tokenDescriptor = new SecurityTokenDescriptor\n    {\n        Subject = new ClaimsIdentity(claims),\n        Expires = DateTime.UtcNow.AddHours(2),\n        SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)\n    };\n    var tokenHandler = new JwtSecurityTokenHandler();\n    return tokenHandler.WriteToken(tokenHandler.CreateToken(tokenDescriptor));\n}</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquez pourquoi il est déconseillé d’inclure des listes très longues (plus de 100 éléments) dans un token JWT, et suggérez une alternative.",
+        "niveau": "very hard",
+        "reponse": "Un token JWT peut devenir très lourd (plusieurs KB) si on inclut de grandes listes, ce qui alourdit chaque requête HTTP (headers).\nAlternative : stocker les droits d’accès par projet dans une base de données ou un cache (Redis) et faire un appel supplémentaire au moment de l’autorisation. Le token ne contient alors que l’ID utilisateur, et un service vérifie les droits à la volée.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

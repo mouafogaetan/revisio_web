@@ -1,0 +1,138 @@
+[
+  {
+    "intitule": "Identification des ressources IDisposable",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>En C#, certaines classes implémentent l'interface <code>IDisposable</code> pour libérer des ressources non gérées (fichiers, connexions base de données, flux réseau, etc.).</p><p>Parmi les objets suivants, lesquels doivent généralement être libérés avec <code>Dispose()</code> ou <code>using</code> ? Justifiez votre réponse.</p><ul><li><code>StreamReader</code></li><li><code>List&lt;int&gt;</code></li><li><code>SqlConnection</code></li><li><code>FileStream</code></li><li><code>string</code></li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier parmi la liste les types qui implémentent IDisposable. Expliquer pourquoi les autres n’en ont pas besoin.",
+        "niveau": "easy",
+        "reponse": "StreamReader, SqlConnection et FileStream implémentent IDisposable car ils manipulent des ressources système (fichiers ouverts, connexions BDD). List<int> et string sont des types managés qui ne contiennent que de la mémoire gérée par le GC.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Réécriture avec using",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Le code suivant lit un fichier mais oublie de libérer la ressource.</p><pre><code>void LireFichier(string chemin) {\n    StreamReader sr = new StreamReader(chemin);\n    string contenu = sr.ReadToEnd();\n    Console.WriteLine(contenu);\n    // sr n'est pas fermé\n}</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Réécrire cette méthode en utilisant l’instruction <code>using</code> pour garantir la libération de <code>StreamReader</code>, même en cas d’exception.",
+        "niveau": "medium",
+        "reponse": "void LireFichier(string chemin) {\n    using (StreamReader sr = new StreamReader(chemin))\n    {\n        string contenu = sr.ReadToEnd();\n        Console.WriteLine(contenu);\n    }\n}\n\n// Version C# 8+ : using declaration\nvoid LireFichier(string chemin) {\n    using StreamReader sr = new StreamReader(chemin);\n    string contenu = sr.ReadToEnd();\n    Console.WriteLine(contenu);\n}",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer ce qui se passe dans le bloc <code>using</code> si une exception est levée pendant <code>ReadToEnd()</code>.",
+            "niveau": "medium",
+            "reponse": "Même si une exception est levée, l’objet IDisposable est correctement disposé : le compilateur génère un bloc try/finally où Dispose() est appelé dans le finally."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Anti-pattern du catch général",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un élève a écrit le code suivant pour traiter les erreurs potentielles d’une opération fichier.</p><pre><code>try {\n    File.Delete(\"donnees.txt\");\n} catch (Exception ex) {\n    Console.WriteLine(\"Erreur : \" + ex.Message);\n}</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Discuter des problèmes liés à la capture de <code>Exception</code> (générique) dans ce contexte. Proposer une meilleure version en ne capturant que les exceptions pertinentes.",
+        "niveau": "medium",
+        "reponse": "Problèmes :\n- Masque des exceptions critiques (StackOverflowException, OutOfMemoryException, etc.)\n- Empêche le débogage en avalant toutes les erreurs.\n- Ne permet pas de réagir différemment selon le type d’erreur.\n\nMeilleure version :\ntry {\n    File.Delete(\"donnees.txt\");\n} catch (IOException ex) {\n    Console.WriteLine(\"Erreur d’accès fichier : \" + ex.Message);\n} catch (UnauthorizedAccessException ex) {\n    Console.WriteLine(\"Permission refusée : \" + ex.Message);\n}",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Dans quel cas très spécifique pourrait-on justifier un <code>catch (Exception)</code> ?",
+            "niveau": "hard",
+            "reponse": "Uniquement au niveau le plus haut d’une application (point d’entrée d’un thread, d’un service, d’une UI) pour journaliser l’erreur et empêcher le crash complet, puis relancer ou fermer proprement."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Mise en place d’un logger simple",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous développez une petite application console qui lit des fichiers utilisateurs. Vous devez journaliser les exceptions sans les ignorer.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créer une classe <code>FileLogger</code> qui écrit les erreurs dans un fichier <code>log.txt</code> avec la date, le message et la stack trace. Utiliser <code>StreamWriter</code> avec <code>using</code>.",
+        "niveau": "medium",
+        "reponse": "public static class FileLogger\n{\n    public static void Log(Exception ex)\n    {\n        string logEntry = $\"[{DateTime.Now}] {ex.GetType().Name}: {ex.Message}\\n{ex.StackTrace}\\n---\";\n        using (StreamWriter sw = new StreamWriter(\"log.txt\", append: true))\n        {\n            sw.WriteLine(logEntry);\n        }\n    }\n}",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Écrire un bloc try-catch qui appelle cette méthode de log et relance l’exception après journalisation (sans perdre la pile d’appels d’origine).",
+            "niveau": "medium",
+            "reponse": "try {\n    // opération risquée\n} catch (Exception ex) {\n    FileLogger.Log(ex);\n    throw;  // préserve la stack trace originale\n    // NE PAS écrire 'throw ex;' qui réinitialise la stack trace\n}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Chaîne de responsabilité des exceptions",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Soit trois méthodes : <code>A()</code> appelle <code>B()</code> appelle <code>C()</code>. <code>C()</code> lance une <code>InvalidOperationException</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer la différence entre :\n- Ne pas capturer du tout\n- Capturer avec <code>catch (Exception ex) { throw; }</code>\n- Capturer avec <code>catch (Exception ex) { throw ex; }</code>\n- Capturer avec <code>catch (Exception ex) { throw new Exception(\"Erreur A\", ex); }</code>",
+        "niveau": "hard",
+        "reponse": "- Pas de catch : l’exception remonte normalement, stack trace complète.\n- throw; : préserve la stack trace d’origine.\n- throw ex; : réinitialise la stack trace à cette ligne, on perd l’info de C().\n- throw new Exception(\"...\", ex) : encapsule l’exception d’origine (InnerException) et donne un nouveau message, utile pour ajouter du contexte.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Bonnes pratiques : libération et logging",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Un service doit lire une configuration depuis un fichier <code>app.cfg</code>, puis se connecter à une base de données. En cas d’échec, on veut journaliser l’erreur ET empêcher l’application de démarrer.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire une méthode <code>InitialiserApplication()</code> qui :\n- Utilise <code>using</code> pour lire le fichier.\n- Capture les exceptions <code>FileNotFoundException</code> et <code>IOException</code> pour les logger.\n- Relance une <code>ApplicationException</code> avec un message clair pour le démarrage.\n- N’utilise PAS <code>catch (Exception)</code> sans raison.",
+        "niveau": "hard",
+        "reponse": "void InitialiserApplication()\n{\n    try\n    {\n        using (StreamReader sr = new StreamReader(\"app.cfg\"))\n        {\n            string config = sr.ReadToEnd();\n            // Simuler connexion BDD\n        }\n    }\n    catch (FileNotFoundException ex)\n    {\n        FileLogger.Log(ex);\n        throw new ApplicationException(\"Fichier de configuration introuvable.\", ex);\n    }\n    catch (IOException ex)\n    {\n        FileLogger.Log(ex);\n        throw new ApplicationException(\"Erreur d’accès au fichier de configuration.\", ex);\n    }\n}",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi ne pas avoir mis <code>catch (Exception)</code> pour gérer aussi les erreurs BDD dans ce même bloc ?",
+            "niveau": "medium",
+            "reponse": "Parce que le principe de responsabilité unique : la lecture fichier a ses propres exceptions. Les erreurs BDD devraient être capturées dans une couche distincte, avec leur propre logique de récupération ou d’échec. Mélanger tout dans un seul catch général rend le débogage difficile et masque la source réelle."
+          }
+        ]
+      }
+    ]
+  }
+]

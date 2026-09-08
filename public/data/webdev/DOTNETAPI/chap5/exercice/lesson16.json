@@ -1,0 +1,123 @@
+[
+  {
+    "intitule": "Diagnostic et interception des erreurs HTTP avec UseExceptionHandler",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Dans une API ASP.NET Core, l’interception globale des exceptions non gérées est essentielle pour éviter de fuiter des détails techniques. R\u00e9pondez aux questions suivantes sur la configuration de <code>app.UseExceptionHandler()</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez le r\u00f4le de <code>app.UseExceptionHandler()</code> dans le pipeline middleware.",
+        "niveau": "easy",
+        "reponse": "Il permet de rediriger les requ\u00eates lorsqu’une exception non g\u00e9r\u00e9e se produit, g\u00e9n\u00e9ralement vers un endpoint d\u00e9di\u00e9 (ex: /error) ou vers un middleware personnalis\u00e9.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Citez deux avantages \u00e0 utiliser ce middleware plut\u00f4t que des blocs try/catch dans chaque contr\u00f4leur.",
+        "niveau": "medium",
+        "reponse": "1. Centralisation de la gestion d’erreurs. 2. R\u00e9duction du code r\u00e9p\u00e9titif et meilleure maintenabilit\u00e9.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Construction d’un middleware personnalisé de gestion d’erreurs",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous devez cr\u00e9er un middleware personnalis\u00e9 qui capture toutes les exceptions, les enregistre dans un fichier de log, et retourne une r\u00e9ponse JSON structur\u00e9e contenant le message &quot;Une erreur interne est survenue&quot; et le code HTTP 500. Utilisez les verbes de la taxonomie de Bloom dans vos r\u00e9ponses.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "D\u00e9crivez la structure de base d’un middleware personnalis\u00e9 asynchrone prenant un <code>RequestDelegate next</code>.",
+        "niveau": "medium",
+        "reponse": "Un middleware est une classe avec une m\u00e9thode InvokeAsync(HttpContext context, RequestDelegate next) qui appelle await next(context) dans un bloc try-catch pour capturer les exceptions.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Justifiez pourquoi il est n\u00e9cessaire d’appeler <code>await next(context)</code> \u00e0 l’int\u00e9rieur d’un bloc try.",
+        "niveau": "medium",
+        "reponse": "Afin de capturer les exceptions lev\u00e9es par les middlewares suivants ou par les endpoints ex\u00e9cut\u00e9s apr\u00e8s dans le pipeline.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Concevez le code C# n\u00e9cessaire pour impl\u00e9menter ce middleware, incluant l’injection de <code>ILogger</code> et la construction de la r\u00e9ponse JSON.",
+        "niveau": "hard",
+        "reponse": "```csharp\npublic class ErrorHandlingMiddleware\n{\n    private readonly RequestDelegate _next;\n    private readonly ILogger<ErrorHandlingMiddleware> _logger;\n\n    public ErrorHandlingMiddleware(RequestDelegate next, ILogger<ErrorHandlingMiddleware> logger)\n    {\n        _next = next;\n        _logger = logger;\n    }\n\n    public async Task InvokeAsync(HttpContext context)\n    {\n        try\n        {\n            await _next(context);\n        }\n        catch (Exception ex)\n        {\n            _logger.LogError(ex, \"Une erreur non gérée s'est produite\");\n            context.Response.StatusCode = 500;\n            context.Response.ContentType = \"application/json\";\n            var response = new { message = \"Une erreur interne est survenue\" };\n            await context.Response.WriteAsync(JsonSerializer.Serialize(response));\n        }\n    }\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Implémentation des Problem Details (RFC 7807)",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>La norme RFC 7807 d\u00e9finit un format standard pour transporter les d\u00e9tails d’une erreur HTTP. Dans ASP.NET Core, la classe <code>ProblemDetails</code> est utilis\u00e9e pour cela.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Nommez les trois propri\u00e9t\u00e9s obligatoires de <code>ProblemDetails</code> selon la RFC 7807.",
+        "niveau": "easy",
+        "reponse": "type, title, status.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Comparez l’approche consistant \u00e0 retourner manuellement un <code>ObjectResult(ProblemDetails)</code> avec l’utilisation de <code>ValidationProblemDetails</code> en cas d’erreur de validation automatique.",
+        "niveau": "medium",
+        "reponse": "ValidationProblemDetails h\u00e9rite de ProblemDetails et ajoute une propri\u00e9t\u00e9 'errors' contenant les erreurs de validation par champ. L’approche manuelle est plus flexible mais plus lourde \u00e0 coder r\u00e9p\u00e9titivement.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Cr\u00e9ez une m\u00e9thode d’extension pour <code>HttpContext</code> qui \u00e9crit une r\u00e9ponse ProblemDetails avec un titre personnalis\u00e9, un status 404 et une instance d’URI.",
+        "niveau": "very hard",
+        "reponse": "```csharp\npublic static async Task WriteProblemDetailsAsync(this HttpContext context, string title, string instance)\n{\n    context.Response.StatusCode = 404;\n    context.Response.ContentType = \"application/problem+json\";\n    var problem = new ProblemDetails\n    {\n        Title = title,\n        Status = 404,\n        Instance = instance,\n        Type = \"https://tools.ietf.org/html/rfc7231#section-6.5.4\"\n    };\n    await context.Response.WriteAsync(JsonSerializer.Serialize(problem));\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Audit et amélioration de la gestion d’erreurs d’une API existante",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Une entreprise utilise une API .NET 8 sans aucun middleware d’erreur. Les contr\u00f4leurs contiennent des blocs try/catch qui retournent des messages d’erreur en texte brut. Les logs sont inexistants. Proposez un plan complet d’am\u00e9lioration bas\u00e9 sur les notions de la le\u00e7on (middleware, Problem Details, logs, filtres).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Diagnostiquez les risques s\u00e9curitaires et de maintenabilit\u00e9 de l’approche actuelle.",
+        "niveau": "hard",
+        "reponse": "Fuites potentielles d’informations sensibles (stack trace), absence de standardisation des erreurs rendant l’int\u00e9gration client difficile, duplications de code, pas de surveillance des exceptions.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposez une architecture middleware + filter hybride pour am\u00e9liorer la situation. Justifiez chaque choix.",
+        "niveau": "very hard",
+        "reponse": "1. Ajout d’un ErrorHandlingMiddleware global pour capturer les exceptions inattendues et produire un ProblemDetails. 2. Utilisation d’un IExceptionFilter pour les erreurs m\u00e9tier connues (ex: NotFoundException) afin d’avoir un contr\u00f4le plus fin. 3. Impl\u00e9mentation d’un logger centralis\u00e9. Avantages : s\u00e9paration des responsabilit\u00e9s (middleware pour erreurs techniques, filtres pour erreurs m\u00e9tier).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "R\u00e9digez un exemple de migration pas-\u00e0-pas pour remplacer un ancien endpoint contenant du try/catch par une approche sans try/catch explicite en s’appuyant sur le nouveau middleware.",
+        "niveau": "very hard",
+        "reponse": "1. Supprimer le bloc try/catch du contr\u00f4leur. 2. Laisser l’exception se propager. 3. Ajouter dans Program.cs : app.UseMiddleware<ErrorHandlingMiddleware>(); 4. Dans le middleware, logger l’erreur et retourner un ProblemDetails. 5. Pour les cas sp\u00e9cifiques, cr\u00e9er des exceptions personnalis\u00e9es (ex: BusinessRuleException) et les traiter sp\u00e9cifiquement dans le middleware ou via un filtre.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

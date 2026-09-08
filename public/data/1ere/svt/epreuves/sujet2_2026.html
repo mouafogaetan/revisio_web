@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+ "matiere": "SVT 1ère A",
+ "classe": "Première",
+ "sequence": "Séquence 2",
+ "anneeScolaire": "2025-2026",
+ "exercices": [
+   {
+     "titre": "Exercice 1 : L'alimentation et l'équilibre nutritionnel (6 points)",
+     "points": "6 pts",
+     "enonce": "<div style='font-size:1rem; line-height:1.8;'>Un adolescent de 16 ans, sportif, consomme quotidiennement un petit-déjeuner composé de :<br><ul style='margin:5px 0; padding-left:20px;'><li>1 bol de lait (300 mL)</li><li>50 g de céréales</li><li>1 pain au chocolat (60 g)</li><li>1 verre de jus d'orange (200 mL)</li></ul>Le tableau ci-dessous donne les valeurs nutritionnelles moyennes pour 100 g ou 100 mL des aliments :</div><table style='width:100%; border-collapse:collapse; margin:10px 0; background:#f8f9fa; border-radius:8px; overflow:hidden;'><thead style='background:#2c3e50; color:white;'><tr><th style='padding:8px; border:1px solid #ddd; text-align:center;'>Aliment</th><th style='padding:8px; border:1px solid #ddd; text-align:center;'>Glucides (g)</th><th style='padding:8px; border:1px solid #ddd; text-align:center;'>Lipides (g)</th><th style='padding:8px; border:1px solid #ddd; text-align:center;'>Protides (g)</th></tr></thead><tbody><tr><td style='padding:8px; border:1px solid #ddd; text-align:center;'>Lait</td><td style='padding:8px; border:1px solid #ddd; text-align:center;'>4,8</td><td style='padding:8px; border:1px solid #ddd; text-align:center;'>3,6</td><td style='padding:8px; border:1px solid #ddd; text-align:center;'>3,3</td></tr><tr><td style='padding:8px; border:1px solid #ddd; text-align:center;'>Céréales</td><td style='padding:8px; border:1px solid #ddd; text-align:center;'>75</td><td style='padding:8px; border:1px solid #ddd; text-align:center;'>2</td><td style='padding:8px; border:1px solid #ddd; text-align:center;'>10</td></tr><tr><td style='padding:8px; border:1px solid #ddd; text-align:center;'>Pain au chocolat</td><td style='padding:8px; border:1px solid #ddd; text-align:center;'>45</td><td style='padding:8px; border:1px solid #ddd; text-align:center;'>25</td><td style='padding:8px; border:1px solid #ddd; text-align:center;'>7</td></tr><tr><td style='padding:8px; border:1px solid #ddd; text-align:center;'>Jus d'orange</td><td style='padding:8px; border:1px solid #ddd; text-align:center;'>10</td><td style='padding:8px; border:1px solid #ddd; text-align:center;'>0</td><td style='padding:8px; border:1px solid #ddd; text-align:center;'>0,5</td></tr></tbody></table><div style='background:#f4f6f7; padding:10px; border-radius:8px; margin-top:10px;'><p style='margin:0;'><strong>Données :</strong> Valeur énergétique : glucides = 17 kJ/g, lipides = 38 kJ/g, protides = 17 kJ/g.</p></div>",
+     "questions":[
+       {
+         "question": "<strong>1.1)</strong> Calculer les quantités de glucides, lipides et protides apportées par ce petit-déjeuner.",
+         "reponse": "<ul style='margin:0; padding-left:20px;'><li><strong>Glucides :</strong> Lait : 4,8 × 3 = 14,4 g ; Céréales : 75 × 0,5 = 37,5 g ; Pain : 45 × 0,6 = 27 g ; Jus : 10 × 2 = 20 g → <strong>Total = 98,9 g</strong></li><li><strong>Lipides :</strong> Lait : 3,6 × 3 = 10,8 g ; Céréales : 2 × 0,5 = 1 g ; Pain : 25 × 0,6 = 15 g ; Jus : 0 g → <strong>Total = 26,8 g</strong></li><li><strong>Protides :</strong> Lait : 3,3 × 3 = 9,9 g ; Céréales : 10 × 0,5 = 5 g ; Pain : 7 × 0,6 = 4,2 g ; Jus : 0,5 × 2 = 1 g → <strong>Total = 20,1 g</strong></li></ul>"
+       },
+       {
+         "question": "<strong>1.2)</strong> Calculer la valeur énergétique totale (en kJ) de ce petit-déjeuner.",
+         "reponse": "<ul style='margin:0; padding-left:20px;'><li><strong>Énergie des glucides :</strong> 98,9 × 17 = 1681,3 kJ</li><li><strong>Énergie des lipides :</strong> 26,8 × 38 = 1018,4 kJ</li><li><strong>Énergie des protides :</strong> 20,1 × 17 = 341,7 kJ</li><li><strong>Total :</strong> 1681,3 + 1018,4 + 341,7 = <strong>3041,4 kJ</strong> (soit environ 727 kcal)</li></ul>"
+       },
+       {
+         "question": "<strong>1.3)</strong> L'apport énergétique quotidien recommandé pour un adolescent sportif est d'environ 12 000 kJ. Ce petit-déjeuner représente-t-il une part raisonnable de cet apport ? Justifier.",
+         "reponse": "<ul style='margin:0; padding-left:20px;'><li><strong>Proportion :</strong> 3041,4 / 12000 × 100 = 25,3%</li><li>Un petit-déjeuner équilibré représente environ 20 à 25% de l'apport énergétique quotidien. Ce petit-déjeuner est donc <strong>adapté</strong> pour un adolescent sportif.</li></ul>"
+       },
+       {
+         "question": "<strong>1.4)</strong> Proposer une modification de ce menu pour le rendre plus équilibré en réduisant l'apport en lipides.",
+         "reponse": "Remplacer le pain au chocolat (riche en lipides : 25 g pour 100 g) par une tartine de pain complet avec un peu de beurre ou de confiture. On peut aussi remplacer le lait entier par du lait demi-écrémé. Ces modifications réduisent la part des lipides tout en maintenant un bon apport en glucides complexes et en protéines."
+       }
+     ]
+   },
+   {
+     "titre": "Exercice 2 : Analyse d'un caryotype et anomalies chromosomiques (6 points)",
+     "points": "6 pts",
+     "enonce": "<div style='font-size:1rem; line-height:1.8;'>Le caryotype ci-dessous est celui d'un patient présentant des troubles du développement.<br><br><div style='background:#f4f6f7; padding:20px; border-radius:8px; text-align:center;'><p style='font-weight:bold;'>Caryotype d'un patient</p><p style='font-family:monospace; font-size:1.2rem;'>46, XY, +21</p></div></div>",
+     "questions":[
+       {
+         "question": "<strong>2.1)</strong> Déterminer le sexe du patient. Justifier la réponse.",
+         "reponse": "Le patient est de sexe masculin car le caryotype présente une paire de chromosomes sexuels XY (un chromosome X et un chromosome Y)."
+       },
+       {
+         "question": "<strong>2.2)</strong> Que signifie la mention « +21 » dans la formule chromosomique ?",
+         "reponse": "La mention « +21 » signifie qu'il y a un chromosome 21 supplémentaire. Au lieu d'une paire (2 chromosomes), le patient possède 3 chromosomes 21. Il s'agit donc d'une <strong>trisomie 21</strong>."
+       },
+       {
+         "question": "<strong>2.3)</strong> Citer deux conséquences phénotypiques observables chez un patient atteint de cette anomalie.",
+         "reponse": "<ul style='margin:0; padding-left:20px;'><li>Un <strong>retard mental</strong> plus ou moins sévère</li><li>Des <strong>caractéristiques morphologiques</strong> particulières (visage rond, yeux bridés, pli palmaire transverse, etc.)</li></ul>"
+       },
+       {
+         "question": "<strong>2.4)</strong> Cette anomalie est-elle une anomalie chromosomique ou génique ? Justifier.",
+         "reponse": "Il s'agit d'une <strong>anomalie chromosomique</strong> car elle affecte un chromosome entier (un chromosome supplémentaire) et non un gène particulier. La trisomie 21 est une anomalie chromosomique numérique."
+       }
+     ]
+   },
+   {
+     "titre": "Exercice 3 : Le système immunitaire et le VIH (8 points)",
+     "points": "8 pts",
+     "enonce": "<div style='font-size:1rem; line-height:1.8;'>Le document ci-dessous présente l'évolution du nombre de lymphocytes T4 (LT4) chez un patient infecté par le VIH, en fonction du temps.</div><div style='background:#f4f6f7; padding:15px; border-radius:8px; margin:10px 0;'><p style='margin:0;'><strong>Document :</strong> Au cours des premières semaines suivant la contamination, le nombre de LT4 chute puis remonte partiellement. Après plusieurs années (phase asymptomatique), le nombre de LT4 diminue progressivement pour atteindre un seuil critique (< 200 cellules/mm³), marquant le début du SIDA.</p></div>",
+     "questions":[
+       {
+         "question": "<strong>3.1)</strong> Quel est le rôle des lymphocytes T4 dans le système immunitaire ?",
+         "reponse": "Les lymphocytes T4 (ou LT4) sont des <strong>auxiliaires</strong> du système immunitaire. Ils activent les autres cellules immunitaires : les lymphocytes B (pour la production d'anticorps) et les lymphocytes T8 (cytotoxiques). Ils sont essentiels à la réponse immunitaire adaptative."
+       },
+       {
+         "question": "<strong>3.2)</strong> Expliquer pourquoi la diminution du nombre de LT4 entraîne l'apparition de maladies opportunistes.",
+         "reponse": "Les LT4 étant des cellules clés de la réponse immunitaire, leur diminution entraîne une <strong>immunodéficience</strong>. Le système immunitaire n'est plus capable de lutter efficacement contre les agents pathogènes. Des micro-organismes normalement inoffensifs (ou contrôlés) provoquent alors des <strong>maladies opportunistes</strong> (tuberculose, pneumocystose, etc.)."
+       },
+       {
+         "question": "<strong>3.3)</strong> Le VIH est un rétrovirus. Expliquer brièvement son mode d'action sur les LT4.",
+         "reponse": "Le VIH possède une enzyme, la <strong>transcriptase inverse</strong>, qui lui permet de transcrire son ARN en ADN. Cet ADN viral s'intègre dans le génome de la cellule hôte (le LT4). La cellule produit alors de nouvelles particules virales qui infectent d'autres LT4, entraînant leur destruction."
+       },
+       {
+         "question": "<strong>3.4)</strong> Citer deux modes de transmission du VIH et deux moyens de prévention.",
+         "reponse": "<ul style='margin:0; padding-left:20px;'><li><strong>Modes de transmission :</strong> Relations sexuelles non protégées, partage de seringues contaminées, transmission mère-enfant (grossesse, accouchement, allaitement).</li><li><strong>Moyens de prévention :</strong> Utilisation du préservatif, dépistage régulier, programmes de réduction des risques (échanges de seringues), traitement antirétroviral chez la femme enceinte.</li></ul>"
+       }
+     ]
+   }
+ ]
+};
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

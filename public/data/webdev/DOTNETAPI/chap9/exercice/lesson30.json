@@ -1,0 +1,134 @@
+[
+  {
+    "intitule": "Cache côté client et cache mémoire",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous développez une API météo avec ASP.NET Core. Les prévisions météo sont actualisées toutes les 10 minutes. Vous souhaitez réduire la charge sur votre serveur et améliorer les temps de réponse pour les clients.</p><p>Répondez aux questions suivantes en vous basant sur la leçon 30.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez la différence entre l’attribut [ResponseCache] et le service IMemoryCache dans ASP.NET Core.",
+        "niveau": "medium",
+        "reponse": "[ResponseCache] agit sur le cache côté client (navigateur/proxy) en ajoutant des en-têtes HTTP (Cache-Control). IMemoryCache est un cache côté serveur en mémoire, partagé entre toutes les requêtes de l’application.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Vous avez un endpoint GET /meteo qui retourne des données valables 5 minutes. Écrivez le code C# pour appliquer un cache client de 300 secondes en utilisant l’attribut [ResponseCache].",
+        "niveau": "medium",
+        "reponse": "[ResponseCache(Duration = 300)]",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Quel en-tête HTTP sera envoyé au client ? Justifiez.",
+            "niveau": "medium",
+            "reponse": "Cache-Control: public,max-age=300. Cet en-tête indique au client qu'il peut conserver la réponse pendant 300 secondes avant de demander une nouvelle version."
+          }
+        ]
+      },
+      {
+        "numero": 3,
+        "texte": "Décrivez une situation concrète où vous utiliseriez IMemoryCache plutôt que [ResponseCache].",
+        "niveau": "medium",
+        "reponse": "Lorsque des données coûteuses à calculer (ex: statistiques agrégées) sont partagées entre plusieurs utilisateurs et que leur délai d’obsolescence est identique pour tous. IMemoryCache permet de stocker le résultat une seule fois côté serveur.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation d’un catalogue produits avec cache",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous êtes responsable d’une API e-commerce. L’endpoint <code>GET /api/products/popular</code> retourne la liste des 20 produits les plus vendus. Cette liste est recalculée toutes les heures à partir d’une requête SQL coûteuse. Actuellement, 10 000 clients différents appellent cet endpoint chaque minute.</p><p>Proposez une stratégie de cache combinant cache client et cache serveur pour réduire la charge. Justifiez votre choix des durées et des niveaux.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevez la solution en précisant quel type de cache (client et/ou serveur) vous utilisez et pourquoi.",
+        "niveau": "hard",
+        "reponse": "Utiliser IMemoryCache côté serveur avec une durée de 1 heure pour ne recalculer la liste qu’une fois par heure. Utiliser [ResponseCache] avec une durée de 5 minutes côté client pour éviter que tous les clients ne réinterrogent le serveur à chaque minute, tout en permettant une fraîcheur raisonnable.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Évaluez l’impact de votre stratégie sur le nombre de requêtes atteignant réellement le contrôleur.",
+            "niveau": "hard",
+            "reponse": "Le cache serveur fait qu’une seule requête par heure exécute la requête SQL. Le cache client fait que chaque client ne revient vers le serveur qu’une fois toutes les 5 minutes maximum, réduisant drastiquement le trafic entrant sur le serveur (de 10 000/min à environ 2 000/min au pire, bien moins en pratique)."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Justifiez le choix des durées d’expiration (1h pour le cache serveur, 5 min pour le cache client) au regard de la contrainte métier (données valables 1h).",
+        "niveau": "hard",
+        "reponse": "Le cache serveur de 1h correspond exactement à la fraîcheur des données métier. Le cache client de 5 minutes est plus court pour permettre aux clients de recevoir des données actualisées plus souvent, mais sans surcharger le serveur. Même si le client a une copie de 5 minutes, elle provient toujours de la version serveur qui est réactualisée toutes les heures.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Mise en place d’un cache avec dépendance",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Dans une API de gestion de stocks, vous devez mettre en cache le niveau de stock d’un produit. Le cache doit être invalidé automatiquement lorsqu’une commande modifie ce stock.</p><p>Écrivez un exemple d’implémentation utilisant <code>IMemoryCache</code> et une dépendance personnalisée ou un mécanisme d’invalidation.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez une méthode pour invalider le cache d’un produit spécifique après une mise à jour de son stock.",
+        "niveau": "very hard",
+        "reponse": "Utiliser une clé de cache composée (ex: \"Stock_Produit_123\"). Lors de la mise à jour du stock, appeler _memoryCache.Remove(\"Stock_Produit_123\") pour supprimer l’entrée. Une autre approche avancée : utiliser IChangeToken avec CancellationTokenSource pour créer une dépendance.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Implémentez le code d’un service StockService qui lit et écrit le cache avec invalidation manuelle.",
+            "niveau": "very hard",
+            "reponse": "public class StockService { private IMemoryCache _cache; public async Task<int> GetStockAsync(int productId) { string key = $\"Stock_{productId}\"; if (!_cache.TryGetValue(key, out int stock)) { stock = await _db.GetStockAsync(productId); _cache.Set(key, stock, TimeSpan.FromMinutes(10)); } return stock; } public void UpdateStock(int productId, int newStock) { _db.UpdateStock(productId, newStock); _cache.Remove($\"Stock_{productId}\"); } }",
+            "numero": "1.b",
+            "texte": "Expliquez un cas où cette approche pourrait poser problème en environnement distribué (plusieurs instances du serveur).",
+            "niveau": "very hard",
+            "reponse": "Chaque instance a sa propre mémoire cache. La mise à jour sur une instance n’invalide pas le cache sur les autres instances. On obtiendrait des incohérences. Solution : utiliser un cache distribué (Redis) ou une invalidation via bus de messages."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse des en-têtes de cache",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Observez l’en-tête HTTP suivant reçu par un client :</p><pre>Cache-Control: public, max-age=60, must-revalidate</pre><p>Répondez aux questions.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Combien de secondes le client peut-il conserver cette réponse en cache sans vérifier auprès du serveur ?",
+        "niveau": "easy",
+        "reponse": "60 secondes.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Que signifie le paramètre \"must-revalidate\" dans cet en-tête ?",
+        "niveau": "medium",
+        "reponse": "Il indique qu’après expiration des 60 secondes, le client doit obligatoirement vérifier auprès du serveur si la ressource a changé, et ne peut pas utiliser une copie obsolète même en cas d’indisponibilité du serveur.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Comment reproduire cet en-tête avec l’attribut [ResponseCache] en C# ?",
+        "niveau": "medium",
+        "reponse": "[ResponseCache(Duration = 60, Location = ResponseCacheLocation.Any, NoStore = false)]",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

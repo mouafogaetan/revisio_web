@@ -1,0 +1,107 @@
+[
+  {
+    "intitule": "Documentation Swagger : savoir l’exploiter et la configurer",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous travaillez sur une API .NET Core que vous avez documentée avec Swagger. Un collègue doit tester un endpoint <code>POST /api/articles</code> mais ne connaît pas le format JSON attendu. Utilisez vos connaissances sur Swagger pour répondre aux questions suivantes.</p>",
+      "images": [
+        "Capture d'écran de Swagger UI montrant un endpoint POST avec l'exemple du corps de requête et les codes de réponse possibles",
+        "Arborescence de projet .NET avec un fichier .xml généré à partir des commentaires XML"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier où se trouve, dans Swagger UI, l’information permettant de connaître la structure JSON attendue par l’endpoint POST /api/articles.",
+        "niveau": "easy",
+        "reponse": "Cliquer sur l'endpoint POST /api/articles pour le dérouler, puis cliquer sur 'Try it out' et le corps de la requête apparaît automatiquement avec un exemple ou un schéma généré par Swagger à partir du modèle DTO.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer pourquoi Swagger ne montre pas les descriptions personnalisées des endpoints dans une nouvelle API .NET 8, et décrire la procédure pour activer cette documentation enrichie.",
+        "niveau": "medium",
+        "reponse": "Les descriptions ne sont pas visibles car la génération du fichier XML de documentation et son injection dans Swagger ne sont pas activées par défaut. Procédure : 1) Activer la documentation XML dans le fichier .csproj (<GenerateDocumentationFile>true</GenerateDocumentationFile>). 2) Ajouter dans Program.cs : builder.Services.AddSwaggerGen(c => { c.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, \"votreAssembly.xml\")); }); 3) Ajouter des commentaires XML (<summary>...) sur les actions des contrôleurs.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Déduire ce qui se passe au niveau des codes HTTP 200, 400 et 401 dans Swagger UI lorsqu’on a ajouté l’attribut [ProducesResponseType] sur une méthode de contrôleur, et justifier l’importance de cette bonne pratique.",
+        "niveau": "hard",
+        "reponse": "Swagger UI affiche explicitement chacun des codes HTTP documentés avec leur description et le format de réponse correspondant. Importance : cela rend l’API auto-documentée, aide les clients à anticiper les erreurs (validation, authentification, etc.), améliore l’expérience développeur et facilite la génération de SDKs clients.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Tests unitaires et d’intégration : vérifier la logique métier et les endpoints",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Dans le cadre d’un projet d’API de gestion de tâches (ToDo API), vous devez écrire des tests pour valider le <strong>service métier</strong> et l’<strong>endpoint GET /api/todos</strong>. La couche service s’appelle <code>TodoService</code> et dépend d’un repository <code>ITodoRepository</code>. Le contrôleur <code>TodoController</code> injecte ce service.</p>",
+      "images": [
+        "Schéma des couches d’une API .NET avec les flèches de dépendance : Contrôleur → Service → Repository",
+        "Exemple de code d’un test xUnit utilisant Moq pour mocker ITodoRepository"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevoir un test unitaire (xUnit + Moq) pour la méthode GetAllAsync du TodoService qui doit retourner une liste de tâches. Simuler le retour du repository et vérifier que le service appelle bien la méthode du repository et renvoie les données attendues.",
+        "niveau": "medium",
+        "reponse": "```csharp\n[Fact]\npublic async Task GetAllAsync_ShouldReturnListOfTodos()\n{\n    // Arrange\n    var mockRepo = new Mock<ITodoRepository>();\n    var expectedTodos = new List<Todo> { new Todo { Id = 1, Title = \"Test\" } };\n    mockRepo.Setup(repo => repo.GetAllAsync()).ReturnsAsync(expectedTodos);\n    var service = new TodoService(mockRepo.Object);\n\n    // Act\n    var result = await service.GetAllAsync();\n\n    // Assert\n    Assert.Equal(expectedTodos, result);\n    mockRepo.Verify(repo => repo.GetAllAsync(), Times.Once);\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrire un test d’intégration (avec WebApplicationFactory) pour l’endpoint GET /api/todos. Configurer une base de données InMemory pour Entity Framework Core, ajouter deux tâches directement via le DbContext, puis vérifier que l’endpoint retourne un code 200 et exactement ces deux tâches dans le JSON.",
+        "niveau": "very hard",
+        "reponse": "```csharp\npublic class TodoIntegrationTests : IClassFixture<WebApplicationFactory<Program>>\n{\n    private readonly WebApplicationFactory<Program> _factory;\n    public TodoIntegrationTests(WebApplicationFactory<Program> factory)\n    {\n        _factory = factory.WithWebHostBuilder(builder =>\n        {\n            builder.ConfigureServices(services =>\n            {\n                var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));\n                if (descriptor != null) services.Remove(descriptor);\n                services.AddDbContext<AppDbContext>(options => options.UseInMemoryDatabase(\"TestDb\"));\n            });\n        });\n    }\n\n    [Fact]\n    public async Task GetTodos_ReturnsTwoTodos()\n    {\n        // Arrange\n        using var scope = _factory.Services.CreateScope();\n        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();\n        context.Todos.AddRange(new Todo { Title = \"Task 1\" }, new Todo { Title = \"Task 2\" });\n        await context.SaveChangesAsync();\n        var client = _factory.CreateClient();\n\n        // Act\n        var response = await client.GetAsync(\"/api/todos\");\n        var todos = await response.Content.ReadFromJsonAsync<List<Todo>>();\n\n        // Assert\n        Assert.Equal(HttpStatusCode.OK, response.StatusCode);\n        Assert.Equal(2, todos.Count);\n    }\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Justifier l’intérêt de séparer les tests unitaires (services mockés) des tests d’intégration (base réelle ou InMemory) dans une API REST professionnelle, et proposer une stratégie pour maintenir les deux.",
+        "niveau": "hard",
+        "reponse": "Les tests unitaires sont rapides, isolent la logique métier, ne nécessitent pas de base de données, et permettent de valider tous les cas (erreurs, conditions limites). Les tests d’intégration vérifient la vraie interaction entre couches (middleware, EF Core, sérialisation, authentification). Stratégie : exécuter les tests unitaires à chaque commit (très rapides), exécuter les tests d’intégration dans un pipeline CI/CD (moins fréquent, plus lent). Utiliser une base de données de test dédiée (InMemory ou Testcontainers) et la réinitialiser entre chaque test.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Déploiement complet d’une API : Azure vs AWS vs Docker",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous êtes consultant pour une entreprise camerounaise qui souhaite déployer son API .NET 8. Ils hésitent entre <strong>Azure App Service</strong>, <strong>AWS Elastic Beanstalk</strong> et un déploiement <strong>Docker + Azure Container Instances (ACI)</strong>. L’équipe a besoin d’une API scalable, facile à mettre à jour, avec base de données PostgreSQL hébergée séparément.</p>",
+      "images": [
+        "Tableau comparatif des services Azure et AWS pour le déploiement d’API .NET (App Service, Elastic Beanstalk, ECS, ACI)",
+        "Diagramme de déploiement Docker : Registre (ACR/ECR) → Conteneur (ACI/ECS) → Base de données externe"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Comparer les trois solutions en termes de : a) coût pour une faible charge (5 utilisateurs), b) facilité de déploiement d’une nouvelle version, c) scalabilité automatique.",
+        "niveau": "hard",
+        "reponse": "a) Coût faible : Azure App Service (niveau gratuit F1 ou partagé D1) ≈ 0€ ou ~13€/mois ; AWS Elastic Beanstalk (t2.micro) ≈ 10-15€/mois ; Docker + ACI (demande à la demande) ≈ 0.01€/heure = ~7€/mois. b) Facilité : App Service (déploiement Git, GitHub Actions, FTP) très simple ; Elastic Beanstalk (déploiement zip via CLI) assez simple ; ACI demande de gérer l’image Docker (build, push, redéploiement) un peu plus technique. c) Scalabilité : App Service (scale out réglable, supporte auto-scale) ; Elastic Beanstalk (auto-scaling intégré) ; ACI (scaling manuel ou via Kubernetes, pas automatique simple).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer une procédure pas-à-pas pour dockeriser l’API .NET 8 (écrire le Dockerfile) et la déployer sur Azure Container Instances avec une base de données PostgreSQL Azure (Flexible Server).",
+        "niveau": "very hard",
+        "reponse": "1) Écrire Dockerfile :\n```dockerfile\nFROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base\nWORKDIR /app\nEXPOSE 80\nFROM mcr.microsoft.com/dotnet/sdk:8.0 AS build\nWORKDIR /src\nCOPY [\"MonApi.csproj\", \".\"]\nRUN dotnet restore\nCOPY . .\nRUN dotnet publish -c Release -o /app/publish\nFROM base AS final\nWORKDIR /app\nCOPY --from=build /app/publish .\nENTRYPOINT [\"dotnet\", \"MonApi.dll\"]\n```\n2) Construire l’image : `docker build -t monapi .`\n3) Tagger pour Azure Container Registry (ACR) : `docker tag monapi monacr.azurecr.io/monapi:v1`\n4) Se connecter à ACR : `az acr login --name monacr`\n5) Pusher l’image : `docker push monacr.azurecr.io/monapi:v1`\n6) Déployer sur ACI : `az container create --resource-group monGroupe --name monapi --image monacr.azurecr.io/monapi:v1 --cpu 1 --memory 1.5 --registry-login-server monacr.azurecr.io --registry-username <nom> --registry-password <mdp> --environment-variables ConnectionStrings__Default=\"Host=monpostgres.postgres.database.azure.com;Database=apidb;Username=...;Password=...\"`",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Évaluer les risques possibles de cette architecture (conteneur unique + DB externe) et proposer des améliorations (health checks, logs centralisés, redémarrage automatique).",
+        "niveau": "very hard",
+        "reponse": "Risques : (a) panne du conteneur (ACI ne redémarre pas automatiquement sauf si configuré avec policy restart). (b) perte des logs après destruction du conteneur. (c) indisponibilité de la base (pas de cache local). Améliorations : 1) Ajouter health checks ASP.NET Core (`AddHealthChecks()`, `MapHealthChecks`) et configurer ACI avec `--restart-policy OnFailure`. 2) Centraliser les logs via `ILogger` vers Application Insights (Azure) ou AWS CloudWatch. 3) Utiliser plusieurs réplicas ACI ou passer à AKS pour la haute disponibilité. 4) Implémenter un cache Redis pour réduire la charge DB.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

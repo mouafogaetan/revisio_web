@@ -1,0 +1,162 @@
+[
+  {
+    "intitule": "Identifier les failles de session et CSRF",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous analysez une application web de e-commerce. Un utilisateur se plaint d'avoir vu un article ajouté à son panier sans son action, juste après avoir cliqué sur un lien reçu par email. Un autre utilisateur a vu son compte déconnecté brutalement alors qu'il était actif.</p><p><strong>Questions :</strong></p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier la faille de sécurité probable pour l'ajout intempestif d'article.",
+        "niveau": "easy",
+        "reponse": "CSRF (Cross-Site Request Forgery). L'attaquant a forcé le navigateur de l'utilisateur à envoyer une requête non autorisée vers le site de e-commerce en utilisant la session active.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Reconnaître le problème probable pour la déconnexion intempestive.",
+        "niveau": "easy",
+        "reponse": "Gestion de session défaillante : durée de vie trop courte, ou l'ID de session n'est pas renouvelée après connexion, ou le serveur invalide la session de manière incorrecte.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposer une contre-mesure immédiate contre la CSRF pour ce panier d'achat.",
+        "niveau": "easy",
+        "reponse": "Ajouter un token CSRF (nonce) généré côté serveur et vérifié à chaque requête modifiant l'état (POST, PUT, DELETE).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyser une attaque par authentification défaillante",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans le cadre d'un audit, vous découvrez que le système de connexion d'une application présente ces caractéristiques :</p><ul><li>Pas de limite de tentatives</li><li>Message d'erreur différent selon que l'utilisateur existe ou non (<i>\"Identifiant inconnu\"</i> vs <i>\"Mot de passe incorrect\"</i>)</li><li>Le mot de passe est stocké en base64 (non haché)</li><li>Le serveur répond avec le même délai quelle que soit la validité du login</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer pourquoi l'absence de limite de tentatives est critique.",
+        "niveau": "easy",
+        "reponse": "Cela permet une attaque par force brute automatisée pour trouver le mot de passe ou l'identifiant.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Analyser l'impact de la différence des messages d'erreur.",
+        "niveau": "medium",
+        "reponse": "Cela permet à un attaquant d'énumérer les utilisateurs valides (user enumeration) avant de lancer une attaque par dictionnaire.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Évaluer le danger du stockage en base64.",
+        "niveau": "hard",
+        "reponse": "Base64 n'est pas un hachage, c'est un encodage réversible. En cas de fuite de la base de données, tous les mots de passe sont lisibles en clair. Il faut utiliser un algorithme de hachage salé comme bcrypt, Argon2 ou PBKDF2.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Corriger une faille XXE (XML External Entity)",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Une application web permet d'importer des fichiers de configuration au format XML pour paramétrer des widgets. Un attaquant a pu lire le fichier <code>/etc/passwd</code> du serveur en envoyant ce document :</p><pre>&lt;!DOCTYPE foo [&lt;!ENTITY xxe SYSTEM \"file:///etc/passwd\" &gt;]&gt;\n&lt;config&gt;&lt;user&gt;&amp;xxe;&lt;/user&gt;&lt;/config&gt;</pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Nommer la vulnérabilité exploitée ici.",
+        "niveau": "easy",
+        "reponse": "XXE (XML eXternal Entity injection)",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Décrire le principe de l'attaque.",
+        "niveau": "medium",
+        "reponse": "L'attaquant déclare une entité externe (XXE) qui référence une ressource locale (file://). Lorsque le parseur XML vulnérable résout l'entité, il lit le fichier système et l'injecte dans la réponse.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposer deux correctifs définitifs.",
+        "niveau": "medium",
+        "reponse": "1. Désactiver complètement la résolution des entités externes et DTD dans le parseur XML. 2. Utiliser un format de données alternatif plus sûr (JSON) si l'application le permet.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Scénario pratique : attaque SSRF (Server-Side Request Forgery)",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Un service web propose une fonction \"Prévisualiser une URL\". Le serveur télécharge le contenu de l'URL fournie et l'affiche à l'utilisateur. Un attaquant utilise cette fonction pour interroger <code>http://169.254.169.254/latest/meta-data/</code> (métadonnées AWS).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Justifier pourquoi cette attaque est dangereuse sur un cloud public (AWS, Azure, GCP).",
+        "niveau": "hard",
+        "reponse": "Le serveur cible interroge le service de métadonnées interne du cloud (adresse IP réservée), ce qui permet à l'attaquant de récupérer des clés d'accès temporaires, des rôles IAM, des secrets, ou la configuration de l'instance.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer une méthode de mitigation efficace.",
+        "niveau": "hard",
+        "reponse": "Mettre en place une liste blanche d'URLs autorisées (allowlist) ; utiliser un pare-feu applicatif (WAF) pour bloquer les adresses IP internes, bouclage (127.0.0.1, 0.0.0.0) et les plages réservées ; ou forcer une validation stricte du schéma (HTTP/HTTPS uniquement) et du domaine.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Désérialisation non sécurisée et logging insuffisant",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Une application Java désérialise des objets provenant de cookies (sans signature ni chiffrement). Un attaquant modifie le cookie et exécute du code arbitraire (<code>Runtime.exec()</code>) via une chaîne de gadgets.</p><p>Par ailleurs, les logs applicatifs ne contiennent que des dates et des messages génériques. Aucune trace des tentatives échouées ou des modifications de cookie n'est conservée.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Nommer le type de vulnérabilité liée aux cookies non sécurisés.",
+        "niveau": "medium",
+        "reponse": "Désérialisation non sécurisée (insecure deserialization)",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Recommander un correctif pour empêcher l'exécution de code arbitraire.",
+        "niveau": "hard",
+        "reponse": "Ne jamais désérialiser des données non authentifiées. Utiliser des formats standards (JSON) avec validation de schéma. En Java, remplacer la sérialisation native par des alternatives (Jackson, Gson) ; ou signer/crypter les cookies avec une clé secrète (HMAC).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Analyser l'impact du logging insuffisant sur la détection et l'investigation.",
+        "niveau": "medium",
+        "reponse": "Sans logs détaillés (IP, user-agent, session ID, payload modifié, stacktrace), il est impossible de détecter l'attaque en temps réel, de connaître son ampleur, ou d'identifier les comptes compromis. Cela viole également des exigences de conformité (RGPD, PCI-DSS).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 4,
+        "texte": "Proposer trois événements à logger obligatoirement pour cette application.",
+        "niveau": "easy",
+        "reponse": "1. Toute tentative de désérialisation échouée (exception). 2. Modification de cookie détectée (incohérence de signature). 3. Connexion avec identifiant valide + IP + horodatage.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

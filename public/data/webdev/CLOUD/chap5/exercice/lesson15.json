@@ -1,0 +1,102 @@
+[
+  {
+    "intitule": "Configuration manuelle d’un VPC",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous travaillez pour une start-up e-commerce qui souhaite migrer une partie de son infrastructure dans le cloud. On vous demande de créer un VPC (Virtual Private Cloud) avec un sous-réseau public et un sous-réseau privé. Aucune passerelle NAT n’est prévue dans un premier temps.</p>",
+      "images": [
+        "schéma simple d'un VPC cloud avec deux sous-réseaux publics et privés"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire la plage d’adresses IPv4 que vous utiliseriez pour le VPC en respectant la plage RFC 1918 ($10.0.0.0/8$, $172.16.0.0/12$, $192.168.0.0/16$). Justifier votre choix.",
+        "niveau": "easy",
+        "reponse": "$10.0.0.0/16$ par exemple. Une plage /16 offre 65536 adresses IP, suffisante pour une petite start-up évolutive, et reste dans l’espace privé RFC 1918.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer pourquoi il est nécessaire de configurer une table de routage distincte pour le sous-réseau privé.",
+        "niveau": "medium",
+        "reponse": "Le sous-réseau privé ne doit pas avoir de route par défaut vers une passerelle Internet (IGW) pour éviter un accès direct depuis Internet. Sa table de routage contiendra uniquement une route locale. Une table différente permet d’isoler les politiques de routage.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Vous devez lister les étapes pour associer correctement les groupes de sécurité (Security Groups) à une instance EC2 dans le sous-réseau public, selon le principe du moindre privilège.",
+        "niveau": "medium",
+        "reponse": "1. Créer un Security Group pour le serveur web. 2. Autoriser le port 80 (HTTP) et 443 (HTTPS) depuis 0.0.0.0/0. 3. Autoriser le port 22 (SSH) uniquement depuis l’IP du bureau de l’administrateur. 4. Associer ce Security Group à l’instance EC2 au lancement. 5. Vérifier qu’aucune règle trop permissive n’existe.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Sécurisation d’un VPC pour une application bancaire",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Une banque camerounaise déploie une application de gestion de comptes dans le cloud. Elle doit respecter des contraintes strictes de sécurité : base de données inaccessible depuis Internet, accès SSH uniquement depuis un réseau administrateur sécurisé (IP fixe $196.200.10.5$), et journalisation de tout le trafic réseau entrant/sortant.</p>",
+      "images": [
+        "architecture cloud avec VPC, sous-réseaux publics/privés, bastion, base de données"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Justifier pourquoi vous utiliseriez à la fois des Security Groups (firewall d’instance) et des NACL (firewall de sous-réseau) pour cette architecture.",
+        "niveau": "hard",
+        "reponse": "Les Security Groups offrent une protection au niveau de l’instance avec des règles stateful (plus simples). Les NACL sont stateless et agissent au niveau du sous-réseau, ajoutant une couche de défense en profondeur. En cas d’erreur de règle dans un Security Group, la NACL peut bloquer le trafic indésirable.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Concevoir les règles de la NACL entrante pour le sous-réseau privé contenant la base de données MySQL (port 3306). Les règles doivent autoriser uniquement le trafic depuis les serveurs applicatifs situés dans le sous-réseau public ($10.0.1.0/24$) et bloquer tout le reste.",
+        "niveau": "hard",
+        "reponse": "Règle 100 : Autoriser, protocole TCP, port 3306, source = 10.0.1.0/24. Règle 200 : Refuser, protocole TCP, port 3306, source = 0.0.0.0/0. Règle * (étoile) : Refuser tout autre trafic. Les règles sont évaluées par ordre croissant de numéro.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Analyser un risque potentiel si l’administrateur oublie de créer une règle de retour dans la NACL sortante pour le sous-réseau privé (les NACL étant stateless). Proposer une correction.",
+        "niveau": "very hard",
+        "reponse": "Risque : Le serveur de base de données peut envoyer une réponse (port éphémère >=1024) au serveur applicatif, mais le trafic de retour sera bloqué par la NACL sortante car aucune règle n’autorise les ports élevés. Correction : Ajouter une règle sortante autorisant TCP sur la plage de ports éphémères (ex. 32768-65535) vers 10.0.1.0/24.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Diagnostic d’une panne de connectivité réseau",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans un VPC AWS, un ingénieur a créé une instance dans un sous-réseau public avec une passerelle Internet attachée à la table de routage. L’instance possède un Security Group autorisant SSH (port 22) depuis n’importe où ($0.0.0.0/0$). Pourtant, l’administrateur ne parvient pas à se connecter en SSH. Le ping (ICMP) vers $8.8.8.8$ fonctionne depuis l’instance.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Énumérer trois causes possibles de l’échec SSH, autres qu’un problème de routage ou de Security Group.",
+        "niveau": "medium",
+        "reponse": "1. Le serveur SSH (sshd) n’est pas en cours d’exécution sur l’instance. 2. La clé privée utilisée par l’administrateur ne correspond pas à la clé publique configurée au lancement. 3. Le pare-feu local de l’OS (iptables, firewalld) bloque le port 22.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer une méthode systématique pour diagnostiquer et résoudre ce problème, en précisant les commandes et outils utilisables.",
+        "niveau": "hard",
+        "reponse": "1. Vérifier la règle du Security Group via console cloud. 2. Vérifier la table de routage du sous-réseau (route 0.0.0.0/0 ciblant l’IGW). 3. Tester la connectivité réseau avec `telnet <IP> 22` depuis un autre serveur. 4. Se connecter via un accès série (EC2 Instance Connect) ou via une instance bastion. 5. Une fois connecté, exécuter `sudo systemctl status sshd`, `sudo netstat -tlnp | grep :22`, `sudo iptables -L -n`.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Généraliser la solution pour que le diagnostic soit automatisé via un script shell. Décrire brièvement les vérifications qu’effectuerait ce script.",
+        "niveau": "very hard",
+        "reponse": "Le script vérifierait : 1) Résolution DNS et ping vers l’instance. 2) `nc -zv <IP> 22` pour tester l’ouverture du port. 3) Via AWS CLI, validation des règles Security Group associées. 4) Connexion SSH avec une clé de test. 5) Si échec, utilisation de AWS Systems Manager (SSM) pour exécuter des commandes internes (statut sshd, iptables). Le script retournerait un diagnostic structuré.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

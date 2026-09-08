@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+  "matiere": "Éducation Civique et Morale",
+  "classe": "Seconde C",
+  "sequence": "Séquence 4",
+  "anneeScolaire": "2025-2026",
+  "exercices": [
+    {
+      "titre": "1 : Citoyenneté, Droits et Devoirs",
+      "points": "5 pts",
+      "enonce": "<div style='font-size: 1em; line-height: 1.6; color: #1a1a1a;'>Cet exercice évalue votre compréhension des concepts fondamentaux de la citoyenneté, des droits et des devoirs qui incombent à tout citoyen camerounais.</div>",
+      "questions": [
+        {
+          "question": "<div style='font-size: 1em; line-height: 1.6; color: #1a1a1a;'><strong>1. (2 pts)</strong> a) Donnez la définition d'un citoyen selon vos cours.<br>b) Distinguez, en les définissant, un <em>devoir civique</em> d'un <em>devoir civil</em>. Illustrez chacun par un exemple.</div>",
+          "reponse": "<div style='background-color: #f0f8ff; padding: 15px; border-radius: 8px; color: #1a1a1a;'><strong>Correction :</strong><br><strong>a)</strong> Un citoyen est un membre d'un État, jouissant de droits civiques et politiques, et faisant preuve d'esprit critique et de participation à la vie de la cité.<br><strong>b)</strong> Un <strong>devoir civique</strong> est une obligation morale et légale envers l'État. Exemple : payer ses impôts (devoir fiscal) [citation:0]. Un <strong>devoir civil</strong> est une obligation envers les autres membres de la société. Exemple : respecter l'ordre et les biens publics.</div>"
+        },
+        {
+          "question": "<div style='font-size: 1em; line-height: 1.6; color: #1a1a1a;'><strong>2. (1,5 pts)</strong> a) Expliquez ce qu'est le droit de grève.<br>b) Pourquoi dit-on que le droit à la défense en justice est un droit fondamental ?</div>",
+          "reponse": "<div style='background-color: #f0f8ff; padding: 15px; border-radius: 8px; color: #1a1a1a;'><strong>Correction :</strong><br><strong>a)</strong> Le droit de grève est un droit socio-économique qui permet aux travailleurs de cesser collectivement le travail pour faire valoir leurs revendications professionnelles.<br><strong>b)</strong> Il permet à tout citoyen accusé d'un délit de bénéficier d'une procédure juste et équitable, garantissant ainsi le respect des droits de la défense.</div>"
+        },
+        {
+          "question": "<div style='font-size: 1em; line-height: 1.6; color: #1a1a1a;'><strong>3. (1,5 pts)</strong> Un bon citoyen sait faire valoir ses droits et assumer ses devoirs. En vous appuyant sur vos connaissances, montrez comment un citoyen responsable peut concilier son devoir de soumission aux lois avec son droit d'opinion.</div>",
+          "reponse": "<div style='background-color: #f0f8ff; padding: 15px; border-radius: 8px; color: #1a1a1a;'><strong>Correction :</strong><br>Un citoyen responsable respecte les lois en vigueur (devoir de soumission) tout en exerçant son droit d'opinion de manière pacifique et constructive, par exemple en participant à des débats citoyens ou en exprimant son opposition par des voies légales (pétitions, manifestations autorisées). Il comprend que la liberté d'opinion ne doit pas porter atteinte à l'ordre public établi par la loi.</div>"
+        }
+      ]
+    },
+    {
+      "titre": "2 : La Paix, un Bien Précieux à Protéger",
+      "points": "6 pts",
+      "enonce": "<div style='font-size: 1em; line-height: 1.6; color: #1a1a1a;'>La paix est un idéal à construire et à préserver. Cet exercice explore ses structures, ses obstacles et ses bienfaits.</div>",
+      "questions": [
+        {
+          "question": "<div style='font-size: 1em; line-height: 1.6; color: #1a1a1a;'><strong>1. (1,5 pts)</strong> Définissez la notion de paix. Citez deux structures mises en place par l'État pour la préserver.</div>",
+          "reponse": "<div style='background-color: #f0f8ff; padding: 15px; border-radius: 8px; color: #1a1a1a;'><strong>Correction :</strong><br>La paix est un état d'équilibre politique, économique et social, caractérisé par l'absence de guerre et de violence.<br>Exemples de structures : les forces armées et de maintien de l'ordre (armée, police), et le système judiciaire (ministère de la Justice).</div>"
+        },
+        {
+          "question": "<div style='font-size: 1em; line-height: 1.6; color: #1a1a1a;'><strong>2. (2 pts)</strong> La paix est souvent menacée par de nombreux fléaux. Citez et expliquez brièvement deux obstacles politiques et deux obstacles socio-culturels à la paix au Cameroun.</div>",
+          "reponse": "<div style='background-color: #f0f8ff; padding: 15px; border-radius: 8px; color: #1a1a1a;'><strong>Correction :</strong><br><strong>Obstacles politiques :</strong> 1) Les fraudes électorales qui minent la confiance dans les institutions. 2) Le détournement des fonds publics qui creuse les inégalités.<br><strong>Obstacles socio-culturels :</strong> 1) Le tribalisme qui divise la population. 2) Les injustices sociales qui engendrent des frustrations et des révoltes.</div>"
+        },
+        {
+          "question": "<div style='font-size: 1em; line-height: 1.6; color: #1a1a1a;'><strong>3. (2,5 pts)</strong> Expliquez l'importance de la paix pour le développement du Cameroun. Vous développerez votre réponse en montrant ses bienfaits sur les plans politique, économique et social.</div>",
+          "reponse": "<div style='background-color: #f0f8ff; padding: 15px; border-radius: 8px; color: #1a1a1a;'><strong>Correction :</strong><br><strong>Sur le plan politique :</strong> La paix est gage d'unité et d'intégration nationale, elle renforce la cohésion sociale et la légitimité des institutions.<br><strong>Sur le plan économique :</strong> C'est un facteur de développement. Elle attire les investissements étrangers, facilite les échanges et permet un développement durable.<br><strong>Sur le plan social :</strong> Elle renforce le patriotisme et la solidarité entre les individus, créant un cadre de vie harmonieux.</div>"
+        }
+      ]
+    },
+    {
+      "titre": "3 : Environnement, Développement et Production",
+      "points": "5 pts",
+      "enonce": "<div style='font-size: 1em; line-height: 1.6; color: #1a1a1a;'>La protection de l'environnement est un enjeu majeur pour notre développement. Cet exercice aborde les liens entre production, sous-développement et agressions environnementales.</div>",
+      "questions": [
+        {
+          "question": "<div style='font-size: 1em; line-height: 1.6; color: #1a1a1a;'><strong>1. (2 pts)</strong> a) Qu'est-ce que le sous-développement ?<br>b) Donnez deux caractéristiques du sous-développement sur le plan économique et deux autres sur le plan social.</div>",
+          "reponse": "<div style='background-color: #f0f8ff; padding: 15px; border-radius: 8px; color: #1a1a1a;'><strong>Correction :</strong><br><strong>a)</strong> Le sous-développement est l'état d'un pays faiblement industrialisé, qui ne parvient pas à satisfaire les besoins fondamentaux de sa population.<br><strong>b) Économique :</strong> Faible degré d'industrialisation, dépendance économique. <strong>Social :</strong> Analphabétisme, malnutrition/misère.</div>"
+        },
+        {
+          "question": "<div style='font-size: 1em; line-height: 1.6; color: #1a1a1a;'><strong>2. (1,5 pts)</strong> Citez les trois facteurs de production. Expliquez brièvement pourquoi les conditions économiques sont déterminantes pour la production.</div>",
+          "reponse": "<div style='background-color: #f0f8ff; padding: 15px; border-radius: 8px; color: #1a1a1a;'><strong>Correction :</strong><br>Les facteurs de production sont les conditions naturelles, humaines et économiques. Les conditions économiques (matières premières, machines, capitaux) sont déterminantes car elles transforment les ressources naturelles et la main-d'œuvre en biens et services consommables.</div>"
+        },
+        {
+          "question": "<div style='font-size: 1em; line-height: 1.6; color: #1a1a1a;'><strong>3. (1,5 pts)</strong> Décrivez deux conséquences directes de la destruction massive des forêts sur l'environnement et la santé humaine.</div>",
+          "reponse": "<div style='background-color: #f0f8ff; padding: 15px; border-radius: 8px; color: #1a1a1a;'><strong>Correction :</strong><br>1) Réduction de la photosynthèse, entraînant une baisse des rendements agricoles et un appauvrissement de la biodiversité.<br>2) Augmentation des gaz à effet de serre et modification du climat, pouvant causer des maladies respiratoires ou liées aux fortes chaleurs.</div>"
+        }
+      ]
+    },
+    {
+      "titre": "4 : Monnaie, Marché et Consommation",
+      "points": "4 pts",
+      "enonce": "<div style='font-size: 1em; line-height: 1.6; color: #1a1a1a;'>Comprendre le fonctionnement de l'économie est essentiel. Cet exercice porte sur les mécanismes de la monnaie, du marché et de la consommation.</div>",
+      "questions": [
+        {
+          "question": "<div style='font-size: 1em; line-height: 1.6; color: #1a1a1a;'><strong>1. (1,5 pts)</strong> a) Qu'est-ce qu'un marché au sens économique ?<br>b) Distinguez un marché local d'un marché mondial en donnant un exemple pour chacun.</div>",
+          "reponse": "<div style='background-color: #f0f8ff; padding: 15px; border-radius: 8px; color: #1a1a1a;'><strong>Correction :</strong><br><strong>a)</strong> Le marché est le lieu de rencontre théorique ou concret entre l'offre et la demande.<br><strong>b)</strong> Un marché local est limité à une zone géographique restreinte (ex: le marché de votre quartier). Un marché mondial s'étend à la planète entière (ex: le marché du pétrole).</div>"
+        },
+        {
+          "question": "<div style='font-size: 1em; line-height: 1.6; color: #1a1a1a;'><strong>2. (1,5 pts)</strong> Définissez la monnaie. Quels sont ses trois rôles principaux dans une économie moderne ?</div>",
+          "reponse": "<div style='background-color: #f0f8ff; padding: 15px; border-radius: 8px; color: #1a1a1a;'><strong>Correction :</strong><br>La monnaie est un moyen de paiement, une convention sociale destinée à faciliter les échanges. Ses rôles sont :<br>1) <strong>Instrument d'échange</strong> (elle permet d'acheter des biens et services).<br>2) <strong>Unité de compte</strong> (elle permet de mesurer la valeur des choses).<br>3) <strong>Réserve de valeur</strong> (elle permet d'épargner pour le futur).</div>"
+        },
+        {
+          "question": "<div style='font-size: 1em; line-height: 1.6; color: #1a1a1a;'><strong>3. (1 pt)</strong> Expliquez en quoi la consommation est-elle importante pour l'économie d'un pays.</div>",
+          "reponse": "<div style='background-color: #f0f8ff; padding: 15px; border-radius: 8px; color: #1a1a1a;'><strong>Correction :</strong><br>La consommation est le moteur de l'économie. Elle permet d'écouler la production, génère des profits pour les entreprises, crée de l'emploi et, in fine, contribue à la croissance économique et à l'amélioration du niveau de vie des citoyens.</div>"
+        }
+      ]
+    }
+  ]
+};
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

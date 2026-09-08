@@ -1,0 +1,130 @@
+[
+  {
+    "intitule": "Création et utilisation d'un thème global avec Context API",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous développez une application mobile React Native qui doit proposer deux modes d'affichage : <strong>mode clair</strong> et <strong>mode sombre</strong>. Tous les écrans de l'application doivent réagir immédiatement au changement de thème.</p><p>On souhaite utiliser la <strong>Context API</strong> pour partager l'état du thème (couleur de fond, couleur du texte, style des boutons) entre tous les composants.</p><p>Le thème est défini ainsi :</p><ul><li>Mode clair : fond blanc ($backgroundColor='#FFFFFF'$), texte noir ($color='#000000'$), bouton bleu clair</li><li>Mode sombre : fond gris foncé ($backgroundColor='#1A1A1A'$), texte blanc ($color='#FFFFFF'$), bouton bleu foncé</li></ul><p>L'utilisateur peut basculer d'un mode à l'autre via un bouton présent dans le header de l'application.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créez le fichier <code>ThemeContext.js</code> contenant le contexte, le provider et le hook personnalisé <code>useTheme()</code>. Définissez la structure de l'état initial et les actions disponibles (toggleTheme).",
+        "niveau": "medium",
+        "reponse": "```javascript\nimport React, { createContext, useState, useContext } from 'react';\n\n// Définition des thèmes\nconst lightTheme = {\n  mode: 'light',\n  backgroundColor: '#FFFFFF',\n  color: '#000000',\n  buttonColor: '#3B82F6',\n  buttonTextColor: '#FFFFFF',\n};\n\nconst darkTheme = {\n  mode: 'dark',\n  backgroundColor: '#1A1A1A',\n  color: '#FFFFFF',\n  buttonColor: '#1E40AF',\n  buttonTextColor: '#FFFFFF',\n};\n\n// Création du contexte\nconst ThemeContext = createContext();\n\n// Provider\nexport const ThemeProvider = ({ children }) => {\n  const [theme, setTheme] = useState(lightTheme);\n\n  const toggleTheme = () => {\n    setTheme(prevTheme => prevTheme.mode === 'light' ? darkTheme : lightTheme);\n  };\n\n  return (\n    <ThemeContext.Provider value={{ theme, toggleTheme }}>\n      {children}\n    </ThemeContext.Provider>\n  );\n};\n\n// Hook personnalisé\nexport const useTheme = () => {\n  const context = useContext(ThemeContext);\n  if (!context) {\n    throw new Error('useTheme doit être utilisé à l\\'intérieur d\\'un ThemeProvider');\n  }\n  return context;\n};\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrivez le code du composant principal <code>App.js</code> qui enveloppe l'application avec le <code>ThemeProvider</code>.",
+        "niveau": "easy",
+        "reponse": "```javascript\nimport React from 'react';\nimport { ThemeProvider } from './contexts/ThemeContext';\nimport HomeScreen from './screens/HomeScreen';\n\nexport default function App() {\n  return (\n    <ThemeProvider>\n      <HomeScreen />\n    </ThemeProvider>\n  );\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Créez un composant <code>SettingsButton</code> qui utilise le hook <code>useTheme()</code> pour afficher un bouton permettant de basculer entre les modes clair et sombre. Le bouton doit changer de couleur selon le thème actif.",
+        "niveau": "medium",
+        "reponse": "```javascript\nimport React from 'react';\nimport { TouchableOpacity, Text, StyleSheet } from 'react-native';\nimport { useTheme } from '../contexts/ThemeContext';\n\nconst SettingsButton = () => {\n  const { theme, toggleTheme } = useTheme();\n\n  return (\n    <TouchableOpacity\n      style={[styles.button, { backgroundColor: theme.buttonColor }]}\n      onPress={toggleTheme}\n    >\n      <Text style={[styles.buttonText, { color: theme.buttonTextColor }]}>\n        {theme.mode === 'light' ? '🌙 Mode sombre' : '☀️ Mode clair'}\n      </Text>\n    </TouchableOpacity>\n  );\n};\n\nconst styles = StyleSheet.create({\n  button: {\n    padding: 12,\n    borderRadius: 8,\n    alignItems: 'center',\n    margin: 16,\n  },\n  buttonText: {\n    fontSize: 16,\n    fontWeight: '600',\n  },\n});\n\nexport default SettingsButton;\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 4,
+        "texte": "Expliquez pourquoi il est important de vérifier que le contexte existe dans le hook personnalisé <code>useTheme()</code> et de lancer une erreur si ce n'est pas le cas.",
+        "niveau": "hard",
+        "reponse": "Cette vérification (guard clause) est essentielle pour éviter des erreurs silencieuses. Si un développeur utilise `useTheme()` dans un composant qui n'est pas enfant d'un `ThemeProvider`, le contexte serait `undefined` et l'accès à `theme` ou `toggleTheme` provoquerait une erreur runtime difficile à déboguer. En lançant une erreur explicite avec un message clair, on identifie immédiatement le problème et on comprend qu'il faut envelopper le composant avec le Provider approprié. C'est une bonne pratique de conception des hooks personnalisés.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse et correction d'un bug de partage d'état",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un développeur a écrit le code suivant pour partager l'état d'un utilisateur connecté dans toute l'application. Malheureusement, lorsque le composant <code>ProfileScreen</code> modifie le nom de l'utilisateur, le changement n'apparaît pas dans le <code>Header</code> qui affiche pourtant le même nom. Analysez le code et corrigez le problème.</p>\n\n<pre><code>// UserContext.js\nimport { createContext, useState } from 'react';\n\nexport const UserContext = createContext();\n\nexport const UserProvider = ({ children }) => {\n  const [user, setUser] = useState({ name: 'Jean', email: 'jean@email.com' });\n  \n  const updateUserName = (newName) => {\n    user.name = newName;  // Modification directe de l'objet\n  };\n  \n  return (\n    &lt;UserContext.Provider value={{ user, updateUserName }}&gt;\n      {children}\n    &lt;/UserContext.Provider&gt;\n  );\n};\n\n// ProfileScreen.js\nimport { useContext } from 'react';\nimport { UserContext } from './UserContext';\n\nconst ProfileScreen = () => {\n  const { user, updateUserName } = useContext(UserContext);\n  \n  const handleChangeName = () => {\n    updateUserName('Marie');\n    console.log('Nouveau nom:', user.name); // Affiche 'Marie'\n  };\n  \n  return (&lt;Text&gt;Nom: {user.name}&lt;/Text&gt;);\n};\n\n// Header.js\nimport { useContext } from 'react';\nimport { UserContext } from './UserContext';\n\nconst Header = () => {\n  const { user } = useContext(UserContext);\n  return (&lt;Text&gt;Bienvenue {user.name}&lt;/Text&gt;); // N'est pas mis à jour !\n};</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier et expliquer l'erreur principale dans ce code. Pourquoi le Header n'est-il pas mis à jour alors que le ProfileScreen semble fonctionner ?",
+        "niveau": "medium",
+        "reponse": "L'erreur principale est la **modification directe de l'objet** dans `updateUserName`. En React, l'état ne doit jamais être modifié directement car React détecte les changements d'état par comparaison de références. Lorsqu'on fait `user.name = newName`, l'objet `user` garde la même référence mémoire, donc React ne déclenche pas de re-rendu des composants qui dépendent de cet état. Le `console.log` affiche la bonne valeur car l'objet a bien été modifié en mémoire, mais React n'en a pas connaissance. Seul l'appel à la fonction de mise à jour `setUser` (issue du `useState`) permet de créer une nouvelle référence et de déclencher les re-rendus.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer une correction du code en respectant le principe d'immutabilité de React.",
+        "niveau": "medium",
+        "reponse": "```javascript\n// UserContext.js (corrigé)\nimport { createContext, useState } from 'react';\n\nexport const UserContext = createContext();\n\nexport const UserProvider = ({ children }) => {\n  const [user, setUser] = useState({ name: 'Jean', email: 'jean@email.com' });\n  \n  const updateUserName = (newName) => {\n    setUser(prevUser => ({\n      ...prevUser,    // Copie de l'ancien objet\n      name: newName   // Nouvelle valeur pour la propriété name\n    }));\n  };\n  \n  return (\n    <UserContext.Provider value={{ user, updateUserName }}>\n      {children}\n    </UserContext.Provider>\n  );\n};\n```\n\nLa correction utilise `setUser` avec une fonction qui reçoit l'état précédent et retourne un **nouvel objet** contenant toutes les propriétés de l'ancien (via l'opérateur spread `...`) et la propriété modifiée. Cela crée une nouvelle référence, permettant à React de détecter le changement et de re-rendre tous les composants qui consomment ce contexte.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Justifier pourquoi on utilise la forme fonctionnelle `setUser(prevUser => ({...prevUser, name: newName}))` plutôt que `setUser({...user, name: newName})` dans le contexte.",
+        "niveau": "very hard",
+        "reponse": "La forme fonctionnelle `setUser(prevUser => ...)` garantit qu'on travaille avec la valeur la plus récente de l'état, même si plusieurs mises à jour sont déclenchées rapidement (par exemple, deux appels consécutifs à `updateUserName`). Avec la forme `setUser({...user, name: newName})`, on pourrait rencontrer des problèmes de **fermeture (closure)** si `user` n'a pas encore été mis à jour entre deux appels, ce qui entraînerait une perte de données. La forme fonctionnelle est donc plus sûre et recommandée lorsque la nouvelle valeur dépend de l'ancienne. De plus, dans un contexte Provider, les consommateurs peuvent appeler `updateUserName` de manière asynchrone ; la forme fonctionnelle évite les bugs de mise à jour basée sur un état obsolète (stale state).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Implémentation d'un panier d'achat avec Context API",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous devez créer un système de <strong>panier d'achat</strong> pour une application e-commerce. Le panier doit être accessible depuis n'importe quel écran (liste des produits, écran produit, écran panier).</p><p>Fonctionnalités attendues :</p><ul><li>Ajouter un produit au panier (avec quantité)</li><li>Retirer un produit du panier</li><li>Modifier la quantité d'un produit existant</li><li>Calculer le nombre total d'articles dans le panier (badge d'affichage)</li><li>Calculer le prix total du panier ($\\sum (prix \\times quantit\\acute{e})$)</li><li>Vider complètement le panier</li></ul><p>Chaque produit est représenté par : <code>{ id: number, nom: string, prix: number, quantite: number }</code></p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevoir la structure du contexte <code>CartContext</code>. Définir l'état initial, les actions nécessaires (addItem, removeItem, updateQuantity, clearCart) et le hook personnalisé <code>useCart()</code>.",
+        "niveau": "hard",
+        "reponse": "```javascript\n// CartContext.js\nimport React, { createContext, useContext, useReducer } from 'react';\n\n// État initial\nconst initialState = {\n  items: [],\n  totalItems: 0,\n  totalPrice: 0,\n};\n\n// Reducer pour gérer les actions du panier\nconst cartReducer = (state, action) => {\n  switch (action.type) {\n    case 'ADD_ITEM': {\n      const existingItem = state.items.find(item => item.id === action.payload.id);\n      let newItems;\n      \n      if (existingItem) {\n        newItems = state.items.map(item =>\n          item.id === action.payload.id\n            ? { ...item, quantite: item.quantite + action.payload.quantite }\n            : item\n        );\n      } else {\n        newItems = [...state.items, { ...action.payload }];\n      }\n      \n      const totalItems = newItems.reduce((sum, item) => sum + item.quantite, 0);\n      const totalPrice = newItems.reduce((sum, item) => sum + (item.prix * item.quantite), 0);\n      \n      return { items: newItems, totalItems, totalPrice };\n    }\n    \n    case 'REMOVE_ITEM': {\n      const newItems = state.items.filter(item => item.id !== action.payload);\n      const totalItems = newItems.reduce((sum, item) => sum + item.quantite, 0);\n      const totalPrice = newItems.reduce((sum, item) => sum + (item.prix * item.quantite), 0);\n      return { items: newItems, totalItems, totalPrice };\n    }\n    \n    case 'UPDATE_QUANTITY': {\n      const { id, quantite } = action.payload;\n      if (quantite <= 0) {\n        return cartReducer(state, { type: 'REMOVE_ITEM', payload: id });\n      }\n      const newItems = state.items.map(item =>\n        item.id === id ? { ...item, quantite } : item\n      );\n      const totalItems = newItems.reduce((sum, item) => sum + item.quantite, 0);\n      const totalPrice = newItems.reduce((sum, item) => sum + (item.prix * item.quantite), 0);\n      return { items: newItems, totalItems, totalPrice };\n    }\n    \n    case 'CLEAR_CART':\n      return initialState;\n      \n    default:\n      return state;\n  }\n};\n\nconst CartContext = createContext();\n\nexport const CartProvider = ({ children }) => {\n  const [state, dispatch] = useReducer(cartReducer, initialState);\n  \n  const addItem = (product, quantite = 1) => {\n    dispatch({ type: 'ADD_ITEM', payload: { ...product, quantite } });\n  };\n  \n  const removeItem = (id) => {\n    dispatch({ type: 'REMOVE_ITEM', payload: id });\n  };\n  \n  const updateQuantity = (id, quantite) => {\n    dispatch({ type: 'UPDATE_QUANTITY', payload: { id, quantite } });\n  };\n  \n  const clearCart = () => {\n    dispatch({ type: 'CLEAR_CART' });\n  };\n  \n  return (\n    <CartContext.Provider value={{\n      cart: state,\n      addItem,\n      removeItem,\n      updateQuantity,\n      clearCart,\n    }}>\n      {children}\n    </CartContext.Provider>\n  );\n};\n\nexport const useCart = () => {\n  const context = useContext(CartContext);\n  if (!context) {\n    throw new Error('useCart doit être utilisé dans un CartProvider');\n  }\n  return context;\n};\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Créer un composant <code>CartBadge</code> qui affiche le nombre total d'articles dans le panier (à utiliser dans le header de l'application).",
+        "niveau": "medium",
+        "reponse": "```javascript\n// CartBadge.js\nimport React from 'react';\nimport { View, Text, StyleSheet } from 'react-native';\nimport { useCart } from '../contexts/CartContext';\n\nconst CartBadge = () => {\n  const { cart } = useCart();\n  \n  if (cart.totalItems === 0) {\n    return null;\n  }\n  \n  return (\n    <View style={styles.badge}>\n      <Text style={styles.badgeText}>{cart.totalItems}</Text>\n    </View>\n  );\n};\n\nconst styles = StyleSheet.create({\n  badge: {\n    position: 'absolute',\n    right: -8,\n    top: -8,\n    backgroundColor: '#EF4444',\n    borderRadius: 12,\n    minWidth: 20,\n    height: 20,\n    justifyContent: 'center',\n    alignItems: 'center',\n    paddingHorizontal: 4,\n  },\n  badgeText: {\n    color: '#FFFFFF',\n    fontSize: 10,\n    fontWeight: 'bold',\n  },\n});\n\nexport default CartBadge;\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Écrire le composant <code>ProductCard</code> qui affiche un produit et permet de l'ajouter au panier. Gérer l'état local de la quantité sélectionnée (stepper) avant ajout.",
+        "niveau": "hard",
+        "reponse": "```javascript\n// ProductCard.js\nimport React, { useState } from 'react';\nimport { View, Text, TouchableOpacity, StyleSheet } from 'react-native';\nimport { useCart } from '../contexts/CartContext';\n\nconst ProductCard = ({ product }) => {\n  const [quantity, setQuantity] = useState(1);\n  const { addItem } = useCart();\n  \n  const increment = () => setQuantity(prev => prev + 1);\n  const decrement = () => setQuantity(prev => (prev > 1 ? prev - 1 : 1));\n  \n  const handleAddToCart = () => {\n    addItem(product, quantity);\n    setQuantity(1); // Réinitialiser après ajout\n  };\n  \n  return (\n    <View style={styles.card}>\n      <Text style={styles.name}>{product.nom}</Text>\n      <Text style={styles.price}>{product.prix} €</Text>\n      \n      <View style={styles.stepper}>\n        <TouchableOpacity onPress={decrement} style={styles.stepperBtn}>\n          <Text style={styles.stepperText}>-</Text>\n        </TouchableOpacity>\n        <Text style={styles.quantity}>{quantity}</Text>\n        <TouchableOpacity onPress={increment} style={styles.stepperBtn}>\n          <Text style={styles.stepperText}>+</Text>\n        </TouchableOpacity>\n      </View>\n      \n      <TouchableOpacity style={styles.addBtn} onPress={handleAddToCart}>\n        <Text style={styles.addBtnText}>Ajouter au panier</Text>\n      </TouchableOpacity>\n    </View>\n  );\n};\n\nconst styles = StyleSheet.create({\n  card: {\n    backgroundColor: '#FFFFFF',\n    borderRadius: 12,\n    padding: 16,\n    margin: 8,\n    shadowColor: '#000',\n    shadowOffset: { width: 0, height: 2 },\n    shadowOpacity: 0.1,\n    elevation: 3,\n  },\n  name: { fontSize: 16, fontWeight: 'bold' },\n  price: { fontSize: 14, color: '#10B981', marginVertical: 4 },\n  stepper: { flexDirection: 'row', alignItems: 'center', marginVertical: 8 },\n  stepperBtn: {\n    backgroundColor: '#E5E7EB',\n    width: 32,\n    height: 32,\n    borderRadius: 16,\n    justifyContent: 'center',\n    alignItems: 'center',\n  },\n  stepperText: { fontSize: 18, fontWeight: 'bold' },\n  quantity: { marginHorizontal: 16, fontSize: 16 },\n  addBtn: {\n    backgroundColor: '#3B82F6',\n    padding: 10,\n    borderRadius: 8,\n    alignItems: 'center',\n  },\n  addBtnText: { color: '#FFF', fontWeight: '600' },\n});\n\nexport default ProductCard;\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Comparaison des approches de partage d'état",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>En React Native, il existe plusieurs méthodes pour partager des données entre composants : les <strong>props</strong> (passage parent → enfant), la <strong>Context API</strong> et les <strong>stores globaux</strong> (Redux, Zustand).</p><p>Vous devez choisir l'approche la plus adaptée pour les situations suivantes et justifier votre choix en utilisant la taxonomie de Bloom (analyser, évaluer).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analyser la situation suivante et évaluer quelle approche est la plus adaptée : une application avec 3 niveaux de composants imbriqués (App → Dashboard → UserProfile). Le composant UserProfile doit afficher le nom de l'utilisateur qui est chargé dans le composant App après une requête API.",
+        "niveau": "medium",
+        "reponse": "La **Context API** est l'approche la plus adaptée. Le passage par props nécessiterait de transmettre la donnée à travers le composant Dashboard qui n'en a pas besoin (prop drilling), ce qui rend le code moins maintenable. La Context API permet au composant UserProfile de consommer directement la donnée sans intermédiaire. Redux serait une sur-ingénierie pour un cas aussi simple (un seul état global). Le passage par props est envisageable si l'arbre est peu profond, mais avec 3 niveaux, Context est préférable.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Évaluer dans quel cas on préférera utiliser Redux plutôt que la Context API pour le partage d'état.",
+        "niveau": "hard",
+        "reponse": "Redux est préféré à la Context API dans les cas suivants :\n\n1. **État global complexe et volumineux** : Redux offre des devtools puissants pour le debugging, le time-travel et la persistance.\n\n2. **Mises à jour fréquentes de l'état** : Context API peut provoquer des re-rendus inutiles de tous les composants consommateurs lors d'un changement, alors que Redux permet de sélectionner uniquement les portions d'état nécessaires via les sélecteurs.\n\n3. **Logique de mise à jour complexe** : Redux avec ses reducers et middleware (thunk, saga) est mieux adapté pour gérer des flux asynchrones, de la validation, ou des transformations complexes.\n\n4. **Performance critique** : Pour une application à grande échelle avec des animations et des listes longues, Redux offre de meilleures performances grâce à sa gestion fine des mises à jour.\n\n5. **Équipe de développement importante** : Redux impose une structure stricte (actions, reducers, store) qui standardise le code et facilite la collaboration.\n\nLa Context API reste recommandée pour les états simples (thème, authentification de base, préférences utilisateur) où la simplicité prime sur les fonctionnalités avancées.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

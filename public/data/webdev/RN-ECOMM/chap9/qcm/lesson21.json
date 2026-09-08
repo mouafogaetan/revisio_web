@@ -1,0 +1,148 @@
+[
+  {
+    "intitule": "Comprendre le système d'interactions utilisateur",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Dans le cadre du développement de l'application mobile <strong>SawaMart</strong>, vous devez comprendre comment fonctionne le système d'interactions utilisateur pour alimenter le moteur de recommandations.</p><p>Le service <code>interactionService</code> est responsable du logging des actions des utilisateurs : vues de produits, recherches effectuées, ajouts aux favoris.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez pourquoi il est important de logger les interactions des utilisateurs dans une application e-commerce.",
+        "niveau": "easy",
+        "reponse": "Il est important de logger les interactions des utilisateurs pour : <ul><li><strong>Personnaliser l'expérience</strong> : proposer des produits adaptés aux goûts de chaque utilisateur</li><li><strong>Améliorer le moteur de recommandations</strong> : plus de données = meilleures prédictions</li><li><strong>Analyser le comportement</strong> : comprendre ce qui intéresse les utilisateurs</li><li><strong>Optimiser le catalogue</strong> : identifier les produits populaires</li><li><strong>Augmenter les ventes</strong> : en proposant des produits pertinents</li></ul>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Identifiez les trois types d'interactions principales qui doivent être loggées dans une application e-commerce comme SawaMart.",
+        "niveau": "easy",
+        "reponse": "Les trois types d'interactions principales à logger sont : <ul><li><strong>Vues de produits</strong> : quand un utilisateur consulte un produit (product_detail_view)</li><li><strong>Recherches</strong> : quand un utilisateur effectue une recherche (product_search)</li><li><strong>Favoris</strong> : quand un utilisateur ajoute ou retire un produit des favoris (favorite_toggle)</li></ul>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Conception du service d'interactions",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>L'équipe de développement de <strong>SawaMart</strong> souhaite améliorer les recommandations en loggant les interactions des utilisateurs.</p><p>Vous devez concevoir le service <code>interactionService</code> qui permettra de loguer les actions des utilisateurs.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevez une structure de données pour l'entité <code>UserInteraction</code> avec les champs appropriés.",
+        "niveau": "medium",
+        "reponse": "```typescript\ninterface UserInteraction {\n  id: string;              // Identifiant unique\n  userId: string;          // Identifiant de l'utilisateur\n  productId?: string;      // Produit concerné (optionnel)\n  type: 'view' | 'search' | 'favorite' | 'purchase';\n  data: {\n    searchQuery?: string;  // Pour les recherches\n    categoryId?: string;   // Pour les vues\n    previousState?: boolean; // Pour les favoris (true/false)\n  };\n  timestamp: Date;         // Date et heure de l'interaction\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrivez la méthode <code>logInteraction</code> du service qui enregistre une interaction de manière asynchrone.",
+        "niveau": "hard",
+        "reponse": "```typescript\n// interactionService.ts\nimport { InteractionRepository } from '../repositories/interaction.repository';\n\nexport class InteractionService {\n  constructor(private interactionRepo: InteractionRepository) {}\n\n  async logInteraction(\n    userId: string,\n    type: 'view' | 'search' | 'favorite' | 'purchase',\n    data: any\n  ): Promise<void> {\n    try {\n      const interaction = {\n        userId,\n        type,\n        data,\n        timestamp: new Date(),\n      };\n      \n      // Enregistrement asynchrone en base de données\n      await this.interactionRepo.save(interaction);\n      \n      // Mise à jour des statistiques en temps réel (optionnel)\n      if (type === 'view') {\n        await this.updateProductViewCount(data.productId);\n      }\n    } catch (error) {\n      console.error('Erreur lors du logging d\\'interaction:', error);\n      // Ne pas propager l'erreur pour ne pas bloquer l'utilisateur\n    }\n  }\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Expliquez pourquoi la méthode doit être asynchrone et comment gérer les erreurs.",
+            "niveau": "medium",
+            "reponse": "La méthode doit être asynchrone car l'enregistrement en base de données est une opération qui peut prendre du temps. En utilisant <code>async/await</code>, on évite de bloquer le thread principal de l'application. Pour la gestion des erreurs : <ul><li>On utilise un <code>try/catch</code> pour capturer les erreurs</li><li>On logue l'erreur pour le debugging</li><li>On ne propage pas l'erreur à l'utilisateur (l'échec du logging ne doit pas bloquer l'action de l'utilisateur)</li><li>On peut implémenter un mécanisme de retry en cas d'échec réseau</li></ul>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Implémentation du moteur de recommandations",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous devez implémenter le <code>RecommendationsService</code> qui génère des suggestions personnalisées pour les utilisateurs de SawaMart.</p><p>Le service doit prendre en compte :</p><ul><li>Les produits consultés par l'utilisateur</li><li>Les produits ajoutés aux favoris</li><li>Les recherches effectuées</li><li>Les produits similaires dans les mêmes catégories</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevez une méthode <code>getPersonalizedRecommendations</code> qui génère des recommandations basées sur les favoris de l'utilisateur.",
+        "niveau": "hard",
+        "reponse": "```typescript\nasync getPersonalizedRecommendations(\n  userId: string,\n  limit: number = 10\n): Promise<Product[]> {\n  // 1. Récupérer les IDs des produits favoris de l'utilisateur\n  const favoriteProducts = await this.getUserFavorites(userId);\n  \n  if (favoriteProducts.length === 0) {\n    // 2. Si pas de favoris, recommander les produits populaires\n    return this.getPopularProducts(limit);\n  }\n  \n  // 3. Récupérer les catégories des produits favoris\n  const categories = await this.getCategoriesFromProducts(favoriteProducts);\n  \n  // 4. Récupérer les produits similaires dans les mêmes catégories\n  const recommendations = await this.productRepository\n    .createQueryBuilder('product')\n    .where('product.categoryId IN (:...categories)', { categories })\n    .andWhere('product.id NOT IN (:...favorites)', { \n      favorites: favoriteProducts.map(p => p.id) \n    })\n    .orderBy('product.viewCount', 'DESC')\n    .limit(limit)\n    .getMany();\n  \n  // 5. Si pas assez de résultats, compléter avec des produits populaires\n  if (recommendations.length < limit) {\n    const popular = await this.getPopularProducts(limit - recommendations.length);\n    recommendations.push(...popular);\n  }\n  \n  return recommendations;\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez comment gérer le cas d'un nouvel utilisateur qui n'a pas encore d'interactions.",
+            "niveau": "medium",
+            "reponse": "Pour un nouvel utilisateur (sans historique), on utilise une approche de <strong>cold start</strong> : <ul><li>Recommander les <strong>produits les plus populaires</strong> de la plateforme</li><li>Recommander les <strong>produits récemment ajoutés</strong></li><li>Afficher une <strong>sélection éditoriale</strong> mise en avant par les administrateurs</li><li>Utiliser les <strong>recommandations basées sur la localisation</strong> (produits près de l'utilisateur)</li><li>Au fur et à mesure que l'utilisateur interagit, les recommandations s'affinent</li></ul>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Comment optimiser les performances du service de recommandations pour éviter les ralentissements ?",
+            "niveau": "hard",
+            "reponse": "Pour optimiser les performances : <ul><li><strong>Mettre en cache</strong> les recommandations avec un TTL (Time To Live) d'environ 5 minutes</li><li>Utiliser un <strong>cache distribué</strong> comme Redis pour les recommandations</li><li><strong>Pré-calculer</strong> les recommandations dans des tâches planifiées (Cron)</li><li>Limiter le <strong>nombre de requêtes SQL</strong> en utilisant des <code>JOIN</code> optimisés</li><li>Utiliser des <strong>index</strong> sur les colonnes <code>userId</code> et <code>categoryId</code></li><li>Implémenter une <strong>pagination</strong> (ne pas charger tous les produits en une fois)</li><li>Utiliser un <strong>pattern BulkHead</strong> pour ne pas surcharger la base de données</li></ul>"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Écrivez la méthode <code>logView</code> qui est appelée à chaque consultation d'un produit et qui met à jour les interactions.",
+        "niveau": "medium",
+        "reponse": "```typescript\nasync logView(userId: string, productId: string): Promise<void> {\n  try {\n    // 1. Enregistrer l'interaction\n    await this.interactionService.logInteraction(userId, 'view', {\n      productId,\n      timestamp: new Date(),\n    });\n    \n    // 2. Mettre à jour le compteur de vues du produit\n    await this.productRepository.increment({ id: productId }, 'viewCount', 1);\n    \n    // 3. Mettre à jour les recommandations en cache (asynchrone)\n    this.updateRecommendationsCache(userId);\n    \n    // 4. Envoyer un événement pour le traitement en temps réel (optionnel)\n    this.eventEmitter.emit('product.viewed', { userId, productId });\n  } catch (error) {\n    console.error('Erreur lors du logging de la vue:', error);\n  }\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion du cache des recommandations",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Le moteur de recommandations de SawaMart doit gérer un cache pour optimiser les performances. Le cache doit avoir un TTL (Time To Live) et être invalidé lorsque l'utilisateur interagit avec un produit.</p><p>Vous devez implémenter un <code>recommendationStore</code> avec Zustand qui gère ce cache.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevez un store Zustand pour les recommandations qui inclut un TTL pour le cache.",
+        "niveau": "medium",
+        "reponse": "```typescript\n// recommendationStore.ts\nimport { create } from 'zustand';\nimport { persist } from 'zustand/middleware';\n\ninterface RecommendationState {\n  recommendations: Product[];\n  cacheTimestamp: number | null;\n  isLoading: boolean;\n  error: string | null;\n  \n  // Actions\n  setRecommendations: (products: Product[]) => void;\n  clearCache: () => void;\n  isCacheValid: () => boolean;\n  getRecommendations: () => Promise<Product[]>;\n  invalidateCache: () => void;\n}\n\nconst TTL = 5 * 60 * 1000; // 5 minutes en millisecondes\n\nexport const useRecommendationStore = create<RecommendationState>()(\n  persist(\n    (set, get) => ({\n      recommendations: [],\n      cacheTimestamp: null,\n      isLoading: false,\n      error: null,\n      \n      setRecommendations: (products) => \n        set({ \n          recommendations: products, \n          cacheTimestamp: Date.now(),\n          isLoading: false,\n          error: null\n        }),\n      \n      clearCache: () => \n        set({ \n          recommendations: [], \n          cacheTimestamp: null \n        }),\n      \n      isCacheValid: () => {\n        const { cacheTimestamp } = get();\n        if (!cacheTimestamp) return false;\n        return (Date.now() - cacheTimestamp) < TTL;\n      },\n      \n      getRecommendations: async () => {\n        const { isCacheValid, recommendations, setRecommendations } = get();\n        \n        // Si le cache est valide, retourner les données en cache\n        if (isCacheValid() && recommendations.length > 0) {\n          return recommendations;\n        }\n        \n        // Sinon, charger les données fraîches\n        set({ isLoading: true, error: null });\n        try {\n          const response = await recommendationService.fetchPersonalized();\n          setRecommendations(response);\n          return response;\n        } catch (error) {\n          set({ \n            error: error.message, \n            isLoading: false \n          });\n          // Retourner les données en cache même si expirées\n          return recommendations;\n        }\n      },\n      \n      invalidateCache: () => {\n        set({ cacheTimestamp: null });\n      }\n    }),\n    {\n      name: 'recommendation-store', // Persistance dans AsyncStorage\n    }\n  )\n);\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Justifiez le choix du TTL de 5 minutes pour les recommandations.",
+            "niveau": "medium",
+            "reponse": "Le TTL de 5 minutes est un bon compromis entre : <ul><li><strong>Performance</strong> : éviter des appels API trop fréquents</li><li><strong>Fraîcheur des données</strong> : les recommandations doivent refléter les interactions récentes</li><li><strong>Comportement utilisateur</strong> : un utilisateur navigue en général plusieurs minutes sur l'application</li><li><strong>Charge serveur</strong> : limiter le nombre de requêtes vers le backend</li><li><strong>Expérience utilisateur</strong> : si un utilisateur ajoute un favori, il veut voir le changement rapidement</li></ul>"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Décrivez comment et quand le cache doit être invalidé pour garantir des recommandations à jour.",
+        "niveau": "medium",
+        "reponse": "Le cache doit être invalidé dans les cas suivants : <ul><li><strong>Ajout ou retrait d'un favori</strong> : les préférences de l'utilisateur ont changé</li><li><strong>Consultation d'un produit</strong> : pour prendre en compte l'intérêt de l'utilisateur</li><li><strong>Recherche effectuée</strong> : pour affiner les recommandations</li><li><strong>TTL expiré</strong> : après 5 minutes</li><li><strong>Déconnexion</strong> : nettoyer les données de l'utilisateur</li></ul>Pour implémenter l'invalidation : <ul><li>Appeler <code>invalidateCache()</code> après chaque interaction</li><li>Utiliser un abonnement aux stores (<code>favoriteStore</code>, <code>searchStore</code>)</li><li>Dans le <code>useEffect</code> de l'écran d'accueil, vérifier la validité du cache</li></ul>"
+      }
+    ]
+  },
+  {
+    "intitule": "État de chargement pour les recommandations",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Dans l'écran d'accueil de SawaMart, les recommandations personnalisées doivent s'afficher avec un état de chargement approprié.</p><p>Le composant doit gérer trois états : <strong>chargement</strong>, <strong>succès</strong> et <strong>erreur</strong>.</p>",
+      "images": [
+        "Trois maquettes d'écran montrant : un spinner de chargement, une liste de produits recommandés, un message d'erreur avec un bouton de réessai"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevez un composant React Native qui affiche les recommandations avec un état de chargement personnalisé.",
+        "niveau": "medium",
+        "reponse": "```typescript\n// RecommendationSection.tsx\nimport React from 'react';\nimport { View, Text, FlatList, ActivityIndicator, TouchableOpacity, StyleSheet } from 'react-native';\nimport { useRecommendationStore } from '../stores/recommendationStore';\nimport { ProductCard } from './ProductCard';\n\nexport const RecommendationSection = () => {\n  const { \n    recommendations, \n    isLoading, \n    error, \n    getRecommendations \n  } = useRecommendationStore();\n\n  const loadRecommendations = async () => {\n    await getRecommendations();\n  };\n\n  // 1. État de chargement\n  if (isLoading && recommendations.length === 0) {\n    return (\n      <View style={styles.container}>\n        <Text style={styles.title}>Recommandations pour vous</Text>\n        <View style={styles.loaderContainer}>\n          <ActivityIndicator size=\"large\" color=\"#48bb78\" />\n          <Text style={styles.loadingText}>Chargement des recommandations...</Text>\n        </View>\n      </View>\n    );\n  }\n\n  // 2. État d'erreur\n  if (error && recommendations.length === 0) {\n    return (\n      <View style={styles.container}>\n        <Text style={styles.title}>Recommandations pour vous</Text>\n        <View style={styles.errorContainer}>\n          <Text style={styles.errorIcon}>😕</Text>\n          <Text style={styles.errorText}>{error}</Text>\n          <TouchableOpacity style={styles.retryButton} onPress={loadRecommendations}>\n            <Text style={styles.retryText}>Réessayer</Text>\n          </TouchableOpacity>\n        </View>\n      </View>\n    );\n  }\n\n  // 3. État de succès\n  if (recommendations.length === 0) {\n    return (\n      <View style={styles.container}>\n        <Text style={styles.title}>Recommandations pour vous</Text>\n        <View style={styles.emptyContainer}>\n          <Text style={styles.emptyText}>Aucune recommandation disponible</Text>\n          <Text style={styles.emptySubtext}>Explorez notre catalogue pour découvrir des produits.</Text>\n        </View>\n      </View>\n    );\n  }\n\n  return (\n    <View style={styles.container}>\n      <View style={styles.header}>\n        <Text style={styles.title}>🔥 Recommandations pour vous</Text>\n        {isLoading && <ActivityIndicator size=\"small\" color=\"#48bb78\" />}\n      </View>\n      <FlatList\n        horizontal\n        showsHorizontalScrollIndicator={false}\n        data={recommendations}\n        keyExtractor={(item) => item.id}\n        renderItem={({ item }) => (\n          <ProductCard product={item} variant=\"horizontal\" />\n        )}\n        contentContainerStyle={styles.listContent}\n      />\n    </View>\n  );\n};\n```",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

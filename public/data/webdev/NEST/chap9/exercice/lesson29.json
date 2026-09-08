@@ -1,0 +1,189 @@
+[
+  {
+    "intitule": "Architecture microservices dans NestJS",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>NestJS permet de créer des microservices avec différents transporteurs (TCP, Redis, RabbitMQ, gRPC, etc.). Répondez aux questions suivantes.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Citer trois transporteurs supportés nativement par NestJS pour les microservices.",
+        "niveau": "easy",
+        "reponse": "TCP, Redis, RabbitMQ (RMQ), gRPC, MQTT, NATS, Kafka.\n(Réponse possible : TCP, Redis, RabbitMQ)",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer la différence entre un contrôleur HTTP classique et un contrôleur de microservice (message handler).",
+        "niveau": "medium",
+        "reponse": "Un contrôleur HTTP répond à des requêtes REST via des décorateurs @Get, @Post, etc. Un microservice utilise le décorateur @MessagePattern() ou @EventPattern() et écoute des messages via un transport (TCP, Redis, etc.). Les requêtes sont envoyées via un client spécial et non directement via HTTP.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Configuration d'un microservice TCP",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous devez créer un microservice de calcul qui additionne deux nombres. Configurez un microservice TCP écoutant sur le port 3001, avec un handler pour le motif 'add'.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire le code du microservice main.ts et du contrôleur avec @MessagePattern('add').",
+        "niveau": "medium",
+        "reponse": "```typescript\n// main.ts (microservice)\nimport { NestFactory } from '@nestjs/core';\nimport { MicroserviceOptions, Transport } from '@nestjs/microservices';\nimport { AppModule } from './app.module';\n\nasync function bootstrap() {\n  const app = await NestFactory.createMicroservice<MicroserviceOptions>(\n    AppModule,\n    {\n      transport: Transport.TCP,\n      options: {\n        host: 'localhost',\n        port: 3001,\n      },\n    },\n  );\n  await app.listen();\n  console.log('Microservice TCP écoute sur le port 3001');\n}\nbootstrap();\n\n// math.controller.ts\nimport { Controller } from '@nestjs/common';\nimport { MessagePattern, Payload } from '@nestjs/microservices';\n\n@Controller()\nexport class MathController {\n  @MessagePattern('add')\n  add(@Payload() data: { a: number; b: number }): number {\n    return data.a + data.b;\n  }\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Communication client-microservice avec ClientProxy",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Créez un client NestJS qui communique avec le microservice de calcul. Le client doit envoyer une requête 'add' et recevoir le résultat. Utilisez `@Client()` ou `ClientProxyFactory`.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire un service client qui envoie une requête au microservice TCP et retourne le résultat.",
+        "niveau": "hard",
+        "reponse": "```typescript\n// math-client.module.ts\nimport { Module } from '@nestjs/common';\nimport { ClientsModule, Transport } from '@nestjs/microservices';\nimport { MathClientService } from './math-client.service';\n\n@Module({\n  imports: [\n    ClientsModule.register([\n      {\n        name: 'MATH_SERVICE',\n        transport: Transport.TCP,\n        options: { host: 'localhost', port: 3001 },\n      },\n    ]),\n  ],\n  providers: [MathClientService],\n  exports: [MathClientService],\n})\nexport class MathClientModule {}\n\n// math-client.service.ts\nimport { Injectable, Inject, OnModuleInit } from '@nestjs/common';\nimport { ClientProxy } from '@nestjs/microservices';\nimport { lastValueFrom } from 'rxjs';\n\n@Injectable()\nexport class MathClientService implements OnModuleInit {\n  constructor(@Inject('MATH_SERVICE') private client: ClientProxy) {}\n\n  async add(a: number, b: number): Promise<number> {\n    return lastValueFrom(this.client.send('add', { a, b }));\n  }\n\n  async onModuleInit() {\n    await this.client.connect();\n  }\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Pattern vs Event",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Expliquez la différence entre <code>@MessagePattern()</code> et <code>@EventPattern()</code> dans le contexte des microservices NestJS.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire les deux types de motifs, leur comportement (attente de réponse ou non) et donner un cas d'usage pour chacun.",
+        "niveau": "easy",
+        "reponse": "- `@MessagePattern()` : attend une réponse du microservice (request-response). Le client est bloqué jusqu'à réception. Utilisé pour des opérations synchrones comme un calcul, une requête en base, etc.\n- `@EventPattern()` : ne retourne pas de réponse (fire-and-forget). Le client envoie un événement et continue. Utilisé pour des notifications, logging, mise à jour de cache, etc.\n\nExemples : MessagePattern = authentification, EventPattern = envoi d'email après inscription.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Microservice Redis",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Transformez le microservice TCP précédent en microservice Redis. Le client doit publier sur le canal 'math' et écouter les réponses via un callback.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Modifier la configuration du microservice et du client pour utiliser Redis comme transporteur.",
+        "niveau": "hard",
+        "reponse": "```typescript\n// microservice main.ts (Redis)\nconst app = await NestFactory.createMicroservice<MicroserviceOptions>(\n  AppModule,\n  {\n    transport: Transport.REDIS,\n    options: {\n      host: 'localhost',\n      port: 6379,\n    },\n  },\n);\n\n// client module\nClientsModule.register([\n  {\n    name: 'MATH_SERVICE',\n    transport: Transport.REDIS,\n    options: { host: 'localhost', port: 6379 },\n  },\n]);\n\n// Le contrôleur reste identique car @MessagePattern est indépendant du transport\n// Attention : Redis n'envoie pas automatiquement de réponse à moins d'utiliser\n// un pattern adapté. Il faut utiliser un client Redis standard ou un pattern custom.\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion des erreurs dans les microservices",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Dans un microservice, une erreur métier doit être remontée au client avec un code d'erreur approprié. Implémentez un handler qui lance une exception `RpcException` lorsqu'un nombre négatif est passé en paramètre.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Modifier le handler 'add' pour lancer une RpcException avec le code 'INVALID_NUMBER' si a ou b est négatif.",
+        "niveau": "hard",
+        "reponse": "```typescript\nimport { RpcException } from '@nestjs/microservices';\n\n@MessagePattern('add')\nadd(@Payload() data: { a: number; b: number }): number {\n  if (data.a < 0 || data.b < 0) {\n    throw new RpcException({\n      code: 'INVALID_NUMBER',\n      message: 'Les nombres ne peuvent pas être négatifs',\n    });\n  }\n  return data.a + data.b;\n}\n\n// Côté client, l'erreur est capturée :\ntry {\n  await client.send('add', { a: -1, b: 2 }).toPromise();\n} catch (error) {\n  console.log(error.code); // 'INVALID_NUMBER'\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Compréhension de l'hybridation (HTTP + microservice)",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Une application NestJS peut être hybride : à la fois serveur HTTP REST et microservice. Expliquez comment configurer une telle application et à quoi cela sert.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire la configuration d'une application hybride et citer un cas d'usage.",
+        "niveau": "medium",
+        "reponse": "```typescript\n// main.ts\nimport { NestFactory } from '@nestjs/core';\nimport { MicroserviceOptions, Transport } from '@nestjs/microservices';\nimport { AppModule } from './app.module';\n\nasync function bootstrap() {\n  const app = await NestFactory.create(AppModule); // HTTP\n  \n  app.connectMicroservice<MicroserviceOptions>({\n    transport: Transport.TCP,\n    options: { port: 3001 },\n  });\n  \n  await app.startAllMicroservices();\n  await app.listen(3000);\n}\nbootstrap();\n```\n\nCas d'usage : Un même module peut exposer des endpoints HTTP pour les clients externes et communiquer en interne avec d'autres services via le microservice. Exemple : une API Gateway qui reçoit les requêtes HTTP et les forward vers des microservices internes.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Série de questions sur les patterns",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Associez chaque transporteur à son cas d'usage idéal : TCP, Redis, RabbitMQ, gRPC.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Donner un exemple de scénario pour chaque transporteur.",
+        "niveau": "medium",
+        "reponse": "- **TCP** : communication simple entre deux services NestJS sur le même réseau. Idéal pour des microservices internes à faible latence.\n- **Redis** : lorsque les services sont éphémères et que l'on veut une messagerie légère avec pub/sub. Bon pour les notifications en temps réel.\n- **RabbitMQ** : pour une communication robuste avec files d'attente, persistance, et routage complexe (topics, headers).\n- **gRPC** : communication inter-services performante avec protocole binaire et code généré automatiquement. Parfait pour des échanges fréquents et typés.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Test d'intégration d'un microservice",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Écrivez un test d'intégration pour le microservice de calcul. Utilisez `Test.createTestingModule` et `ClientProxyFactory` pour créer un client et tester le handler 'add'.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire le test avec un client InMemory ou en démarrant un vrai microservice sur un port dédié.",
+        "niveau": "very hard",
+        "reponse": "```typescript\n// math.controller.spec.ts\nimport { Test, TestingModule } from '@nestjs/testing';\nimport { INestApplication } from '@nestjs/common';\nimport { MicroserviceOptions, Transport, ClientProxy, ClientProxyFactory } from '@nestjs/microservices';\nimport { MathController } from './math.controller';\n\ndescribe('MathController (microservice)', () => {\n  let app: INestApplication;\n  let client: ClientProxy;\n\n  beforeAll(async () => {\n    const module: TestingModule = await Test.createTestingModule({\n      controllers: [MathController],\n    }).compile();\n\n    app = module.createNestApplication();\n    app.connectMicroservice<MicroserviceOptions>({\n      transport: Transport.TCP,\n      options: { port: 3002 }, // port de test\n    });\n    await app.startAllMicroservices();\n\n    client = ClientProxyFactory.create({\n      transport: Transport.TCP,\n      options: { port: 3002 },\n    });\n    await client.connect();\n  });\n\n  afterAll(async () => {\n    await client.close();\n    await app.close();\n  });\n\n  it('devrait additionner 2 et 3', async () => {\n    const result = await client.send('add', { a: 2, b: 3 }).toPromise();\n    expect(result).toBe(5);\n  });\n\n  it('devrait lancer une exception pour nombre négatif', async () => {\n    try {\n      await client.send('add', { a: -1, b: 5 }).toPromise();\n      fail('Exception non levée');\n    } catch (error) {\n      expect(error.code).toBe('INVALID_NUMBER');\n    }\n  });\n});\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Déploiement d'un microservice",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Listez les précautions à prendre lorsqu'on déploie un microservice NestJS en production (scalabilité, découverte de services, monitoring).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Citer au moins 4 bonnes pratiques pour le déploiement de microservices NestJS.",
+        "niveau": "medium",
+        "reponse": "1. **Service Discovery** : Utiliser Consul, Eureka ou Kubernetes pour que les clients trouvent dynamiquement les microservices.\n2. **Load balancing** : Répartir la charge entre plusieurs instances du même microservice.\n3. **Monitoring** : Outils comme Prometheus + Grafana, ou New Relic, pour surveiller latence, erreurs, saturation.\n4. **Health checks** : Implémenter un endpoint de santé (ex: /health) pour que l'orchestrateur vérifie la disponibilité.\n5. **Variables d'environnement** : Configurer les ports, hôtes, secrets via ConfigModule et .env.\n6. **Logging centralisé** : Utiliser ELK (Elasticsearch, Logstash, Kibana) ou Datadog.\n7. **Gestion des versions** : Éviter les breaking changes entre client et service (versionner les patterns).",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

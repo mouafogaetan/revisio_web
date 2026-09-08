@@ -1,0 +1,130 @@
+[
+  {
+    "intitule": "Configuration de l'environnement de test Jest",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Dans un projet NestJS fraîchement créé, Jest est déjà préconfiguré. Cependant, vous souhaitez modifier certains paramètres par défaut.</p>\n<p>Répondez aux questions suivantes concernant la configuration de Jest dans NestJS.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Citer le fichier de configuration de Jest utilisé par défaut dans un projet NestJS et nommer au moins trois options que l'on peut y personnaliser.",
+        "niveau": "easy",
+        "reponse": "Le fichier de configuration est <code>jest.config.js</code> (ou <code>jest.config.ts</code>). On peut y personnaliser : <code>moduleFileExtensions</code> (extensions de fichiers à tester), <code>rootDir</code> (racine des tests), <code>testRegex</code> (pattern des fichiers de test), <code>collectCoverageFrom</code> (fichiers à inclure dans le rapport de couverture), <code>coverageDirectory</code> (dossier des rapports), <code>testEnvironment</code> (node ou jsdom).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer la différence entre un test unitaire et un test d'intégration dans le contexte d'une application NestJS.",
+        "niveau": "medium",
+        "reponse": "Un test unitaire teste une unité de code isolément (ex: une méthode d'un service) en mockant toutes ses dépendances (repositories, autres services). Un test d'intégration teste l'interaction entre plusieurs composants (ex: un contrôleur avec son service réel, ou un service avec une vraie base de données de test). NestJS utilise <code>Test.createTestingModule()</code> pour créer un module de test qui peut inclure des composants réels ou des mocks.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Analyser le rôle du fichier <code>jest-e2e.json</code> (ou configuration e2e) et expliquer en quoi il diffère de la configuration unitaire.",
+        "niveau": "medium",
+        "reponse": "Le fichier <code>jest-e2e.json</code> est une configuration spécifique pour les tests end-to-end. Les différences principales sont : <code>testRegex</code> cible les fichiers <code>.e2e-spec.ts</code>, <code>testEnvironment</code> est généralement 'node', et on peut désactiver la collecte de couverture. De plus, les tests e2e nécessitent souvent un module de test plus complet qui démarre l'application entière (<code>app.getHttpServer()</code>).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Test unitaire d'un service utilisateur avec mock du repository",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous avez un service <code>UserService</code> qui dépend d'un repository TypeORM <code>UserRepository</code>. Voici le code à tester :</p>\n<pre><code>// user.service.ts\nimport { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { User } from './user.entity';\n\nexport class CreateUserDto {\n  email: string;\n  name: string;\n}\n\n@Injectable()\nexport class UserService {\n  constructor(\n    @InjectRepository(User)\n    private userRepository: Repository&lt;User&gt;,\n  ) {}\n\n  async create(createUserDto: CreateUserDto): Promise&lt;User&gt; {\n    const user = this.userRepository.create(createUserDto);\n    return this.userRepository.save(user);\n  }\n\n  async findAll(): Promise&lt;User[]&gt; {\n    return this.userRepository.find();\n  }\n\n  async findOne(id: number): Promise&lt;User&gt; {\n    const user = await this.userRepository.findOne({ where: { id } });\n    if (!user) {\n      throw new Error('Utilisateur non trouvé');\n    }\n    return user;\n  }\n}\n</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créer un mock complet du repository <code>UserRepository</code> avec les méthodes <code>create</code>, <code>save</code> et <code>findOne</code>.",
+        "niveau": "medium",
+        "reponse": "<pre><code>const mockUserRepository = {\n  create: jest.fn().mockImplementation((dto) => ({ id: 1, ...dto })),\n  save: jest.fn().mockImplementation((user) => Promise.resolve(user)),\n  find: jest.fn().mockResolvedValue([]),\n  findOne: jest.fn().mockImplementation(({ where: { id } }) => {\n    if (id === 1) return Promise.resolve({ id: 1, email: 'test@test.com', name: 'Test' });\n    return Promise.resolve(null);\n  }),\n};\n\nconst mockUserRepositoryProvider = {\n  provide: getRepositoryToken(User),\n  useValue: mockUserRepository,\n};</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrire un test unitaire complet pour la méthode <code>findOne(id)</code> qui vérifie : (a) le comportement quand l'utilisateur existe, (b) quand l'utilisateur n'existe pas (exception).",
+        "niveau": "hard",
+        "reponse": "<pre><code>describe('UserService - findOne', () => {\n  let service: UserService;\n  let repository: Repository&lt;User&gt;;\n\n  beforeEach(async () => {\n    const module: TestingModule = await Test.createTestingModule({\n      providers: [\n        UserService,\n        {\n          provide: getRepositoryToken(User),\n          useValue: {\n            findOne: jest.fn(),\n          },\n        },\n      ],\n    }).compile();\n\n    service = module.get&lt;UserService&gt;(UserService);\n    repository = module.get&lt;Repository&lt;User&gt;&gt;(getRepositoryToken(User));\n  });\n\n  it('devrait retourner un utilisateur quand il existe', async () => {\n    const mockUser = { id: 1, email: 'test@test.com', name: 'Test' };\n    jest.spyOn(repository, 'findOne').mockResolvedValue(mockUser as User);\n\n    const result = await service.findOne(1);\n    expect(result).toEqual(mockUser);\n    expect(repository.findOne).toHaveBeenCalledWith({ where: { id: 1 } });\n  });\n\n  it('devrait lancer une erreur quand l\\'utilisateur n\\'existe pas', async () => {\n    jest.spyOn(repository, 'findOne').mockResolvedValue(null);\n\n    await expect(service.findOne(999)).rejects.toThrow('Utilisateur non trouvé');\n  });\n});</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquer pourquoi il est important de mocker le repository plutôt que d'utiliser une vraie base de données pour les tests unitaires.",
+        "niveau": "medium",
+        "reponse": "Mocker le repository permet d'isoler le service pour tester uniquement sa logique métier, sans dépendre d'une base de données réelle. Cela rend les tests : plus rapides (pas d'accès réseau/disk), déterministes (pas de données parasites), plus faciles à écrire (pas besoin de setup/teardown de BD), et exécutables en CI sans infrastructure. On peut ainsi contrôler finement les cas de test (retours spécifiques, exceptions).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Test d'un contrôleur avec mock du service",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous devez tester le contrôleur <code>UserController</code> qui dépend de <code>UserService</code>. Voici le code :</p>\n<pre><code>// user.controller.ts\nimport { Controller, Get, Post, Body, Param } from '@nestjs/common';\nimport { UserService } from './user.service';\n\nexport class CreateUserDto {\n  email: string;\n  name: string;\n}\n\n@Controller('users')\nexport class UserController {\n  constructor(private readonly userService: UserService) {}\n\n  @Post()\n  create(@Body() createUserDto: CreateUserDto) {\n    return this.userService.create(createUserDto);\n  }\n\n  @Get()\n  findAll() {\n    return this.userService.findAll();\n  }\n\n  @Get(':id')\n  findOne(@Param('id') id: string) {\n    return this.userService.findOne(+id);\n  }\n}\n</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire un test unitaire pour la méthode <code>findAll()</code> du contrôleur en mockant le service.",
+        "niveau": "medium",
+        "reponse": "<pre><code>import { Test, TestingModule } from '@nestjs/testing';\nimport { UserController } from './user.controller';\nimport { UserService } from './user.service';\n\ndescribe('UserController', () => {\n  let controller: UserController;\n  let service: UserService;\n\n  const mockUserService = {\n    findAll: jest.fn(),\n    create: jest.fn(),\n    findOne: jest.fn(),\n  };\n\n  beforeEach(async () => {\n    const module: TestingModule = await Test.createTestingModule({\n      controllers: [UserController],\n      providers: [\n        {\n          provide: UserService,\n          useValue: mockUserService,\n        },\n      ],\n    }).compile();\n\n    controller = module.get&lt;UserController&gt;(UserController);\n    service = module.get&lt;UserService&gt;(UserService);\n  });\n\n  it('devrait retourner un tableau d\\'utilisateurs', async () => {\n    const mockUsers = [{ id: 1, email: 'test@test.com', name: 'Test' }];\n    mockUserService.findAll.mockResolvedValue(mockUsers);\n\n    const result = await controller.findAll();\n    expect(result).toEqual(mockUsers);\n    expect(service.findAll).toHaveBeenCalled();\n  });\n});</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Rédiger un test pour la méthode <code>create()</code> qui vérifie que les données sont correctement transmises au service.",
+        "niveau": "medium",
+        "reponse": "<pre><code>it('devrait créer un utilisateur et retourner le résultat', async () => {\n  const createUserDto = { email: 'john@example.com', name: 'John' };\n  const mockCreatedUser = { id: 1, ...createUserDto };\n  mockUserService.create.mockResolvedValue(mockCreatedUser);\n\n  const result = await controller.create(createUserDto);\n  expect(result).toEqual(mockCreatedUser);\n  expect(service.create).toHaveBeenCalledWith(createUserDto);\n});</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Analyser l'importance de séparer les tests du contrôleur (qui vérifient le routage et la délégation) des tests du service (qui vérifient la logique métier).",
+        "niveau": "hard",
+        "reponse": "Cette séparation suit le principe de responsabilité unique et permet : (1) Des tests plus ciblés - chaque test ne vérifie qu'une couche spécifique. (2) Une maintenance simplifiée - quand la logique métier change, seuls les tests du service sont mis à jour. (3) Une détection plus précise des erreurs - un échec dans le contrôleur indique un problème d'appel API, un échec dans le service indique un problème métier. (4) Des tests plus rapides - les mocks sont légers. (5) Une meilleure isolation - les bugs dans une couche n'affectent pas les tests de l'autre.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Utilisation de jest.spyOn pour mocker partiellement",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous avez un service <code>EmailService</code> avec une méthode <code>sendWelcomeEmail()</code> qui envoie réellement un email. Pour les tests, vous ne voulez pas vraiment envoyer d'emails.</p>\n<p>Le service est injecté dans <code>UserService</code> :</p>\n<pre><code>@Injectable()\nexport class EmailService {\n  async sendWelcomeEmail(email: string): Promise&lt;void&gt; {\n    // Envoi réel via un provider SMTP\n    console.log(`Email envoyé à ${email}`);\n  }\n}\n\n@Injectable()\nexport class UserService {\n  constructor(\n    private emailService: EmailService,\n    @InjectRepository(User)\n    private userRepository: Repository&lt;User&gt;,\n  ) {}\n\n  async create(createUserDto: CreateUserDto): Promise&lt;User&gt; {\n    const user = await this.userRepository.save(createUserDto);\n    await this.emailService.sendWelcomeEmail(user.email);\n    return user;\n  }\n}\n</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer ce qu'est <code>jest.spyOn()</code> et en quoi il diffère d'un mock complet via <code>useValue</code>.",
+        "niveau": "medium",
+        "reponse": "<code>jest.spyOn(object, methodName)</code> crée un espion (spy) sur une méthode existante d'un objet réel. Contrairement à un mock complet (<code>useValue</code>) qui remplace entièrement l'implémentation, le spy peut : (1) appeler la vraie méthode avec <code>.spyOn(...).mockImplementation()</code> ou la remplacer, (2) restaurer l'implémentation originale avec <code>.mockRestore()</code>, (3) conserver les autres méthodes intactes. C'est utile pour mocker une méthode spécifique tout en gardant le reste du service réel.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrire un test unitaire pour la méthode <code>create()</code> de <code>UserService</code> qui utilise <code>jest.spyOn()</code> pour mocker uniquement <code>sendWelcomeEmail()</code> sans remplacer tout le <code>EmailService</code>.",
+        "niveau": "hard",
+        "reponse": "<pre><code>import { Test, TestingModule } from '@nestjs/testing';\nimport { getRepositoryToken } from '@nestjs/typeorm';\nimport { UserService } from './user.service';\nimport { EmailService } from './email.service';\n\ndescribe('UserService - create with spy', () => {\n  let service: UserService;\n  let emailService: EmailService;\n  let mockUserRepository;\n\n  beforeEach(async () => {\n    mockUserRepository = {\n      save: jest.fn().mockImplementation((dto) => Promise.resolve({ id: 1, ...dto })),\n    };\n\n    const module: TestingModule = await Test.createTestingModule({\n      providers: [\n        UserService,\n        EmailService, // Service réel\n        {\n          provide: getRepositoryToken(User),\n          useValue: mockUserRepository,\n        },\n      ],\n    }).compile();\n\n    service = module.get&lt;UserService&gt;(UserService);\n    emailService = module.get&lt;EmailService&gt;(EmailService);\n  });\n\n  it('devrait créer un utilisateur et appeler sendWelcomeEmail sans l\\'envoyer réellement', async () => {\n    const sendWelcomeEmailSpy = jest\n      .spyOn(emailService, 'sendWelcomeEmail')\n      .mockResolvedValue(undefined);\n\n    const createUserDto = { email: 'test@test.com', name: 'Test' };\n    const result = await service.create(createUserDto);\n\n    expect(result).toHaveProperty('id', 1);\n    expect(sendWelcomeEmailSpy).toHaveBeenCalledWith('test@test.com');\n\n    sendWelcomeEmailSpy.mockRestore();\n  });\n});</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Discuter les avantages et inconvénients de l'utilisation de <code>jest.spyOn()</code> par rapport à un mock complet du service.",
+        "niveau": "hard",
+        "reponse": "Avantages : (1) Moins de code de mock à écrire. (2) La vraie implémentation des autres méthodes est conservée (utile pour les tests d'intégration). (3) Permet de vérifier que la méthode a bien été appelée avec les bons paramètres. Inconvénients : (1) Dépend de l'implémentation réelle du service (si le service change, le test peut casser). (2) Plus lent qu'un mock complet si le service réel a des dépendances lourdes. (3) Moins approprié pour les tests unitaires purs où on veut une isolation totale.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

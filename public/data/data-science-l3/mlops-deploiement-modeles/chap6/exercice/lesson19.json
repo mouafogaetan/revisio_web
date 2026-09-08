@@ -1,0 +1,152 @@
+[
+  {
+    "intitule": "Mise en place d'un système d'alerting pour un modèle de détection de fraude",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous êtes responsable du déploiement d'un modèle de <strong>détection de fraude</strong> pour une banque camerounaise. Le modèle est en production depuis 3 mois et traite environ 10 000 transactions par jour. Vous devez mettre en place un système d'<strong>alerting</strong> et de <strong>logging</strong> pour surveiller le modèle et détecter les anomalies.</p><p><strong>Contexte :</strong></p><ul><li>Le modèle prédit un score de fraude (0 à 1).</li><li>Un seuil de 0.8 est utilisé pour déclencher une alerte de fraude.</li><li>Les performances actuelles : précision = 0.92, rappel = 0.85, F1-score = 0.88.</li><li>Les logs actuels sont stockés dans un fichier texte local.</li></ul>",
+      "images": [
+        "Schéma d'une architecture de monitoring avec Prometheus et Grafana montrant les flux : Modèle -> Exposition des métriques (via API) -> Prometheus (collecte) -> Grafana (visualisation) -> Alertes (Alertmanager) -> Email/Notification. Les logs sont envoyés vers un système centralisé (ELK Stack) pour analyse."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Distinguez les concepts d'<strong>alerting</strong> et de <strong>logging</strong> dans le contexte du MLOps. Quels sont leurs objectifs respectifs ?",
+        "niveau": "easy",
+        "reponse": "<p><strong>Alerting</strong> : C'est un mécanisme qui permet de notifier automatiquement une équipe lorsqu'un événement ou une condition spécifique se produit (ex: baisse de performance, dérive des données, latence trop élevée). L'objectif est de permettre une réaction rapide face à des problèmes.<br/><strong>Logging</strong> : C'est l'enregistrement d'événements, de transactions, d'erreurs ou de métriques dans un fichier ou une base de données. L'objectif est de conserver une trace pour l'audit, le débogage, l'analyse post-mortem et le monitoring.</p>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Évaluez les logs actuels (fichier texte local). Quels sont les risques et limitations de cette approche pour un système de production comme celui-ci ? Proposez des améliorations.",
+        "niveau": "medium",
+        "reponse": "<p><strong>Risques et limitations :</strong><br/>1. <strong>Perte de données</strong> : En cas de panne du serveur, les logs peuvent être perdus.<br/>2. <strong>Scalabilité</strong> : Un fichier texte devient difficile à gérer avec un grand volume de logs (10 000 transactions/jour).<br/>3. <strong>Analyse difficile</strong> : Rechercher des erreurs ou des motifs dans un fichier texte est fastidieux et peu efficace.<br/>4. <strong>Sécurité</strong> : Les logs peuvent contenir des données sensibles et doivent être protégés.<br/><br/><strong>Améliorations :</strong><br/>1. <strong>Centralisation</strong> : Utiliser un système de logging centralisé comme <strong>ELK Stack</strong> (Elasticsearch, Logstash, Kibana) ou <strong>Loki</strong>.<br/>2. <strong>Structuring</strong> : Stocker les logs au format JSON pour faciliter la recherche et l'analyse.<br/>3. <strong>Persistance</strong> : Utiliser des bases de données ou du stockage cloud (ex: AWS S3) pour la rétention des logs.<br/>4. <strong>Sécurité</strong> : Chiffrer les logs et restreindre l'accès.</p>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposez un ensemble d'alertes pour ce système. Pour chaque alerte, définissez : (a) la métrique surveillée, (b) le seuil, (c) le niveau de criticité, (d) l'action à entreprendre.",
+        "niveau": "hard",
+        "reponse": "<p><strong>Alertes proposées :</strong><br/><br/><strong>1. Alerte de performance du modèle</strong><br/>   - Métrique : F1-score (calculé sur une fenêtre glissante de 1000 transactions)<br/>   - Seuil : F1-score < 0.75 (critique) ou < 0.80 (warning)<br/>   - Niveau : Critique<br/>   - Action : Notifier l'équipe ML, examiner les données, envisager un retraining.<br/><br/><strong>2. Alerte de volume de transactions</strong><br/>   - Métrique : Nombre de transactions par minute<br/>   - Seuil : > 100% de la moyenne historique (ex: 50 transactions/min)<br/>   - Niveau : Warning<br/>   - Action : Vérifier le scaling du serveur, s'assurer qu'il n'y a pas de saturation.<br/><br/><strong>3. Alerte de latence élevée</strong><br/>   - Métrique : Temps de réponse (latence) du modèle<br/>   - Seuil : > 200ms (au lieu de 100ms habituellement)<br/>   - Niveau : Critique<br/>   - Action : Diagnostiquer la cause (CPU, I/O), scaler verticalement ou horizontalement.<br/><br/><strong>4. Alerte de data drift</strong><br/>   - Métrique : Distance de Kullback-Leibler entre les distributions des features<br/>   - Seuil : > 0.1<br/>   - Niveau : Warning<br/>   - Action : Notifier l'équipe data pour investiguer, préparer un retraining.<br/><br/><strong>5. Alerte de taux d'erreur élevé</strong><br/>   - Métrique : Taux d'erreur de prédiction (erreurs de validation, exceptions)<br/>   - Seuil : > 1% des requêtes<br/>   - Niveau : Critique<br/>   - Action : Examiner les logs d'erreur, vérifier l'intégrité des données en entrée.</p>",
+        "sousQuestions": [
+          {
+            "numero": "3.a",
+            "texte": "Pour l'alerte de performance (F1-score), comment mettriez-vous en place la collecte de la métrique en production, sachant que le modèle prédit et que la vérité terrain (fraude réelle) n'est connue qu'après enquête (plusieurs jours après) ?",
+            "niveau": "hard",
+            "reponse": "<p>Dans ce cas, la vérité terrain est décalée dans le temps. On ne peut pas calculer le F1-score en temps réel. Plusieurs approches sont possibles :<br/><br/>1. <strong>Utiliser un proxy de performance</strong> : Surveiller la distribution des scores de confiance. Si la distribution change, cela peut indiquer un problème.<br/>2. <strong>Calculer la performance sur un échantillon validé</strong> : Une fois que les fraudes sont confirmées (ex: après 7 jours), on calcule la performance sur les transactions de cette période. On peut utiliser un pipeline batch pour ce calcul.<br/>3. <strong>Utiliser des métriques en ligne</strong> : Par exemple, le <strong>taux de rappel</strong> peut être estimé en temps réel en comparant les prédictions avec les alertes réelles (si les fraudes sont rapidement signalées par les utilisateurs).<br/>4. <strong>Alertes basées sur les erreurs de validation</strong> : Si le modèle rejette des transactions et que celles-ci sont ensuite confirmées comme fraudes, on peut déclencher une alerte.<br/><br/><strong>Recommandation</strong> : Mettre en place un pipeline de validation différé avec un scheduling quotidien ou hebdomadaire, et déclencher des alertes si la performance chute significativement sur une période glissante.</p>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion des logs en production pour un système de recommandation",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Une startup de e-commerce camerounaise a déployé un <strong>système de recommandation de produits</strong> basé sur un modèle de Machine Learning. L'API reçoit des requêtes de recommandation en temps réel (environ 5 000 requêtes/minute). L'équipe souhaite améliorer la <strong>gestion des logs</strong> pour faciliter le <strong>débogage</strong>, le <strong>monitoring</strong> et l'<strong>analyse</strong>.</p><p><strong>Logs actuels :</strong></p><pre style='background-color: #f5f5f5; padding: 15px; border-radius: 5px; font-family: monospace;'>2024-01-15 10:23:45 INFO Requête reçue : user=12345, produit=54321\n2024-01-15 10:23:46 INFO Prédiction : [101, 102, 103]</pre>",
+      "images": [
+        "Schéma d'une architecture ELK (Elasticsearch, Logstash, Kibana) montrant les flux : Application -> Logs (JSON) -> Logstash (collecte, transformation) -> Elasticsearch (stockage, indexation) -> Kibana (recherche, visualisation). Des pipelines de traitement sont visibles pour enrichir les logs."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analysez les logs actuels et identifiez les informations clés qui y sont stockées. Quelles informations importantes sont manquantes pour un monitoring et un débogage efficaces ?",
+        "niveau": "medium",
+        "reponse": "<p><strong>Informations présentes :</strong><br/>- Horodatage (date et heure)<br/>- Niveau de log (INFO)<br/>- Message texte (\"Requête reçue\", \"Prédiction\")<br/>- Identifiants (user, produit, prédictions)<br/><br/><strong>Informations manquantes :</strong><br/>1. <strong>Temps de réponse</strong> (latence) pour chaque requête.<br/>2. <strong>Identifiant unique de session</strong> (corrélation entre les logs).<br/>3. <strong>Version du modèle</strong> utilisé pour la prédiction.<br/>4. <strong>Métadonnées de la requête</strong> (IP source, type de navigateur, etc.).<br/>5. <strong>Niveau d'erreur</strong> (ex: DEBUG, WARN, ERROR) pour faciliter le filtrage.<br/>6. <strong>Contexte de l'erreur</strong> (stack trace en cas d'exception).<br/>7. <strong>Données utilisateur</strong> (anonymisées) pour l'analyse du comportement.</p>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposez un format de log structuré (ex: JSON) pour remplacer le format texte actuel. Justifiez les champs choisis.",
+        "niveau": "hard",
+        "reponse": "<p><strong>Exemple de log structuré JSON :</strong></p><pre style='background-color: #f5f5f5; padding: 15px; border-radius: 5px; font-family: monospace;'>{\n  \"timestamp\": \"2024-01-15T10:23:45.123Z\",\n  \"level\": \"INFO\",\n  \"service\": \"recommendation-api\",\n  \"trace_id\": \"a1b2c3d4e5f6\",\n  \"session_id\": \"sess-98765\",\n  \"user_id\": \"user-12345\",\n  \"product_id\": \"prod-54321\",\n  \"request_id\": \"req-001\",\n  \"model_version\": \"v2.3.1\",\n  \"latency_ms\": 123,\n  \"response\": {\n    \"recommendations\": [\"prod-101\", \"prod-102\", \"prod-103\"],\n    \"scores\": [0.95, 0.89, 0.76]\n  },\n  \"client_ip\": \"192.168.1.1\"\n}</pre><p><strong>Justification des champs :</strong><br/>- <code>timestamp</code> : Horodatage précis (format ISO 8601) pour le tri et l'analyse temporelle.<br/>- <code>level</code> : Niveau de log pour le filtrage (INFO, ERROR, WARN, DEBUG).<br/>- <code>service</code> : Nom du service pour identifier la source.<br/>- <code>trace_id</code> / <code>session_id</code> : Permet de tracer le parcours d'une requête à travers les microservices.<br/>- <code>user_id</code>, <code>product_id</code>, <code>request_id</code> : Identifiants métier pour l'audit.<br/>- <code>model_version</code> : Version du modèle pour le debugging des performances.<br/>- <code>latency_ms</code> : Temps de réponse pour le monitoring des performances.<br/>- <code>response</code> : Structure contenant les recommandations et les scores.<br/>- <code>client_ip</code> : Informations réseau pour la sécurité.</p>",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Discutez de l'importance de l'ajout d'un <code>trace_id</code> et d'un <code>session_id</code> dans les logs. Comment ces champs facilitent-ils le débogage et l'analyse ?",
+            "niveau": "medium",
+            "reponse": "<p><strong>Importance de trace_id et session_id :</strong><br/>- <strong>Trace_id</strong> : Permet de suivre une requête à travers tous les services d'une architecture (ex: API Gateway, service de recommandation, service de monitoring). Si une erreur survient, on peut retrouver tous les logs associés à cette requête pour comprendre le contexte.<br/>- <strong>Session_id</strong> : Permet de suivre le parcours d'un utilisateur sur plusieurs requêtes. Cela permet d'analyser son comportement, de détecter des patterns (ex: session anormale) ou de comprendre les causes d'une dégradation de performance.<br/>- <strong>Ensemble</strong> : Ils améliorent considérablement la <strong>traçabilité</strong> et permettent un <strong>debugging</strong> efficace en production, surtout dans des systèmes distribués.</p>"
+          }
+        ]
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquez comment vous mettrez en place un système de collecte de logs centralisé. Décrivez les composants et les flux de données.",
+        "niveau": "hard",
+        "reponse": "<p><strong>Architecture proposée : ELK Stack (Elasticsearch, Logstash, Kibana) ou alternative moderne (Loki).</strong><br/><br/><strong>Composants :</strong><br/>1. <strong>Sources de logs</strong> : L'API FastAPI génère des logs au format JSON et les écrit dans un fichier ou les envoie directement à un collector.<br/>2. <strong>Collecteur (Logstash ou fluentd)</strong> :<br/>   - Récupère les logs depuis les sources (fichiers, sockets).<br/>   - Les parse, les transforme (ex: ajout de champs, normalisation).<br/>   - Les envoie vers Elasticsearch.<br/>3. <strong>Stockage (Elasticsearch)</strong> :<br/>   - Indexe les logs pour une recherche rapide.<br/>   - Permet de faire des requêtes et des agrégations.<br/>4. <strong>Visualisation (Kibana)</strong> :<br/>   - Permet de créer des tableaux de bord pour visualiser les logs.<br/>   - Offre des outils de recherche et d'analyse.<br/>5. <strong>Alerting</strong> :<br/>   - Utiliser <strong>Alertmanager</strong> (Prometheus) ou <strong>ElastAlert</strong> pour déclencher des alertes basées sur des conditions dans les logs.<br/><br/><strong>Flux de données :</strong><br/>Application -> Fichiers de logs (ou envoi direct) -> Logstash (collecte, transformation) -> Elasticsearch (indexation) -> Kibana (visualisation).</p>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion des logs et des alertes dans un pipeline ML avec Airflow",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous gérez un pipeline de données avec <strong>Apache Airflow</strong> qui exécute quotidiennement les étapes suivantes : extraction des données, transformation, entraînement du modèle, et déploiement (si validation réussie). Le pipeline est composé de plusieurs tâches (tasks).</p>",
+      "images": [
+        "Graphique représentant un DAG Airflow avec 5 tâches : Extraction -> Nettoyage -> Feature Engineering -> Entraînement -> Déploiement. Des flèches montrent les dépendances. Des annotations indiquent les logs produits par chaque tâche."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Quels types d'informations devraient être loggés par chaque tâche du pipeline Airflow pour assurer un bon monitoring et un débogage efficace ?",
+        "niveau": "medium",
+        "reponse": "<p><strong>Pour chaque tâche, les logs devraient inclure :</strong><br/>1. <strong>Début et fin de la tâche</strong> : avec horodatage et durée.<br/>2. <strong>Paramètres de la tâche</strong> : les paramètres d'entrée (ex: date de traitement, chemins de fichiers).<br/>3. <strong>Métriques de performance</strong> : pour l'entraînement, les métriques du modèle (précision, F1-score) ; pour l'extraction, le nombre de lignes traitées.<br/>4. <strong>Erreurs et exceptions</strong> : avec stack trace pour identifier les causes des échecs.<br/>5. <strong>Version des dépendances</strong> : versions des bibliothèques utilisées (ex: scikit-learn, pandas).<br/>6. <strong>Identifiant du pipeline</strong> (DAG ID, Run ID) pour le suivi.<br/>7. <strong>Résultat de la tâche</strong> : succès, échec, ou warning.<br/>8. <strong>Métadonnées des données</strong> : statistiques sur les données traitées (ex: nombre de valeurs manquantes).</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment Airflow gère-t-il les logs par défaut ? Proposez des améliorations pour les logs d'Airflow en production.",
+            "niveau": "hard",
+            "reponse": "<p><strong>Gestion par défaut d'Airflow :</strong><br/>Airflow stocke les logs des tâches dans des fichiers sur le système de fichiers local (par défaut dans <code>$AIRFLOW_HOME/logs</code>). Les logs sont organisés par DAG et par tâche.<br/><br/><strong>Améliorations pour la production :</strong><br/>1. <strong>Centralisation</strong> : Configurer Airflow pour envoyer les logs vers un système centralisé comme <strong>Elasticsearch</strong> ou <strong>Loki</strong> (via des handlers personnalisés ou des plugins).<br/>2. <strong>Structuring</strong> : Utiliser un format JSON structuré pour les logs afin de faciliter la recherche et l'analyse.<br/>3. <strong>Rétention</strong> : Mettre en place une politique de rétention pour éviter de saturer le disque.<br/>4. <strong>Surveillance des logs</strong> : Utiliser des outils comme <strong>Promtail</strong> pour collecter les logs Airflow et les envoyer à <strong>Loki</strong>.<br/>5. <strong>Alertes sur les logs</strong> : Définir des alertes basées sur des patterns dans les logs (ex: \"ERROR\", \"Task failed\").</p>"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Imaginez que la tâche d'entraînement du modèle échoue. Décrivez comment vous utiliseriez les logs pour diagnostiquer le problème et comment vous pourriez mettre en place une alerte pour être notifié de cet échec.",
+        "niveau": "hard",
+        "reponse": "<p><strong>Diagnostic via les logs :</strong><br/>1. <strong>Identifier l'erreur</strong> : Vérifier le log de la tâche d'entraînement pour l'erreur (ex: MemoryError, KeyError, valeur NULL).<br/>2. <strong>Contexte</strong> : Utiliser le trace_id ou l'identifiant de la tâche pour retrouver les logs des tâches précédentes et vérifier la qualité des données en entrée.<br/>3. <strong>Analyser la stack trace</strong> : Pour comprendre où l'erreur s'est produite (ex: une fonction spécifique).<br/>4. <strong>Vérifier les paramètres</strong> : Les paramètres de la tâche (ex: hyperparamètres) peuvent être incorrects.<br/><br/><strong>Mise en place d'alertes :</strong><br/>1. <strong>Alertes Airflow</strong> : Utiliser la fonctionnalité d'alertes intégrée d'Airflow (envoi d'email en cas d'échec).<br/>2. <strong>Alertes basées sur les logs</strong> : Configurer des alertes dans <strong>Elasticsearch</strong> ou <strong>Loki</strong> pour détecter les mots-clés \"ERROR\" ou \"Task failed\".<br/>3. <strong>Alertes Prometheus</strong> : Exposer une métrique (ex: <code>airflow_task_failure_count</code>) et définir une alerte sur cette métrique.<br/>4. <strong>Notifications</strong> : Envoyer des notifications via Slack, email ou SMS pour informer l'équipe en temps réel.</p>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Mise en place d'alertes pour la détection de dérive de données",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous devez surveiller un modèle de <strong>scoring de crédit</strong> déployé en production. Le modèle est sensible aux changements dans les données (data drift). Vous devez mettre en place un système d'alerting pour détecter automatiquement ces dérives.</p><p><strong>Métriques disponibles :</strong></p><ul><li>Distance de Wasserstein pour chaque feature</li><li>Précision du modèle sur un échantillon (calculée quotidiennement)</li><li>Distribution des scores de confiance</li></ul>",
+      "images": [
+        "Graphique montrant l'évolution de la distance de Wasserstein pour 3 features (âge, revenu, ancienneté) au cours du temps. Une ligne rouge indique le seuil d'alerte. Une flèche indique un dépassement du seuil pour la feature 'revenu', déclenchant une alerte."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Pour chaque métrique disponible, proposez un seuil d'alerte et justifiez votre choix. Expliquez comment vous mettriez en place ces alertes.",
+        "niveau": "hard",
+        "reponse": "<p><strong>1. Distance de Wasserstein :</strong><br/>- Seuil : > 0.15 pour chaque feature (ou basé sur les 30 derniers jours).<br/>- Justification : Une distance de Wasserstein de 0.15 indique un changement significatif de distribution, confirmé par la littérature. À adapter selon la sensibilité de votre domaine.<br/>- Mise en place : Collecter la métrique via une API Prometheus, définir une alerte dans Alertmanager.<br/><br/><strong>2. Précision du modèle :</strong><br/>- Seuil : Baisse de 10% par rapport à la moyenne des 7 derniers jours.<br/>- Justification : Une baisse de 10% est significative et indique une possible dérive.<br/>- Mise en place : Calculer la précision sur un échantillon de transactions (batch quotidien), exporter la métrique, définir une alerte.<br/><br/><strong>3. Distribution des scores de confiance :</strong><br/>- Seuil : Test de Kolmogorov-Smirnov p-value < 0.05 par rapport à la distribution de référence.<br/>- Justification : Une p-value < 0.05 indique une différence statistiquement significative.<br/>- Mise en place : Exécuter le test KS quotidiennement, exporter la p-value, alerter si p-value < 0.05.</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quels sont les risques de définir des seuils trop bas ou trop hauts ? Comment gérer les faux positifs et faux négatifs ?",
+            "niveau": "hard",
+            "reponse": "<p><strong>Seuils trop bas :</strong> Risque de <strong>faux positifs</strong> (alertes non pertinentes), ce qui peut entraîner une <strong>fatigue d'alerte</strong> et une perte de confiance dans le système.<br/><strong>Seuils trop hauts :</strong> Risque de <strong>faux négatifs</strong> (dérive non détectée), ce qui peut entraîner des dégradations de performance non détectées et des pertes financières.<br/><br/><strong>Gestion :</strong><br/>1. <strong>Adaptation dynamique</strong> : Utiliser des seuils basés sur des statistiques historiques (ex: moyenne + 3 écarts-types) pour s'adapter aux variations normales.<br/>2. <strong>Validation humaine</strong> : Mettre en place un processus de validation manuelle pour les alertes critiques.<br/>3. <strong>Multi-critères</strong> : Combiner plusieurs métriques pour réduire les faux positifs (ex: alerter uniquement si la précision baisse ET la distance de Wasserstein augmente).<br/>4. <strong>Monitoring des alertes</strong> : Surveiller le nombre d'alertes déclenchées et ajuster les seuils si nécessaire.</p>"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Une alerte de data drift est déclenchée pour la feature 'revenu'. Décrivez le processus que vous suivriez pour investiguer et résoudre ce problème.",
+        "niveau": "hard",
+        "reponse": "<p><strong>Processus d'investigation :</strong><br/>1. <strong>Vérification des logs</strong> : Consulter les logs d'ingestion de données pour identifier si la source de données a changé (ex: nouvelle API, nouveau format).<br/>2. <strong>Analyse des distributions</strong> : Visualiser les distributions de la feature 'revenu' avant et après le drift pour comprendre la nature du changement (ex: augmentation des valeurs, apparition de valeurs aberrantes).<br/>3. <strong>Validation métier</strong> : Discuter avec l'équipe métier pour comprendre si un changement dans le marché ou dans la politique de crédit a eu lieu.<br/>4. <strong>Impact sur le modèle</strong> : Évaluer l'impact du drift sur la performance du modèle en calculant les métriques sur des données récentes.<br/>5. <strong>Plan d'action</strong> :<br/>   - Si le drift est dû à une erreur de collecte : Corriger la source de données.<br/>   - Si le drift est réel et permanent : Planifier un retraining du modèle avec les nouvelles données.<br/>   - Si le drift est temporaire : Mettre en place une surveillance renforcée et préparer un retraining de secours.</p>",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

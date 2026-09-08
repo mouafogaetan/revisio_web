@@ -1,0 +1,122 @@
+[
+  {
+    "intitule": "Compréhension de l'injection de dépendances et du conteneur IoC",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans l'écosystème NestJS, le conteneur d'<strong>inversion de contrôle (IoC)</strong> est un mécanisme fondamental qui gère le cycle de vie des objets et leurs dépendances.</p>",
+      "images": [
+        "schéma du conteneur IoC de NestJS avec providers, modules et injection"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer le principe de l'inversion de contrôle (IoC) et son avantage par rapport à une approche où chaque classe crée ses propres dépendances.",
+        "niveau": "medium",
+        "reponse": "L'IoC inverse le contrôle de création des dépendances : ce n'est plus la classe qui instancie ses dépendances (new Dépendance()), mais le conteneur IoC qui les fournit via le constructeur. Avantages : découplage, testabilité facilitée (mocks), réutilisabilité du code, et meilleure maintenance.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Décrire le rôle du décorateur <code>@Injectable()</code> dans NestJS. À quoi sert-il et que se passe-t-il si on l'omet ?",
+            "niveau": "medium",
+            "reponse": "<code>@Injectable()</code> marque une classe comme pouvant être gérée par le conteneur IoC de NestJS. Il permet à NestJS de la reconnaître comme un provider et de l'injecter dans d'autres classes. Si on l'omet, la classe ne peut pas être injectée via le constructeur ; on obtiendra une erreur car NestJS ne pourra pas résoudre la dépendance."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Dans un service NestJS, comparez deux approches : créer une instance d'un autre service avec <code>new MonService()</code> vs l'injecter via le constructeur. Quelle approche respecte l'IoC et pourquoi ?",
+            "niveau": "hard",
+            "reponse": "La bonne approche est l'injection via le constructeur : <code>constructor(private monService: MonService)</code>. Cela respecte l'IoC car NestJS fournit automatiquement l'instance. L'approche <code>new MonService()</code> crée une instance directement (contrôle non inversé) et rend difficile le test unitaire (impossible de mocker MonService facilement). De plus, si MonService a ses propres dépendances, il faudrait toutes les instancier manuellement."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Injection de services et providers personnalisés",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous développez une API de gestion d'utilisateurs avec NestJS. Vous avez les classes suivantes :</p><pre><code>// logger.service.ts\n@Injectable()\nexport class LoggerService {\n  log(message: string) { console.log(`[LOG] ${message}`); }\n}\n\n// mail.service.ts\n@Injectable()\nexport class MailService {\n  send(email: string, content: string) {\n    console.log(`Email envoyé à ${email}`);\n  }\n}\n\n// user.service.ts (à implémenter)\n// Doit utiliser LoggerService et MailService</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémenter le <code>UserService</code> qui injecte <code>LoggerService</code> et <code>MailService</code> dans son constructeur. Ajouter une méthode <code>createUser(email: string, name: string)</code> qui : logue la création, envoie un email de bienvenue, et retourne un objet utilisateur.",
+        "niveau": "medium",
+        "reponse": "Le service doit utiliser l'injection de dépendances via le constructeur et appeler les méthodes des services injectés.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Écrire le code complet du <code>UserService</code> avec les injections et la méthode <code>createUser</code>.",
+            "niveau": "medium",
+            "reponse": "```typescript\nimport { Injectable } from '@nestjs/common';\nimport { LoggerService } from './logger.service';\nimport { MailService } from './mail.service';\n\n@Injectable()\nexport class UserService {\n  constructor(\n    private readonly loggerService: LoggerService,\n    private readonly mailService: MailService,\n  ) {}\n\n  createUser(email: string, name: string) {\n    this.loggerService.log(`Création de l'utilisateur ${email}`);\n    this.mailService.send(email, `Bienvenue ${name} sur notre plateforme !`);\n    \n    return {\n      id: Date.now(),\n      email,\n      name,\n      createdAt: new Date(),\n    };\n  }\n}\n```"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Créer un <strong>provider personnalisé</strong> nommé <code>CONFIG</code> qui fournit un objet de configuration (ex: { appName: 'MyApp', adminEmail: 'admin@example.com' }) en utilisant <code>useValue</code>. Injecter ensuite ce provider dans <code>MailService</code>.",
+            "niveau": "very hard",
+            "reponse": "```typescript\n// config.provider.ts\nexport const CONFIG = 'CONFIG';\n\nexport const configProvider = {\n  provide: CONFIG,\n  useValue: {\n    appName: 'MyApp',\n    adminEmail: 'admin@example.com',\n    contactEmail: 'contact@example.com',\n  },\n};\n\n// mail.service.ts modifié\nimport { Injectable, Inject } from '@nestjs/common';\nimport { CONFIG } from './config.provider';\n\n@Injectable()\nexport class MailService {\n  constructor(@Inject(CONFIG) private readonly config: any) {}\n\n  send(email: string, content: string) {\n    console.log(`[${this.config.appName}] Email envoyé à ${email}`);\n    // Utilisation de config.adminEmail, etc.\n  }\n}\n\n// Dans le module (app.module.ts)\nimport { Module } from '@nestjs/common';\nimport { configProvider } from './config.provider';\n\n@Module({\n  providers: [MailService, configProvider],\n  exports: [MailService],\n})\nexport class AppModule {}\n```"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Cycle de vie des providers et portée (scope)",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Dans NestJS, les providers ont par défaut une <strong>portée singleton</strong> : une seule instance est partagée dans toute l'application. Il existe aussi les portées <code>REQUEST</code> et <code>TRANSIENT</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer la différence entre les portées <code>DEFAULT (SINGLETON)</code>, <code>REQUEST</code> et <code>TRANSIENT</code>. Donner un cas d'usage pour chaque.",
+        "niveau": "hard",
+        "reponse": "SINGLETON : une instance unique pour toute l'application (cas par défaut). REQUEST : une nouvelle instance par requête HTTP (utile pour stocker des données spécifiques à la requête, comme l'utilisateur courant). TRANSIENT : une nouvelle instance à chaque injection (utile pour des services qui ne doivent pas partager d'état).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment modifier la portée d'un provider en NestJS ? Écrire un exemple de service avec portée REQUEST.",
+            "niveau": "medium",
+            "reponse": "On utilise le décorateur <code>@Injectable({ scope: Scope.REQUEST })</code>. Exemple :\n```typescript\nimport { Injectable, Scope } from '@nestjs/common';\n\n@Injectable({ scope: Scope.REQUEST })\nexport class RequestScopedService {\n  private requestId: string;\n\n  setRequestId(id: string) {\n    this.requestId = id;\n  }\n\n  getRequestId() {\n    return this.requestId;\n  }\n}\n```\nAttention : un provider REQUEST ne peut pas être injecté dans un provider singleton directement (car il dépend de la requête). Il faut utiliser <code>@Inject(REQUEST)</code> ou des modules spéciaux."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Quel problème peut survenir si un service avec portée REQUEST est injecté dans un service singleton ? Comment le résoudre ?",
+            "niveau": "very hard",
+            "reponse": "Problème : le service singleton est instancié une fois au démarrage, et le service REQUEST dépend de la requête en cours. NestJS ne peut pas satisfaire l'injection car le singleton ne peut pas avoir une instance différente par requête. Solution : utiliser <code>@Inject(REQUEST)</code> et <code>REQUEST</code> provider (de <code>@nestjs/core</code>), ou repenser l'architecture pour ne pas injecter de service REQUEST dans un singleton. Alternative : utiliser un <code>AsyncLocalStorage</code> pour stocker le contexte de requête sans changer la portée."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Cas pratique : Architecture modulaire avec injection",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous concevez une application de gestion de commandes. Voici les spécifications :</p><ul><li><strong>ProductService</strong> : gère les produits (avec une méthode <code>checkStock(productId)</code>)</li><li><strong>DiscountService</strong> : applique des réductions (avec <code>getDiscount(userId)</code>)</li><li><strong>OrderService</strong> : crée des commandes et doit utiliser ProductService et DiscountService</li><li><strong>NotificationService</strong> : envoie des emails après création de commande</li></ul><p>Les services sont dans des modules séparés (<code>ProductsModule</code>, <code>DiscountModule</code>, <code>NotificationsModule</code>).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Dessiner (décrire) le graphe des dépendances entre les modules et les services. Indiquer quels modules doivent exporter leurs services pour que <code>OrderService</code> puisse les utiliser.",
+        "niveau": "hard",
+        "reponse": "OrderService dépend de ProductService, DiscountService et NotificationService. Donc OrderModule doit importer ProductsModule, DiscountModule et NotificationsModule. Chacun de ces modules doit exporter son service correspondant (ProductService, DiscountService, NotificationService) via la propriété <code>exports</code> du décorateur <code>@Module</code>.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Écrire le code complet du <code>OrderModule</code> et du <code>OrderService</code> qui injecte les trois dépendances. Inclure les imports nécessaires.",
+            "niveau": "very hard",
+            "reponse": "```typescript\n// products.module.ts\nimport { Module } from '@nestjs/common';\nimport { ProductService } from './product.service';\n\n@Module({\n  providers: [ProductService],\n  exports: [ProductService],\n})\nexport class ProductsModule {}\n\n// discount.module.ts\nimport { Module } from '@nestjs/common';\nimport { DiscountService } from './discount.service';\n\n@Module({\n  providers: [DiscountService],\n  exports: [DiscountService],\n})\nexport class DiscountModule {}\n\n// notifications.module.ts\nimport { Module } from '@nestjs/common';\nimport { NotificationService } from './notification.service';\n\n@Module({\n  providers: [NotificationService],\n  exports: [NotificationService],\n})\nexport class NotificationsModule {}\n\n// order.module.ts\nimport { Module } from '@nestjs/common';\nimport { OrderService } from './order.service';\nimport { ProductsModule } from '../products/products.module';\nimport { DiscountModule } from '../discount/discount.module';\nimport { NotificationsModule } from '../notifications/notifications.module';\n\n@Module({\n  imports: [ProductsModule, DiscountModule, NotificationsModule],\n  providers: [OrderService],\n  exports: [OrderService],\n})\nexport class OrderModule {}\n\n// order.service.ts\nimport { Injectable } from '@nestjs/common';\nimport { ProductService } from '../products/product.service';\nimport { DiscountService } from '../discount/discount.service';\nimport { NotificationService } from '../notifications/notification.service';\n\n@Injectable()\nexport class OrderService {\n  constructor(\n    private readonly productService: ProductService,\n    private readonly discountService: DiscountService,\n    private readonly notificationService: NotificationService,\n  ) {}\n\n  async createOrder(userId: string, productId: string, quantity: number) {\n    const stockOk = await this.productService.checkStock(productId, quantity);\n    if (!stockOk) throw new Error('Stock insuffisant');\n    \n    const discount = await this.discountService.getDiscount(userId);\n    const total = quantity * 100; // prix exemple\n    const finalTotal = total * (1 - discount / 100);\n    \n    await this.notificationService.sendEmail(userId, `Commande créée : ${finalTotal}€`);\n    \n    return { productId, quantity, discount, finalTotal };\n  }\n}\n```"
+          }
+        ]
+      }
+    ]
+  }
+]

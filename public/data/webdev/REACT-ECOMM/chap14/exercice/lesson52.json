@@ -1,0 +1,99 @@
+[
+  {
+    "intitule": "Configuration du déploiement automatique sur Vercel",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous avez un projet React e-commerce hébergé sur GitHub. Vous souhaitez le déployer automatiquement sur Vercel à chaque <code>push</code> sur la branche <code>main</code>. Vercel propose une intégration native via GitHub.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez les étapes pour connecter votre dépôt GitHub à Vercel et configurer les variables d’environnement (ex: <code>VITE_API_URL</code>). Expliquez comment Vercel détecte automatiquement le framework React.",
+        "niveau": "easy",
+        "reponse": "1. Créer un compte Vercel et importer le dépôt GitHub. 2. Sélectionner le projet, Vercel détecte automatiquement Vite/React et applique les paramètres par défaut. 3. Dans les paramètres du projet, ajouter les variables d’environnement (ex: VITE_API_URL) pour les environnements Production et Preview. 4. Activer les déploiements automatiques sur push. 5. Chaque push sur main déclenche un build et un déploiement. Vercel fournit une URL de production et des preview URLs pour chaque PR.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Création d’un workflow GitHub Actions pour Netlify",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous préférez utiliser Netlify pour héberger votre application React. Vous devez créer un workflow GitHub Actions qui build le projet et déploie sur Netlify à chaque push sur <code>main</code>. Les variables d’environnement sont stockées dans les secrets GitHub.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le fichier YAML du workflow (`.github/workflows/deploy-netlify.yml`) qui : installe les dépendances, build l’application, puis utilise l’action `netlify/actions/deploy` avec le token Netlify et l’ID du site. Incluez la gestion des variables d’environnement.",
+        "niveau": "medium",
+        "reponse": "```yaml\nname: Deploy to Netlify\non:\n  push:\n    branches: [main]\njobs:\n  deploy:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/setup-node@v4\n        with: { node-version: 18 }\n      - run: npm ci\n      - run: npm run build\n        env:\n          VITE_API_URL: ${{ secrets.VITE_API_URL }}\n      - uses: netlify/actions/deploy@v2\n        with:\n          auth: ${{ secrets.NETLIFY_AUTH_TOKEN }}\n          site_id: ${{ secrets.NETLIFY_SITE_ID }}\n          dir: dist\n          deploy-branch: main\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment configurer les secrets dans GitHub pour stocker le token Netlify et l’ID du site ?",
+            "niveau": "easy",
+            "reponse": "Aller dans Settings → Secrets and variables → Actions → New repository secret. Ajouter `NETLIFY_AUTH_TOKEN` (token personnel Netlify) et `NETLIFY_SITE_ID` (ID trouvé dans les paramètres du site Netlify)."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Mise en place des preview deployments pour les pull requests",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Votre équipe souhaite tester chaque pull request dans un environnement isolé avant de fusionner. Vercel et Netlify proposent des preview deployments automatiques. Vous devez configurer un workflow qui commente l’URL de preview sur chaque PR.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez comment configurer Netlify (ou Vercel) pour générer une URL de preview pour chaque PR. Puis écrivez un script ou une action GitHub qui commente automatiquement l’URL de preview dans la PR.",
+        "niveau": "hard",
+        "reponse": "Netlify : Activer les ‘Deploy Previews’ dans les paramètres du site (Branch deploys). Pour chaque PR, Netlify crée une URL unique (ex: `pr-123--mon-site.netlify.app`). Pour commenter, on peut utiliser l’action `mshick/add-pr-comment` en récupérant l’URL depuis la sortie du déploiement Netlify. Ou bien utiliser l’action officielle `netlify/actions/deploy` qui retourne l’URL. Exemple : après déploiement, récupérer `${{ steps.deploy.outputs.deploy-url }}` et utiliser `actions/github-script` pour créer un commentaire.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Débogage d’un déploiement échoué sur Vercel",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Après avoir pushé du code sur la branche <code>main</code>, Vercel échoue à déployer avec l’erreur : <code>Error: Command "build" not found</code>. Le projet utilise Vite et le script <code>build</code> est bien défini dans <code>package.json</code> comme <code>vite build</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifiez les causes probables et proposez une procédure de résolution en vérifiant la configuration du projet et les logs Vercel.",
+        "niveau": "medium",
+        "reponse": "Causes possibles : 1) Le fichier `package.json` est mal formé (virgule manquante). 2) Les dépendances (vite) ne sont pas installées (vérifier `dependencies` vs `devDependencies`, Vercel installe les devDependencies par défaut). 3) Le dossier de sortie `dist` n’est pas correctement configuré. 4) Un fichier `vercel.json` écrase la commande build. Résolution : Vérifier les logs de build sur Vercel, tester localement `npm run build`, s’assurer que `vite` est dans `devDependencies`, et que le framework preset est bien détecté. Ajouter éventuellement un `vercel.json` avec `buildCommand: \"npm run build\"` et `outputDirectory: \"dist\"`.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation du cache des dépendances dans GitHub Actions",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Votre workflow GitHub Actions pour déployer sur Vercel/Netlify prend 5 minutes à chaque exécution, principalement à cause de l’installation des dépendances. Vous souhaitez accélérer le processus en mettant en cache <code>node_modules</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez un workflow YAML qui utilise l’action `actions/cache` pour mettre en cache le dossier `node_modules` ou le cache npm (`~/.npm`). Incluez la génération d’une clé de cache basée sur le hash du `package-lock.json`.",
+        "niveau": "medium",
+        "reponse": "```yaml\n- uses: actions/cache@v3\n  with:\n    path: ~/.npm\n    key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}\n    restore-keys: |\n      ${{ runner.os }}-node-\n- run: npm ci\n```\nOu pour node_modules : `path: node_modules`, `key: ${{ runner.os }}-node-modules-${{ hashFiles('package-lock.json') }}`. Cela réduit le temps d’installation à quelques secondes.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

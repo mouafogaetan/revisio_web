@@ -1,0 +1,141 @@
+[
+  {
+    "intitule": "Comprendre React Query et ses avantages",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>React Query (maintenant appelé TanStack Query) est une bibliothèque puissante pour la gestion des données asynchrones dans React. Elle résout de nombreux problèmes liés aux requêtes API.</p>",
+      "images": ["schéma comparant la gestion manuelle des requêtes avec useEffect/fetch et l'approche React Query avec caching automatique", "logo de TanStack Query avec sa documentation"]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Définir trois avantages principaux de React Query par rapport à une gestion manuelle avec useEffect et fetch.",
+        "niveau": "easy",
+        "reponse": "1) Caching automatique : les données sont mises en cache et réutilisées entre les composants.\n2) Revalidation et refetch en arrière-plan : les données sont automatiquement rafraîchies lorsque l'utilisateur revient sur l'onglet.\n3) Gestion native des états (loading, error, data) sans code boilerplate.\n4) Déduplication automatique des requêtes identiques.\n5) Pagination et chargement infini simplifiés.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer ce qu'est la 'stale-while-revalidate' et pourquoi c'est utile pour l'expérience utilisateur.",
+        "niveau": "medium",
+        "reponse": "Stale-while-revalidate est une stratégie où React Query retourne d'abord les données en cache (même si elles sont 'périmées' / stale) pour un affichage immédiat, puis rafraîchit les données en arrière-plan. L'utilisateur voit le contenu instantanément sans écran de chargement, puis les données se mettent à jour silencieusement si nécessaire. Cela améliore considérablement la perception de rapidité de l'application.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Migration d'un useEffect/fetch vers useQuery",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Une application existante utilise le code suivant pour récupérer la liste des produits d'un e-commerce :</p><pre><code>function Products() {\n  const [products, setProducts] = useState([]);\n  const [loading, setLoading] = useState(true);\n  const [error, setError] = useState(null);\n\n  useEffect(() => {\n    fetch('/api/products')\n      .then(res => res.json())\n      .then(setProducts)\n      .catch(setError)\n      .finally(() => setLoading(false));\n  }, []);\n\n  if (loading) return &lt;div&gt;Chargement...&lt;/div&gt;;\n  if (error) return &lt;div&gt;Erreur : {error.message}&lt;/div&gt;\n  return &lt;ul&gt;{products.map(p => &lt;li key={p.id}&gt;{p.name}&lt;/li&gt;)}&lt;/ul&gt;;\n}</code></pre>",
+      "images": ["capture d'écran du code avant et après migration vers React Query", "schéma du QueryClientProvider enveloppant l'application"]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Réécrire ce composant en utilisant useQuery de React Query (importer les hooks nécessaires).",
+        "niveau": "medium",
+        "reponse": "import { useQuery } from '@tanstack/react-query';\n\nfunction Products() {\n  const { data: products, isLoading, error } = useQuery({\n    queryKey: ['products'],\n    queryFn: () => fetch('/api/products').then(res => res.json())\n  });\n\n  if (isLoading) return <div>Chargement...</div>;\n  if (error) return <div>Erreur : {error.message}</div>;\n  return <ul>{products.map(p => <li key={p.id}>{p.name}</li>)}</ul>;\n}",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Justifier l'utilisation de queryKey et expliquer son rôle.",
+            "niveau": "medium",
+            "reponse": "queryKey est un identifiant unique pour la requête. React Query l'utilise pour mettre en cache les données. Si le même queryKey est utilisé dans plusieurs composants, ils partageront le même cache. De plus, quand on invalide un queryKey (ex: après une mutation), toutes les requêtes associées sont automatiquement revalidées."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Ajouter une configuration pour que les données soient considérées comme périmées (stale) après 5 minutes.",
+        "niveau": "medium",
+        "reponse": "const { data: products } = useQuery({\n  queryKey: ['products'],\n  queryFn: fetchProducts,\n  staleTime: 5 * 60 * 1000 // 5 minutes en millisecondes\n});",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Mutations avec React Query",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Dans l'application de gestion de produits, on souhaite ajouter la fonctionnalité de suppression d'un produit. Après suppression, la liste des produits doit être automatiquement mise à jour.</p>",
+      "images": ["interface avec bouton supprimer sur chaque produit", "diagramme de séquence de useMutation avec invalidation du cache"]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire une mutation deleteProduct avec useMutation, incluant la gestion des états (isPending, error) et l'invalidation du cache après succès.",
+        "niveau": "hard",
+        "reponse": "import { useMutation, useQueryClient } from '@tanstack/react-query';\n\nfunction DeleteProductButton({ productId }) {\n  const queryClient = useQueryClient();\n\n  const mutation = useMutation({\n    mutationFn: (id) => fetch(`/api/products/${id}`, { method: 'DELETE' }).then(res => {\n      if (!res.ok) throw new Error('Erreur lors de la suppression');\n    }),\n    onSuccess: () => {\n      // Invalider le cache des produits pour déclencher un refetch\n      queryClient.invalidateQueries({ queryKey: ['products'] });\n    },\n  });\n\n  return (\n    <button \n      onClick={() => mutation.mutate(productId)}\n      disabled={mutation.isPending}\n    >\n      {mutation.isPending ? 'Suppression...' : 'Supprimer'}\n    </button>\n  );\n}",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer pourquoi on utilise queryClient.invalidateQueries après une mutation réussie.",
+            "niveau": "hard",
+            "reponse": "Lorsqu'on supprime un produit, la liste des produits dans le cache n'est plus à jour. invalidateQueries(['products']) marque les données comme périmées, ce qui force React Query à refaire la requête automatiquement lors du prochain accès. Cela garantit que tous les composants utilisant 'products' affichent les données à jour sans code supplémentaire."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisations et refetch automatique",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>React Query offre plusieurs options de configuration pour contrôler le comportement de revalidation (refetch) des données.</p>",
+      "images": ["graphique montrant les moments où React Query refetch automatiquement", "tableau des options de refetch (refetchOnMount, refetchOnWindowFocus, refetchOnReconnect)"]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire le comportement de refetchOnWindowFocus et expliquer son intérêt pour une application météo.",
+        "niveau": "hard",
+        "reponse": "refetchOnWindowFocus (activé par défaut) déclenche une nouvelle requête lorsque l'utilisateur revient sur l'onglet de l'application. Pour une application météo, c'est très utile : si l'utilisateur consulte un autre onglet puis revient, les données météo sont automatiquement mises à jour sans qu'il ait besoin de rafraîchir manuellement. Cela garantit que l'affichage reflète toujours la dernière information.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Comparer les options refetchOnMount, refetchOnWindowFocus et refetchOnReconnect en expliquant quand chacune est déclenchée.",
+        "niveau": "hard",
+        "reponse": "- refetchOnMount (true par défaut) : déclenche un refetch lorsque le composant utilise useQuery pour la première fois, sauf si des données existent dans le cache.\n- refetchOnWindowFocus (true par défaut) : déclenche un refetch quand l'utilisateur revient sur l'onglet actif.\n- refetchOnReconnect (true par défaut) : déclenche un refetch quand l'appareil retrouve une connexion internet après une déconnexion.\nCes trois options peuvent être personnalisées globalement via QueryClient ou individuellement par useQuery.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Optimistic Updates pour une meilleure UX",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Dans une application de tâches (todo list), l'utilisateur peut cocher une tâche comme terminée. Pour une expérience plus fluide, vous souhaitez implémenter une mise à jour optimiste : l'interface se met à jour immédiatement, et si la requête échoue, on annule le changement.</p>",
+      "images": ["schéma d'optimistic update : mise à jour immédiate puis rollback en cas d'erreur", "interface todo list avec case à cocher"]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer le concept de 'optimistic update' et son bénéfice pour l'expérience utilisateur.",
+        "niveau": "very hard",
+        "reponse": "L'optimistic update consiste à mettre à jour l'interface IMMÉDIATEMENT après l'action utilisateur, avant même que la requête serveur ne soit terminée. Si la requête réussit, tout est parfait. Si elle échoue, on annule (rollback) la modification. Le bénéfice est une interface ultra-réactive : l'utilisateur n'attend pas la réponse du serveur, ce qui donne une impression de rapidité, surtout sur des connexions lentes.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrire une mutation pour basculer le statut 'completed' d'une tâche avec optimistic update en utilisant React Query.",
+        "niveau": "very hard",
+        "reponse": "const queryClient = useQueryClient();\n\nconst toggleMutation = useMutation({\n  mutationFn: (todo) => fetch(`/api/todos/${todo.id}`, {\n    method: 'PATCH',\n    body: JSON.stringify({ completed: !todo.completed })\n  }).then(res => {\n    if (!res.ok) throw new Error('Erreur réseau');\n    return res.json();\n  }),\n\n  onMutate: async (newTodo) => {\n    // Annuler les requêtes en cours\n    await queryClient.cancelQueries({ queryKey: ['todos'] });\n    \n    // Sauvegarder l'état précédent\n    const previousTodos = queryClient.getQueryData(['todos']);\n    \n    // Mise à jour optimiste du cache\n    queryClient.setQueryData(['todos'], (old) =>\n      old.map(todo =>\n        todo.id === newTodo.id \n          ? { ...todo, completed: !todo.completed }\n          : todo\n      )\n    );\n    \n    return { previousTodos };\n  },\n\n  onError: (err, newTodo, context) => {\n    // Rollback en cas d'erreur\n    queryClient.setQueryData(['todos'], context.previousTodos);\n  },\n\n  onSettled: () => {\n    // Revalider pour être sûr d'être à jour\n    queryClient.invalidateQueries({ queryKey: ['todos'] });\n  }\n});",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Expliquer le rôle de chaque callback (onMutate, onError, onSettled) dans cette implémentation.",
+            "niveau": "very hard",
+            "reponse": "- onMutate : exécuté AVANT la mutation. On annule les requêtes en cours, on sauvegarde l'état précédent, et on met à jour le cache de manière optimiste.\n- onError : appelé si la mutation échoue. On restaure l'état précédent (rollback).\n- onSettled : toujours exécuté après la mutation (succès ou échec). On invalide le cache pour garantir que les données sont synchronisées avec le serveur."
+          }
+        ]
+      }
+    ]
+  }
+]

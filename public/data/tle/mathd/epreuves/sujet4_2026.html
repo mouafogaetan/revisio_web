@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+  "matiere": "Mathématiques",
+  "classe": "Terminale D",
+  "sequence": "Séquence 4",
+  "anneeScolaire": "2025-2026",
+  "exercices": [
+    {
+      "titre": "Exercice 1 : Statistiques - Ajustement linéaire (Ressources)",
+      "points": "3.75 points",
+      "enonce": "<div style='display: flex; flex-direction: column; gap: 8px;'>\n  <p>Le tableau ci-dessous donne le nombre d'habitants (en milliers) d'une ville en fonction de l'année.</p>\n  <div style='background: #f1f5f9; padding: 10px; border-radius: 6px; overflow-x: auto;'>\n    <table style='width: 100%; border-collapse: collapse; font-size: 14px;'>\n      <thead>\n        <tr style='background: #3b82f6; color: white;'>\n          <th style='padding: 8px; border: 1px solid #ddd;'>Année \\( x \\)</th>\n          <th style='padding: 8px; border: 1px solid #ddd;'>2010</th>\n          <th style='padding: 8px; border: 1px solid #ddd;'>2012</th>\n          <th style='padding: 8px; border: 1px solid #ddd;'>2014</th>\n          <th style='padding: 8px; border: 1px solid #ddd;'>2016</th>\n          <th style='padding: 8px; border: 1px solid #ddd;'>2018</th>\n        </tr>\n      </thead>\n      <tbody>\n        <tr>\n          <td style='padding: 8px; border: 1px solid #ddd; background: #f8fafc;'><strong>Population \\( y \\)</strong></td>\n          <td style='padding: 8px; border: 1px solid #ddd; background: #f8fafc;'>15</td>\n          <td style='padding: 8px; border: 1px solid #ddd; background: #f8fafc;'>18</td>\n          <td style='padding: 8px; border: 1px solid #ddd; background: #f8fafc;'>22</td>\n          <td style='padding: 8px; border: 1px solid #ddd; background: #f8fafc;'>27</td>\n          <td style='padding: 8px; border: 1px solid #ddd; background: #f8fafc;'>33</td>\n        </tr>\n      </tbody>\n    </table>\n  </div>\n</div>",
+      "questions": [
+        {
+          "question": "<p>1) Calculer les coordonnées du point moyen \\( G \\). (0.5pt)</p>",
+          "reponse": "<p>\\( \\bar{x} = \\dfrac{2010+2012+2014+2016+2018}{5} = 2014 \\)</p><p>\\( \\bar{y} = \\dfrac{15+18+22+27+33}{5} = \\dfrac{115}{5} = 23 \\)</p><p>Donc \\( G(2014; 23) \\).</p>"
+        },
+        {
+          "question": "<p>2) Déterminer l'équation de la droite de régression de \\( y \\) en \\( x \\) par la méthode des moindres carrés. (1.5pts)</p>",
+          "reponse": "<p>On pose \\( X = x - 2010 \\) pour simplifier les calculs. On obtient \\( X_i \\) : 0, 2, 4, 6, 8.</p><p>\\( \\bar{X} = 4 \\), \\( \\bar{y} = 23 \\)</p><p>\\( \\sum X_i^2 = 0 + 4 + 16 + 36 + 64 = 120 \\)</p><p>\\( \\sum X_i y_i = 0\\times15 + 2\\times18 + 4\\times22 + 6\\times27 + 8\\times33 = 0+36+88+162+264 = 550 \\)</p><p>\\( a = \\dfrac{\\sum X_i y_i - n\\bar{X}\\bar{y}}{\\sum X_i^2 - n\\bar{X}^2} = \\dfrac{550 - 5\\times4\\times23}{120 - 5\\times16} = \\dfrac{550 - 460}{120 - 80} = \\dfrac{90}{40} = 2.25 \\)</p><p>\\( b = \\bar{y} - a\\bar{X} = 23 - 2.25\\times4 = 23 - 9 = 14 \\)</p><p>Donc \\( y = 2.25X + 14 \\). En revenant à \\( x \\) : \\( y = 2.25(x-2010) + 14 = 2.25x - 4522.5 + 14 = 2.25x - 4508.5 \\).</p>"
+        },
+        {
+          "question": "<p>3) Calculer le coefficient de corrélation linéaire. Interpréter le résultat. (1.25pt)</p>",
+          "reponse": "<p>On a \\( \\sum y_i^2 = 15^2+18^2+22^2+27^2+33^2 = 225+324+484+729+1089 = 2851 \\)</p><p>\\( \\sum X_i^2 = 120 \\)</p><p>\\( r = \\dfrac{\\sum X_i y_i - n\\bar{X}\\bar{y}}{\\sqrt{(\\sum X_i^2 - n\\bar{X}^2)(\\sum y_i^2 - n\\bar{y}^2)}} = \\dfrac{550 - 5\\times4\\times23}{\\sqrt{(120 - 5\\times16)(2851 - 5\\times23^2)}} = \\dfrac{550 - 460}{\\sqrt{(120 - 80)(2851 - 2645)}} = \\dfrac{90}{\\sqrt{40 \\times 206}} = \\dfrac{90}{\\sqrt{8240}} = \\dfrac{90}{90.77} \\approx 0.991 \\)</p><p>Le coefficient de corrélation est proche de 1, donc l'ajustement linéaire est très bon.</p>"
+        },
+        {
+          "question": "<p>4) Estimer la population en 2022 à l'aide de cette droite. (0.5pt)</p>",
+          "reponse": "<p>Pour \\( x = 2022 \\) : \\( y = 2.25 \\times 2022 - 4508.5 = 4549.5 - 4508.5 = 41 \\) milliers d'habitants.</p>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 2 : Probabilités et loi binomiale (Ressources)",
+      "points": "3.75 points",
+      "enonce": "<div style='display: flex; flex-direction: column; gap: 8px;'>\n  <p>Dans une classe de Terminale D, 60% des élèves sont des filles. On choisit au hasard et avec remise 5 élèves de cette classe. Soit \\( X \\) la variable aléatoire égale au nombre de filles choisies.</p>\n</div>",
+      "questions": [
+        {
+          "question": "<p>1) Justifier que \\( X \\) suit une loi binomiale et préciser ses paramètres. (0.5pt)</p>",
+          "reponse": "<p>On répète 5 fois de manière indépendante une épreuve de Bernoulli de paramètre \\( p = 0.6 \\) (succès : \"choisir une fille\").</p><p>Donc \\( X \\) suit la loi binomiale \\( \\mathcal{B}(5; 0.6) \\).</p>"
+        },
+        {
+          "question": "<p>2) Déterminer \\( P(X = 2) \\). (0.75pt)</p>",
+          "reponse": "<p>\\( P(X = 2) = \\binom{5}{2} (0.6)^2 (0.4)^3 = 10 \\times 0.36 \\times 0.064 = 10 \\times 0.02304 = 0.2304 \\)</p>"
+        },
+        {
+          "question": "<p>3) Calculer l'espérance mathématique \\( E(X) \\) et l'écart-type \\( \\sigma(X) \\). (1pt)</p>",
+          "reponse": "<p>\\( E(X) = np = 5 \\times 0.6 = 3 \\)</p><p>\\( V(X) = np(1-p) = 5 \\times 0.6 \\times 0.4 = 1.2 \\)</p><p>\\( \\sigma(X) = \\sqrt{1.2} \\approx 1.095 \\)</p>"
+        },
+        {
+          "question": "<p>4) Quelle est la probabilité d'avoir au moins 3 filles ? (1.5pts)</p>",
+          "reponse": "<p>\\( P(X \\ge 3) = P(X=3) + P(X=4) + P(X=5) \\)</p><p>\\( P(X=3) = \\binom{5}{3} (0.6)^3 (0.4)^2 = 10 \\times 0.216 \\times 0.16 = 0.3456 \\)</p><p>\\( P(X=4) = \\binom{5}{4} (0.6)^4 (0.4)^1 = 5 \\times 0.1296 \\times 0.4 = 0.2592 \\)</p><p>\\( P(X=5) = \\binom{5}{5} (0.6)^5 (0.4)^0 = 0.07776 \\)</p><p>\\( P(X \\ge 3) = 0.3456 + 0.2592 + 0.07776 = 0.68256 \\)</p>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 3 : Théorie des graphes - Arbres et plus court chemin (Ressources)",
+      "points": "2.5 points",
+      "enonce": "<div style='display: flex; flex-direction: column; gap: 8px;'>\n  <p>On considère le graphe non orienté suivant dont les arêtes sont pondérées :</p>\n  <ul>\n    <li>AB = 4, AC = 3, AD = 6</li>\n    <li>BC = 5, BD = 2, BE = 4</li>\n    <li>CD = 7, CE = 8, CF = 3</li>\n    <li>DE = 9, DF = 5</li>\n    <li>EF = 2</li>\n  </ul>\n</div>",
+      "questions": [
+        {
+          "question": "<p>1) Déterminer l'arbre couvrant de poids minimum du graphe à l'aide de l'algorithme de Kruskal. (1.5pts)</p>",
+          "reponse": "<p>On trie les arêtes par poids croissant :</p><p>EF(2), BD(2), AC(3), CF(3), AB(4), BE(4), DF(5), BC(5), AD(6), CD(7), CE(8), DE(9).</p><p>Algorithme de Kruskal :</p><ul><li>EF(2) → pas de cycle</li><li>BD(2) → pas de cycle</li><li>AC(3) → pas de cycle</li><li>CF(3) → pas de cycle</li><li>BE(4) → pas de cycle (relie E au reste)</li></ul><p>L'arbre couvrant est composé des arêtes : EF(2), BD(2), AC(3), CF(3), BE(4).</p><p>Poids total = 2 + 2 + 3 + 3 + 4 = 14.</p>"
+        },
+        {
+          "question": "<p>2) Déterminer le plus court chemin entre A et E à l'aide de l'algorithme de Dijkstra. (1pt)</p>",
+          "reponse": "<p>On applique l'algorithme de Dijkstra :</p><ul><li>Distance de A à A = 0</li><li>A → C = 3, A → B = 4, A → D = 6</li><li>C → F = 3+3 = 6, C → E = 3+8 = 11</li><li>B → E = 4+4 = 8, B → D = 4+2 = 6</li><li>F → E = 6+2 = 8</li></ul><p>Le plus court chemin de A à E est A → B → E avec une distance de 4+4 = 8, ou A → C → F → E avec une distance de 3+3+2 = 8.</p><p>Il existe deux chemins de poids 8 : A-B-E et A-C-F-E.</p>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 4 : Synthèse - Statistiques, probabilités et graphes (Compétences)",
+      "points": "5 points",
+      "enonce": "<div style='display: flex; flex-direction: column; gap: 12px;'>\n  <p>Un transporteur de café doit acheminer sa production de cinq localités (A, B, C, D, E) vers un centre de collecte. Les localités sont reliées par des routes dont les distances (en km) sont données par le graphe ci-dessous.</p>\n  <div style='background: #f1f5f9; padding: 10px; border-radius: 6px;'>\n    <ul>\n      <li>AB = 10, AC = 15, AD = 20</li>\n      <li>BC = 12, BD = 18, BE = 25</li>\n      <li>CD = 8, CE = 14, DE = 16</li>\n    </ul>\n  </div>\n  <p>Par ailleurs, le transporteur a relevé ses productions (en tonnes) des cinq dernières années pour prévoir la production future :</p>\n  <div style='background: #f1f5f9; padding: 10px; border-radius: 6px; overflow-x: auto;'>\n    <table style='width: 80%; border-collapse: collapse; font-size: 14px; margin: auto;'>\n      <thead>\n        <tr style='background: #3b82f6; color: white;'>\n          <th style='padding: 6px; border: 1px solid #ddd;'>Année (rang)</th>\n          <th style='padding: 6px; border: 1px solid #ddd;'>1</th>\n          <th style='padding: 6px; border: 1px solid #ddd;'>2</th>\n          <th style='padding: 6px; border: 1px solid #ddd;'>3</th>\n          <th style='padding: 6px; border: 1px solid #ddd;'>4</th>\n          <th style='padding: 6px; border: 1px solid #ddd;'>5</th>\n        </tr>\n      </thead>\n      <tbody>\n        <tr>\n          <td style='padding: 6px; border: 1px solid #ddd; background: #f8fafc;'><strong>Production (tonnes)</strong></td>\n          <td style='padding: 6px; border: 1px solid #ddd; background: #f8fafc;'>2.5</td>\n          <td style='padding: 6px; border: 1px solid #ddd; background: #f8fafc;'>3.2</td>\n          <td style='padding: 6px; border: 1px solid #ddd; background: #f8fafc;'>4.0</td>\n          <td style='padding: 6px; border: 1px solid #ddd; background: #f8fafc;'>4.5</td>\n          <td style='padding: 6px; border: 1px solid #ddd; background: #f8fafc;'>5.1</td>\n        </tr>\n      </tbody>\n    </table>\n  </div>\n</div>",
+      "questions": [
+        {
+          "question": "<p>1) Déterminer l'arbre couvrant de poids minimum pour relier toutes les localités au centre de collecte. Quel est le poids total minimal ? (2pts)</p>",
+          "reponse": "<p>On trie les arêtes par poids croissant :</p><p>CD(8), AB(10), BC(12), CE(14), AC(15), DE(16), BD(18), AD(20), BE(25).</p><p>Algorithme de Kruskal :</p><ul><li>CD(8) → pas de cycle</li><li>AB(10) → pas de cycle</li><li>BC(12) → pas de cycle (relie B à C)</li><li>CE(14) → pas de cycle (relie E)</li></ul><p>L'arbre couvrant est composé des arêtes : CD(8), AB(10), BC(12), CE(14).</p><p>Poids total = 8 + 10 + 12 + 14 = 44 km.</p>"
+        },
+        {
+          "question": "<p>2) Estimer la production de la 6ème année à l'aide d'un ajustement linéaire (méthode des moindres carrés). (2pts)</p>",
+          "reponse": "<p>\\( \\bar{x} = \\dfrac{1+2+3+4+5}{5} = 3 \\)</p><p>\\( \\bar{y} = \\dfrac{2.5+3.2+4.0+4.5+5.1}{5} = \\dfrac{19.3}{5} = 3.86 \\)</p><p>\\( \\sum x_i^2 = 1+4+9+16+25 = 55 \\)</p><p>\\( \\sum x_i y_i = 1\\times2.5 + 2\\times3.2 + 3\\times4.0 + 4\\times4.5 + 5\\times5.1 = 2.5+6.4+12+18+25.5 = 64.4 \\)</p><p>\\( a = \\dfrac{\\sum x_i y_i - n\\bar{x}\\bar{y}}{\\sum x_i^2 - n\\bar{x}^2} = \\dfrac{64.4 - 5\\times3\\times3.86}{55 - 5\\times9} = \\dfrac{64.4 - 57.9}{55 - 45} = \\dfrac{6.5}{10} = 0.65 \\)</p><p>\\( b = \\bar{y} - a\\bar{x} = 3.86 - 0.65\\times3 = 3.86 - 1.95 = 1.91 \\)</p><p>Droite : \\( y = 0.65x + 1.91 \\)</p><p>Pour x = 6 : \\( y = 0.65\\times6 + 1.91 = 3.9 + 1.91 = 5.81 \\) tonnes.</p>"
+        },
+        {
+          "question": "<p>3) Sachant que le prix du café est de 1800 FCFA/kg, estimer la recette de la 6ème année. (1pt)</p>",
+          "reponse": "<p>Production estimée : 5.81 tonnes = 5810 kg.</p><p>Recette = 5810 × 1800 = 10 458 000 FCFA.</p>"
+        }
+      ]
+    }
+  ]
+};
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

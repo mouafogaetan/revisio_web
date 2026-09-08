@@ -1,0 +1,130 @@
+[
+  {
+    "intitule": "Injection des dépendances : enregistrement et injection de services",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous travaillez sur une API .NET Core qui doit gérer des produits. Vous avez créé une interface <code>IProductService</code> et sa classe concrète <code>ProductService</code>. En utilisant le conteneur d’injection de dépendances d’ASP.NET Core, répondez aux questions suivantes.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rappelez la méthode à utiliser dans `Program.cs` pour enregistrer `ProductService` avec une durée de vie **Scoped**.",
+        "niveau": "easy",
+        "reponse": "`builder.Services.AddScoped<IProductService, ProductService();`",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez dans quel ordre les services enregistrés avec `AddTransient`, `AddScoped` et `AddSingleton` sont instanciés au cours d’une même requête HTTP.",
+        "niveau": "medium",
+        "reponse": "`AddSingleton` : une seule instance pour toute l’application. `AddScoped` : une instance par requête HTTP. `AddTransient` : une nouvelle instance à chaque demande (injection).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Appliquez la règle en modifiant l’enregistrement ci-dessous pour qu’il devienne **Singleton**. Justifiez brièvement.",
+        "niveau": "medium",
+        "reponse": "`builder.Services.AddSingleton<IProductService, ProductService();` car une seule instance sera partagée dans toute l’application.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Bonnes pratiques d’injection dans un contrôleur",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous devez implémenter un contrôleur <code>WeatherController</code> qui dépend de <code>IWeatherService</code> (déjà enregistré avec <code>AddScoped</code>) et de <code>ILogger<WeatherController></code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créez le constructeur du contrôleur en respectant le pattern d’injection de dépendances par constructeur.",
+        "niveau": "medium",
+        "reponse": "```csharp\npublic class WeatherController : ControllerBase\n{\n    private readonly IWeatherService _weatherService;\n    private readonly ILogger<WeatherController> _logger;\n\n    public WeatherController(IWeatherService weatherService, ILogger<WeatherController> logger)\n    {\n        _weatherService = weatherService;\n        _logger = logger;\n    }\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Justifiez pourquoi on n’instancie pas `new WeatherService()` directement dans le contrôleur.",
+        "niveau": "easy",
+        "reponse": "Pour respecter le couplage faible, faciliter les tests unitaires et laisser le conteneur DI gérer le cycle de vie.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Si `IWeatherService` est enregistré avec `AddScoped` et que vous l’injectez aussi dans un service intermédiaire (ex: `WeatherRepository`), combien d’instances seront créées pour une requête ?",
+        "niveau": "hard",
+        "reponse": "Une seule instance par requête, car la durée de vie Scoped garantit la même instance dans tout le scope de la requête.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Résolution manuelle et cycle de vie des services",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Dans un middleware personnalisé, vous devez résoudre manuellement un service <code>IEmailSender</code> (enregistré avec <code>AddSingleton</code>) et un service <code>IRequestContext</code> (enregistré avec <code>AddScoped</code>).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le code permettant d’obtenir ces deux services à partir de `IServiceProvider` dans un middleware.",
+        "niveau": "hard",
+        "reponse": "```csharp\nvar emailSender = context.RequestServices.GetRequiredService<IEmailSender>();\nvar requestContext = context.RequestServices.GetRequiredService<IRequestContext>();\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez pourquoi il ne faut pas injecter un service `Scoped` dans un service `Singleton`.",
+        "niveau": "hard",
+        "reponse": "Car le service `Singleton` vit pour toute l’application alors que le `Scoped` est propre à une requête. Le `Singleton` garderait une référence vers une instance `Scoped` qui deviendrait obsolète après la fin de la requête, causant des fuites mémoire ou des comportements incorrects.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposez une solution pour injecter un `Scoped` dans un `Singleton` sans violer les règles du conteneur.",
+        "niveau": "very hard",
+        "reponse": "Injecter `IServiceScopeFactory` dans le `Singleton`, puis créer un scope à la volée : `using var scope = serviceScopeFactory.CreateScope(); var service = scope.ServiceProvider.GetRequiredService<IScopedService();`",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Problème concret : architecture de notification",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous développez une API de notification. Les services suivants sont requis :</p><ul><li><code>INotificationSender</code> (Singleton, sans état)</li><li><code>IUserContext</code> (Scoped, contient l’utilisateur courant)</li><li><code>IAuditLogger</code> (Transient, pour loguer chaque action)</li></ul><p>Le contrôleur <code>NotificationController</code> doit envoyer une notification et loguer l’action.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créez l’enregistrement des trois services dans `Program.cs` avec les durées de vie adaptées.",
+        "niveau": "hard",
+        "reponse": "```csharp\nbuilder.Services.AddSingleton<INotificationSender, EmailSender>();\nbuilder.Services.AddScoped<IUserContext, UserContext>();\nbuilder.Services.AddTransient<IAuditLogger, AuditLogger>();\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrivez le constructeur du `NotificationController` qui injecte ces trois dépendances.",
+        "niveau": "medium",
+        "reponse": "```csharp\npublic class NotificationController : ControllerBase\n{\n    private readonly INotificationSender _notificationSender;\n    private readonly IUserContext _userContext;\n    private readonly IAuditLogger _auditLogger;\n\n    public NotificationController(INotificationSender notificationSender, IUserContext userContext, IAuditLogger auditLogger)\n    {\n        _notificationSender = notificationSender;\n        _userContext = userContext;\n        _auditLogger = auditLogger;\n    }\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Justifiez le choix de la durée de vie `Singleton` pour `INotificationSender` et `Transient` pour `IAuditLogger`.",
+        "niveau": "hard",
+        "reponse": "`Singleton` car `INotificationSender` n’a pas d’état interne et peut être réutilisé sans risque dans toute l’application. `Transient` pour `IAuditLogger` car chaque log doit être indépendant (pas de partage d’état entre les requêtes) et on évite les problèmes de concurrence.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

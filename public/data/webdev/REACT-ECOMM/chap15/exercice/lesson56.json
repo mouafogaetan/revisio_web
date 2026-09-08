@@ -1,0 +1,113 @@
+[
+  {
+    "intitule": "Audit d'accessibilité avec Lighthouse et axe-core",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous êtes chargé d'auditer l'accessibilité d'une page produit d'e-commerce React. Vous utilisez Lighthouse (Chrome DevTools) et l'extension axe-core.</p><p>Le rapport Lighthouse indique :</p><ul><li>Score d'accessibilité : 68/100</li><li>Problèmes détectés : images sans texte alternatif, contraste insuffisant, absence de landmarks, champs de formulaire sans label associé.</li></ul><p><strong>Question :</strong> Expliquez comment interpréter ces résultats et proposez des corrections concrètes pour chaque problème.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analyser le rapport Lighthouse et décrire les correctifs à apporter dans le code React pour résoudre les problèmes d'accessibilité.",
+        "niveau": "medium",
+        "reponse": "Corrections :\n1. **Images sans alt** : ajouter `alt` descriptif à chaque `<img>`. Si image décorative, `alt=\"\"`.\n2. **Contraste insuffisant** : ajuster les couleurs (ex: texte sur fond clair : ratio minimum 4.5:1).\n3. **Absence de landmarks** : utiliser les balises sémantiques `<header>`, `<main>`, `<footer>`, `<nav>` ou les rôles ARIA (`role=\"banner\"`, `role=\"main\"`).\n4. **Champs sans label** : associer `<label htmlFor=\"...\">` ou utiliser `aria-label` / `aria-labelledby`.\n\nExemple de correction :\n```jsx\n<label htmlFor=\"quantity\">Quantité</label>\n<input id=\"quantity\" type=\"number\" />\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer pourquoi un score Lighthouse de 68/100 n'est pas acceptable pour un site e-commerce public.",
+            "niveau": "easy",
+            "reponse": "Un score d'accessibilité faible exclut les utilisateurs en situation de handicap (malvoyants, non-voyants, moteurs), ce qui peut constituer une violation légale (ex: RGAA en France, ADA aux États-Unis) et réduit le chiffre d'affaires potentiel. De plus, l'accessibilité améliore le SEO et l'expérience globale."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Implémentation de la navigation au clavier pour un menu déroulant",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous développez un composant `DropdownMenu` pour un e-commerce React. Ce menu doit être utilisable au clavier selon les règles WCAG :</p><ul><li>Ouverture/fermeture avec `Enter` ou `Espace`</li><li>Navigation entre les éléments avec `Flèche Haut/Bas`</li><li>Sélection d'un élément avec `Enter`</li><li>Fermeture avec `Echap`</li><li>Focus piégé à l'intérieur du menu ouvert</li></ul><p><strong>Question :</strong> Implémentez ce composant en utilisant React Hooks (`useState`, `useRef`, `useEffect`) et la gestion des événements clavier.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédiger le code complet du composant DropdownMenu accessible au clavier.",
+        "niveau": "very hard",
+        "reponse": "```jsx\nimport React, { useState, useRef, useEffect } from 'react';\n\nconst DropdownMenu = ({ options, onSelect, label }) => {\n  const [isOpen, setIsOpen] = useState(false);\n  const [focusedIndex, setFocusedIndex] = useState(-1);\n  const containerRef = useRef(null);\n  const buttonRef = useRef(null);\n  const itemRefs = useRef([]);\n\n  const handleKeyDown = (e) => {\n    if (e.key === 'Escape') {\n      setIsOpen(false);\n      buttonRef.current?.focus();\n    }\n    if (!isOpen) {\n      if (e.key === 'Enter' || e.key === ' ') {\n        e.preventDefault();\n        setIsOpen(true);\n        setFocusedIndex(0);\n      }\n      return;\n    }\n    switch (e.key) {\n      case 'ArrowDown':\n        e.preventDefault();\n        setFocusedIndex((prev) => (prev + 1) % options.length);\n        break;\n      case 'ArrowUp':\n        e.preventDefault();\n        setFocusedIndex((prev) => (prev - 1 + options.length) % options.length);\n        break;\n      case 'Enter':\n        e.preventDefault();\n        if (focusedIndex >= 0) {\n          onSelect(options[focusedIndex]);\n          setIsOpen(false);\n          buttonRef.current?.focus();\n        }\n        break;\n      default:\n        break;\n    }\n  };\n\n  useEffect(() => {\n    if (isOpen && focusedIndex >= 0) {\n      itemRefs.current[focusedIndex]?.focus();\n    }\n  }, [focusedIndex, isOpen]);\n\n  useEffect(() => {\n    const handleClickOutside = (e) => {\n      if (containerRef.current && !containerRef.current.contains(e.target)) {\n        setIsOpen(false);\n      }\n    };\n    document.addEventListener('mousedown', handleClickOutside);\n    return () => document.removeEventListener('mousedown', handleClickOutside);\n  }, []);\n\n  return (\n    <div ref={containerRef} className=\"dropdown\" onKeyDown={handleKeyDown}>\n      <button\n        ref={buttonRef}\n        onClick={() => setIsOpen(!isOpen)}\n        aria-expanded={isOpen}\n        aria-haspopup=\"listbox\"\n      >\n        {label}\n      </button>\n      {isOpen && (\n        <ul role=\"listbox\" className=\"dropdown-menu\">\n          {options.map((option, idx) => (\n            <li\n              key={idx}\n              ref={(el) => (itemRefs.current[idx] = el)}\n              tabIndex={focusedIndex === idx ? 0 : -1}\n              role=\"option\"\n              aria-selected={focusedIndex === idx}\n              onClick={() => {\n                onSelect(option);\n                setIsOpen(false);\n                buttonRef.current?.focus();\n              }}\n              onMouseEnter={() => setFocusedIndex(idx)}\n            >\n              {option.label}\n            </li>\n          ))}\n        </ul>\n      )}\n    </div>\n  );\n};\n\nexport default DropdownMenu;\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer le rôle de `tabIndex={focusedIndex === idx ? 0 : -1}` et pourquoi on utilise `useRef` pour les éléments de la liste.",
+            "niveau": "hard",
+            "reponse": "`tabIndex={0}` rend l'élément focusable au clavier, `tabIndex={-1}` le rend focusable uniquement via JavaScript. Cela permet de contrôler manuellement le focus avec `focusedIndex`. `useRef` stocke les références des éléments DOM pour pouvoir appeler `.focus()` dessus lorsque `focusedIndex` change, sans avoir à utiliser `document.querySelector`."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Ajout d'attributs ARIA à un composant Carrousel",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous avez un composant Carrousel de produits qui affiche une image à la fois, avec des boutons 'Précédent' et 'Suivant'. Actuellement, les lecteurs d'écran ne comprennent pas la structure.</p><p><strong>Question :</strong> Ajoutez les attributs ARIA nécessaires (`role`, `aria-label`, `aria-live`, `aria-hidden`, etc.) pour rendre ce carrousel accessible.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédiger le code modifié du carrousel avec les attributs ARIA appropriés.",
+        "niveau": "medium",
+        "reponse": "```jsx\nconst ProductCarousel = ({ images, currentIndex, onPrevious, onNext }) => {\n  return (\n    <div\n      role=\"region\"\n      aria-label=\"Carrousel de produits\"\n      className=\"carousel\"\n    >\n      <div\n        role=\"group\"\n        aria-roledescription=\"diapositive\"\n        aria-label={`Image ${currentIndex + 1} sur ${images.length}`}\n        className=\"carousel-slide\"\n      >\n        <img src={images[currentIndex]} alt={`Produit vue ${currentIndex + 1}`} />\n      </div>\n      \n      <button\n        onClick={onPrevious}\n        aria-label=\"Image précédente\"\n        disabled={currentIndex === 0}\n      >\n        ◀\n      </button>\n      \n      <button\n        onClick={onNext}\n        aria-label=\"Image suivante\"\n        disabled={currentIndex === images.length - 1}\n      >\n        ▶\n      </button>\n      \n      <div aria-live=\"polite\" className=\"sr-only\">\n        {`Affichage de l'image ${currentIndex + 1} sur ${images.length}`}\n      </div>\n    </div>\n  );\n};\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Correction d'accessibilité dans un formulaire d'inscription",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Voici un formulaire d'inscription avec des problèmes d'accessibilité :</p><pre><code>&lt;form&gt;\n  &lt;div&gt;Nom: &lt;input type=\"text\" placeholder=\"Nom\" /&gt;&lt;/div&gt;\n  &lt;div&gt;Email: &lt;input type=\"email\" placeholder=\"email@exemple.com\" /&gt;&lt;/div&gt;\n  &lt;div&gt;&lt;input type=\"checkbox\" /&gt; J'accepte les conditions&lt;/div&gt;\n  &lt;button&gt;S'inscrire&lt;/button&gt;\n&lt;/form&gt;</code></pre><p><strong>Question :</strong> Identifiez au moins 4 violations des WCAG et corrigez le code HTML/React.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Lister les problèmes et fournir le code corrigé.",
+        "niveau": "medium",
+        "reponse": "Problèmes identifiés :\n1. Absence de `<label>` associé aux champs → les lecteurs d'écran ne savent pas quoi saisir.\n2. Utilisation de `placeholder` comme seule indication → mauvaise pour les utilisateurs à mobilité réduite.\n3. Checkbox sans `id` ni `label` correct.\n4. Absence de `aria-required` pour les champs obligatoires.\n\nCode corrigé :\n```jsx\n<form>\n  <div>\n    <label htmlFor=\"name\">Nom :</label>\n    <input id=\"name\" type=\"text\" aria-required=\"true\" />\n  </div>\n  <div>\n    <label htmlFor=\"email\">Email :</label>\n    <input id=\"email\" type=\"email\" aria-required=\"true\" />\n  </div>\n  <div>\n    <input id=\"terms\" type=\"checkbox\" />\n    <label htmlFor=\"terms\">J'accepte les conditions</label>\n  </div>\n  <button type=\"submit\">S'inscrire</button>\n</form>\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation du score Lighthouse pour un site e-commerce",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Votre site e-commerce React a un score Lighthouse de 55/100 en performance et 65/100 en accessibilité. Voici quelques problèmes détectés :</p><ul><li>Images non optimisées</li><li>JavaScript non minifié</li><li>Manque de contraste sur les boutons CTA</li><li>Ordre de tabulation non logique (focus qui saute entre les éléments)</li><li>Absence de `lang` sur la balise HTML</li></ul><p><strong>Question :</strong> Proposez un plan d'action pour améliorer ces scores, en distinguant les correctifs frontend directs des optimisations de build.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire les étapes concrètes pour améliorer les scores de performance et d'accessibilité.",
+        "niveau": "hard",
+        "reponse": "**Performance :**\n- Images : utiliser `<img loading=\"lazy\">`, générer des WebP avec Vite, utiliser un CDN (Cloudinary)\n- JavaScript : minification automatique par Vite en production, code splitting avec `React.lazy`\n- Bundle : analyse avec `vite-bundle-visualizer` pour éliminer les doublons\n- Cache : configurer les en-têtes `Cache-Control` sur le serveur\n\n**Accessibilité :**\n- Contraste : modifier la palette Tailwind (ex: `bg-primary-600` au lieu de `bg-primary-400`)\n- Ordre de tabulation : vérifier l'attribut `tabIndex` (éviter les valeurs positives), utiliser l'ordre DOM naturel\n- Langue : ajouter `<html lang=\"fr\">` dans `index.html`\n- Audit avec axe-core régulièrement\n\n**Build :**\n- Configurer Vite pour produire des sourcemaps uniquement en staging\n- Tree-shaking actif par défaut",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment tester l'ordre de tabulation et le contraste avec des outils gratuits ?",
+            "niveau": "medium",
+            "reponse": "Ordre de tabulation : naviguer avec la touche `Tab` et observer le surlignage de focus. Outils : Chrome DevTools → 'Inspect' → 'Accessibility' → 'Source Order Viewer'. Contraste : utiliser l'extension 'WCAG Contrast Checker' ou 'axe DevTools' qui affiche les ratios automatiquement. Lighthouse donne aussi les éléments à contraste insuffisant."
+          }
+        ]
+      }
+    ]
+  }
+]

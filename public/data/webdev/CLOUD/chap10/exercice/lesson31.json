@@ -1,0 +1,162 @@
+[
+  {
+    "intitule": "Tableau de bord de surveillance cloud",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous êtes administrateur cloud junior. Un client utilise AWS CloudWatch pour surveiller ses serveurs. Voici trois métriques relevées sur 24h :</p><ul><li>CPUUtilization moyenne = 85%</li><li>StatusCheckFailed (instance) = 1 échec à 03h15</li><li>NetworkIn = 500 Mo à 14h, 50 Mo les autres heures</li></ul><p>Répondez aux questions suivantes en justifiant.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier la métrique qui pourrait indiquer un pic de trafic utilisateur.",
+        "niveau": "easy",
+        "reponse": "NetworkIn à 14h (500 Mo) indique un pic de trafic entrant, correspondant à une hausse d'activité utilisateur.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer quel événement s’est produit à 03h15 avec StatusCheckFailed. Proposer une alerte associée.",
+        "niveau": "medium",
+        "reponse": "StatusCheckFailed indique un échec du contrôle de statut de l’instance (arrêt ou panne). Une alerte CloudWatch peut être configurée avec seuil >=1 pendant 5 minutes, action : redémarrer l’instance.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Déterminer si la CPUUtilization moyenne nécessite une augmentation de la taille de l’instance. Justifier.",
+        "niveau": "medium",
+        "reponse": "85% est élevé mais pas critique si pas de pics >90%. Une règle d’auto-scaling pourrait être fixée à 75% pour ajouter une instance, sinon passer à un type compute-optimisé.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Configuration d’alertes pour un site e-commerce",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un site e-commerce camerounais utilise Azure Monitor. Le responsable veut être alerté si :</p><ul><li>Le nombre de requêtes HTTP 5xx dépasse 10 par minute</li><li>Le temps de réponse moyen dépasse 3 secondes</li><li>L’espace disque libre tombe sous 10% sur une VM critique</li></ul><p>Il dispose d’un budget limité et souhaite minimiser les alertes intempestives.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevoir une règle d’alerte pour les erreurs HTTP 5xx en précisant : agrégation, fréquence d’évaluation, seuil et action.",
+        "niveau": "medium",
+        "reponse": "Agrégation = Total, fréquence = toutes les 5 minutes, seuil > 50 (car 10/min * 5 min = 50), action : envoyer email + déclencher Azure Function pour redémarrer l’app service.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Comparer l’alerte sur temps de réponse (moyenne > 3000 ms) avec une alerte sur percentile 95. Expliquer l’intérêt du percentile.",
+        "niveau": "hard",
+        "reponse": "La moyenne peut masquer des pics lents si beaucoup de requêtes rapides. Le percentile 95 (P95) montre la latence pour 95% des requêtes, plus pertinent pour l’expérience utilisateur. Azure Monitor supporte les percentiles via Metrics Explorer.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposer une stratégie d’alerte pour l’espace disque en évitant les réveils nocturnes pour des baisses temporaires.",
+        "niveau": "medium",
+        "reponse": "Utiliser une condition logique : espace libre <10% pendant 30 minutes consécutives, avec évaluation toutes les 5 minutes (soit 6 échantillons). Action : résolution automatique par suppression de logs + alerte humaine si persiste 1h.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation des coûts par monitoring",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Une startup utilise Google Cloud Monitoring. Elle dispose de 10 VM e2-standard-2 tournant 24h/24. L’analyse des métriques CPU sur 30 jours montre :</p><ul><li>6 VM ont une utilisation moyenne de 12%</li><li>3 VM ont une utilisation moyenne de 35%</li><li>1 VM a des pics à 90% entre 9h et 17h, et 5% la nuit</li></ul><p>Le coût actuel : $0,10/heure/VM. L’objectif est de réduire la facture d’au moins 30% sans dégrader les performances.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Calculer l’économie annuelle si les 6 VM à 12% passent en e2-micro ($0,02/heure). Exprimer en $.",
+        "niveau": "medium",
+        "reponse": "Économie par VM = (0,10 - 0,02) × 24h × 365j = 0,08 × 8760 = 700,80 $. Pour 6 VM : 6 × 700,80 = 4204,80 $ par an.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer une solution pour l’unique VM à usage variable en utilisant une métrique de monitoring. Décrire les étapes.",
+        "niveau": "hard",
+        "reponse": "Utiliser Cloud Monitoring pour détecter la période creuse (23h-7h). Créer une alerte basée sur CPU < 10% pendant 30 min → déclencher une Cloud Function qui arrête la VM. Une autre alerte CPU > 70% la redémarre. Gain : arrêt 8h/jour soit 33% d’économie sur cette VM.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Analyser le risque des deux actions précédentes en termes de monitoring. Quels indicateurs surveiller après changement ?",
+        "niveau": "very hard",
+        "reponse": "Risques : (1) e2-micro peut saturer si trafic imprévu → surveiller CPU steal time et erreurs HTTP. (2) Arrêt nocturne peut échouer si tâche batch non terminée → surveiller last stop reason. Indicateurs post-changement : uptime, latence, nombre d’erreurs 5xx, économie réelle vs prévue.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Création d’un dashboard multi-service",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Une entreprise utilise AWS CloudWatch. Elle veut un dashboard pour visualiser :</p><ul><li>La latence moyenne des requêtes API Gateway</li><li>Le nombre d’invocations Lambda avec répartition par alias (prod vs staging)</li><li>L’espace utilisé dans un bucket S3</li></ul><p>Les ressources sont taguées Environment=production et Environment=staging.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Donner les noms exacts des métriques CloudWatch à utiliser pour chaque besoin.",
+        "niveau": "medium",
+        "reponse": "API Gateway : AWS/ApiGateway > Latency (moyenne). Lambda : AWS/Lambda > Invocations avec dimension Alias=prod ou staging. S3 : AWS/S3 > BucketSizeBytes + NumberOfObjects.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer comment créer un widget de type \"ligne\" pour la latence API en séparant staging et production sur un même graphique.",
+        "niveau": "hard",
+        "reponse": "Dans CloudWatch dashboard → Add widget → Line graph → Metrics → API Gateway → Latence. Ajouter une première métrique avec filtre Stage=prod, puis une seconde avec Stage=staging. Régler Statistic=Average, Period=5 minutes.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Déterminer si la métrique S3 BucketSizeBytes est une métrique horaire ou quotidienne. Justifier l’importance de choisir la bonne période.",
+        "niveau": "hard",
+        "reponse": "S3 BucketSizeBytes est publiée une fois par jour (période 86400 secondes). Choisir une période inférieure (ex: 3600) afficherait des points vides. Pour le monitoring temps réel, il faut plutôt utiliser CloudWatch Logs pour les écritures S3.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse forensique avec logs et métriques",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Un incident de sécurité a eu lieu sur Azure. On vous donne les éléments suivants :</p><ul><li>Azure Monitor alerte CPU élevée (95%) sur une VM de 02h00 à 02h15</li><li>Logs d’activité : redémarrage de la VM à 02h18</li><li>Logs de diagnostic Windows : création d’un utilisateur \"tempadmin\" à 02h05</li><li>Network Watcher : flux sortant vers une IP suspecte (45.33.22.11) sur le port 4444 à 02h08</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Reconstituer la chronologie de l’attaque et proposer un scénario cohérent avec chaque événement.",
+        "niveau": "very hard",
+        "reponse": "02h05 : création user tempadmin (compromission initiale). 02h08 : connexion sortante sur port 4444 (reverse shell). 02h00-02h15 : pic CPU (minage crypto ou brute force). 02h18 : reboot (attaque ou tentative de nettoyage). Scénario : brute force RDP → élévation → installation miner → connexion C2.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer quelles métriques additionnelles Azure Monitor auraient pu déclencher une alerte plus précoce (avant 02h00).",
+        "niveau": "hard",
+        "reponse": "Métriques : Failed logins (augmentation soudaine), TCP connections sortantes non standard (port 4444), changement de configuration (guest user created via Azure Activity Log). Alerte sur Network Out > 100 Mbps sur port inconnu.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Formuler une requête KQL (Kusto Query Language) pour rechercher dans les logs de la VM toute tentative de connexion SSH échouée entre 01h00 et 02h00.",
+        "niveau": "very hard",
+        "reponse": "```kql\nAzureDiagnostics\n| where TimeGenerated between (datetime(01:00) .. datetime(02:00))\n| where Computer contains \"VM-APP-01\"\n| where Message has \"sshd\" and Message has \"Failed password\"\n| project TimeGenerated, Computer, Message\n```",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

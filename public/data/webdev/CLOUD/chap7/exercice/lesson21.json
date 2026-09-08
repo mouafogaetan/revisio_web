@@ -1,0 +1,93 @@
+[
+  {
+    "intitule": "Gestion des identités et des accès (IAM)",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous venez d'être embauché(e) comme administrateur(trice) cloud junior dans une entreprise qui utilise AWS. Votre supérieur vous demande d'expliquer à une nouvelle stagiaire comment fonctionne la gestion des accès dans le cloud.</p>",
+      "images": [
+        "Schéma simple d'un modèle IAM montrant un utilisateur, un groupe, un rôle et une politique associés à une ressource cloud"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez les quatre composants principaux d'un système IAM (utilisateurs, groupes, rôles, politiques) en utilisant une analogie simple.",
+        "niveau": "easy",
+        "reponse": "Les quatre composants sont : 1) Utilisateurs : les personnes ou services qui accèdent au cloud (ex: les employés). 2) Groupes : collections d'utilisateurs partageant les mêmes permissions (ex: l'équipe marketing). 3) Rôles : ensembles de permissions attribués temporairement à des utilisateurs ou services (ex: le rôle 'auditeur' activé pour une mission). 4) Politiques : documents qui définissent précisément les permissions (ex: 'peut lire le bucket S3 X mais pas le modifier')."
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez le principe du moindre privilège. Pourquoi est-il fondamental en sécurité cloud ?",
+        "niveau": "medium",
+        "reponse": "Le principe du moindre privilège consiste à n'accorder à chaque utilisateur, service ou rôle que les permissions strictement nécessaires à l'accomplissement de ses tâches. Il est fondamental car il réduit la surface d'attaque : si un compte est compromis, les dégâts potentiels sont limités. Il évite aussi les erreurs accidentelles et facilite la conformité (ex: GDPR, ISO 27001)."
+      },
+      {
+        "numero": 3,
+        "texte": "Pourquoi recommande-t-on d'utiliser des rôles pour les services plutôt que des clés d'API statiques ?",
+        "niveau": "medium",
+        "reponse": "Les rôles pour services (ex: rôles IAM associés à une instance EC2 ou une fonction Lambda) attribuent des permissions temporaires et automatiquement renouvelées. Les clés statiques, si elles sont divulguées (code source, logs, fuite GitHub), peuvent être utilisées indéfiniment par un attaquant. Les rôles éliminent ce risque de stockage de secrets durables et facilitent la rotation des identifiants."
+      }
+    ]
+  },
+  {
+    "intitule": "Audit de sécurité IAM",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous êtes consultant(e) en sécurité cloud. Une entreprise vous missionne pour auditer sa politique IAM sur AWS. Voici un extrait de leur configuration :</p><ul><li>Un compte 'root' utilisé quotidiennement par l'administrateur principal.</li><li>Un utilisateur 'dev_user' possède la politique 'AdministratorAccess'.</li><li>Les clés d'API de 'dev_user' datent de 3 ans et ne sont jamais changées.</li><li>Un rôle 'backup_role' autorise l'accès complet à S3 pour le service de backup, mais ce rôle est aussi attribuable à n'importe quel utilisateur sans condition.</li><li>Une instance EC2 a un rôle IAM avec les permissions 'S3FullAccess', 'DynamoDBFullAccess', 'CloudWatchFullAccess'.</li><li>Aucune journalisation CloudTrail n'est activée.</li></ul>",
+      "images": [
+        "Diagramme d'architecture AWS présentant des utilisateurs, un compte root, EC2, S3 et IAM roles"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifiez au moins 5 violations des bonnes pratiques IAM dans cette configuration. Expliquez brièvement chaque risque.",
+        "niveau": "hard",
+        "reponse": "1. Utilisation quotidienne du compte 'root' (risque : le root a des permissions irrévocables, sa compromission est catastrophique). 2. Politique 'AdministratorAccess' pour 'dev_user' (violation du moindre privilège). 3. Clés API jamais renouvelées pendant 3 ans (augmente le risque de vol et d'utilisation malveillante). 4. Rôle 'backup_role' assumable sans condition (permet à tout utilisateur de se faire passer pour le service backup). 5. Rôle EC2 trop large (FullAccess sur 3 services → compromission de l'instance compromet S3, DynamoDB et CloudWatch). 6. Absence de CloudTrail (aucun audit possible des actions)."
+      },
+      {
+        "numero": 2,
+        "texte": "Proposez des corrections concrètes pour chaque violation identifiée, en utilisant les verbes 'verrouiller', 'restreindre', 'mettre en place', 'configurer', 'appliquer'.",
+        "niveau": "hard",
+        "reponse": "- Verrouiller le compte root (mettre MFA, créer un utilisateur admin dédié). - Restreindre 'dev_user' avec une politique gérée par moindre privilège. - Appliquer une rotation automatique des clés tous les 90 jours via une politique IAM. - Configurer une condition (ex: 'aws:SourceIp' ou 'aws:RequestTag') sur 'backup_role'. - Restreindre le rôle EC2 à des actions spécifiques (ex: 's3:GetObject' sur un bucket précis). - Mettre en place CloudTrail et configurer une alerte pour toute modification IAM."
+      },
+      {
+        "numero": 3,
+        "texte": "Concevez une politique IAM (en pseudo-code ou en anglais simple) qui suit le principe du moindre privilège pour l'instance EC2 : elle doit uniquement écrire des logs dans un bucket S3 nommé 'app-logs-prod' et envoyer des métriques à CloudWatch.",
+        "niveau": "very hard",
+        "reponse": "Pseudo-code :\n{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [\n    {\n      \"Effect\": \"Allow\",\n      \"Action\": [\"s3:PutObject\"],\n      \"Resource\": \"arn:aws:s3:::app-logs-prod/*\"\n    },\n    {\n      \"Effect\": \"Allow\",\n      \"Action\": [\"cloudwatch:PutMetricData\"],\n      \"Resource\": \"*\"\n    },\n    {\n      \"Effect\": \"Deny\",\n      \"Action\": [\"s3:GetObject\", \"s3:DeleteObject\", \"dynamodb:*\"],\n      \"Resource\": \"*\"\n    }\n  ]\n}\n\nExplication : On autorise explicitement PutObject sur le bucket cible et PutMetricData, et on refuse tout le reste (notamment les accès DynamoDB et les opérations de lecture/suppression S3)."
+      }
+    ]
+  },
+  {
+    "intitule": "Diagnostic et correction d'une faille IAM",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous êtes lead DevOps. Un développeur a partagé par erreur sur un repository public GitHub un fichier contenant des clés d'API AWS (Access Key ID + Secret Access Key) d'un utilisateur IAM nommé 'ci_deployer'. Cet utilisateur possède la politique suivante : <code>{\"Effect\":\"Allow\", \"Action\":\"s3:*\", \"Resource\":\"*\"}</code>. En analysant CloudTrail, vous découvrez que 2 heures après le leak, un appel <code>s3:DeleteBucket</code> a réussi sur le bucket 'client-finance-prod' depuis une IP inconnue au Nigeria.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Évaluez l'impact réel de ce leak. Quelles ressources sont compromises et quelles actions l'attaquant a-t-il pu faire ?",
+        "niveau": "hard",
+        "reponse": "L'impact est critique car la politique permet toutes les actions S3 (s3:*) sur tous les buckets (Resource: '*'). L'attaquant a pu : lister tous les buckets, lire tous les objets (fuite de données sensibles clients/finances), modifier/supprimer des objets, supprimer le bucket 'client-finance-prod' (constaté), créer de nouveaux buckets, configurer la réplication vers ses comptes, activer la versioning ou le logging pour dissimuler ses traces. Aucune autre ressource (EC2, RDS) n'est directement affectée, mais l'impact métier sur la perte de données est catastrophique."
+      },
+      {
+        "numero": 2,
+        "texte": "Justifiez et proposez un plan d'action immédiat (5 étapes) pour contenir l'incident et sécuriser le compte.",
+        "niveau": "very hard",
+        "reponse": "1) Désactiver immédiatement les clés compromises via la console IAM ou AWS CLI. 2) Supprimer l'utilisateur 'ci_deployer' ou le désactiver (ses permissions sont trop larges). 3) Activer un blocage public sur tous les buckets S3 restants pour éviter l'exfiltration. 4) Analyser CloudTrail (si activé) pour toutes les actions S3 depuis le moment du leak afin d'identifier l'étendue des dégâts. 5) Notifier la direction, l'équipe juridique (GDPR/RGPD), et l'équipe client si des données ont fui. Étape bonus : restaurer le bucket supprimé depuis un backup/Glacier."
+      },
+      {
+        "numero": 3,
+        "texte": "Proposez une nouvelle architecture IAM pour le compte 'ci_deployer' en suivant le moindre privilège et en supprimant les secrets statiques. Vous devez décrire les composants (utilisateurs, rôles, politiques) et expliquer comment remplacer les clés statiques par des rôles.",
+        "niveau": "very hard",
+        "reponse": "Nouvelle architecture :\n1) Supprimer l'utilisateur 'ci_deployer' et ses clés statiques.\n2) Créer un rôle IAM nommé 'CICD-EC2-Role' ou 'CICD-CodeBuild-Role'.\n3) Politique associée au rôle (exemple de moindre privilège) :\n   - Pour S3 : seulement \"s3:PutObject\" sur le bucket de déploiement 'app-deploy-bucket'.\n   - Pour autre action : aucune permission S3 supplémentaire.\n4) Attribuer ce rôle à l'instance EC2 qui exécute le CI/CD ou au service CodeBuild/GitHub Actions via OIDC (OpenID Connect).\n5) Pour les pipelines CI/CD externes (GitHub Actions) : configurer un OIDC provider (GitHub -> AWS) qui assume le rôle sans clé statique.\n6) Mettre en place une politique de refus explicite (Deny) pour toutes les actions S3 non nécessaires.\n7) Activer CloudTrail + Config rules pour alerter sur toute création de nouvelle politique IAM trop permissive.\n\nAvantages : plus de clés à fuir, les identifiants sont temporaires (durée de session courte), rotation automatique."
+      }
+    ]
+  }
+]

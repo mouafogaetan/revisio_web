@@ -1,0 +1,122 @@
+[
+  {
+    "questionText": "En MongoDB avec Mongoose, quelle est la principale différence entre l'<strong>embedding</strong> (intégration directe) et le <strong>referencing</strong> (référence) ?",
+    "options": [
+      "L'embedding stocke les IDs dans un tableau, le referencing stocke les documents enfants dans le parent.",
+      "L'embedding stocke les documents enfants à l'intérieur du document parent, tandis que le referencing stocke uniquement l'ID de l'enfant dans le parent.",
+      "L'embedding est uniquement pour les relations Many-to-Many, le referencing pour One-to-Many.",
+      "Il n'y a aucune différence, les deux approches sont identiques en performance."
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium",
+    "explanation": "L'embedding consiste à placer directement les sous-documents dans un tableau ou un objet du parent. Le referencing (ou normalisation) consiste à stocker uniquement l'ObjectId du document enfant dans le parent, puis à utiliser `populate()` pour les récupérer."
+  },
+  {
+    "questionText": "Soit deux schémas Mongoose :\n&lt;pre&gt;<code>const userSchema = new Schema({ name: String });\nconst postSchema = new Schema({\n  title: String,\n  author: { type: Schema.Types.ObjectId, ref: 'User' }\n});</code>&lt;/pre&gt;\nQuelle méthode permet de remplacer automatiquement l'ObjectId `author` par le document `User` complet lors d'une requête ?",
+    "options": [
+      "`.join()`",
+      "`.merge()`",
+      "`.populate('author')`",
+      "`.lookup('author')`"
+    ],
+    "correctAnswer": 2,
+    "difficulty": "easy",
+    "explanation": "Mongoose fournit la méthode `.populate()` pour remplacer automatiquement un champ contenant un ObjectId par le document complet référencé, issu de la collection indiquée par l'attribut `ref`."
+  },
+  {
+    "questionText": "Dans un schéma Mongoose, comment déclarer correctement un champ `owner` qui référence un document de la collection `'User'` ?",
+    "options": [
+      "`owner: { type: String, ref: 'User' }`",
+      "`owner: { type: Schema.ObjectId, ref: 'User' }`",
+      "`owner: { type: Schema.Types.ObjectId, ref: 'User' }`",
+      "`owner: { type: Schema.Types.ObjectID, reference: 'User' }`"
+    ],
+    "correctAnswer": 2,
+    "difficulty": "easy",
+    "explanation": "Le bon type est `Schema.Types.ObjectId` (ou `mongoose.Schema.Types.ObjectId`). L'attribut `ref` doit contenir le nom de la collection cible (ici 'User') pour que `populate()` fonctionne."
+  },
+  {
+    "questionText": "Quel est l'inconvénient principal de l'<strong>embedding</strong> lorsque les données enfant sont très volumineuses ou mises à jour fréquemment ?",
+    "options": [
+      "Augmentation de la taille du document parent pouvant dépasser la limite BSON (16 Mo) et réplication de données.",
+      "Impossibilité d'utiliser des index sur les champs enfants.",
+      "Nécessité d'utiliser plusieurs bases de données différentes.",
+      "Perte automatique des relations lors d'une mise à jour."
+    ],
+    "correctAnswer": 0,
+    "difficulty": "medium",
+    "explanation": "MongoDB limite chaque document à 16 Mo. L'embedding de listes trop longues (ex: commentaires, messages) peut atteindre cette limite. De plus, mettre à jour un sous-document oblige à réécrire tout le document parent, ce qui est moins performant que le referencing."
+  },
+  {
+    "questionText": "Vous avez une relation <strong>Many-to-Many</strong> entre `Student` et `Course`. Quelle approche est la plus adaptée avec Mongoose ?",
+    "options": [
+      "Embedding : chaque `Student` contient un tableau de tous les `Course`.",
+      "Embedding : chaque `Course` contient un tableau de tous les `Student`.",
+      "Referencing avec un tableau d'IDs dans l'un des deux documents ou un modèle de jonction séparé.",
+      "Utiliser uniquement des clés étrangères SQL, impossible en MongoDB."
+    ],
+    "correctAnswer": 2,
+    "difficulty": "hard",
+    "explanation": "Pour une relation Many-to-Many, le referencing est recommandé : chaque `Student` peut avoir un tableau `courses: [{ type: Schema.Types.ObjectId, ref: 'Course' }]` (ou l'inverse). On peut aussi créer un modèle `Enrollment` séparé si on veut stocker des métadonnées (date, note). L'embedding créerait des duplications massives."
+  },
+  {
+    "questionText": "Quelle méthode Mongoose déclenche une erreur si un ID référencé n'existe pas lors de l'utilisation de `populate()` ?",
+    "options": [
+      "Aucune, `populate()` ignore silencieusement les IDs invalides.",
+      "`.populate({ strict: true })`",
+      "`populate()` suivi de `.orFail()`",
+      "Il faut utiliser `$lookup` avec `unwind` et `preserveNullAndEmptyArrays: false`"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "medium",
+    "explanation": "Par défaut, Mongoose ne génère pas d'erreur si un ID référencé est invalide (cassé) : le champ sera `null`. Pour lever une erreur, il faut vérifier manuellement le résultat ou utiliser des plugins comme `mongoose-id-validator`."
+  },
+  {
+    "questionText": "En termes de <strong>performances de lecture</strong>, pourquoi l'embedding est-il souvent plus rapide que le referencing ?",
+    "options": [
+      "Parce que l'embedding utilise moins de RAM sur le serveur.",
+      "Parce qu'une seule requête suffit pour obtenir toutes les données, alors que le referencing nécessite souvent des requêtes supplémentaires (même avec populate qui fait un `$in`).",
+      "Parce que MongoDB interdit les index sur les références.",
+      "Parce que populate() désactive tous les index secondaires."
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium",
+    "explanation": "L'embedding permet de lire un document parent + tous ses enfants en une seule opération disque. Le referencing, même avec `.populate()`, exécute au moins deux requêtes (une sur la collection parent, une autre avec un `$in` sur la collection enfant). Pour des données fortement liées, l'embedding peut donc être plus rapide."
+  },
+  {
+    "questionText": "Quel code permet de peupler le champ `comments` (référence vers `Comment`) d'un article tout en limitant les champs retournés pour chaque commentaire à `text` et `date` ?",
+    "options": [
+      "`Article.find().populate('comments', 'text date')`",
+      "`Article.find().populate({ path: 'comments', select: 'text date' })`",
+      "`Article.find().populate('comments').select('text date')`",
+      "Les deux réponses A et B sont correctes."
+    ],
+    "correctAnswer": 3,
+    "difficulty": "easy",
+    "explanation": "Les deux syntaxes sont valides : `.populate('comments', 'text date')` (forme courte) et `.populate({ path: 'comments', select: 'text date' })` (forme objet). La méthode `.select()` s'applique au document parent, pas aux enfants. Il faut bien utiliser le second paramètre ou l'option `select`."
+  },
+  {
+    "questionText": "Vous avez deux collections : `authors` et `books`. Un livre a un seul auteur (One-to-Many). Quel schéma pour `books` est le plus adapté ?",
+    "options": [
+      "`{ author: { type: String } }`",
+      "`{ authorId: { type: Schema.Types.ObjectId, ref: 'Author' } }`",
+      "`{ author: { type: Schema.Types.ObjectId, ref: 'Author' } }`",
+      "`{ author: { type: Schema.Types.ObjectId } }` (sans ref)"
+    ],
+    "correctAnswer": 2,
+    "difficulty": "easy",
+    "explanation": "Il est recommandé d'utiliser `Schema.Types.ObjectId` avec l'attribut `ref: 'Author'` pour indiquer la relation. Le nom du champ peut être `author` ou `authorId`, mais `author` est clair. Sans `ref`, `.populate()` ne fonctionnera pas."
+  },
+  {
+    "questionText": "Que se passe-t-il si vous supprimez un document parent qui est référencé par un champ dans un autre document (ex: suppression d'un `User` référencé par `Post.author`) ?",
+    "options": [
+      "Mongoose supprime automatiquement tous les posts de cet utilisateur.",
+      "Mongoose met automatiquement le champ author à null.",
+      "Mongoose ne fait rien automatiquement ; le champ `author` devient un ObjectId orphelin, menant à une référence cassée.",
+      "MongoDB lève une erreur de contrainte d'intégrité référentielle (comme SQL)."
+    ],
+    "correctAnswer": 2,
+    "difficulty": "hard",
+    "explanation": "MongoDB ne gère pas les contraintes d'intégrité référentielle automatiquement (pas de `ON DELETE CASCADE` natif). Mongoose ne supprime pas automatiquement les références orphelines. Il faut gérer cela manuellement (middleware `pre('remove')` ou nettoyage en application)."
+  }
+]

@@ -1,0 +1,128 @@
+[
+  {
+    "intitule": "Identifier les problèmes de rendus inutiles",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Voici un composant <code>ParentComponent</code> qui transmet une fonction <code>onPress</code> et une valeur <code>count</code> à <code>ChildComponent</code>. Expliquez pourquoi <code>ChildComponent</code> se re-rend même quand <code>count</code> ne change pas. Proposez une correction avec <code>React.memo</code> et <code>useCallback</code>.</p>\n<pre><code>const ParentComponent = () => {\n  const [count, setCount] = useState(0);\n  const [text, setText] = useState('');\n\n  const handlePress = () => {\n    console.log('Pressed');\n  };\n\n  return (\n    &lt;View&gt;\n      &lt;TextInput value={text} onChangeText={setText} /&gt;\n      &lt;ChildComponent onPress={handlePress} count={count} /&gt;\n      &lt;Button title=\"Incrémenter\" onPress={() => setCount(c => c + 1)} /&gt;\n    &lt;/View&gt;\n  );\n};\n\nconst ChildComponent = ({ onPress, count }) => {\n  console.log('Child render');\n  return (\n    &lt;View&gt;\n      &lt;Text&gt;Count: {count}&lt;/Text&gt;\n      &lt;Button title=\"Press\" onPress={onPress} /&gt;\n    &lt;/View&gt;\n  );\n};</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analysez le problème et réécrivez le code optimisé.",
+        "niveau": "medium",
+        "reponse": "Le problème : à chaque modification de `text` (frappe dans TextInput), le composant parent se re-rend, ce qui recrée la fonction `handlePress` (nouvelle référence). Même si `count` ne change pas, `ChildComponent` reçoit une nouvelle prop `onPress` et se re-rend.\n\nCorrection :\n1. Envelopper `ChildComponent` avec `React.memo` pour éviter le re-rend si les props n'ont pas changé (comparaison superficielle).\n2. Utiliser `useCallback` pour mémoriser `handlePress`.\n\nCode corrigé :\n```\nconst ParentComponent = () => {\n  const [count, setCount] = useState(0);\n  const [text, setText] = useState('');\n\n  const handlePress = useCallback(() => {\n    console.log('Pressed');\n  }, []); // Pas de dépendances\n\n  return (\n    <View>\n      <TextInput value={text} onChangeText={setText} />\n      <ChildComponent onPress={handlePress} count={count} />\n      <Button title=\"Incrémenter\" onPress={() => setCount(c => c + 1)} />\n    </View>\n  );\n};\n\nconst ChildComponent = React.memo(({ onPress, count }) => {\n  console.log('Child render');\n  return (\n    <View>\n      <Text>Count: {count}</Text>\n      <Button title=\"Press\" onPress={onPress} />\n    </View>\n  );\n});\n```\nDésormais, `ChildComponent` ne se re-rend que quand `count` change ou si `handlePress` change (jamais, car dépendances vides).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation d'un calcul coûteux avec useMemo",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un composant affiche une liste de produits et un total calculé à partir d'une opération coûteuse (ex: somme des prix avec TVA). Le composant se re-rend fréquemment à cause d'autres états (recherche, filtre). Optimisez le calcul du total avec <code>useMemo</code>.</p>\n<pre><code>const ProductList = ({ products, searchTerm }) => {\n  const [sortOrder, setSortOrder] = useState('asc');\n\n  // Calcul coûteux : total avec TVA (19%)\n  const totalTTC = products.reduce((sum, p) => {\n    return sum + p.price * 1.19;\n  }, 0);\n\n  const filteredProducts = products.filter(p =>\n    p.name.toLowerCase().includes(searchTerm.toLowerCase())\n  );\n\n  return (\n    &lt;View&gt;\n      &lt;Text&gt;Total TTC : {totalTTC} FCFA&lt;/Text&gt;\n      &lt;Button title=\"Changer tri\" onPress={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')} /&gt;\n      &lt;FlatList data={filteredProducts} renderItem={...} /&gt;\n    &lt;/View>\n  );\n};</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Modifiez le code pour que le calcul de totalTTC ne soit refait que lorsque la liste products change.",
+        "niveau": "medium",
+        "reponse": "Il faut envelopper le calcul avec `useMemo` et mettre `products` comme dépendance :\n\n```\nconst totalTTC = useMemo(() => {\n  console.log('Recalcul du total');\n  return products.reduce((sum, p) => sum + p.price * 1.19, 0);\n}, [products]);\n```\n\nAinsi, quand l'utilisateur change `sortOrder` ou `searchTerm`, le total n'est pas recalculé inutilement. Le calcul n'est refait que quand la prop `products` (référence) change.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Que se passe-t-il si products est recréé à chaque rendu du parent ? Comment le résoudre ?",
+            "niveau": "hard",
+            "reponse": "Si le parent recrée un nouveau tableau `products` à chaque rendu (même avec les mêmes données), `useMemo` recalculera aussi à chaque fois car la dépendance a changé (nouvelle référence).\n\nSolution côté parent : mémoriser `products` avec `useMemo` ou `useCallback` si c'est une fonction, ou stabiliser la référence en utilisant un state ou un contexte qui ne change que quand les données changent vraiment.\n\nExemple :\n```\nconst products = useMemo(() => [\n  { id: 1, name: 'A', price: 1000 },\n  { id: 2, name: 'B', price: 2000 }\n], []); // Ne change jamais\n```",
+            "niveau": "hard"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation d'une FlatList avec getItemLayout",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous avez une <code>FlatList</code> qui affiche 500 éléments. Chaque élément a une hauteur fixe de 80 pixels. Sans optimisation, le défilement peut être saccadé. Ajoutez la prop <code>getItemLayout</code> pour améliorer les performances.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez la prop getItemLayout pour cette FlatList.",
+        "niveau": "easy",
+        "reponse": "```\nconst getItemLayout = (data, index) => ({\n  length: 80,     // hauteur fixe de chaque élément\n  offset: 80 * index,\n  index,\n});\n\n<FlatList\n  data={data}\n  renderItem={renderItem}\n  getItemLayout={getItemLayout}\n  initialNumToRender={10}\n/>\n```\n\n`getItemLayout` permet à FlatList de calculer la position des éléments sans avoir à les mesurer dynamiquement, ce qui améliore les performances de défilement, surtout pour les longues listes.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Utilisation de React.memo avec des props complexes",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Dans une application de messagerie, chaque <code>MessageItem</code> reçoit un objet <code>message</code> (contenant id, texte, date) et une fonction <code>onPress</code> qui dépend de l'id du message. Actuellement, tous les messages se re-rendent quand un nouveau message arrive. Optimisez avec <code>React.memo</code> et une fonction de comparaison personnalisée si nécessaire.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le code optimisé du composant MessageItem et expliquez votre stratégie.",
+        "niveau": "hard",
+        "reponse": "```\n// Composant optimisé\nconst MessageItem = React.memo(({ message, onPress }) => {\n  console.log(`Render message ${message.id}`);\n  return (\n    <TouchableOpacity onPress={() => onPress(message.id)}>\n      <Text>{message.text}</Text>\n      <Text>{new Date(message.date).toLocaleString()}</Text>\n    </TouchableOpacity>\n  );\n}, (prevProps, nextProps) => {\n  // Comparaison personnalisée : ne re-rend que si le contenu du message change\n  // ou si la fonction onPress a changé (mais normalement elle est stable)\n  return prevProps.message.id === nextProps.message.id &&\n         prevProps.message.text === nextProps.message.text &&\n         prevProps.message.date === nextProps.message.date &&\n         prevProps.onPress === nextProps.onPress;\n});\n\n// Dans le parent, mémoriser la fonction onPress pour chaque message ?\n// Mieux : utiliser useCallback avec l'id en paramètre ou créer un composant MessageContainer\nconst MessageList = ({ messages }) => {\n  const handlePress = useCallback((messageId) => {\n    console.log('Press on', messageId);\n  }, []);\n\n  return (\n    <FlatList\n      data={messages}\n      renderItem={({ item }) => (\n        <MessageItem message={item} onPress={handlePress} />\n      )}\n      keyExtractor={item => item.id}\n    />\n  );\n};\n```\n\nExplication :\n- `React.memo` avec comparaison personnalisée évite le re-rend si seulement l'ordre des messages change mais pas leur contenu.\n- La fonction `onPress` est mémorisée avec `useCallback` dans le parent, stable entre les rendus.\n- `keyExtractor` est déjà optimisée pour FlatList.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyser un problème de performance avec le profiling",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous remarquez que votre application React Native devient lente lors de la saisie dans un champ de recherche qui filtre une grande liste (1000 éléments). Vous soupçonnez des re-rendus excessifs. Décrivez la démarche pour :</p><ol><li>Identifier la cause avec les outils de profiling (React DevTools, Flipper)</li><li>Appliquer au moins deux techniques d'optimisation vues dans la leçon</li></ol>",
+      "images": [
+        "Capture d'écran React DevTools montrant les composants qui se re-rendent pendant la saisie",
+        "Flipper profiler mettant en évidence le temps de rendu des composants de liste"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez la procédure de diagnostic et les corrections possibles.",
+        "niveau": "very hard",
+        "reponse": "**Diagnostic :**\n1. Activer le profiler dans React DevTools (onglet Profiler) et enregistrer une interaction (saisie dans le champ).\n2. Observer quels composants se re-rendent : probablement tous les éléments de la liste à chaque frappe.\n3. Dans Flipper, utiliser le plugin React DevTools intégré ou le plugin Performance pour voir le temps passé dans les rendus.\n4. Vérifier si le composant parent recrée des fonctions ou objets à chaque rendu.\n\n**Corrections :**\n\n1. **Mémoriser la fonction de filtrage** avec `useCallback` et les résultats filtrés avec `useMemo` :\n```\nconst [search, setSearch] = useState('');\nconst filteredData = useMemo(() => {\n  return products.filter(p => p.name.includes(search));\n}, [products, search]);\n```\n\n2. **Utiliser `React.memo` sur l'élément de liste** pour éviter qu'il ne se re-rende si ses props n'ont pas changé.\n\n3. **Optimiser FlatList** :\n   - `initialNumToRender={10}` (réduire le nombre d'éléments rendus au départ)\n   - `maxToRenderPerBatch={10}`\n   - `windowSize={5}`\n   - `removeClippedSubviews={true}` pour Android\n   - `getItemLayout` si hauteur fixe\n\n4. **Débouncer la recherche** : attendre que l'utilisateur arrête de taper avant de filtrer.\n```\nconst debouncedSearch = useDebounce(search, 300);\nuseEffect(() => {\n  // Filtrer uniquement quand debouncedSearch change\n  const filtered = products.filter(p => p.name.includes(debouncedSearch));\n  setFilteredData(filtered);\n}, [debouncedSearch, products]);\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quel est l'impact de `removeClippedSubviews={true}` sur Android ?",
+            "niveau": "hard",
+            "reponse": "`removeClippedSubviews` permet de démonter les vues qui sont hors de l'écran visible. Cela réduit la consommation mémoire et améliore les performances de défilement car moins d'éléments sont maintenus dans l'arbre des vues. Cependant, cela peut causer des problèmes si certaines vues ont des animations ou des états internes qui doivent être préservés. Sur iOS, ce comportement est activé par défaut."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Application pratique : Optimisation d'un écran de produits",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous développez un écran de catalogue produits avec les fonctionnalités suivantes : recherche par nom, tri par prix (croissant/décroissant), ajout/suppression de favoris. Le code actuel est lent. Appliquez les optimisations appropriées.</p>\n<pre><code>const ProductCatalog = ({ products }) => {\n  const [search, setSearch] = useState('');\n  const [sortOrder, setSortOrder] = useState('asc');\n  const [favorites, setFavorites] = useState([]);\n\n  const toggleFavorite = (id) => {\n    if (favorites.includes(id)) {\n      setFavorites(favorites.filter(favId => favId !== id));\n    } else {\n      setFavorites([...favorites, id]);\n    }\n  };\n\n  const filtered = products.filter(p => p.name.includes(search));\n  const sorted = [...filtered].sort((a, b) =>\n    sortOrder === 'asc' ? a.price - b.price : b.price - a.price\n  );\n\n  return (\n    &lt;View&gt;\n      &lt;TextInput value={search} onChangeText={setSearch} placeholder=\"Rechercher\" /&gt;\n      &lt;Button title=\"Trier\" onPress={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')} /&gt;\n      &lt;FlatList\n        data={sorted}\n        renderItem={({ item }) => (\n          &lt;ProductItem\n            product={item}\n            isFavorite={favorites.includes(item.id)}\n            onToggleFavorite={() => toggleFavorite(item.id)}\n          />\n        )}\n        keyExtractor={item => item.id}\n      />\n    &lt;/View>\n  );\n};</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez une version optimisée en expliquant chaque modification.",
+        "niveau": "hard",
+        "reponse": "```\nconst ProductCatalog = React.memo(({ products }) => {\n  const [search, setSearch] = useState('');\n  const [sortOrder, setSortOrder] = useState('asc');\n  const [favorites, setFavorites] = useState([]);\n\n  // 1. Mémoriser la fonction toggleFavorite\n  const toggleFavorite = useCallback((id) => {\n    setFavorites(prev => {\n      if (prev.includes(id)) {\n        return prev.filter(favId => favId !== id);\n      } else {\n        return [...prev, id];\n      }\n    });\n  }, []); // Pas de dépendances car on utilise la forme fonctionnelle de setState\n\n  // 2. Mémoriser les résultats filtrés et triés\n  const processedData = useMemo(() => {\n    const filtered = products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));\n    const sorted = [...filtered].sort((a, b) =>\n      sortOrder === 'asc' ? a.price - b.price : b.price - a.price\n    );\n    return sorted;\n  }, [products, search, sortOrder]);\n\n  // 3. Extraire renderItem avec useCallback\n  const renderItem = useCallback(({ item }) => {\n    return (\n      <ProductItem\n        product={item}\n        isFavorite={favorites.includes(item.id)}\n        onToggleFavorite={toggleFavorite}\n      />\n    );\n  }, [favorites, toggleFavorite]); // favorites change quand on ajoute/supprime\n\n  return (\n    <View>\n      <TextInput value={search} onChangeText={setSearch} placeholder=\"Rechercher\" />\n      <Button title=\"Trier\" onPress={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')} />\n      <FlatList\n        data={processedData}\n        renderItem={renderItem}\n        keyExtractor={item => item.id}\n        initialNumToRender={10}\n        maxToRenderPerBatch={10}\n        windowSize={5}\n        removeClippedSubviews={Platform.OS === 'android'}\n      />\n    </View>\n  );\n});\n\n// 4. Optimiser ProductItem séparément\nconst ProductItem = React.memo(({ product, isFavorite, onToggleFavorite }) => {\n  // ... rendu du produit\n});\n```\n\n**Explications :**\n- `React.memo` sur le composant parent évite des re-rendus inutiles si `products` ne change pas.\n- `useCallback` pour `toggleFavorite` utilise la forme fonctionnelle `setFavorites(prev => ...)` pour ne pas dépendre de `favorites`.\n- `useMemo` pour `processedData` évite de refiltrer/trier à chaque rendu si `search`, `sortOrder` ou `products` n'ont pas changé.\n- `renderItem` mémorisée avec `useCallback` empêche la recréation de la fonction à chaque rendu.\n- `React.memo` sur `ProductItem` évite les re-rendus si `isFavorite` ne change pas pour cet élément.\n- Props `initialNumToRender`, `maxToRenderPerBatch`, `windowSize` optimisent FlatList.\n- `removeClippedSubviews` pour Android améliore la mémoire.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

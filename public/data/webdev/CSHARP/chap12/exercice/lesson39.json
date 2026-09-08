@@ -1,0 +1,132 @@
+[
+  {
+    "intitule": "Construction d'une API de gestion de tâches (Todo List)",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous devez développer une API REST de gestion de tâches (Todo List) pour une petite équipe de développeurs au Cameroun. L'API doit permettre de créer, lire, modifier et supprimer des tâches. Chaque tâche contient : un identifiant unique (int), un titre (string), une description (string), une date d'échéance (DateTime), un statut (bool : terminé ou non), et un niveau de priorité (int de 1 à 3). L'API doit être sécurisée avec JWT : seuls les utilisateurs authentifiés peuvent accéder aux endpoints. Utilisez Entity Framework Core (Code First) avec une base de données SQL Server.</p><p>Questions :</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez les étapes pour créer le modèle TodoItem et le DbContext, puis expliquez comment générer la migration initiale et mettre à jour la base de données.",
+        "niveau": "hard",
+        "reponse": "1. Créer une classe TodoItem avec les propriétés (Id, Title, Description, DueDate, IsCompleted, Priority).\n2. Créer une classe AppDbContext qui hérite de DbContext, avec un DbSet<TodoItem>.\n3. Dans Program.cs, ajouter services.AddDbContext<AppDbContext>(options => options.UseSqlServer(connectionString)).\n4. En ligne de commande : dotnet ef migrations add InitialCreate puis dotnet ef database update.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer le rôle de l'attribut [Key] et [Required] sur les propriétés du modèle.",
+            "niveau": "medium",
+            "reponse": "[Key] indique la clé primaire (souvent optionnel si la propriété s'appelle Id). [Required] force la colonne à ne pas être NULL en base de données."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Proposer une modification du modèle pour que la date d'échéance soit optionnelle.",
+            "niveau": "easy",
+            "reponse": "Remplacer DateTime DueDate par DateTime? DueDate (nullable)."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Implémentez le contrôleur TodosController avec les actions suivantes : GetTodos (retourne toutes les tâches), GetTodoById, CreateTodo, UpdateTodo, DeleteTodo. Utilisez les attributs HTTP appropriés et l'injection de dépendances pour le DbContext.",
+        "niveau": "hard",
+        "reponse": "[ApiController], [Route(\"api/[controller]\")]. Injecter AppDbContext dans le constructeur. GetTodos : return Ok(await _context.Todos.ToListAsync()). GetTodoById : return Ok(await _context.Todos.FindAsync(id)) ou NotFound. CreateTodo : _context.Todos.Add(todo); await _context.SaveChangesAsync(); return CreatedAtAction. UpdateTodo : chercher, modifier, SaveChanges. DeleteTodo : chercher, Remove, SaveChanges.",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Justifier l'utilisation de CreatedAtAction dans la méthode CreateTodo.",
+            "niveau": "medium",
+            "reponse": "CreatedAtAction retourne un code HTTP 201 (Created) avec un en-tête Location pointant vers l'URL de la nouvelle ressource (GetTodoById). C'est une bonne pratique REST."
+          }
+        ]
+      },
+      {
+        "numero": 3,
+        "texte": "Ajoutez l'authentification JWT à l'API. Expliquez comment générer un token JWT pour un utilisateur simple (username/password fictif) et comment protéger les endpoints avec [Authorize].",
+        "niveau": "hard",
+        "reponse": "1. Installer Microsoft.AspNetCore.Authentication.JwtBearer.\n2. Dans appsettings.json, ajouter JWT:Issuer, Audience, Key.\n3. Dans Program.cs : ajouter services.AddAuthentication().AddJwtBearer() avec validation du paramètre.\n4. Créer un endpoint /api/auth/login qui vérifie les identifiants et génère un token (JwtSecurityTokenHandler).\n5. Ajouter [Authorize] sur TodosController ou sur certaines actions.\n6. Le client doit envoyer le token dans l'en-tête Authorization: Bearer <token>.",
+        "sousQuestions": [
+          {
+            "numero": "3.a",
+            "texte": "Identifier les risques si la clé secrète JWT est divulguée et proposer une solution.",
+            "niveau": "very hard",
+            "reponse": "Risque : n'importe qui peut générer des tokens valides. Solution : stocker la clé dans Azure Key Vault / AWS Secrets Manager ou utiliser des variables d'environnement, et la faire tourner régulièrement (key rotation)."
+          }
+        ]
+      },
+      {
+        "numero": 4,
+        "texte": "Testez l'API avec Swagger. Listez les informations que vous devez ajouter dans Program.cs pour activer Swagger avec prise en charge du JWT (ajouter le bouton Authorize).",
+        "niveau": "medium",
+        "reponse": "services.AddSwaggerGen(c => { c.AddSecurityDefinition(\"Bearer\", new OpenApiSecurityScheme{...}); c.AddSecurityRequirement(...); }). Ensuite app.UseSwagger(); app.UseSwaggerUI(); L'ordre doit être : UseSwagger, UseSwaggerUI, UseAuthentication, UseAuthorization.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Bonnes pratiques de validation et déploiement d'une API",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous avez développé une API de gestion d'articles de blog. L'API possède un endpoint POST /api/articles qui accepte un objet JSON avec les propriétés : Titre (string, 3-100 caractères), Contenu (string, au moins 10 caractères), Auteur (email valide), DatePublication (DateTime, pas dans le futur).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer comment implémenter la validation des données entrantes en utilisant les Data Annotations dans le modèle Article.",
+        "niveau": "medium",
+        "reponse": "Ajouter [Required], [StringLength(100, MinimumLength=3)], [EmailAddress], [FutureDateAttribute] (attribut personnalisé). Dans le contrôleur, vérifier ModelState.IsValid avant de traiter la requête et retourner BadRequest(ModelState) en cas d'erreur.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Décrire les étapes pour déployer cette API sur un serveur IIS (Windows Server) dans un contexte local au Cameroun. Mentionnez les prérequis et la configuration du pool d'applications.",
+        "niveau": "hard",
+        "reponse": "Prérequis : .NET Core Runtime/Hosting Bundle, IIS installé. Étapes : 1. Publier l'API (dotnet publish -c Release). 2. Copier les fichiers dans C:\\inetpub\\wwwroot\\MonAPI. 3. Dans IIS, créer un site ou une application pointant vers ce dossier. 4. Configurer le pool d'applications en mode 'Sans code managé' (No Managed Code) car ASP.NET Core s'exécute en dehors de IIS. 5. Activer le module aspNetCore. 6. S'assurer que les ports firewalls sont ouverts.",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Proposer une alternative de déploiement gratuite sur le cloud pour des tests (hors Azure/AWS).",
+            "niveau": "medium",
+            "reponse": "Utiliser Render.com, Railway.app, ou Fly.io. Ou un VPS à bas coût (DigitalOcean, OVH) avec Docker et reverse proxy Nginx."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Sécurisation et gestion d'erreurs dans une API REST",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Une API e-commerce permet d'acheter des produits. L'endpoint POST /api/orders crée une commande. Vous devez :</p><ul><li>Vérifier que l'utilisateur est authentifié (JWT).</li><li>Vérifier que le stock est suffisant avant de créer la commande (sinon, retourner une erreur 409 Conflict).</li><li>En cas d'erreur inattendue, retourner une réponse standardisée 500.</li><li>Logguer chaque erreur avec le niveau approprié.</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémenter un middleware global de gestion des exceptions qui capture toutes les exceptions non gérées, les loggue et retourne un objet JSON standardisé contenant un message convivial et un identifiant d'erreur.",
+        "niveau": "very hard",
+        "reponse": "Créer une classe ExceptionMiddleware avec un paramètre RequestDelegate, ILogger. Dans InvokeAsync : try { await _next(context); } catch (Exception ex) { _logger.LogError(ex, \"Une erreur est survenue\"); var response = new { Message = \"Erreur technique\", ErrorId = Guid.NewGuid() }; context.Response.StatusCode = 500; await context.Response.WriteAsJsonAsync(response); }. Enregistrer avec app.UseMiddleware<ExceptionMiddleware>().",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Déterminer le code HTTP approprié pour \"stock insuffisant\" (réponse déjà citée) et expliquer pourquoi.",
+            "niveau": "hard",
+            "reponse": "409 Conflict car la demande entre en conflit avec l'état actuel de la ressource (stock)."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer comment implémenter un mécanisme de rate limiting simple (limitation du nombre de requêtes par IP) pour éviter les abus sur l'API.",
+        "niveau": "hard",
+        "reponse": "Utiliser le package AspNetCoreRateLimit. Configurer les options (GeneralRules, IpRateLimiting). Ajouter services.AddMemoryCache(), services.AddInMemoryRateLimiting(), services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>(). Ajouter app.UseIpRateLimiting(). Définir des limites comme 100 requêtes par minute par IP.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

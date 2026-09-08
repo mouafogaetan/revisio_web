@@ -1,0 +1,122 @@
+[
+  {
+    "questionText": "Quelle est la principale différence entre un `emptyDir` et un `PersistentVolume` (PV) dans Kubernetes ?",
+    "options": [
+      "`emptyDir` est persistant, tandis qu'un PV est éphémère et lié à la durée de vie du Pod.",
+      "`emptyDir` partage son contenu entre les conteneurs d'un Pod mais les données sont perdues si le Pod est supprimé, alors qu'un PV offre un stockage persistant indépendant du cycle de vie du Pod.",
+      "`emptyDir` nécessite une `StorageClass`, contrairement au PV qui est toujours manuel.",
+      "`emptyDir` ne peut être utilisé que pour des fichiers de configuration secrets, alors qu'un PV est pour les données applicatives."
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium",
+    "explanation": "`emptyDir` est un volume partagé entre les conteneurs d'un même Pod, mais son contenu est supprimé avec la mort du Pod. Un `PersistentVolume` est une ressource de cluster qui fournit un stockage durable, indépendant du Pod qui l'utilise. C'est la base du stockage permanent dans Kubernetes."
+  },
+  {
+    "questionText": "Quel est le rôle d'un `PersistentVolumeClaim` (PVC) dans Kubernetes ?",
+    "options": [
+      "Créer automatiquement un nouveau nœud dans le cluster.",
+      "Sécuriser le trafic réseau entre les Pods.",
+      "Demander une ressource de stockage (taille, mode d'accès) sans connaître les détails du stockage sous-jacent.",
+      "Monitorer l'utilisation du CPU et de la mémoire d'un Pod."
+    ],
+    "correctAnswer": 2,
+    "difficulty": "easy",
+    "explanation": "Un `PersistentVolumeClaim` (PVC) est une requête de stockage faite par un utilisateur ou un déploiement. Il permet de découpler la demande de stockage (ex: 10 Go, lecture/écriture par un seul nœud) de l'offre réelle (le PV). Kubernetes va lier le PVC à un PV qui correspond aux critères."
+  },
+  {
+    "questionText": "Vous avez un Pod qui doit stocker des logs temporaires pendant son exécution, et ces logs n'ont pas besoin d'être conservés après l'arrêt du Pod. Quel volume Kubernetes est le plus adapté ?",
+    "options": [
+      "`PersistentVolume`",
+      "`emptyDir`",
+      "`ConfigMap`",
+      "`Secret`"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "easy",
+    "explanation": "Le volume `emptyDir` est parfait pour ce cas d'usage. Il est créé lorsque le Pod est assigné à un nœud et existe aussi longtemps que le Pod tourne sur ce nœud. Les données sont perdues définitivement si le Pod est supprimé ou recréé, ce qui correspond au besoin de stockage temporaire de logs."
+  },
+  {
+    "questionText": "Quelle est l'utilité d'une `StorageClass` ?",
+    "options": [
+      "Définir une classe de priorité pour les Pods.",
+      "Permettre le provisionnement dynamique de volumes persistants en se basant sur un type de stockage (ex: 'fast-ssd' ou 'slow-hdd').",
+      "Classer les nœuds par capacité mémoire.",
+      "Gérer les entrées/sorties réseau des Services."
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium",
+    "explanation": "Une `StorageClass` permet de créer un PV automatiquement lorsqu'un PVC en fait la demande (provisionnement dynamique). Elle spécifie le *provisioner* (ex: `kubernetes.io/aws-ebs` ou `kubernetes.io/gce-pd`) et les paramètres de stockage. Sans elle, un administrateur doit créer manuellement tous les PV."
+  },
+  {
+    "questionText": "Un `PersistentVolume` a le statut 'Released'. Qu'est-ce que cela signifie ?",
+    "options": [
+      "Le PV est actuellement utilisé par un PVC et fonctionne normalement.",
+      "Le PV vient d'être créé mais n'est pas encore disponible.",
+      "Le PVC lié à ce PV a été supprimé, mais les données n'ont pas encore été nettoyées ou réclamées.",
+      "Le PV a rencontré une erreur matérielle et est en cours de réparation."
+    ],
+    "correctAnswer": 2,
+    "difficulty": "hard",
+    "explanation": "L'état `Released` signifie que le PVC associé a été supprimé. Cependant, le PV ne peut pas être immédiatement réutilisé (`Available`) car les données précédentes existent encore. Il faut soit réclamer le PV manuellement (en le recréant avec `reclaimPolicy: Retain`), soit le nettoyer."
+  },
+  {
+    "questionText": "Parmi ces modes d'accès, lequel permet à plusieurs Pods sur le même nœud de lire et d'écrire dans le même volume ?",
+    "options": [
+      "`ReadWriteOnce` (RWO)",
+      "`ReadOnlyMany` (ROX)",
+      "`ReadWriteOncePod` (RWOP)",
+      "`ReadWriteMany` (RWX)"
+    ],
+    "correctAnswer": 3,
+    "difficulty": "medium",
+    "explanation": "Le mode `ReadWriteMany` (RWX) permet au volume d'être monté en lecture et écriture par plusieurs nœuds (et donc plusieurs Pods) simultanément. C'est typiquement nécessaire pour des systèmes de fichiers partagés comme NFS ou certains stockages cloud (ex: Azure Files)."
+  },
+  {
+    "questionText": "Dans un fichier YAML définissant un `PersistentVolume`, que spécifie la clé `storageClassName` ?",
+    "options": [
+      "Le nom de la classe de priorité du Pod qui utilisera ce volume.",
+      "La classe de stockage associée, permettant de lier ce PV uniquement aux PVC demandant cette classe précise.",
+      "Le niveau de chiffrement des données sur le disque.",
+      "Le nom de l'administrateur responsable du PV."
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium",
+    "explanation": "La clé `storageClassName` permet d'associer un PV à une `StorageClass` spécifique. Un PVC qui demande une `storageClassName` particulière ne pourra se lier qu'à un PV ayant exactement le même nom de classe. Si la classe est laissée vide ou non définie, cela correspond à la classe par défaut du cluster."
+  },
+  {
+    "questionText": "Vous perdez les modifications d'un fichier écrit dans un volume `emptyDir` après avoir redémarré le Pod. Quelle en est la raison ?",
+    "options": [
+      "C'est un bug dans la configuration du Pod.",
+      "Le redémarrage du Pod a recréé le conteneur, mais le `emptyDir` est intrinsèquement lié à la durée de vie du Pod. Si le Pod est supprimé et recréé, le volume est recréé vide.",
+      "Les permissions d'écriture sur le répertoire hôte sont insuffisantes.",
+      "Il faut absolument utiliser un `ConfigMap` pour persister les fichiers modifiables."
+    ],
+    "correctAnswer": 1,
+    "difficulty": "easy",
+    "explanation": "C'est le comportement normal d'`emptyDir`. Un `emptyDir` vit aussi longtemps que le Pod. Si le Pod est supprimé (même recréé avec le même nom), son volume est détruit et un nouveau volume vide est créé pour le nouveau Pod. Pour persister les données, il faut utiliser un `PersistentVolume`."
+  },
+  {
+    "questionText": "Quelle commande `kubectl` permet de lister tous les `PersistentVolumeClaims` du namespace par défaut ?",
+    "options": [
+      "`kubectl get pv`",
+      "`kubectl get pvc`",
+      "`kubectl get sc`",
+      "`kubectl get volumes`"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "easy",
+    "explanation": "La commande `kubectl get pvc` liste les `PersistentVolumeClaims` dans le namespace actuel. `kubectl get pv` liste les volumes persistants (au niveau du cluster). `kubectl get sc` liste les `StorageClasses`."
+  },
+  {
+    "questionText": "Un développeur souhaite provisionner dynamiquement un disque SSD de 20 Go. Quelle ressource doit-il créer ?",
+    "options": [
+      "Directement un `PersistentVolume` avec les paramètres du disque SSD.",
+      "Une `StorageClass` de type 'fast'.",
+      "Un `PersistentVolumeClaim` demandant 20 Go et la `StorageClass` correspondant au SSD.",
+      "Un `emptyDir` avec une limite de 20 Go."
+    ],
+    "correctAnswer": 2,
+    "difficulty": "medium",
+    "explanation": "Pour le provisionnement dynamique, le développeur crée un `PersistentVolumeClaim` (PVC) en spécifiant la taille (20 Go) et la `storageClassName` associée aux disques SSD (ex: 'fast-ssd'). Kubernetes utilise cette `StorageClass` pour créer automatiquement un `PersistentVolume` correspondant, puis le lie au PVC."
+  }
+]

@@ -9,6 +9,7 @@ import { Exercice, Question as QuestionType } from '@/types/classeTypes'
 import { DIFFICULTY_ORDER } from '@/constants'
 import { MathJaxContent } from '@/components/common/MathJaxContent'
 import { FullScreenAdModal } from '@/components/common/FullScreenAdModal'
+import { NotFoundScreen } from './NotFoundScreen'
 
 export const ExerciceDocScreen: React.FC = () => {
   const { classeId, matiereId, chapitreId, lessonId } = useParams<{
@@ -27,6 +28,7 @@ export const ExerciceDocScreen: React.FC = () => {
   const [visibleAnswers, setVisibleAnswers] = useState<Record<string, boolean>>({})
   const [renderKey, setRenderKey] = useState(0)
   const [routeLoading, setRouteLoading] = useState(true)
+  const [notFound, setNotFound] = useState(false)
 
   const classe = classes.find(c => c.classeId === classeId)
   const matiere = classe?.matieres.find(m => m.matiereId === matiereId)
@@ -47,23 +49,35 @@ export const ExerciceDocScreen: React.FC = () => {
 
   useEffect(() => {
     const loadExercices = async () => {
-      if (!classeId || !matiereId || !chapitreId || !lessonId) return
+  if (!classeId || !matiereId || !chapitreId || !lessonId) return
 
-      try {
-        setLoading(true)
-        setError(null)
-        const data = await getExercices(classeId, matiereId, chapitreId, lessonId)
-        const sorted = [...data].sort((a, b) => {
-          return DIFFICULTY_ORDER[a.niveau] - DIFFICULTY_ORDER[b.niveau]
-        })
-        setExercices(sorted)
-      } catch (err) {
-        setError('Impossible de charger les exercices')
-        console.error(err)
-      } finally {
-        setLoading(false)
-      }
+  try {
+    setLoading(true)
+    setError(null)
+    const data = await getExercices(classeId, matiereId, chapitreId, lessonId)
+    
+    if (!data || data.length === 0) {
+      setNotFound(true)
+      setLoading(false)
+      return
     }
+    
+    const sorted = [...data].sort((a, b) => {
+      return DIFFICULTY_ORDER[a.niveau] - DIFFICULTY_ORDER[b.niveau]
+    })
+    setExercices(sorted)
+  } catch (err:any) {
+    // Gérer l'erreur 404
+    if (err.response && err.response.status === 404) {
+      setNotFound(true)
+    } else {
+      setError('Impossible de charger les exercices')
+      console.error(err)
+    }
+  } finally {
+    setLoading(false)
+  }
+}
     loadExercices()
   }, [classeId, matiereId, chapitreId, lessonId])
 
@@ -158,6 +172,10 @@ export const ExerciceDocScreen: React.FC = () => {
     )
   }
 
+  if (!classe || !matiere || !chapitre || !lesson) {
+    // Rediriger vers la page 404
+    return <NotFoundScreen message="L'exercice demandé n'existe pas." redirectTo="/" delay={5000} />
+  }
   if (routeLoading || loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">

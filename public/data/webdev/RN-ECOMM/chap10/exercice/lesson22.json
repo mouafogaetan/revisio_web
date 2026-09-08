@@ -1,0 +1,158 @@
+[
+  {
+    "intitule": "Comprendre l'importance de la résilience hors ligne dans une application mobile",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Dans un contexte camerounais où la couverture réseau peut être instable, la résilience hors ligne est essentielle pour une application e-commerce.</p><p>En vous basant sur les objectifs de la leçon 22, répondez aux questions suivantes.</p>",
+      "images": [
+        "Schéma montrant un téléphone mobile avec une connexion réseau instable (barres de signal faibles). L'application affiche un indicateur 'Mode hors ligne' et un badge sur l'icône de message pour les messages en attente d'envoi."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Quels sont les principaux défis liés à la connexion réseau dans les applications mobiles au Cameroun ?",
+        "niveau": "easy",
+        "reponse": "1. **Couverture réseau inégale** : Dans certaines zones rurales ou périurbaines, la couverture 4G/3G peut être faible ou inexistante\n2. **Stabilité du réseau** : Les connexions peuvent être interrompues fréquemment, même en zone urbaine\n3. **Coût des données** : Les utilisateurs peuvent limiter leur consommation de données pour réduire les coûts\n4. **Performance variable** : La vitesse de connexion peut varier considérablement selon l'opérateur et l'emplacement\n5. **Pannes de courant** : Les coupures de courant peuvent affecter les infrastructures réseau",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi est-il important pour une application e-commerce de gérer les situations hors ligne ?",
+            "niveau": "easy",
+            "reponse": "La gestion hors ligne est importante car elle permet :\n1. D'améliorer l'expérience utilisateur en évitant les blocages en cas de perte de connexion\n2. De maintenir l'engagement des utilisateurs même en zone mal couverte\n3. De réduire la frustration liée aux chargements infinis\n4. D'augmenter la fidélité des utilisateurs qui peuvent continuer à utiliser l'application\n5. De préserver les données et de les synchroniser automatiquement lorsque la connexion revient"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Analyser le mécanisme de file d'attente hors ligne",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>La file d'attente hors ligne est un mécanisme clé pour garantir que les actions des utilisateurs ne sont pas perdues en cas de problème de réseau.</p><p>Analyser le fonctionnement de ce mécanisme à travers les questions suivantes.</p>",
+      "images": [
+        "Diagramme illustrant le processus de file d'attente hors ligne : 1. L'utilisateur envoie un message, 2. L'application vérifie la connexion, 3. Si hors ligne, le message est stocké dans AsyncStorage avec un ID temporaire, 4. L'interface affiche le message avec un indicateur 'en attente', 5. Lorsque la connexion est rétablie, la file d'attente est vidée automatiquement."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 2,
+        "texte": "Décrivez le fonctionnement complet d'une file d'attente hors ligne pour les messages dans l'application de chat.",
+        "niveau": "medium",
+        "reponse": "**Fonctionnement de la file d'attente hors ligne :**\n\n1. **Détection de la connexion** : L'application surveille en permanence l'état du réseau via <code>NetInfo</code>\n2. **Envoi de message** : Lorsque l'utilisateur envoie un message, l'application vérifie si la connexion est disponible\n3. **Cas connecté** : Le message est envoyé immédiatement via WebSocket ou API REST\n4. **Cas hors ligne** : Le message est stocké dans AsyncStorage avec :\n   - Un ID temporaire unique\n   - Le contenu du message\n   - Le timestamp\n   - Un statut 'pending'\n5. **Affichage optimiste** : Le message apparaît immédiatement dans l'interface avec un indicateur visuel (icône d'horloge ou de téléchargement)\n6. **Reconnexion** : Lorsque la connexion est rétablie, la file d'attente est automatiquement vidée\n7. **Synchronisation** : Chaque message est envoyé séquentiellement et mis à jour avec l'ID réel du serveur\n8. **Gestion d'erreur** : Si l'envoi échoue après plusieurs tentatives, le message reste en file d'attente et l'utilisateur est informé",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Quel est le rôle du badge ou indicateur visuel pour les messages en attente d'envoi ?",
+            "niveau": "easy",
+            "reponse": "Le badge ou indicateur visuel a plusieurs rôles :\n1. **Feedback utilisateur** : L'utilisateur sait que son message a bien été pris en compte mais n'est pas encore envoyé\n2. **Transparence** : L'utilisateur comprend que le message sera envoyé automatiquement dès que possible\n3. **Confiance** : L'utilisateur peut quitter l'application sans perdre ses messages\n4. **Statut** : Il permet de distinguer les messages déjà envoyés de ceux en attente\n5. **Action** : Dans certains cas, l'utilisateur peut cliquer sur l'indicateur pour réessayer manuellement"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Créer un service de file d'attente hors ligne pour les messages",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>L'application de chat doit pouvoir stocker les messages hors ligne et les synchroniser automatiquement lorsque la connexion est rétablie.</p><p>Développer un service de file d'attente hors ligne complet pour les messages.</p>",
+      "images": [
+        "Schéma d'architecture du service offlineQueue avec ses composants : QueueManager (gestion de la file), StorageManager (AsyncStorage), NetworkMonitor (NetInfo), et SyncEngine (synchronisation)."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 3,
+        "texte": "Écrivez le service <code>offlineQueue</code> avec les méthodes nécessaires pour la gestion des messages hors ligne.",
+        "niveau": "medium",
+        "reponse": "```typescript\n// services/offlineQueue.ts\nimport AsyncStorage from '@react-native-async-storage/async-storage';\nimport NetInfo from '@react-native-community/netinfo';\n\nexport interface QueuedMessage {\n  id: string; // ID temporaire\n  chatId: string;\n  content: string;\n  type: 'text' | 'image';\n  imageUri?: string;\n  timestamp: number;\n  retries: number;\n  status: 'pending' | 'sending' | 'failed';\n}\n\nclass OfflineQueueService {\n  private readonly QUEUE_KEY = '@offline_messages';\n  private isProcessing = false;\n  private isOnline = false;\n\n  constructor() {\n    this.init();\n  }\n\n  private async init() {\n    // Vérifier la connexion initiale\n    const state = await NetInfo.fetch();\n    this.isOnline = state.isConnected ?? false;\n\n    // Écouter les changements de connexion\n    NetInfo.addEventListener((state) => {\n      const wasOffline = !this.isOnline;\n      this.isOnline = state.isConnected ?? false;\n      \n      // Si la connexion est rétablie, vider la file d'attente\n      if (wasOffline && this.isOnline) {\n        this.processQueue();\n      }\n    });\n  }\n\n  // Ajouter un message à la file d'attente\n  async addMessage(message: Omit<QueuedMessage, 'id' | 'status' | 'retries'>): Promise<string> {\n    const id = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;\n    const queuedMessage: QueuedMessage = {\n      ...message,\n      id,\n      status: 'pending',\n      retries: 0,\n    };\n\n    // Stocker dans AsyncStorage\n    await this.saveToQueue(queuedMessage);\n\n    // Si connecté, tenter l'envoi immédiat\n    if (this.isOnline) {\n      this.processQueue();\n    }\n\n    return id;\n  }\n\n  // Sauvegarder dans AsyncStorage\n  private async saveToQueue(message: QueuedMessage) {\n    try {\n      const queue = await this.getQueue();\n      queue.push(message);\n      await AsyncStorage.setItem(this.QUEUE_KEY, JSON.stringify(queue));\n    } catch (error) {\n      console.error('Erreur lors de la sauvegarde du message', error);\n    }\n  }\n\n  // Récupérer la file d'attente\n  private async getQueue(): Promise<QueuedMessage[]> {\n    try {\n      const data = await AsyncStorage.getItem(this.QUEUE_KEY);\n      return data ? JSON.parse(data) : [];\n    } catch {\n      return [];\n    }\n  }\n\n  // Vider la file d'attente\n  private async clearQueue() {\n    await AsyncStorage.removeItem(this.QUEUE_KEY);\n  }\n\n  // Supprimer un message spécifique de la file\n  private async removeFromQueue(messageId: string) {\n    const queue = await this.getQueue();\n    const updatedQueue = queue.filter(msg => msg.id !== messageId);\n    await AsyncStorage.setItem(this.QUEUE_KEY, JSON.stringify(updatedQueue));\n  }\n\n  // Traiter la file d'attente\n  async processQueue() {\n    if (this.isProcessing || !this.isOnline) {\n      return;\n    }\n\n    this.isProcessing = true;\n    const queue = await this.getQueue();\n    const failedMessages: QueuedMessage[] = [];\n\n    for (const message of queue) {\n      if (message.status === 'sending') continue;\n\n      try {\n        // Marquer comme en cours d'envoi\n        message.status = 'sending';\n        await this.updateMessageInQueue(message);\n\n        // Envoyer le message via WebSocket ou API\n        const response = await this.sendMessageToServer(message);\n\n        // Supprimer de la file si réussi\n        await this.removeFromQueue(message.id);\n\n        // Émettre un événement pour mettre à jour l'UI\n        this.onMessageSent(message.id, response);\n\n      } catch (error) {\n        // En cas d'échec, incrémenter le compteur de retries\n        message.retries += 1;\n        message.status = message.retries >= 3 ? 'failed' : 'pending';\n        await this.updateMessageInQueue(message);\n        \n        if (message.status === 'failed') {\n          failedMessages.push(message);\n        }\n      }\n    }\n\n    this.isProcessing = false;\n\n    // Notifier des échecs\n    if (failedMessages.length > 0) {\n      this.onMessagesFailed(failedMessages);\n    }\n  }\n\n  // Mettre à jour un message dans la file\n  private async updateMessageInQueue(message: QueuedMessage) {\n    const queue = await this.getQueue();\n    const index = queue.findIndex(msg => msg.id === message.id);\n    if (index !== -1) {\n      queue[index] = message;\n      await AsyncStorage.setItem(this.QUEUE_KEY, JSON.stringify(queue));\n    }\n  }\n\n  // Envoyer le message au serveur\n  private async sendMessageToServer(message: QueuedMessage): Promise<any> {\n    // Implémentation selon l'API\n    return await chatService.sendMessage(message.chatId, {\n      content: message.content,\n      type: message.type,\n      imageUri: message.imageUri,\n    });\n  }\n\n  // Callback de succès\n  private onMessageSent(tempId: string, response: any) {\n    // Émettre un événement via le store ou EventEmitter\n    chatStore.updateMessage(tempId, {\n      id: response.id,\n      status: 'sent',\n    });\n  }\n\n  // Callback d'échec\n  private onMessagesFailed(messages: QueuedMessage[]) {\n    // Afficher une notification à l'utilisateur\n    notificationStore.showToast(\n      `${messages.length} message(s) non envoyé(s)`, \n      'error'\n    );\n    \n    // Mettre à jour le store\n    messages.forEach(msg => {\n      chatStore.updateMessage(msg.id, { status: 'failed' });\n    });\n  }\n\n  // Réessayer un message échoué\n  async retryMessage(messageId: string) {\n    const queue = await this.getQueue();\n    const message = queue.find(msg => msg.id === messageId);\n    if (message && message.status === 'failed') {\n      message.retries = 0;\n      message.status = 'pending';\n      await this.updateMessageInQueue(message);\n      this.processQueue();\n    }\n  }\n}\n\nexport const offlineQueue = new OfflineQueueService();\n```",
+        "sousQuestions": [
+          {
+            "numero": "3.a",
+            "texte": "Comment gérer les messages en file d'attente avec des images (upload multipart) ?",
+            "niveau": "hard",
+            "reponse": "**Gestion des messages avec images en hors ligne :**\n\n1. **Stockage de l'image localement** :\n```typescript\n// Sauvegarder l'image localement\nconst imagePath = await FileSystem.documentDirectory + `temp_${Date.now()}.jpg`;\nawait FileSystem.copyAsync({\n  from: imageUri,\n  to: imagePath,\n});\n```\n\n2. **Ajout à la file d'attente** :\n```typescript\nconst queuedMessage: QueuedMessage = {\n  ...message,\n  imagePath, // Chemin local de l'image\n  status: 'pending',\n  imageUploaded: false,\n};\n```\n\n3. **Envoi séquentiel** :\n```typescript\nasync sendMessageToServer(message: QueuedMessage) {\n  if (message.type === 'image' && message.imagePath) {\n    // 1. Upload de l'image\n    const formData = new FormData();\n    formData.append('image', {\n      uri: message.imagePath,\n      type: 'image/jpeg',\n      name: `message_${Date.now()}.jpg`,\n    });\n    \n    const uploadResponse = await api.post('/uploads', formData);\n    const imageUrl = uploadResponse.data.url;\n    \n    // 2. Envoi du message avec l'URL de l'image\n    return await chatService.sendMessage(message.chatId, {\n      content: message.content,\n      type: 'image',\n      imageUrl,\n    });\n  }\n  // Message texte\n  return await chatService.sendMessage(message.chatId, {\n    content: message.content,\n    type: 'text',\n  });\n}\n```\n\n4. **Gestion de l'échec d'upload** :\n- Si l'upload échoue, le message reste en file avec son image locale\n- L'utilisateur peut réessayer manuellement\n- L'image locale est conservée jusqu'à l'envoi réussi\n\n5. **Nettoyage** :\n- Supprimer l'image locale une fois l'upload réussi\n- Nettoyer périodiquement les images orphelines"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Développer un système de retry et timeout pour les appels API",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Les appels API peuvent échouer pour diverses raisons (réseau instable, serveur en maintenance, timeout). Un système de retry et de timeout permet de rendre l'application plus résiliente.</p><p>Développer ce système en utilisant les intercepteurs Axios.</p>",
+      "images": [
+        "Schéma illustrant le processus de retry : 1. Une requête API est envoyée, 2. Elle échoue (timeout ou erreur 5xx), 3. Le système attend avec un backoff exponentiel (1s, 2s, 4s, 8s), 4. Il réessaie jusqu'à 3 fois, 5. Si succès, la requête est terminée, 6. Si échec après 3 tentatives, une erreur est affichée à l'utilisateur."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 4,
+        "texte": "Écrivez un interceptor Axios avec un système de retry automatique et backoff exponentiel.",
+        "niveau": "hard",
+        "reponse": "```typescript\n// services/api.ts\nimport axios, { AxiosError, AxiosRequestConfig } from 'axios';\n\nconst API_URL = process.env.API_URL || 'https://api.sawamart.com';\n\nconst RETRY_CONFIG = {\n  maxRetries: 3,\n  baseDelay: 1000, // 1 seconde\n  maxDelay: 30000, // 30 secondes\n  timeout: 10000, // 10 secondes\n  retryableStatuses: [408, 429, 500, 502, 503, 504],\n  retryableErrors: [\n    'ECONNABORTED',\n    'ECONNRESET',\n    'ENETUNREACH',\n    'ETIMEDOUT',\n    'ERR_NETWORK',\n  ],\n};\n\nconst api = axios.create({\n  baseURL: API_URL,\n  timeout: RETRY_CONFIG.timeout,\n  headers: {\n    'Content-Type': 'application/json',\n  },\n});\n\n// Interceptor pour le token JWT\napi.interceptors.request.use(\n  (config) => {\n    const token = authStore.getState().token;\n    if (token) {\n      config.headers.Authorization = `Bearer ${token}`;\n    }\n    return config;\n  },\n  (error) => Promise.reject(error)\n);\n\n// Interceptor pour le retry\napi.interceptors.response.use(\n  (response) => response,\n  async (error: AxiosError) => {\n    const config = error.config as AxiosRequestConfig & { _retry?: number };\n    \n    // Ne pas retenter si on a déjà retenté ou si on est en mode upload\n    if (!config || config._retry === undefined) {\n      config._retry = 0;\n    }\n\n    // Vérifier si l'erreur est retryable\n    const isRetryableStatus = error.response && \n      RETRY_CONFIG.retryableStatuses.includes(error.response.status);\n    \n    const isRetryableError = error.code && \n      RETRY_CONFIG.retryableErrors.includes(error.code);\n\n    const shouldRetry = (isRetryableStatus || isRetryableError) \n      && config._retry < RETRY_CONFIG.maxRetries;\n\n    if (shouldRetry) {\n      config._retry++;\n      \n      // Calcul du délai avec backoff exponentiel\n      const delay = Math.min(\n        RETRY_CONFIG.baseDelay * Math.pow(2, config._retry - 1) * \n        (0.5 + Math.random() * 0.5), // Ajout d'un jitter pour éviter la tempête de retry\n        RETRY_CONFIG.maxDelay\n      );\n\n      // Afficher une notification\n      const isOffline = error.code === 'ERR_NETWORK' || error.code === 'ENETUNREACH';\n      if (isOffline) {\n        // Ajouter à la file d'attente hors ligne\n        await offlineQueue.addToQueue({\n          id: `retry_${Date.now()}`,\n          type: 'api_request',\n          config: config,\n          timestamp: Date.now(),\n        });\n        return Promise.reject(error);\n      }\n\n      // Afficher un message de tentative\n      if (config._retry === 1) {\n        // Toast ou notification\n      }\n\n      // Attendre avant de réessayer\n      await new Promise((resolve) => setTimeout(resolve, delay));\n      \n      // Réessayer\n      return api(config);\n    }\n\n    // Gérer les erreurs non retryables\n    if (error.response?.status === 401) {\n      // Gérer le refresh token\n      await handleRefreshToken();\n      return api(config);\n    }\n\n    // Gérer les timeouts\n    if (error.code === 'ECONNABORTED' && error.message.includes('timeout')) {\n      // Ajouter à la file d'attente pour retry plus tard\n      await offlineQueue.addToQueue({\n        id: `timeout_${Date.now()}`,\n        type: 'api_request',\n        config: config,\n        timestamp: Date.now(),\n      });\n    }\n\n    return Promise.reject(error);\n  }\n);\n\n// Fonction pour gérer le refresh token\nasync function handleRefreshToken() {\n  try {\n    const refreshToken = authStore.getState().refreshToken;\n    if (!refreshToken) {\n      throw new Error('No refresh token');\n    }\n    \n    const response = await axios.post(`${API_URL}/auth/refresh`, {\n      refreshToken,\n    });\n    \n    const { token, refreshToken: newRefreshToken } = response.data;\n    authStore.getState().setTokens(token, newRefreshToken);\n    \n  } catch (error) {\n    // Déconnecter l'utilisateur\n    authStore.getState().logout();\n    // Rediriger vers l'écran de connexion\n    // Navigation\n  }\n}\n\nexport default api;\n```",
+        "sousQuestions": [
+          {
+            "numero": "4.a",
+            "texte": "Expliquez le concept de backoff exponentiel et son importance dans un système de retry.",
+            "niveau": "hard",
+            "reponse": "**Backoff exponentiel :**\n\nLe backoff exponentiel est une stratégie de retry qui augmente le délai d'attente entre chaque tentative de manière exponentielle.\n\n**Formule :** $delay = baseDelay \\times 2^{n-1}$ où $n$ est le numéro de la tentative\n\n**Exemple :**\n- Tentative 1 : $1 \\times 2^{0} = 1$ seconde\n- Tentative 2 : $1 \\times 2^{1} = 2$ secondes  \n- Tentative 3 : $1 \\times 2^{2} = 4$ secondes\n- Tentative 4 : $1 \\times 2^{3} = 8$ secondes\n\n**Importance :**\n1. **Évite la surcharge du serveur** : En espaçant les requêtes, on évite d'aggraver un problème existant\n2. **Gère les pics de charge** : Permet au serveur de récupérer entre les tentatives\n3. **Augmente les chances de succès** : Les problèmes temporaires ont le temps de se résoudre\n4. **Économise les ressources** : Moins de requêtes inutiles\n5. **Jitter** : L'ajout d'un facteur aléatoire ($0.5 + 0.5 \\times random$) évite la 'tempête de retry' où toutes les requêtes se synchronisent"
+          },
+          {
+            "numero": "4.b",
+            "texte": "Comment gérer les erreurs de timeout avec la file d'attente hors ligne ?",
+            "niveau": "hard",
+            "reponse": "**Gestion des timeouts avec la file d'attente hors ligne :**\n\n1. **Détection du timeout** :\n```typescript\nif (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {\n  // Ajouter à la file d'attente hors ligne\n  await offlineQueue.addToQueue({\n    id: `timeout_${Date.now()}`,\n    type: 'api_request',\n    config: config,\n    timestamp: Date.now(),\n    maxRetries: 3,\n  });\n}\n```\n\n2. **Traitement de la file d'attente** :\n```typescript\n// Dans offlineQueue.processQueue()\nif (item.type === 'api_request') {\n  try {\n    const response = await api({\n      ...item.config,\n      timeout: 30000, // Augmenter le timeout pour les retries\n    });\n    // Succès, supprimer de la file\n  } catch (error) {\n    if (error.code === 'ECONNABORTED') {\n      // Timeout à nouveau, incrémenter les retries\n      item.retries++;\n      if (item.retries < item.maxRetries) {\n        // Rester dans la file pour un prochain essai\n        await this.updateItem(item);\n      } else {\n        // Abandonner après trop de retries\n        await this.notifyFailure(item);\n      }\n    }\n  }\n}\n```\n\n3. **Stratégies alternatives :**\n- Utiliser un timeout plus long pour les requêtes retry\n- Segmenter les requêtes volumineuses en plusieurs petites requêtes\n- Utiliser des requêtes HEAD pour vérifier la disponibilité du serveur avant de tenter l'upload\n- Mettre en place un mécanisme de 'dead letter' pour les requêtes qui échouent définitivement"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Analyser l'impact de la gestion hors ligne sur l'expérience utilisateur",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>La gestion hors ligne doit être transparente pour l'utilisateur tout en lui fournissant des indicateurs clairs sur l'état de ses actions.</p><p>Évaluer les impacts de la gestion hors ligne sur l'expérience utilisateur à travers les questions suivantes.</p>",
+      "images": [
+        "Interface utilisateur montrant différents états : connecté (indicateur vert), hors ligne (indicateur rouge avec message 'Vous êtes hors ligne'), messages en attente (badge avec compteur), et synchronisation en cours (animation de chargement)."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 5,
+        "texte": "Évaluez l'impact d'une mauvaise gestion hors ligne sur la satisfaction utilisateur.",
+        "niveau": "hard",
+        "reponse": "**Impact d'une mauvaise gestion hors ligne :**\n\n1. **Perte de confiance** :\n   - Les utilisateurs perdent confiance si leurs messages ou actions disparaissent en cas de problème réseau\n   - L'application est perçue comme peu fiable\n\n2. **Frustration** :\n   - Messages qui restent bloqués sans feedback\n   - Chargements infinis qui donnent l'impression que l'application est bloquée\n   - Perte de données (formulaires, messages, etc.)\n\n3. **Abandon** :\n   - Les utilisateurs peuvent quitter l'application définitivement\n   - Taux de désabonnement élevé\n\n4. **Impact économique** :\n   - Perte de ventes (les utilisateurs ne peuvent pas finaliser leurs achats)\n   - Coût du support client pour gérer les plaintes\n\n**Bonnes pratiques pour une bonne UX hors ligne :**\n\n1. **Indicateurs clairs** :\n   - Afficher l'état de la connexion (connecté / hors ligne)\n   - Montrer la progression de la synchronisation\n   - Indiquer le nombre d'actions en attente\n\n2. **Feedback immédiat** :\n   - Les messages apparaissent immédiatement même hors ligne\n   - Des toasts ou notifications informent du statut\n   - Des animations de chargement pour les actions en cours\n\n3. **Transparence** :\n   - Expliquer clairement ce qui se passe (ex: 'Votre message sera envoyé automatiquement dès que la connexion sera rétablie')\n\n4. **Contrôle utilisateur** :\n   - Permettre de réessayer manuellement\n   - Afficher les actions en file d'attente\n   - Donner la possibilité d'annuler ou de modifier\n\n5. **Récupération automatique** :\n   - Synchronisation automatique dès la reconnexion\n   - Pas de perte de données\n   - Conservation de l'état de l'application",
+        "sousQuestions": [
+          {
+            "numero": "5.a",
+            "texte": "Proposez des stratégies de communication pour informer l'utilisateur de l'état hors ligne sans le frustrer.",
+            "niveau": "hard",
+            "reponse": "**Stratégies de communication pour l'état hors ligne :**\n\n1. **Indicateur discret mais visible** :\n```typescript\n// Composant NetworkStatus\nconst NetworkStatus = () => {\n  const isConnected = useNetworkStore((state) => state.isConnected);\n  const pendingCount = useOfflineStore((state) => state.pendingCount);\n  \n  if (isConnected) {\n    return pendingCount > 0 ? (\n      <View style={styles.syncing}>\n        <ActivityIndicator size=\"small\" color=\"#007AFF\" />\n        <Text>Envoi en cours... ({pendingCount})</Text>\n      </View>\n    ) : null;\n  }\n  \n  return (\n    <View style={styles.offline}>\n      <Icon name=\"wifi-off\" size={16} color=\"#666\" />\n      <Text style={styles.offlineText}>\n        Hors ligne - {pendingCount} message(s) en attente\n      </Text>\n    </View>\n  );\n};\n```\n\n2. **Messages progressifs** :\n   - **Connexion perdue** : Message informatif avec solution (ex: 'Vérifiez votre connexion')\n   - **Synchronisation** : Indicateur de progression (x sur y messages envoyés)\n   - **Réussite** : Notification de succès discrète (toast)\n   - **Échec** : Message clair avec option de réessayer\n\n3. **Animation et transitions** :\n   - Utiliser des animations pour montrer le passage de 'hors ligne' à 'connecté'\n   - Animation de 'réussite' lors de la synchronisation\n   - Transition fluide entre les états\n\n4. **Personnalisation** :\n   - Adapter le message au type de données (messages, photos, achats)\n   - Afficher les messages avec un statut clair (envoyé, en attente, échoué)\n\n5. **Contrôle utilisateur** :\n   - Bouton 'Réessayer' visible sur les messages échoués\n   - Indicateur de file d'attente accessible (ex: écran dédié aux actions en attente)\n   - Option pour basculer en mode hors ligne forcé pour économiser les données"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Concevoir une architecture complète de résilience hors ligne",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>L'application Sawamart doit être résiliente aux problèmes de réseau. Une architecture complète de résilience hors ligne doit intégrer la détection réseau, la file d'attente, le cache et la synchronisation.</p><p>Concevoir cette architecture complète.</p>",
+      "images": [
+        "Diagramme d'architecture complète de la résilience hors ligne montrant les composants : NetworkDetector (NetInfo), OfflineQueue (AsyncStorage), CacheManager (MMKV/AsyncStorage), SyncEngine (qui gère la synchronisation), et les différents stores qui interagissent avec ces composants."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 6,
+        "texte": "Concevez une architecture complète de résilience hors ligne pour l'application Sawamart.",
+        "niveau": "very hard",
+        "reponse": "**Architecture complète de résilience hors ligne :**\n\n## 1. **NetworkDetector - Détection et monitoring réseau**\n\n```typescript\n// services/NetworkDetector.ts\nimport NetInfo from '@react-native-community/netinfo';\nimport { create } from 'zustand';\n\ninterface NetworkState {\n  isConnected: boolean;\n  isWifi: boolean;\n  connectionType: 'wifi' | 'cellular' | 'none';\n  speed: 'fast' | 'medium' | 'slow';\n  lastChecked: Date;\n}\n\nconst useNetworkStore = create<NetworkState>((set) => ({\n  isConnected: true,\n  isWifi: false,\n  connectionType: 'wifi',\n  speed: 'fast',\n  lastChecked: new Date(),\n  \n  updateStatus: (status) => set(status),\n}));\n\nclass NetworkDetector {\n  private static instance: NetworkDetector;\n  private listeners: ((connected: boolean) => void)[] = [];\n\n  static getInstance() {\n    if (!NetworkDetector.instance) {\n      NetworkDetector.instance = new NetworkDetector();\n    }\n    return NetworkDetector.instance;\n  }\n\n  startMonitoring() {\n    NetInfo.addEventListener((state) => {\n      const

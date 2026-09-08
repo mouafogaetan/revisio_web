@@ -1,0 +1,98 @@
+[
+  {
+    "questionText": "En ASP.NET Core, quel est l'intérêt principal d'utiliser l'injection de dépendances (DI) dans un contrôleur d'API ?",
+    "options": [
+      "Améliorer les performances de l'API",
+      "Réduire le couplage entre les classes et améliorer la testabilité",
+      "Chiffrer automatiquement les données échangées",
+      "Générer automatiquement la documentation Swagger"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "easy",
+    "explanation": "L'injection de dépendances permet un couplage faible : le contrôleur ne crée pas lui-même ses dépendances (ex: service), elles lui sont fournies de l'extérieur. Cela rend le code plus modulaire, facile à tester unitairement (on peut injecter des mocks), et plus maintenable."
+  },
+  {
+    "questionText": "Dans ASP.NET Core, quelle durée de vie choisir pour un service qui doit être unique pendant toute la durée d'une requête HTTP (ex: DbContext) ?",
+    "options": [
+      "Transient",
+      "Scoped",
+      "Singleton",
+      "Instance"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "easy",
+    "explanation": "La durée de vie 'Scoped' crée une seule instance par requête HTTP. C'est idéal pour DbContext car cela garantit la cohérence des données au sein d'une même requête et évite les problèmes de concurrence. Transient crée une instance à chaque injection, Singleton une instance unique pour toute l'application."
+  },
+  {
+    "questionText": "Voici un extrait de <code>Program.cs</code> :<br><code>builder.Services.AddScoped&lt;IProductRepository, ProductRepository&gt;();</code><br>Quel est l'effet de cette ligne ?",
+    "options": [
+      "Crée une instance unique de ProductRepository pour toute l'application",
+      "Crée une nouvelle instance de ProductRepository à chaque appel",
+      "Crée une instance de ProductRepository par requête HTTP et l'associe à IProductRepository",
+      "Enregistre ProductRepository comme un contrôleur"
+    ],
+    "correctAnswer": 2,
+    "difficulty": "easy",
+    "explanation": "AddScoped&lt;TService, TImplementation&gt;() enregistre que chaque fois qu'une interface IProductRepository est demandée, le conteneur DI fournira une instance de ProductRepository créée une seule fois par requête HTTP (Scoped). C'est la liaison entre l'abstraction et son implémentation."
+  },
+  {
+    "questionText": "Pour injecter un service dans un contrôleur d'API .NET, où doit-on le déclarer ?",
+    "options": [
+      "Dans la méthode Main()",
+      "Directement dans chaque action du contrôleur avec <code>[FromServices]</code>",
+      "Dans le constructeur du contrôleur",
+      "Dans le fichier <code>appsettings.json</code>"
+    ],
+    "correctAnswer": 2,
+    "difficulty": "medium",
+    "explanation": "La bonne pratique est d'utiliser l'injection par constructeur : on déclare un paramètre de type interface dans le constructeur du contrôleur, et ASP.NET Core fournit automatiquement l'instance enregistrée. Exemple : <code>public ProductsController(IProductService service) { _service = service; }</code>"
+  },
+  {
+    "questionText": "Que se passe-t-il si on enregistre un service avec <code>AddSingleton&lt;IMyService, MyService&gt;()</code> et qu'on l'injecte dans deux contrôleurs différents ?",
+    "options": [
+      "Chaque contrôleur reçoit une instance différente",
+      "Les deux contrôleurs reçoivent la même instance unique (réutilisée)",
+      "Une exception est levée car Singleton n'est pas compatible avec les contrôleurs",
+      "L'instance est recréée à chaque méthode d'action"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium",
+    "explanation": "Avec Singleton, une seule instance du service est créée pour toute l'application. Tous les contrôleurs (et toutes les requêtes) partagent donc la même instance. Attention : cela peut poser problème si le service a un état mutable (risque de conflits entre requêtes)."
+  },
+  {
+    "questionText": "Quelle est la différence entre <code>AddTransient</code> et <code>AddScoped</code> ?",
+    "options": [
+      "Transient est pour les API web, Scoped pour les applications desktop",
+      "Transient crée une instance par injection, Scoped une instance par requête",
+      "Transient ne permet pas l'injection d'interfaces, Scoped oui",
+      "Transient fonctionne uniquement avec des classes statiques"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium",
+    "explanation": "Transient : une nouvelle instance du service est créée chaque fois qu'il est demandé (même plusieurs fois dans la même requête). Scoped : une seule instance par requête HTTP. Pour un contrôleur, une requête donne une seule instance Scoped, mais plusieurs instances Transient si on injecte le service plusieurs fois."
+  },
+  {
+    "questionText": "Dans une application ASP.NET Core, on veut résoudre manuellement un service à l'intérieur d'une méthode d'un contrôleur. Comment accéder au conteneur DI ?",
+    "options": [
+      "Via <code>HttpContext.RequestServices</code>",
+      "Via <code>this.ServiceProvider</code>",
+      "Via <code>builder.Services</code>",
+      "Ce n'est pas possible, l'injection manuelle est interdite"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "hard",
+    "explanation": "On peut accéder au conteneur DI via <code>HttpContext.RequestServices.GetService&lt;T&gt;()</code> (ou <code>IServiceProvider</code> injecté). C'est utile pour résoudre des services avec une durée de vie Scoped quand on n'a pas de constructeur. Exemple : <code>var service = HttpContext.RequestServices.GetRequiredService&lt;IMyService&gt;();</code>"
+  },
+  {
+    "questionText": "On a deux services :<br><code>builder.Services.AddScoped&lt;IServiceA, ServiceA&gt;();</code><br><code>builder.Services.AddTransient&lt;IServiceB, ServiceB&gt;();</code><br>ServiceA dépend de IServiceB. Combien d'instances de ServiceB seront créées pour une même requête si on appelle deux fois ServiceA ?",
+    "options": [
+      "1 instance",
+      "2 instances (une par appel)",
+      "0 instance, erreur de cycle",
+      "Cela dépend du nombre de contrôleurs"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "hard",
+    "explanation": "ServiceB est Transient : chaque fois que le conteneur DI a besoin d'une instance (chaque fois qu'il construit ServiceA), il crée une nouvelle instance de ServiceB. Donc deux appels à ServiceA dans la même requête produisent deux instances distinctes de ServiceB. Attention : une dépendance Transient dans un Scoped peut causer des comportements inattendus."
+  }
+]

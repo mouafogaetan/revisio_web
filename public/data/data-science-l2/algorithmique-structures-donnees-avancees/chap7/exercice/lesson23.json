@@ -1,0 +1,127 @@
+[
+  {
+    "intitule": "Compréhension du modèle Pregel",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Pregel est un modèle de programmation pour les algorithmes distribués sur graphes, développé par Google. Il s'inspire du modèle de programmation Bulk Synchronous Parallel (BSP).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez le principe du modèle Pregel et le concept de super-étape.",
+        "niveau": "easy",
+        "reponse": "<p>Le modèle Pregel est un paradigme de programmation pour le traitement distribué de grands graphes. Son principe est basé sur le modèle BSP (Bulk Synchronous Parallel).</p><p><strong>Principe :</strong></p><ul><li>Le calcul est organisé en une série d'itérations appelées <strong>super-étapes</strong>.</li><li>À chaque super-étape, les nœuds du graphe (vertices) exécutent une fonction qui peut : recevoir des messages, mettre à jour leur état, et envoyer des messages à d'autres nœuds.</li><li>Les messages envoyés pendant une super-étape sont livrés au début de la super-étape suivante.</li><li>Le calcul se termine lorsque tous les nœuds sont inactifs et qu'il n'y a plus de messages en attente.</li></ul><p><strong>Concept de super-étape :</strong> Une super-étape est une phase de calcul synchronisée où tous les nœuds actifs exécutent leur fonction en parallèle. La synchronisation a lieu à la fin de chaque super-étape, garantissant que tous les messages sont échangés avant le début de la suivante.</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comparez le modèle Pregel avec le modèle MapReduce en termes de structure et d'utilisation pour les graphes.",
+            "niveau": "easy",
+            "reponse": "<p><strong>MapReduce :</strong></p><ul><li>Conçu pour le traitement par lots de données non structurées ou semi-structurées.</li><li>Structure en phases Map-Shuffle-Reduce.</li><li>Pour les graphes, nécessite des astuces complexes (ex: itérations successives avec des jobs MapReduce).</li><li>Pas de notion d'état persistant pour les nœuds du graphe.</li></ul><p><strong>Pregel :</strong></p><ul><li>Conçu spécifiquement pour le traitement de grands graphes.</li><li>Structure en super-étapes synchronisées avec échange de messages.</li><li>Les nœuds du graphe conservent un état entre les super-étapes.</li><li>Plus naturel et efficace pour les algorithmes de graphes (PageRank, BFS, SSSP).</li></ul><p>Pregel est plus adapté aux graphes car il permet de penser directement en termes de nœuds, d'arêtes et de messages.</p>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "titre": "Analyse du PageRank distribué",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous implémentez l'algorithme PageRank dans un système Pregel pour un graphe de 10 millions de pages web. Chaque nœud (page) doit calculer son score PageRank itérativement.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez comment vous structureriez l'algorithme PageRank en utilisant le modèle Pregel, en détaillant le rôle des messages et des super-étapes.",
+        "niveau": "medium",
+        "reponse": "<p><strong>Structure de l'algorithme PageRank en Pregel :</strong></p><p><strong>Initialisation (super-étape 0) :</strong></p><ul><li>Chaque nœud initialise son score PageRank à \(1/N\) (où N est le nombre total de pages).</li><li>Chaque nœud envoie un message à ses voisins sortants contenant sa contribution : <div class='math-block'><div class='math'>$$ \\text{contribution} = \\frac{\\text{PR}(v)}{\\text{outdeg}(v)} $$</div></div></li></ul><p><strong>Super-étapes suivantes :</strong></p><ul><li>Chaque nœud reçoit les messages de ses prédécesseurs.</li><li>Il calcule son nouveau score PageRank : <div class='math-block'><div class='math'>$$ \\text{PR}(v) = \\frac{1-d}{N} + d \\times \\sum \\text{contributions reçues} $$</div></div></li><li>Si la différence avec le score précédent dépasse un seuil \( \\epsilon \\), le nœud reste actif et envoie de nouveaux messages.</li><li>Sinon, le nœud devient inactif.</li></ul><p><strong>Fin du calcul :</strong> L'algorithme se termine lorsque tous les nœuds sont inactifs (convergence atteinte).</p><p><strong>Rôle des messages :</strong> Les messages transportent la contribution de chaque page à ses voisins, permettant de propager l'influence à travers le graphe.</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Identifiez les avantages de l'approche Pregel pour PageRank par rapport à une approche MapReduce.",
+            "niveau": "medium",
+            "reponse": "<p><strong>Avantages de Pregel pour PageRank :</strong></p><ul><li><strong>Itérations naturelles :</strong> PageRank est intrinsèquement itératif. Pregel gère les itérations via les super-étapes, alors que MapReduce nécessite de chaîner plusieurs jobs.</li><li><strong>État persistant :</strong> Dans Pregel, chaque nœud conserve son score entre les super-étapes, évitant de recharger les données à chaque itération.</li><li><strong>Efficacité des messages :</strong> Seules les contributions (messages) sont échangées, pas le graphe entier.</li><li><strong>Convergence rapide :</strong> Les nœuds qui ont convergé deviennent inactifs, réduisant la charge de calcul.</li><li><strong>Scalabilité :</strong> Le graphe est partitionné et distribué sur plusieurs machines, permettant de traiter des milliards de pages.</li></ul><p>MapReduce nécessiterait un job par itération, avec des lectures/écritures disque à chaque fois, ce qui est beaucoup moins efficace.</p>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "titule": "Implémentation de BFS distribué",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Une entreprise de réseau social souhaite calculer la distance (nombre d'amis intermédiaires) entre un utilisateur donné et tous les autres utilisateurs du réseau (BFS distribué). Le graphe a 1 milliard de nœuds et 50 milliards d'arêtes.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevez l'algorithme de BFS distribué en utilisant le modèle Pregel en détaillant les étapes et les messages échangés.",
+        "niveau": "hard",
+        "reponse": "<p><strong>Algorithme BFS distribué avec Pregel :</strong></p><p><strong>Initialisation (super-étape 0) :</strong></p><ul><li>Le nœud source (l'utilisateur de départ) initialise sa distance à 0 et devient actif.</li><li>Tous les autres nœuds initialisent leur distance à \( \\infty \) (ou -1 pour non atteint).</li><li>Le nœud source envoie un message de distance 1 à tous ses voisins (amis directs).</li></ul><p><strong>Super-étapes suivantes :</strong></p><ul><li>Chaque nœud reçoit des messages contenant des distances candidates.</li><li>Le nœud sélectionne la plus petite distance reçue.</li><li>Si cette distance est inférieure à sa distance actuelle, le nœud met à jour sa distance, devient actif, et envoie des messages de distance \( \\text{distance} + 1 \) à ses voisins.</li><li>Sinon, le nœud devient inactif (ne participe pas à la super-étape suivante).</li></ul><p><strong>Fin du calcul :</strong> L'algorithme se termine lorsqu'il n'y a plus de nœuds actifs, ce qui signifie que tous les nœuds accessibles ont été visités.</p><p><strong>Messages échangés :</strong> Les messages contiennent la distance candidate à transmettre (distance actuelle du nœud + 1).</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Analysez la complexité de cet algorithme en termes de nombre de super-étapes et de volume de messages.",
+            "niveau": "hard",
+            "reponse": "<p><strong>Nombre de super-étapes :</strong> Le nombre de super-étapes est égal à la distance maximale entre la source et le nœud le plus éloigné (le diamètre du graphe). Dans le pire cas, cela peut être \(O(V)\) où V est le nombre de nœuds (si le graphe est une chaîne).</p><p><strong>Volume de messages :</strong></p><ul><li>Chaque nœud envoie un message à chacun de ses voisins lorsqu'il est visité pour la première fois.</li><li>Le nombre total de messages est \(O(E)\), où E est le nombre d'arêtes (chaque arête est parcourue une fois dans le sens source → voisin).</li><li>Dans un graphe orienté, chaque arête peut générer au plus un message.</li></ul><p><strong>Scalabilité :</strong> L'algorithme est scalable car les messages sont distribués sur le réseau et les calculs sont parallélisés sur les nœuds. Le partitionnement du graphe permet de réduire les communications inter-machines.</p>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Détection de communautés en Pregel",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Une plateforme de streaming souhaite identifier des communautés d'utilisateurs (groupes de personnes qui se suivent mutuellement) en utilisant l'algorithme de Label Propagation. L'algorithme consiste à ce que chaque nœud propage son label à ses voisins, et chaque nœud adopte le label le plus fréquent parmi ses voisins.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Développez une implémentation de l'algorithme de Label Propagation en utilisant le modèle Pregel. Discutez des défis de la convergence et de la gestion des labels.",
+        "niveau": "very hard",
+        "reponse": "<p><strong>Implémentation de Label Propagation en Pregel :</strong></p><p><strong>Initialisation (super-étape 0) :</strong></p><ul><li>Chaque nœud initialise son label à son identifiant (ou à un identifiant unique).</li><li>Chaque nœud envoie son label à tous ses voisins.</li></ul><p><strong>Super-étapes suivantes :</strong></p><ul><li>Chaque nœud reçoit les labels de ses voisins.</li><li>Le nœud compte la fréquence de chaque label reçu.</li><li>Il adopte le label le plus fréquent (en cas d'égalité, un tirage aléatoire ou choix du plus petit label).</li><li>Si le label du nœud change, il devient actif et envoie son nouveau label à ses voisins.</li><li>Sinon, le nœud devient inactif.</li></ul><p><strong>Fin du calcul :</strong> L'algorithme se termine lorsque tous les nœuds sont inactifs (stabilité des labels).</p><p><strong>Défis :</strong></p><ul><li><strong>Convergence :</strong> L'algorithme peut osciller si les labels changent constamment (notamment avec les égalités). Des solutions : introduire des délais (asynchronie), utiliser un critère de convergence basé sur le pourcentage de nœuds stables.</li><li><strong>Gestion des labels :</strong> Les labels doivent être représentés efficacement (entiers, pas de chaînes de caractères).</li><li><strong>Partitionnement :</strong> Le partitionnement du graphe peut affecter la convergence. Les nœuds aux frontières des partitions peuvent avoir des comportements différents.</li><li><strong>Ordre des messages :</strong> Dans Pregel, tous les messages d'une super-étape sont traités avant la super-étape suivante, ce qui garantit une certaine cohérence.</li></ul>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comparez l'efficacité de cette approche Pregel avec une approche MapReduce pour le Label Propagation.",
+            "niveau": "very hard",
+            "reponse": "<p><strong>Comparaison Pregel vs MapReduce pour Label Propagation :</strong></p><p><strong>Pregel :</strong></p><ul><li><strong>Avantages :</strong> Itérations naturelles, état persistant entre les itérations, faible volume de messages (seulement les labels).</li><li><strong>Inconvénients :</strong> Nécessite une synchronisation à chaque super-étape, ce qui peut être coûteux si le graphe est mal équilibré.</li></ul><p><strong>MapReduce :</strong></p><ul><li><strong>Avantages :</strong> Simple à implémenter, bien adapté aux grands volumes de données.</li><li><strong>Inconvénients :</strong> Chaque itération nécessite un job MapReduce complet avec lecture/écriture disque, ce qui est très coûteux. La gestion de l'état des nœuds est complexe (il faut recharger le graphe à chaque itération).</li></ul><p><strong>Conclusion :</strong> Pregel est clairement plus efficace pour ce type d'algorithme itératif sur graphe, car il minimise les échanges de données et maintient l'état des nœuds en mémoire. MapReduce serait prohibitif pour un graphe de grande taille.</p>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse des super-étapes",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Dans un système Pregel, les super-étapes sont des phases synchronisées de calcul et de communication. Chaque super-étape se décompose en trois phases : calcul, envoi des messages, et synchronisation.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez les implications de la synchronisation dans Pregel sur la performance et la tolérance aux pannes.",
+        "niveau": "hard",
+        "reponse": "<p><strong>Implications de la synchronisation :</strong></p><p><strong>Performance :</strong></p><ul><li><strong>Avantage :</strong> La synchronisation garantit que tous les messages sont échangés avant le début de la super-étape suivante, ce qui simplifie la programmation et assure la cohérence des données.</li><li><strong>Inconvénient :</strong> La synchronisation peut créer des goulots d'étranglement. Si un nœud est lent (par exemple, un nœud avec un grand nombre d'arêtes), toutes les autres machines doivent attendre (effet de \"straggler\").</li><li>Pour atténuer ce problème, Pregel utilise des techniques comme le partitionnement équilibré du graphe et la possibilité d'ignorer les nœuds inactifs.</li></ul><p><strong>Tolérance aux pannes :</strong></p><ul><li>La synchronisation facilite la tolérance aux pannes : à la fin de chaque super-étape, l'état du système (les valeurs des nœuds et les messages en attente) peut être sauvegardé sur disque (checkpoint).</li><li>Si une machine tombe en panne, le système peut reprendre le calcul à la dernière super-étape sauvegardée, en rechargeant les données depuis le checkpoint.</li><li>Cette approche est efficace car les sauvegardes sont relativement peu fréquentes (une par super-étape) et le coût de la reprise est limité.</li></ul>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Analysez comment le modèle Pregel gère les nœuds inactifs et pourquoi cette gestion est importante pour l'efficacité.",
+            "niveau": "hard",
+            "reponse": "<p><strong>Gestion des nœuds inactifs :</strong></p><ul><li>Dans Pregel, un nœud qui n'a plus de messages à envoyer et qui a atteint sa condition d'arrêt devient inactif.</li><li>Les nœuds inactifs ne participent pas aux super-étapes suivantes, ce qui réduit la charge de calcul.</li><li>Un nœud inactif peut être réactivé s'il reçoit un message (un vote pour sortir de l'état inactif).</li></ul><p><strong>Importance pour l'efficacité :</strong></p><ul><li>Dans des algorithmes comme PageRank ou BFS, la plupart des nœuds convergent rapidement et deviennent inactifs.</li><li>Le système peut alors se concentrer sur les nœuds qui nécessitent encore du calcul, ce qui accélère la convergence globale.</li><li>Sans cette gestion, tous les nœuds seraient actifs à chaque super-étape, même ceux qui n'ont rien à faire, ce qui gâcherait des ressources de calcul.</li><li>C'est un mécanisme clé pour la scalabilité de Pregel sur des graphes de très grande taille.</li></ul>"
+          }
+        ]
+      }
+    ]
+  }
+]

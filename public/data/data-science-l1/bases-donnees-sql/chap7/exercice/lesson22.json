@@ -1,0 +1,114 @@
+[
+  {
+    "intitule": "Analyse des Ventes d'une Entreprise de Distribution",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous êtes data scientist dans une entreprise de distribution au Cameroun. Votre responsable vous demande d'analyser les performances commerciales de l'entreprise. La base de données contient les tables suivantes :</p><ul><li><strong>Clients</strong> (id_client, nom, prenom, ville, date_inscription)</li><li><strong>Produits</strong> (id_produit, nom_produit, categorie, prix_unitaire, stock)</li><li><strong>Commandes</strong> (id_commande, id_client, date_commande, statut)</li><li><strong>Lignes_Commandes</strong> (id_ligne, id_commande, id_produit, quantite, prix_vente)</li><li><strong>Livraisons</strong> (id_livraison, id_commande, date_livraison, ville_livraison, montant_livraison)</li></ul><p>Vous devez écrire des requêtes SQL pour répondre aux questions métier suivantes.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez une requête SQL pour calculer le chiffre d'affaires total par ville (en utilisant les prix de vente réels des lignes de commande).",
+        "niveau": "medium",
+        "reponse": "<p><strong>Requête SQL :</strong></p><pre style='background-color: #2d2d2d; color: #f8f8f2; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.9rem;'>SELECT c.ville, SUM(lc.prix_vente * lc.quantite) AS chiffre_affaires\nFROM Clients c\nJOIN Commandes cmd ON c.id_client = cmd.id_client\nJOIN Lignes_Commandes lc ON cmd.id_commande = lc.id_commande\nGROUP BY c.ville\nORDER BY chiffre_affaires DESC;</pre><p><strong>Explication :</strong> On joint les tables Clients, Commandes et Lignes_Commandes. On utilise <code>SUM(lc.prix_vente * lc.quantite)</code> pour calculer le chiffre d'affaires. On regroupe par <code>ville</code> et on trie par chiffre d'affaires décroissant pour avoir les meilleures villes en premier.</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Ajoutez le nombre total de commandes et le nombre total de clients uniques par ville dans le même résultat.",
+            "niveau": "medium",
+            "reponse": "<p><strong>Requête SQL :</strong></p><pre style='background-color: #2d2d2d; color: #f8f8f2; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.9rem;'>SELECT c.ville,\n       COUNT(DISTINCT cmd.id_client) AS nb_clients,\n       COUNT(cmd.id_commande) AS nb_commandes,\n       SUM(lc.prix_vente * lc.quantite) AS chiffre_affaires\nFROM Clients c\nJOIN Commandes cmd ON c.id_client = cmd.id_client\nJOIN Lignes_Commandes lc ON cmd.id_commande = lc.id_commande\nGROUP BY c.ville\nORDER BY chiffre_affaires DESC;</pre><p><strong>Explication :</strong> On ajoute <code>COUNT(DISTINCT cmd.id_client)</code> pour compter les clients uniques par ville et <code>COUNT(cmd.id_commande)</code> pour le nombre total de commandes.</p>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Filtrez le résultat pour n'afficher que les villes dont le chiffre d'affaires est supérieur à 1 000 000 FCFA.",
+            "niveau": "easy",
+            "reponse": "<p><strong>Requête SQL :</strong></p><pre style='background-color: #2d2d2d; color: #f8f8f2; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.9rem;'>SELECT c.ville,\n       COUNT(DISTINCT cmd.id_client) AS nb_clients,\n       COUNT(cmd.id_commande) AS nb_commandes,\n       SUM(lc.prix_vente * lc.quantite) AS chiffre_affaires\nFROM Clients c\nJOIN Commandes cmd ON c.id_client = cmd.id_client\nJOIN Lignes_Commandes lc ON cmd.id_commande = lc.id_commande\nGROUP BY c.ville\nHAVING SUM(lc.prix_vente * lc.quantite) > 1000000\nORDER BY chiffre_affaires DESC;</pre><p><strong>Explication :</strong> On utilise la clause <code>HAVING</code> pour filtrer les groupes après l'agrégation, car <code>WHERE</code> ne peut pas filtrer sur une colonne agrégée.</p>"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Écrivez une requête SQL pour identifier les produits les plus vendus (en quantité) et leur contribution au chiffre d'affaires total.",
+        "niveau": "medium",
+        "reponse": "<p><strong>Requête SQL :</strong></p><pre style='background-color: #2d2d2d; color: #f8f8f2; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.9rem;'>SELECT p.nom_produit,\n       p.categorie,\n       SUM(lc.quantite) AS quantite_totale,\n       SUM(lc.prix_vente * lc.quantite) AS ca_total,\n       ROUND(100.0 * SUM(lc.prix_vente * lc.quantite) / (SELECT SUM(prix_vente * quantite) FROM Lignes_Commandes), 2) AS pourcentage_ca\nFROM Produits p\nJOIN Lignes_Commandes lc ON p.id_produit = lc.id_produit\nGROUP BY p.id_produit, p.nom_produit, p.categorie\nORDER BY quantite_totale DESC;</pre><p><strong>Explication :</strong> On joint Produits et Lignes_Commandes. On calcule la quantité totale et le chiffre d'affaires par produit. La sous-requête calcule le chiffre d'affaires total de l'entreprise, ce qui permet de calculer le pourcentage de contribution de chaque produit.</p>",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Modifiez la requête pour ne considérer que les commandes du dernier trimestre.",
+            "niveau": "medium",
+            "reponse": "<p><strong>Requête SQL :</strong></p><pre style='background-color: #2d2d2d; color: #f8f8f2; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.9rem;'>SELECT p.nom_produit,\n       p.categorie,\n       SUM(lc.quantite) AS quantite_totale,\n       SUM(lc.prix_vente * lc.quantite) AS ca_total,\n       ROUND(100.0 * SUM(lc.prix_vente * lc.quantite) / (SELECT SUM(prix_vente * quantite) \n                                                          FROM Lignes_Commandes lc2\n                                                          JOIN Commandes cmd2 ON lc2.id_commande = cmd2.id_commande\n                                                          WHERE cmd2.date_commande >= DATE_SUB(NOW(), INTERVAL 3 MONTH)), 2) AS pourcentage_ca\nFROM Produits p\nJOIN Lignes_Commandes lc ON p.id_produit = lc.id_produit\nJOIN Commandes cmd ON lc.id_commande = cmd.id_commande\nWHERE cmd.date_commande >= DATE_SUB(NOW(), INTERVAL 3 MONTH)\nGROUP BY p.id_produit, p.nom_produit, p.categorie\nORDER BY quantite_totale DESC;</pre><p><strong>Explication :</strong> On ajoute une jointure avec <code>Commandes</code> et un filtre sur la date (<code>DATE_SUB(NOW(), INTERVAL 3 MONTH)</code> pour MySQL). La sous-requête calcule le CA total du même trimestre.</p>"
+          }
+        ]
+      },
+      {
+        "numero": 3,
+        "texte": "Analysez la performance des livraisons : écrivez une requête pour calculer le nombre de jours moyen entre la commande et la livraison, par ville.",
+        "niveau": "hard",
+        "reponse": "<p><strong>Requête SQL :</strong></p><pre style='background-color: #2d2d2d; color: #f8f8f2; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.9rem;'>SELECT l.ville_livraison,\n       AVG(DATEDIFF(l.date_livraison, cmd.date_commande)) AS delai_moyen_jours,\n       MIN(DATEDIFF(l.date_livraison, cmd.date_commande)) AS delai_min,\n       MAX(DATEDIFF(l.date_livraison, cmd.date_commande)) AS delai_max,\n       COUNT(l.id_livraison) AS nb_livraisons\nFROM Livraisons l\nJOIN Commandes cmd ON l.id_commande = cmd.id_commande\nGROUP BY l.ville_livraison\nORDER BY delai_moyen_jours ASC;</pre><p><strong>Explication :</strong> On joint <code>Livraisons</code> et <code>Commandes</code>. <code>DATEDIFF</code> calcule l'écart en jours entre les deux dates. On groupe par ville de livraison pour analyser les performances par zone. On trie par délai moyen croissant pour identifier les villes les plus rapides.</p>",
+        "sousQuestions": [
+          {
+            "numero": "3.a",
+            "texte": "Identifiez les commandes dont le délai de livraison dépasse la moyenne de leur ville de plus de 50 %.",
+            "niveau": "hard",
+            "reponse": "<p><strong>Requête SQL :</strong></p><pre style='background-color: #2d2d2d; color: #f8f8f2; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.9rem;'>SELECT cmd.id_commande,\n       c.nom,\n       c.prenom,\n       l.ville_livraison,\n       DATEDIFF(l.date_livraison, cmd.date_commande) AS delai,\n       AVG(DATEDIFF(l2.date_livraison, cmd2.date_commande)) OVER (PARTITION BY l2.ville_livraison) AS delai_moyen_ville,\n       ROUND(100.0 * DATEDIFF(l.date_livraison, cmd.date_commande) / AVG(DATEDIFF(l2.date_livraison, cmd2.date_commande)) OVER (PARTITION BY l2.ville_livraison), 2) AS pourcentage_delai\nFROM Livraisons l\nJOIN Commandes cmd ON l.id_commande = cmd.id_commande\nJOIN Clients c ON cmd.id_client = c.id_client\nJOIN Livraisons l2 ON 1=1\nJOIN Commandes cmd2 ON l2.id_commande = cmd2.id_commande\nWHERE DATEDIFF(l.date_livraison, cmd.date_commande) > 1.5 * (\n    SELECT AVG(DATEDIFF(l3.date_livraison, cmd3.date_commande))\n    FROM Livraisons l3\n    JOIN Commandes cmd3 ON l3.id_commande = cmd3.id_commande\n    WHERE l3.ville_livraison = l.ville_livraison\n);</pre><p><strong>Explication :</strong> La sous-requête corrélée calcule le délai moyen de livraison pour la ville de la commande. La requête principale sélectionne les commandes dont le délai est supérieur à 1.5 fois cette moyenne.</p>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse des Étudiants et des Cours",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Une université camerounaise souhaite analyser les performances de ses étudiants. La base de données contient les tables suivantes :</p><ul><li><strong>Etudiants</strong> (id_etudiant, nom, prenom, date_naissance, ville, filiere)</li><li><strong>Cours</strong> (id_cours, code_cours, nom_cours, credits, departement)</li><li><strong>Inscriptions</strong> (id_inscription, id_etudiant, id_cours, annee, semestre)</li><li><strong>Notes</strong> (id_note, id_inscription, note, type_evaluation)</li></ul><p>Écrivez les requêtes SQL pour répondre aux questions suivantes.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez une requête pour lister tous les étudiants de la filière 'Data Science' avec leur nom, prénom et ville.",
+        "niveau": "easy",
+        "reponse": "<p><strong>Requête SQL :</strong></p><pre style='background-color: #2d2d2d; color: #f8f8f2; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.9rem;'>SELECT nom, prenom, ville\nFROM Etudiants\nWHERE filiere = 'Data Science';</pre>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Ajoutez le nombre total de cours auxquels chaque étudiant est inscrit.",
+            "niveau": "medium",
+            "reponse": "<p><strong>Requête SQL :</strong></p><pre style='background-color: #2d2d2d; color: #f8f8f2; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.9rem;'>SELECT e.nom, e.prenom, e.ville, COUNT(i.id_cours) AS nb_cours\nFROM Etudiants e\nLEFT JOIN Inscriptions i ON e.id_etudiant = i.id_etudiant\nWHERE e.filiere = 'Data Science'\nGROUP BY e.id_etudiant, e.nom, e.prenom, e.ville\nORDER BY nb_cours DESC;</pre>"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Calculez la moyenne générale de chaque étudiant de la filière 'Data Science' sur l'ensemble de ses notes.",
+        "niveau": "medium",
+        "reponse": "<p><strong>Requête SQL :</strong></p><pre style='background-color: #2d2d2d; color: #f8f8f2; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.9rem;'>SELECT e.nom, e.prenom, ROUND(AVG(n.note), 2) AS moyenne_generale\nFROM Etudiants e\nJOIN Inscriptions i ON e.id_etudiant = i.id_etudiant\nJOIN Notes n ON i.id_inscription = n.id_inscription\nWHERE e.filiere = 'Data Science'\nGROUP BY e.id_etudiant, e.nom, e.prenom\nORDER BY moyenne_generale DESC;</pre>",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Comptez le nombre de mentions obtenues par les étudiants (mention 'Très Bien' pour moyenne >= 16, 'Bien' pour >= 14, 'Assez Bien' pour >= 12, 'Passable' pour >= 10).",
+            "niveau": "hard",
+            "reponse": "<p><strong>Requête SQL :</strong></p><pre style='background-color: #2d2d2d; color: #f8f8f2; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.9rem;'>SELECT mention, COUNT(*) AS nb_etudiants\nFROM (\n    SELECT e.id_etudiant,\n           CASE\n               WHEN AVG(n.note) >= 16 THEN 'Très Bien'\n               WHEN AVG(n.note) >= 14 THEN 'Bien'\n               WHEN AVG(n.note) >= 12 THEN 'Assez Bien'\n               WHEN AVG(n.note) >= 10 THEN 'Passable'\n               ELSE 'Insuffisant'\n           END AS mention\n    FROM Etudiants e\n    JOIN Inscriptions i ON e.id_etudiant = i.id_etudiant\n    JOIN Notes n ON i.id_inscription = n.id_inscription\n    WHERE e.filiere = 'Data Science'\n    GROUP BY e.id_etudiant\n) AS mentions_etudiants\nGROUP BY mention\nORDER BY nb_etudiants DESC;</pre>"
+          }
+        ]
+      },
+      {
+        "numero": 3,
+        "texte": "Identifiez les cours qui ont le taux de réussite le plus élevé (note >= 10) par semestre.",
+        "niveau": "hard",
+        "reponse": "<p><strong>Requête SQL :</strong></p><pre style='background-color: #2d2d2d; color: #f8f8f2; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.9rem;'>SELECT c.nom_cours,\n       i.semestre,\n       i.annee,\n       ROUND(100.0 * SUM(CASE WHEN n.note >= 10 THEN 1 ELSE 0 END) / COUNT(n.id_note), 2) AS taux_reussite\nFROM Cours c\nJOIN Inscriptions i ON c.id_cours = i.id_cours\nJOIN Notes n ON i.id_inscription = n.id_inscription\nGROUP BY c.id_cours, c.nom_cours, i.semestre, i.annee\nORDER BY taux_reussite DESC;</pre>",
+        "sousQuestions": [
+          {
+            "numero": "3.a",
+            "texte": "Pour chaque département, calculez le taux de réussite moyen de tous les cours.",
+            "niveau": "medium",
+            "reponse": "<p><strong>Requête SQL :</strong></p><pre style='background-color: #2d2d2d; color: #f8f8f2; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.9rem;'>SELECT c.departement,\n       ROUND(AVG(taux_reussite), 2) AS taux_reussite_moyen_departement\nFROM (\n    SELECT c.id_cours,\n           c.departement,\n           ROUND(100.0 * SUM(CASE WHEN n.note >= 10 THEN 1 ELSE 0 END) / COUNT(n.id_note), 2) AS taux_reussite\n    FROM Cours c\n    JOIN Inscriptions i ON c.id_cours = i.id_cours\n    JOIN Notes n ON i.id_inscription = n.id_inscription\n    GROUP BY c.id_cours, c.departement\n) AS taux_cours\nGROUP BY departement\nORDER BY taux_reussite_moyen_departement DESC;</pre>"
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -1,0 +1,110 @@
+[
+  {
+    "intitule": "Manipulation de fichiers avec le module fs (synchrone vs asynchrone)",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous devez créer un script Node.js qui lit le contenu d'un fichier <code>data.txt</code>, y ajoute la date actuelle (<code>Date.now()</code>), puis réécrit le fichier modifié. Ensuite, le programme doit afficher dans la console le contenu final du fichier.</p><p>Consignes :</p><ul><li>Utilisez <code>fs.readFile</code> et <code>fs.writeFile</code> de manière <strong>asynchrone</strong> (callbacks).</li><li>Gérez les erreurs potentielles (fichier inexistant, problème d'écriture).</li><li>Affichez <code>\"Fichier mis à jour avec succès\"</code> uniquement si l'écriture s'est bien passée.</li></ul><p>Donnée initiale de <code>data.txt</code> : <code>\"Valeur initiale : 100\"</code></p><p>Formule pour la mise à jour : <code>$\\text{nouveauContenu} = \\text{ancienContenu} + \" - Date : \" + \\text{Date.now()}$</code></p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le code complet du script respectant les contraintes asynchrones.",
+        "niveau": "medium",
+        "reponse": "```javascript\nconst fs = require('fs');\n\nfs.readFile('data.txt', 'utf8', (err, data) => {\n  if (err) {\n    console.error('Erreur de lecture :', err.message);\n    return;\n  }\n  const newContent = data + ' - Date : ' + Date.now();\n  fs.writeFile('data.txt', newContent, 'utf8', (err) => {\n    if (err) {\n      console.error('Erreur d\\'écriture :', err.message);\n      return;\n    }\n    console.log('Fichier mis à jour avec succès');\n    fs.readFile('data.txt', 'utf8', (err, finalData) => {\n      if (err) {\n        console.error('Erreur de relecture :', err.message);\n        return;\n      }\n      console.log('Contenu final :', finalData);\n    });\n  });\n});\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Création et gestion de répertoires avec mkdir",
+    "type": "competence",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Dans un projet de gestion de logs, vous devez organiser les fichiers journaux par date.</p><p>Objectif : écrire une fonction asynchrone <code>creerDossierLogs(date)</code> qui crée un dossier nommé <code>logs_AAAA_MM_JJ</code> (par exemple <code>logs_2026_06_12</code>).</p><p>Si le dossier existe déjà, la fonction doit afficher <code>\"Dossier déjà existant\"</code> sans erreur. Utilisez le module <code>fs</code> avec <code>fs.promises</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémentez la fonction `creerDossierLogs` en utilisant `fs.promises.mkdir` avec l'option `recursive: true`.",
+        "niveau": "easy",
+        "reponse": "```javascript\nconst fs = require('fs').promises;\n\nasync function creerDossierLogs(date) {\n  const year = date.getFullYear();\n  const month = String(date.getMonth() + 1).padStart(2, '0');\n  const day = String(date.getDate()).padStart(2, '0');\n  const folderName = `logs_${year}_${month}_${day}`;\n  \n  try {\n    await fs.mkdir(folderName, { recursive: true });\n    console.log(`Dossier ${folderName} créé avec succès`);\n  } catch (err) {\n    if (err.code === 'EEXIST') {\n      console.log('Dossier déjà existant');\n    } else {\n      console.error('Erreur :', err.message);\n    }\n  }\n}\n\n// Exemple d'utilisation\ncreerDossierLogs(new Date());\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Nettoyage de répertoire avec readdir et unlink",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Un serveur d'upload génère des fichiers temporaires (<code>.tmp</code>) dans le dossier <code>temp/</code>. Vous devez écrire un script qui supprime tous les fichiers <code>.tmp</code> de ce dossier.</p><p>Contraintes :</p><ul><li>Utilisez <code>fs.promises.readdir</code> et <code>fs.promises.unlink</code>.</li><li>Ne supprimez que les fichiers se terminant par <code>.tmp</code> (pas les dossiers).</li><li>Affichez pour chaque fichier supprimé son nom.</li><li>Utilisez <code>path.extname</code> pour identifier l'extension.</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le script complet (y compris les imports nécessaires).",
+        "niveau": "hard",
+        "reponse": "```javascript\nconst fs = require('fs').promises;\nconst path = require('path');\n\nasync function nettoyerTemp() {\n  const dossier = './temp';\n  try {\n    const fichiers = await fs.readdir(dossier);\n    for (const fichier of fichiers) {\n      const cheminComplet = path.join(dossier, fichier);\n      const stats = await fs.stat(cheminComplet);\n      if (stats.isFile() && path.extname(fichier) === '.tmp') {\n        await fs.unlink(cheminComplet);\n        console.log(`Supprimé : ${fichier}`);\n      }\n    }\n    console.log('Nettoyage terminé');\n  } catch (err) {\n    console.error('Erreur :', err.message);\n  }\n}\n\nnettoyerTemp();\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Décomposer une tâche synchrone en version asynchrone promesse",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Un code existant utilise <code>fs.readFileSync</code> et <code>fs.writeFileSync</code> pour copier un fichier <code>source.txt</code> vers <code>destination.txt</code>. Le voici :</p><pre><code>const fs = require('fs');\nconst data = fs.readFileSync('source.txt', 'utf8');\nconst modified = data.toUpperCase();\nfs.writeFileSync('destination.txt', modified);\nconsole.log('Copie terminée');\n</code></pre><p>Problème : le blocage du thread principal pose des problèmes de performance.</p><p>Objectif : réécrire ce code en version asynchrone avec <code>fs.promises</code> et <code>async/await</code>, tout en ajoutant la gestion des erreurs.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Réécrivez le code donné en respectant l'approche asynchrone avec `async/await` et `fs.promises`.",
+        "niveau": "hard",
+        "reponse": "```javascript\nconst fs = require('fs').promises;\n\nasync function copierEtModifier() {\n  try {\n    const data = await fs.readFile('source.txt', 'utf8');\n    const modified = data.toUpperCase();\n    await fs.writeFile('destination.txt', modified);\n    console.log('Copie terminée');\n  } catch (err) {\n    console.error('Erreur lors de la copie :', err.message);\n  }\n}\n\ncopierEtModifier();\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse comparative : synchronisation vs asynchronisme dans le module fs",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous animez un atelier sur les bonnes pratiques Node.js. Préparez une explication pour les débutants.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Comparez `readFileSync` et `readFile` (callback) en termes de : blocage du thread, gestion des erreurs, lisibilité.",
+        "niveau": "medium",
+        "reponse": "**Blocage** : `readFileSync` bloque l'event loop jusqu'à la fin de l'opération, ce qui peut rendre l'application inutilisable pour d'autres tâches pendant ce temps. `readFile` non-bloquant.\n\n**Gestion des erreurs** : `readFileSync` nécessite un `try/catch`, `readFile` utilise le paramètre d'erreur du callback.\n\n**Lisibilité** : la version synchrone est plus linéaire et plus simple, mais l'asynchrone nécessite soit des callbacks imbriqués (callback hell) soit des Promises/async-await.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Projet pratique : mini outil de backup",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Un client souhaite un script Node.js qui sauvegarde un dossier <code>data/</code> dans un dossier <code>backup/</code> avec horodatage.</p><p>Fonctionnalités attendues :</p><ul><li>Lire tous les fichiers du dossier <code>data/</code> (nom, taille, date de modification).</li><li>Créer un dossier <code>backup/</code> s'il n'existe pas.</li><li>Pour chaque fichier texte (<code>.txt</code>), copier son contenu dans <code>backup/fichier_original_AAAA-MM-JJ.txt</code>.</li><li>Pour chaque autre fichier, simplement copier le fichier tel quel.</li><li>Gérer les erreurs (fichier manquant, permission, etc.) sans arrêter la sauvegarde complète.</li></ul><p>Utilisez exclusivement <code>fs.promises</code> et <code>path</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédigez le code complet pour répondre au problème, avec explications brèves des étapes.",
+        "niveau": "very hard",
+        "reponse": "```javascript\nconst fs = require('fs').promises;\nconst path = require('path');\n\nasync function sauvegarder() {\n  const dossierSource = './data';\n  const dossierBackup = './backup';\n  const today = new Date().toISOString().slice(0,10); // AAAA-MM-JJ\n\n  try {\n    // Création du dossier backup si besoin\n    await fs.mkdir(dossierBackup, { recursive: true });\n\n    // Lecture du dossier source\n    const fichiers = await fs.readdir(dossierSource);\n\n    for (const fichier of fichiers) {\n      const cheminSource = path.join(dossierSource, fichier);\n      const stats = await fs.stat(cheminSource);\n\n      if (stats.isFile()) {\n        const ext = path.extname(fichier);\n        let nomDestination;\n\n        if (ext === '.txt') {\n          nomDestination = `${path.basename(fichier, ext)}_${today}.txt`;\n          const contenu = await fs.readFile(cheminSource, 'utf8');\n          await fs.writeFile(path.join(dossierBackup, nomDestination), contenu, 'utf8');\n        } else {\n          nomDestination = fichier;\n          await fs.copyFile(cheminSource, path.join(dossierBackup, nomDestination));\n        }\n        console.log(`Sauvegardé : ${fichier} -> ${nomDestination}`);\n      }\n    }\n    console.log('Backup terminé avec succès');\n  } catch (err) {\n    console.error('Échec de la sauvegarde :', err.message);\n  }\n}\n\nsauvegarder();\n```",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

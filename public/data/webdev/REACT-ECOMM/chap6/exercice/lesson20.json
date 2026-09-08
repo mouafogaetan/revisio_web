@@ -1,0 +1,158 @@
+[
+  {
+    "intitule": "Implémentation d'une redirection conditionnelle dans React Router",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans une application e-commerce React avec React Router DOM v6, on souhaite gérer les redirections suivantes :</p><ul><li>Si un utilisateur <strong>non authentifié</strong> tente d'accéder à <code>/compte</code>, il est redirigé vers <code>/connexion</code>.</li><li>Si un utilisateur <strong>déjà authentifié</strong> tente d'accéder à <code>/connexion</code> ou <code>/inscription</code>, il est redirigé vers <code>/compte</code>.</li></ul><p>Le store Zustand <code>useAuthStore</code> expose un état <code>user</code> (null si déconnecté) et une fonction <code>isLoading</code> pour la vérification initiale du token.</p>",
+      "images": [
+        "Schéma de flux de redirection basé sur l'état d'authentification"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer pourquoi il est important d'ajouter un état de chargement (<code>isLoading</code>) avant de prendre une décision de redirection, plutôt que de se baser uniquement sur <code>user === null</code>.",
+        "niveau": "easy",
+        "reponse": "Au chargement initial de l'application, le store doit récupérer le token depuis localStorage et vérifier sa validité auprès du backend (refresh). Pendant cette opération asynchrone, <code>user</code> est null même si l'utilisateur est authentifié. Sans état de chargement, l'utilisateur serait brièvement redirigé vers /connexion avant d'être renvoyé vers /compte, créant un flash indésirable et une mauvaise UX.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrire un composant <code>AuthRedirect</code> qui gère ces deux cas de redirection et qui peut être utilisé comme wrapper pour les routes /connexion et /inscription.",
+        "niveau": "hard",
+        "reponse": "```jsx\nimport { Navigate } from 'react-router-dom';\nimport { useAuthStore } from '../stores/authStore';\n\nexport default function AuthRedirect({ children }) {\n  const { user, isLoading } = useAuthStore();\n  \n  if (isLoading) {\n    return <div className=\"flex justify-center p-8\">Chargement...</div>;\n  }\n  \n  if (user) {\n    // Déjà connecté → rediriger vers le compte\n    return <Navigate to=\"/compte\" replace />;\n  }\n  \n  // Non connecté → afficher la page (login ou register)\n  return children;\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": "2.a",
+        "texte": "Comment utiliser ce composant dans la configuration du routeur pour la route /connexion ?",
+        "niveau": "easy",
+        "reponse": "```jsx\n{\n  path: 'connexion',\n  element: <AuthRedirect><LoginPage /></AuthRedirect>\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Persistance de session avec refresh token automatique",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Votre application e-commerce utilise des tokens JWT avec une courte durée de vie (15 minutes) et un refresh token stocké dans un cookie HttpOnly (géré par le backend). Après un refresh de page, le token d'accès est perdu car stocké en mémoire. Vous devez implémenter une <strong>persistance de session</strong> qui :</p><ul><li>Vérifie au chargement de l'application si un refresh token existe (via un appel API silencieux).</li><li>Si l'appel réussit, récupère un nouvel access token et recharge l'utilisateur dans le store.</li><li>Si l'appel échoue, l'utilisateur reste déconnecté.</li><li>Pendant cette vérification, aucun composant protégé ne doit s'afficher (ni page de login).</li></ul><p>On suppose que le backend expose un endpoint <code>POST /auth/refresh</code> qui accepte le refresh token (via cookie) et retourne un nouvel access token.</p>",
+      "images": [
+        "Diagramme de séquence du refresh token automatique au chargement"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire la structure du store Zustand (état, actions) pour gérer l'authentification avec persistance, incluant l'état <code>isLoading</code>.",
+        "niveau": "hard",
+        "reponse": "```js\nconst useAuthStore = create((set) => ({\n  user: null,\n  accessToken: null,\n  isLoading: true,\n  setAuth: (user, token) => set({ user, accessToken: token, isLoading: false }),\n  logout: () => set({ user: null, accessToken: null, isLoading: false }),\n  checkAuth: async () => {\n    try {\n      const response = await axios.post('/auth/refresh');\n      set({ user: response.data.user, accessToken: response.data.accessToken, isLoading: false });\n    } catch {\n      set({ isLoading: false });\n    }\n  }\n}));\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrire le code d'initialisation dans le composant racine (App ou main) pour appeler <code>checkAuth()</code> une fois au démarrage et éviter les redirections intempestives.",
+        "niveau": "medium",
+        "reponse": "```jsx\nfunction App() {\n  const { checkAuth, isLoading } = useAuthStore();\n\n  useEffect(() => {\n    checkAuth();\n  }, []);\n\n  if (isLoading) {\n    return <div className=\"h-screen flex items-center justify-center\">Chargement de la session...</div>;\n  }\n\n  return <RouterProvider router={router} />;\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": "3",
+        "texte": "Analyser les implications de sécurité de stocker l'access token en mémoire vive (RAM) plutôt que dans localStorage. Justifier pourquoi cette approche est plus sécurisée malgré la perte du token au refresh.",
+        "niveau": "hard",
+        "reponse": "Stocker l'access token en mémoire (variable JavaScript) le rend inaccessible aux scripts malveillants via XSS, contrairement à localStorage où tout script peut le lire. Les cookies HttpOnly protègent le refresh token des XSS mais pas des attaques CSRF (d'où l'utilisation de SameSite=Strict). La perte du token au refresh est acceptable car le refresh token (HttpOnly) permet de le régénérer automatiquement sans intervention utilisateur. C'est la pratique recommandée par l'OWASP pour les applications sensibles.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Diagnostic d'un bug de redirection après login",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Un développeur a implémenté la page de connexion avec le code suivant. Cependant, après une connexion réussie, l'utilisateur n'est pas redirigé vers la page qu'il tentait d'atteindre (ex: <code>/compte/commandes</code>). Au lieu de cela, il reste sur <code>/connexion</code> ou est redirigé vers l'accueil.</p><pre>function LoginPage() {\n  const navigate = useNavigate();\n  const { login } = useAuthStore();\n  const location = useLocation();\n\n  const onSubmit = async (data) => {\n    await login(data.email, data.password);\n    navigate('/');\n  };\n\n  return &lt;form onSubmit={handleSubmit(onSubmit)}&gt;...&lt;/form&gt;;\n}</pre><p>La redirection souhaitée est : après connexion, aller vers <code>location.state?.from?.pathname || '/compte'</code>.</p>",
+      "images": [
+        "Capture d'écran d'une redirection incorrecte dans React Router"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier l'erreur dans ce code et expliquer pourquoi <code>location.state</code> est vide.",
+        "niveau": "medium",
+        "reponse": "L'erreur est que le ProtectedRoute n'a pas transmis l'état <code>from</code> lorsqu'il a redirigé l'utilisateur non authentifié vers /connexion. Dans le ProtectedRoute, il faut faire : <code>&lt;Navigate to='/connexion' state={{ from: location }} replace /&gt;</code>. Sans cela, location.state est undefined.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Corriger le code de la page LoginPage pour utiliser correctement <code>location.state?.from?.pathname</code> et rediriger vers l'URL d'origine ou /compte par défaut.",
+        "niveau": "medium",
+        "reponse": "```jsx\nconst location = useLocation();\nconst navigate = useNavigate();\nconst from = location.state?.from?.pathname || '/compte';\n\nconst onSubmit = async (data) => {\n  await login(data.email, data.password);\n  navigate(from, { replace: true }); // replace évite de revenir à login avec bouton retour\n};\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": "2.a",
+        "texte": "Pourquoi utilise-t-on <code>replace: true</code> dans navigate ?",
+        "niveau": "easy",
+        "reponse": "`replace: true` remplace l'entrée courante dans l'historique du navigateur au lieu d'en ajouter une nouvelle. Ainsi, si l'utilisateur clique sur le bouton retour après la connexion, il ne reviendra pas sur la page de connexion (évite une boucle de redirection).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Construction d'un hook personnalisé useAuthGuard",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Pour centraliser la logique de redirection basée sur l'authentification, on souhaite créer un hook personnalisé <code>useAuthGuard</code> qui retourne un état de chargement et un indicateur <code>shouldRedirect</code>. Ce hook sera utilisé dans les pages qui nécessitent une redirection conditionnelle.</p><p>Le coût d'acquisition client (CAC) est donné par $CAC = \\frac{Coûts\\ marketing\\ et\\ ventes}{Nombre\\ de\\ nouveaux\\ clients}$.</p>",
+      "images": [
+        "Diagramme d'architecture des hooks d'authentification"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire le hook <code>useAuthGuard</code> qui prend en paramètre <code>requireAuth</code> (boolean) et <code>redirectTo</code> (string). Il doit gérer l'état de chargement et retourner un objet indiquant si le rendu peut avoir lieu.",
+        "niveau": "hard",
+        "reponse": "```jsx\nimport { useEffect } from 'react';\nimport { useNavigate } from 'react-router-dom';\nimport { useAuthStore } from '../stores/authStore';\n\nexport function useAuthGuard({ requireAuth = true, redirectTo = '/connexion' } = {}) {\n  const { user, isLoading } = useAuthStore();\n  const navigate = useNavigate();\n\n  useEffect(() => {\n    if (!isLoading) {\n      if (requireAuth && !user) {\n        navigate(redirectTo, { replace: true });\n      }\n      if (!requireAuth && user) {\n        navigate('/compte', { replace: true });\n      }\n    }\n  }, [isLoading, user, requireAuth, navigate, redirectTo]);\n\n  return { isLoading, isAuthenticated: !!user };\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": "1.a",
+        "texte": "Comment utiliser ce hook dans une page de connexion pour éviter l'affichage du formulaire si l'utilisateur est déjà connecté ?",
+        "niveau": "easy",
+        "reponse": "```jsx\nexport default function LoginPage() {\n  const { isLoading, isAuthenticated } = useAuthGuard({ requireAuth: false });\n  \n  if (isLoading) return <Spinner />;\n  if (isAuthenticated) return null; // La redirection est gérée par le hook\n  \n  return <LoginForm />;\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion de la session après expiration du token",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Dans une application e-commerce, l'utilisateur reste connecté pendant plusieurs heures mais l'access token expire après 15 minutes. Le refresh token est valide 7 jours. Un intercepteur Axios est configuré pour :</p><ul><li>Ajouter automatiquement l'access token aux requêtes.</li><li>Si une requête échoue avec 401, tenter de rafraîchir le token via <code>/auth/refresh</code>.</li><li>Si le refresh réussit, rejouer la requête initiale avec le nouveau token.</li><li>Si le refresh échoue, déconnecter l'utilisateur et le rediriger vers /connexion.</li></ul><p>Le taux de rebond est $B = \\frac{Sessions\\ monofeuillet}{Total\\ sessions} \\times 100$.</p>",
+      "images": [
+        "Schéma de l'intercepteur Axios avec queue de requêtes"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer pourquoi il est nécessaire de mettre en place une file d'attente (queue) pendant le rafraîchissement du token pour éviter les appels concurrents à <code>/auth/refresh</code>.",
+        "niveau": "hard",
+        "reponse": "Si plusieurs requêtes échouent simultanément en 401, sans file d'attente, chacune déclencherait un appel à /auth/refresh, ce qui est inefficace et peut provoquer des conflits (invalidation de refresh token). La file d'attente permet qu'une seule requête de refresh soit envoyée ; les autres requêtes en attente sont mises en pause et rejouées une fois le nouveau token obtenu, ou rejetées si le refresh échoue.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrire le code de l'intercepteur Axios qui implémente cette logique avec une queue de promesses.",
+        "niveau": "very hard",
+        "reponse": "```jsx\nlet isRefreshing = false;\nlet failedQueue = [];\n\nconst processQueue = (error, token = null) => {\n  failedQueue.forEach(prom => {\n    if (error) prom.reject(error);\n    else prom.resolve(token);\n  });\n  failedQueue = [];\n};\n\naxios.interceptors.response.use(\n  response => response,\n  async (error) => {\n    const originalRequest = error.config;\n    if (error.response?.status === 401 && !originalRequest._retry) {\n      if (isRefreshing) {\n        return new Promise((resolve, reject) => {\n          failedQueue.push({ resolve, reject });\n        }).then(token => {\n          originalRequest.headers.Authorization = `Bearer ${token}`;\n          return axios(originalRequest);\n        }).catch(err => Promise.reject(err));\n      }\n      originalRequest._retry = true;\n      isRefreshing = true;\n      try {\n        const { data } = await axios.post('/auth/refresh');\n        const newToken = data.accessToken;\n        useAuthStore.getState().setAccessToken(newToken);\n        processQueue(null, newToken);\n        originalRequest.headers.Authorization = `Bearer ${newToken}`;\n        return axios(originalRequest);\n      } catch (refreshError) {\n        processQueue(refreshError, null);\n        useAuthStore.getState().logout();\n        window.location.href = '/connexion';\n        return Promise.reject(refreshError);\n      } finally {\n        isRefreshing = false;\n      }\n    }\n    return Promise.reject(error);\n  }\n);\n```",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

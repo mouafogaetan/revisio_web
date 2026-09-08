@@ -1,0 +1,216 @@
+[
+  {
+    "intitule": "Quiz sur les Fonctions Stockées",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Ce quiz vise à évaluer votre compréhension des concepts de base des fonctions stockées dans une base de données relationnelle.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Quelle est la principale différence entre une procédure stockée et une fonction stockée ?",
+        "niveau": "easy",
+        "reponse": "Voir sous-questions.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Identifier la caractéristique qui distingue fondamentalement une fonction stockée d'une procédure stockée.",
+            "niveau": "easy",
+            "reponse": "Une fonction stockée retourne obligatoirement une valeur, tandis qu'une procédure stockée peut ne rien retourner (ou retourner plusieurs paramètres OUT)."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Dans quel type de requête SQL peut-on utiliser une fonction stockée ?",
+            "niveau": "easy",
+            "reponse": "Une fonction stockée peut être utilisée dans une requête SELECT, contrairement à une procédure stockée."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Citer les deux principales raisons d'utiliser des fonctions stockées dans une base de données.",
+        "niveau": "easy",
+        "reponse": "1. Réutilisabilité du code (éviter la duplication). 2. Centralisation de la logique métier au niveau de la base de données.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Quel mot-clé doit-on utiliser pour retourner une valeur dans une fonction stockée en SQL ?",
+        "niveau": "easy",
+        "reponse": "Le mot-clé RETURN (ou RETURNS dans la définition de la fonction).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Création de Fonctions Stockées",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>On considère une base de données d'une entreprise de vente en ligne. Les tables principales sont :</p><ul><li><strong>PRODUIT(id, nom, prix, stock)</strong></li><li><strong>CLIENT(id, nom, email, ville)</strong></li><li><strong>COMMANDE(id, id_client, date, montant_total)</strong></li><li><strong>LIGNE_COMMANDE(id_commande, id_produit, quantite, prix_unitaire)</strong></li></ul><p>Vous êtes chargé de créer des fonctions stockées pour faciliter les opérations courantes.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire une fonction stockée qui retourne le nombre total de commandes passées par un client donné.",
+        "niveau": "medium",
+        "reponse": "Voir la solution ci-dessous.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Créer une fonction <strong>nb_commandes</strong> qui prend en paramètre l'id d'un client et retourne le nombre de commandes de ce client.",
+            "niveau": "medium",
+            "reponse": "```sql\nCREATE FUNCTION nb_commandes(p_id_client INT)\nRETURNS INT\nDETERMINISTIC\nBEGIN\n    DECLARE total INT;\n    SELECT COUNT(*) INTO total FROM COMMANDE WHERE id_client = p_id_client;\n    RETURN total;\nEND;\n```"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Expliquer pourquoi on utilise le mot-clé DETERMINISTIC dans cette fonction.",
+            "niveau": "medium",
+            "reponse": "Le mot-clé DETERMINISTIC indique que la fonction retourne toujours le même résultat pour les mêmes paramètres d'entrée. Cela permet au SGBD d'optimiser l'exécution des requêtes utilisant cette fonction."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Écrire une fonction stockée qui calcule le montant total des ventes pour un produit donné sur une période.",
+        "niveau": "hard",
+        "reponse": "Voir la solution ci-dessous.",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Créer une fonction <strong>chiffre_affaires_produit</strong> qui prend en paramètres l'id_produit, une date_debut et une date_fin, et retourne le chiffre d'affaires total réalisé par ce produit sur cette période.",
+            "niveau": "hard",
+            "reponse": "```sql\nCREATE FUNCTION chiffre_affaires_produit(\n    p_id_produit INT,\n    p_date_debut DATE,\n    p_date_fin DATE\n)\nRETURNS DECIMAL(10,2)\nDETERMINISTIC\nBEGIN\n    DECLARE total DECIMAL(10,2);\n    SELECT SUM(lc.quantite * lc.prix_unitaire)\n    INTO total\n    FROM LIGNE_COMMANDE lc\n    JOIN COMMANDE c ON lc.id_commande = c.id\n    WHERE lc.id_produit = p_id_produit\n      AND c.date BETWEEN p_date_debut AND p_date_fin;\n    RETURN IFNULL(total, 0);\nEND;\n```"
+          },
+          {
+            "numero": "2.b",
+            "texte": "Que se passe-t-il si aucun produit n'a été vendu sur la période ? Comment votre fonction gère-t-elle ce cas ?",
+            "niveau": "medium",
+            "reponse": "La fonction utilise IFNULL(total, 0) pour retourner 0 au lieu de NULL si aucun résultat n'est trouvé. C'est une bonne pratique pour éviter les valeurs NULL dans les résultats."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse de Fonctions Stockées",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Une entreprise utilise la fonction stockée suivante pour gérer les stocks :</p><pre style='background:#f4f4f4; padding:10px; border-radius:5px; overflow-x:auto;'>\nCREATE FUNCTION verifier_stock(\n    p_id_produit INT,\n    p_quantite_demandee INT\n)\nRETURNS BOOLEAN\nBEGIN\n    DECLARE stock_actuel INT;\n    DECLARE seuil_alerte INT DEFAULT 10;\n    \n    SELECT stock INTO stock_actuel FROM PRODUIT WHERE id = p_id_produit;\n    \n    IF stock_actuel >= p_quantite_demandee THEN\n        RETURN TRUE;\n    ELSE\n        RETURN FALSE;\n    END IF;\nEND;\n</pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analyser la fonction stockée et identifier ses faiblesses ou améliorations possibles.",
+        "niveau": "hard",
+        "reponse": "Voir les sous-questions.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Que fait cette fonction ? Expliquer son utilité métier.",
+            "niveau": "medium",
+            "reponse": "Cette fonction vérifie si un produit a un stock suffisant pour répondre à une demande. Elle retourne TRUE si le stock est suffisant, FALSE sinon. Elle pourrait être utilisée avant de valider une commande."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Identifier au moins deux problèmes potentiels avec cette fonction.",
+            "niveau": "hard",
+            "reponse": "1. La fonction n'est pas DETERMINISTIC car elle dépend des données de la table PRODUIT qui peuvent changer. 2. Elle ne gère pas le cas où le produit n'existe pas (NULL). 3. La variable seuil_alerte est déclarée mais jamais utilisée. 4. Elle ne vérifie pas que p_quantite_demandee est positif."
+          },
+          {
+            "numero": "1.c",
+            "texte": "Proposer une version améliorée de cette fonction en corrigeant les problèmes identifiés.",
+            "niveau": "very hard",
+            "reponse": "```sql\nCREATE FUNCTION verifier_stock(\n    p_id_produit INT,\n    p_quantite_demandee INT\n)\nRETURNS BOOLEAN\nREADS SQL DATA\nBEGIN\n    DECLARE stock_actuel INT;\n    \n    -- Vérifier que la quantité est positive\n    IF p_quantite_demandee <= 0 THEN\n        RETURN FALSE;\n    END IF;\n    \n    -- Récupérer le stock avec gestion de l'absence du produit\n    SELECT stock INTO stock_actuel FROM PRODUIT WHERE id = p_id_produit;\n    \n    -- Gérer le cas où le produit n'existe pas\n    IF stock_actuel IS NULL THEN\n        RETURN FALSE;\n    END IF;\n    \n    RETURN stock_actuel >= p_quantite_demandee;\nEND;\n```"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Fonctions Stockées vs Code Application",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous êtes consultant en optimisation de bases de données pour une entreprise. Actuellement, la logique de calcul des remises est implémentée dans le code de l'application (Java) et non dans la base de données. Le calcul de la remise dépend du profil du client (fidélité, montant total des achats, nombre de commandes) et du produit.</p><p>L'équipe de développement souhaite améliorer la performance et la maintenabilité.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analyser la situation et proposer une solution basée sur les fonctions stockées.",
+        "niveau": "hard",
+        "reponse": "Voir les sous-questions.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quels sont les avantages à déplacer la logique de calcul des remises dans une fonction stockée ?",
+            "niveau": "hard",
+            "reponse": "1. Centralisation de la logique métier (une seule définition). 2. Réduction des allers-retours entre l'application et la base de données. 3. Possibilité d'utiliser la fonction directement dans des requêtes SQL (pour des rapports, par exemple). 4. Meilleure sécurité des données (la logique est côté serveur). 5. Indépendance du langage de l'application."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Quels sont les inconvénients potentiels de cette approche ?",
+            "niveau": "hard",
+            "reponse": "1. La logique devient moins portable (dépendante du SGBD). 2. Les fonctions stockées peuvent être plus difficiles à tester et à versionner. 3. Risque de surcharge du serveur de base de données. 4. Les développeurs doivent connaître le langage SQL procédural du SGBD."
+          },
+          {
+            "numero": "1.c",
+            "texte": "Proposer une architecture hybride qui combine les avantages de la logique applicative et des fonctions stockées.",
+            "niveau": "very hard",
+            "reponse": "On peut utiliser des fonctions stockées pour les calculs complexes qui sont utilisés dans plusieurs requêtes (comme la remise), tout en gardant une partie de la logique métier dans l'application. Par exemple, l'application appelle la fonction stockée pour calculer la remise, mais gère les règles de validation et les workflows. On peut aussi utiliser des vues matérialisées qui utilisent les fonctions stockées pour pré-calculer les données fréquemment utilisées."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Bonnes Pratiques des Fonctions Stockées",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Évaluer vos connaissances sur les bonnes pratiques de conception des fonctions stockées.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Associer chaque affirmation à la bonne pratique correspondante.",
+        "niveau": "medium",
+        "reponse": "Voir les sous-questions.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Une fonction qui ne modifie pas les données doit être déclarée avec ...",
+            "niveau": "medium",
+            "reponse": "READS SQL DATA (ou DETERMINISTIC si elle retourne toujours le même résultat pour les mêmes entrées)."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Pour éviter des résultats inattendus, il est recommandé de ...",
+            "niveau": "medium",
+            "reponse": "Gérer les cas d'erreur (comme les valeurs NULL ou les paramètres invalides) et retourner des valeurs par défaut appropriées."
+          },
+          {
+            "numero": "1.c",
+            "texte": "Pour faciliter la maintenance, il est conseillé de ...",
+            "niveau": "medium",
+            "reponse": "Nommer clairement les fonctions et les paramètres, et documenter le code avec des commentaires expliquant le but et les paramètres."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Pourquoi est-il déconseillé d'effectuer des opérations de modification de données (INSERT, UPDATE, DELETE) dans une fonction stockée qui sera utilisée dans une requête SELECT ?",
+        "niveau": "medium",
+        "reponse": "Cela peut entraîner des effets de bord inattendus et violer la pureté de la fonction. Une fonction utilisée dans un SELECT doit être déterministe ou au moins ne pas modifier les données pour garantir la cohérence des résultats.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

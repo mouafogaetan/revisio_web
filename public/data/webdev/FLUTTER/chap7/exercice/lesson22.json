@@ -1,0 +1,109 @@
+[
+  {
+    "intitule": "Conversion manuelle JSON → Dart",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Voici une réponse JSON brute obtenue depuis une API météo :</p><pre>{\"city\":\"Yaoundé\",\"temperature\":28,\"humidity\":75,\"conditions\":\"ensoleillé\"}</pre><p>En Dart/Flutter, on veut créer une classe <code>Weather</code> avec les champs <code>city</code> (String), <code>temperature</code> (int), <code>humidity</code> (int), <code>conditions</code> (String).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "À partir des connaissances de la leçon, écrire la méthode `fromJson(Map<String, dynamic> json)` retournant une instance de `Weather`.",
+        "niveau": "easy",
+        "reponse": "```dart\nfactory Weather.fromJson(Map<String, dynamic> json) {\n  return Weather(\n    city: json['city'],\n    temperature: json['temperature'],\n    humidity: json['humidity'],\n    conditions: json['conditions'],\n  );\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrire la méthode `toJson()` correspondante pour transformer un objet `Weather` en `Map<String, dynamic>`.",
+        "niveau": "easy",
+        "reponse": "```dart\nMap<String, dynamic> toJson() {\n  return {\n    'city': city,\n    'temperature': temperature,\n    'humidity': humidity,\n    'conditions': conditions,\n  };\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Automatisation avec json_serializable",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>On souhaite utiliser le package <code>json_serializable</code> pour générer automatiquement le code de sérialisation.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Citer les 3 dépendances à ajouter dans `pubspec.yaml` pour utiliser `json_serializable`.",
+        "niveau": "easy",
+        "reponse": "json_annotation, json_serializable (dev), build_runner (dev)",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Compléter le code suivant de la classe `Product` avec les annotations nécessaires et la méthode `fromJson` générée automatiquement :\n```dart\nimport 'package:json_annotation/json_annotation.dart';\n\npart 'product.g.dart';\n\n@JsonSerializable()\nclass Product {\n  final String name;\n  final double price;\n  \n  Product({required this.name, required this.price});\n  \n  factory Product.fromJson(Map<String, dynamic> json) => _$ProductFromJson(json);\n  Map<String, dynamic> toJson() => _$ProductToJson(this);\n}\n```\n<b>Justifier l’utilité de `part 'product.g.dart';`.</b>",
+        "niveau": "medium",
+        "reponse": "L'instruction `part` permet d'inclure le fichier généré automatiquement `product.g.dart` dans la même bibliothèque. Ce fichier contient les implémentations réelles de `_$ProductFromJson` et `_$ProductToJson`. Sans cette ligne, le code ne compile pas.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Correction d’une application météo locale",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Un élève a écrit une application Flutter qui récupère des données météo depuis une API. Il obtient un JSON comme celui-ci :</p><pre>{\"weather\":[{\"main\":\"Rain\",\"description\":\"light rain\"}],\"main\":{\"temp\":26.5,\"humidity\":82},\"name\":\"Douala\"}</pre><p>Il a créé cette classe incomplète et avec des erreurs.</p><pre>class WeatherResponse {\n  final String cityName;\n  final double temp;\n  final int humidity;\n  final String condition;\n\n  WeatherResponse({required this.cityName, required this.temp, required this.humidity, required this.condition});\n\n  factory WeatherResponse.fromJson(Map&lt;String, dynamic&gt; json) {\n    return WeatherResponse(\n      cityName: json['city'],      // erreur\n      temp: json['temp'],          // erreur\n      humidity: json['humidity'],  // erreur\n      condition: json['condition'] // erreur\n    );\n  }\n}</pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer en détail pourquoi le code actuel génère des erreurs à l’exécution. (Identifier chaque champ source et sa position réelle dans le JSON)",
+        "niveau": "medium",
+        "reponse": "Le JSON contient une structure imbriquée :\n- `cityName` se trouve dans `json['name']` et non `json['city']`\n- `temp` est dans `json['main']['temp']`\n- `humidity` est dans `json['main']['humidity']`\n- `condition` est dans `json['weather'][0]['main']` (ou `description`)\nLe code actuel ne navigue pas dans les sous-objets, donc tous les champs retourneront `null` (ou erreur si on force non-nullable).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Réécrire complètement la méthode `fromJson` corrigée en respectant la structure du JSON réel et en gérant la sécurité (null-safety).",
+        "niveau": "hard",
+        "reponse": "```dart\nfactory WeatherResponse.fromJson(Map<String, dynamic> json) {\n  return WeatherResponse(\n    cityName: json['name'] as String? ?? 'Inconnue',\n    temp: (json['main'] as Map<String, dynamic>?)?['temp'] as double? ?? 0.0,\n    humidity: (json['main'] as Map<String, dynamic>?)?['humidity'] as int? ?? 0,\n    condition: ((json['weather'] as List<dynamic>?)?.first as Map<String, dynamic>?)?['main'] as String? ?? 'Inconnu',\n  );\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Application carrière : profil développeur Cameroun",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Dans le cadre d’une application de gestion des profils développeurs à Douala, on reçoit ce JSON depuis une API REST locale :</p><pre>{\n  \"dev_id\": 101,\n  \"full_name\": \"Ngo Manga Judith\",\n  \"stack\": [\"Flutter\", \"Firebase\"],\n  \"years_exp\": 2,\n  \"portfolio\": {\n    \"url\": \"https://judith.dev\",\n    \"projects_count\": 4\n  }\n}</pre><p>Tu dois créer une classe `Developer` avec `json_serializable`.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire la classe `Developer` avec les annotations `@JsonKey` pour mapper `dev_id` vers `id`, `full_name` vers `fullName` et `portfolio.url` vers `portfolioUrl`.",
+        "niveau": "very hard",
+        "reponse": "```dart\nimport 'package:json_annotation/json_annotation.dart';\n\npart 'developer.g.dart';\n\n@JsonSerializable()\nclass Developer {\n  @JsonKey(name: 'dev_id')\n  final int id;\n  \n  @JsonKey(name: 'full_name')\n  final String fullName;\n  \n  final List<String> stack;\n  \n  @JsonKey(name: 'years_exp')\n  final int yearsExp;\n  \n  @JsonKey(name: 'portfolio.url')\n  final String portfolioUrl;\n  \n  Developer({\n    required this.id,\n    required this.fullName,\n    required this.stack,\n    required this.yearsExp,\n    required this.portfolioUrl,\n  });\n  \n  factory Developer.fromJson(Map<String, dynamic> json) => _$DeveloperFromJson(json);\n  Map<String, dynamic> toJson() => _$DeveloperToJson(this);\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Après avoir ajouté les dépendances, quelle commande terminal doit exécuter l’élève pour générer le fichier `developer.g.dart` ?",
+        "niveau": "medium",
+        "reponse": "```bash\nflutter pub run build_runner build\n```\nou\n```bash\ndart run build_runner build\n```\nL’option `--delete-conflicting-outputs` est parfois utilisée pour résoudre les conflits.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquer pourquoi, au Cameroun, maîtriser la conversion JSON ↔ Dart est crucial pour un développeur Flutter junior qui souhaite postuler dans une entreprise technologique locale.",
+        "niveau": "easy",
+        "reponse": "La plupart des applications mobiles communiquent avec des API backend (par exemple, services bancaires, e-commerce, santé, éducation). Sans conversion JSON/Dart, il est impossible d’afficher des données dynamiques. Les recruteurs camerounais testent régulièrement cette compétence en entretien technique, car elle montre la capacité à intégrer une application au monde réel.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

@@ -1,0 +1,152 @@
+[
+  {
+    "intitule": "Configuration de l'environnement de production",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous développez une application Node.js qui sera déployée en production. Vous devez configurer correctement les variables d'environnement et le mode de fonctionnement.</p><p>Rappel : <code>NODE_ENV</code> est une variable d'environnement standard dans l'écosystème Node.js.</p>",
+      "images": [
+        "schéma montrant la différence entre environnement de développement et environnement de production"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer quel est le rôle de la variable d'environnement NODE_ENV dans une application Node.js en production.",
+        "niveau": "medium",
+        "reponse": "NODE_ENV='production' indique à l'application qu'elle s'exécute en mode production. Cela désactive les logs de debugging, active le caching des vues et des modules, et optimise les performances (ex: Express réduit le verbose des erreurs).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Citer deux comportements qui changent automatiquement dans Express lorsque NODE_ENV est défini sur 'production'.",
+            "niveau": "medium",
+            "reponse": "1) Le caching des templates vues est activé. 2) Les messages d'erreur détaillés sont désactivés (affichage d'erreurs génériques). 3) Les logs deviennent moins verbeux."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Comparer l'utilisation de dotenv en développement et en production.",
+            "niveau": "hard",
+            "reponse": "En développement, dotenv charge un fichier .env local. En production, on utilise directement les variables d'environnement du système (hébergeur) sans fichier .env versionné. Le package dotenv peut être conditionnel (ex: si NODE_ENV !== 'production') mais ce n'est pas recommandé sur les PaaS."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Décrire les étapes nécessaires pour déployer une application Node.js sur Railway.app en utilisant Git.",
+        "niveau": "medium",
+        "reponse": "1) Initialiser un dépôt Git et pousser le code sur GitHub/GitLab. 2) Créer un compte Railway et se connecter avec GitHub. 3) Cliquer sur 'New Project' > 'Deploy from GitHub repo'. 4) Sélectionner le dépôt. 5) Railway détecte automatiquement le projet Node.js et lance 'npm start'. 6) Ajouter les variables d'environnement (ex: DATABASE_URL, JWT_SECRET) dans l'interface Railway. 7) Récupérer l'URL publique fournie.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Mise en place d'un reverse proxy Nginx pour une application Node.js",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous administrez un serveur Ubuntu sur lequel tourne une application Node.js écoutant sur le port 3000. Vous souhaitez exposer cette application sur le port 80 (HTTP) et 443 (HTTPS) en utilisant Nginx comme reverse proxy. Vous devez également servir des fichiers statiques (CSS, JS, images) directement depuis Nginx.</p><p>Le domaine configuré est : <code>api.ecole-cameroun.cm</code></p>",
+      "images": [
+        "schéma d'architecture d'un reverse proxy Nginx devant une application Node.js",
+        "exemple de fichier de configuration Nginx avec bloc server"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédiger la configuration Nginx complète (bloc server) pour répondre aux exigences suivantes : proxy vers localhost:3000 pour les requêtes dynamiques, servir les fichiers statiques depuis /var/www/ecole/public, et rediriger HTTP vers HTTPS.",
+        "niveau": "very hard",
+        "reponse": "```nginx\nserver {\n    listen 80;\n    server_name api.ecole-cameroun.cm;\n    return 301 https://$server_name$request_uri;\n}\n\nserver {\n    listen 443 ssl http2;\n    server_name api.ecole-cameroun.cm;\n\n    ssl_certificate /etc/letsencrypt/live/api.ecole-cameroun.cm/fullchain.pem;\n    ssl_certificate_key /etc/letsencrypt/live/api.ecole-cameroun.cm/privkey.pem;\n\n    location /static/ {\n        alias /var/www/ecole/public/;\n        expires 30d;\n        add_header Cache-Control \"public, immutable\";\n    }\n\n    location / {\n        proxy_pass http://localhost:3000;\n        proxy_http_version 1.1;\n        proxy_set_header Upgrade $http_upgrade;\n        proxy_set_header Connection 'upgrade';\n        proxy_set_header Host $host;\n        proxy_cache_bypass $http_upgrade;\n        proxy_set_header X-Real-IP $remote_addr;\n        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n        proxy_set_header X-Forwarded-Proto $scheme;\n    }\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Justifier l'utilisation des directives proxy_set_header X-Forwarded-For et X-Forwarded-Proto.",
+            "niveau": "hard",
+            "reponse": "X-Forwarded-For transmet l'adresse IP réelle du client à l'application Node.js (car Nginx agit comme proxy). X-Forwarded-Proto indique si la requête originale était en HTTP ou HTTPS, permettant à l'application de générer des URLs correctes (ex: redirections sécurisées)."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Proposer une commande pour vérifier la syntaxe du fichier Nginx avant rechargement.",
+            "niveau": "medium",
+            "reponse": "sudo nginx -t (ou nginx -t selon les droits). Cette commande valide la syntaxe et l'existence des fichiers référencés."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer pourquoi il est recommandé d'utiliser un reverse proxy (Nginx/Apache) devant Node.js en production plutôt que d'exposer Node.js directement sur le port 80.",
+        "niveau": "medium",
+        "reponse": "1) Nginx gère mieux les connexions concurrentes (event-driven) et les fichiers statiques. 2) Node.js n'a pas besoin de droits root (port < 1024). 3) Nginx peut faire du load balancing, du cache, de la compression gzip. 4) Gestion simplifiée du HTTPS/SSL. 5) Protection contre certaines attaques (slowloris).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Bonnes pratiques de déploiement continu",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Votre équipe développe une API Node.js pour une plateforme éducative camerounaise. Vous utilisez GitHub et souhaitez mettre en place un pipeline de déploiement continu vers un serveur de production (VPS) ou vers Railway. Répondez aux questions suivantes.</p>",
+      "images": [
+        "schéma d'un pipeline CI/CD avec GitHub Actions",
+        "exemple de fichier YAML pour GitHub Actions"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevoir les étapes minimales d'un workflow GitHub Actions pour déployer automatiquement sur Railway à chaque push sur la branche 'main'.",
+        "niveau": "hard",
+        "reponse": "```yaml\nname: Deploy to Railway\non:\n  push:\n    branches: [ main ]\njobs:\n  deploy:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v3\n      - uses: actions/setup-node@v3\n        with:\n          node-version: '18'\n      - run: npm ci\n      - run: npm test\n      - uses: railwayup/[email\u00a0protected]\n        with:\n          railway_token: ${{ secrets.RAILWAY_TOKEN }}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Identifier les secrets qui doivent être stockés dans GitHub pour que ce workflow fonctionne.",
+            "niveau": "medium",
+            "reponse": "RAILWAY_TOKEN (jeton d'API Railway) et éventuellement des variables comme DATABASE_URL si elles ne sont pas déjà définies dans Railway. Ne jamais versionner ces secrets dans le code."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Décrire comment gérer les variables d'environnement spécifiques à la production (ex: clés API externes) sans les exposer dans le code source.",
+            "niveau": "medium",
+            "reponse": "Elles sont définies directement dans l'interface de la plateforme d'hébergement (Railway dashboard, Heroku config vars, ou .env sur VPS avec fichier non versionné). Les secrets sont injectés au moment du déploiement via l'environnement du serveur."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Discuter les avantages et inconvénients d'un déploiement sur Platform as a Service (Railway/Heroku) par rapport à un VPS (DigitalOcean, AWS EC2) dans le contexte camerounais (latence, coût, contrôle).",
+        "niveau": "hard",
+        "reponse": "Avantages PaaS : configuration simplifiée, mise à l'échelle automatique, gestion SSL/domaine intégrée, facturation à l'usage. Inconvénients PaaS : coût potentiellement élevé à grande échelle, moins de contrôle sur le système, latence si data center distant. Avantages VPS : contrôle total, coût fixe prévisible, choix de la localisation (ex: Afrique du Sud). Inconvénients VPS : administration système requise, sécurisation manuelle, configuration plus complexe.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Dépannage d'un déploiement en production",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Après avoir déployé votre application Node.js sur un VPS avec Nginx comme reverse proxy, vous constatez que votre API renvoie des erreurs 502 Bad Gateway. Vous avez vérifié que l'application Node.js tourne bien sur le port 3000 avec <code>pm2 list</code>.</p>",
+      "images": [
+        "capture d'écran d'une erreur 502 Bad Gateway dans le navigateur",
+        "exemple de logs Nginx avec erreur 502"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Énumérer quatre causes possibles de l'erreur 502 Bad Gateway dans cette configuration et proposer une commande de diagnostic pour chacune.",
+        "niveau": "hard",
+        "reponse": "1) Nginx ne parvient pas à joindre localhost:3000 → 'curl http://localhost:3000' et 'netstat -tlnp | grep 3000'. 2) Node.js écoute sur 127.0.0.1 et Nginx sur localhost (IPv4 vs IPv6) → 'ss -lntp | grep node'. 3) Firewall bloquant (UFW) → 'sudo ufw status'. 4) Temps mort (timeout) trop court → vérifier 'proxy_read_timeout' et logs 'upstream timed out'.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Rédiger la commande PM2 pour redémarrer l'application et afficher les logs en temps réel afin de déboguer l'erreur.",
+        "niveau": "easy",
+        "reponse": "```bash\npm2 restart all\npm2 logs --lines 100\n```\nOu pour une application spécifique : `pm2 restart monApp && pm2 logs monApp --lines 200`",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

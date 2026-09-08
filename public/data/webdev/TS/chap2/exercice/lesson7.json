@@ -1,0 +1,202 @@
+[
+  {
+    "intitule": "Définir les union types et intersection types",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>TypeScript permet de combiner des types grâce aux union (`|`) et aux intersection (`&`).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer la différence entre un type union (`string | number`) et un type intersection (`A & B`).",
+        "niveau": "easy",
+        "reponse": "Un **type union** (ou type somme) représente une valeur qui peut être de l'un des types membres. Exemple : `string | number` accepte soit une chaîne, soit un nombre. Un **type intersection** combine plusieurs types en un seul : une valeur de type `A & B` doit satisfaire à la fois `A` et `B` (avoir toutes les propriétés de `A` et toutes celles de `B`). Les unions sont utilisées pour l'alternance, les intersections pour la composition.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Donner un exemple concret d'utilisation d'un type union.",
+        "niveau": "easy",
+        "reponse": "Exemple : une fonction `formatId` qui accepte un identifiant pouvant être soit un nombre, soit une chaîne. `function formatId(id: number | string): string { return `ID-${id}`; }`. Le paramètre `id` pourra recevoir `42` ou `\"abc\"`.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Distinguer union et intersection à travers des exemples",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>On définit les types suivants :</p><pre><code>interface Person {\n  name: string;\n  age: number;\n}\n\ninterface Employee {\n  employeeId: number;\n  department: string;\n}</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire les propriétés d'une valeur de type `Person | Employee` (union) et d'une valeur de type `Person & Employee` (intersection).",
+        "niveau": "medium",
+        "reponse": "`Person | Employee` : une valeur peut être soit un objet avec `name` et `age` (mais pas forcément `employeeId`/`department`), soit un objet avec `employeeId` et `department` (mais pas forcément `name`/`age`). `Person & Employee` : une valeur doit avoir **toutes** les propriétés : `name`, `age`, `employeeId`, `department`. Elle doit satisfaire les deux interfaces simultanément.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Quel est le problème avec l'assignation suivante : `let x: Person | Employee = { name: \"Alice\", age: 30, employeeId: 42 };` ?",
+        "niveau": "medium",
+        "reponse": "Il n'y a pas de problème. L'objet a `name` et `age` (satisfait `Person`) et `employeeId` (est présent). Le type union accepte l'objet car il correspond au moins à l'un des types (ici `Person`). L'objet peut avoir des propriétés supplémentaires (comme `employeeId`) sans problème.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Appliquer le narrowing avec typeof",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Écrire une fonction `getLength` qui accepte un paramètre de type `string | string[] | null` et retourne la longueur (length) si c'est une chaîne ou un tableau, ou 0 si la valeur est `null`.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémenter la fonction avec un narrowing approprié.",
+        "niveau": "medium",
+        "reponse": "```typescript\nfunction getLength(value: string | string[] | null): number {\n  if (value === null) {\n    return 0;\n  }\n  return value.length;\n}\n```\nAprès la vérification `value === null`, TypeScript sait que `value` ne peut être que `string | string[]`, qui ont tous les deux une propriété `length`. On peut aussi écrire `return value?.length ?? 0;` en utilisant l'optional chaining.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Que se passe-t-il si on vérifie d'abord `typeof value === \"object\"` ? Expliquer le problème.",
+        "niveau": "hard",
+        "reponse": "`typeof null` retourne `\"object\"` en JavaScript (bug historique). Donc `if (typeof value === \"object\")` sera vrai pour `null` et pour les tableaux. Il faudrait affiner davantage : `if (value !== null && typeof value === \"object\")` pour identifier les tableaux, puis `if (typeof value === \"string\")` pour les chaînes. La meilleure approche reste de traiter `null` explicitement en premier, comme dans la réponse 1.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Utiliser le narrowing avec la propriété discriminante (tagged union)",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Définir un type union `Shape` qui peut être un `Circle` (avec `kind: \"circle\"` et `radius: number`) ou un `Rectangle` (avec `kind: \"rectangle\"`, `width: number`, `height: number`). Écrire une fonction `getArea` qui retourne l'aire de la forme.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Définir les types et implémenter la fonction `getArea`.",
+        "niveau": "hard",
+        "reponse": "```typescript\ninterface Circle {\n  kind: \"circle\";\n  radius: number;\n}\n\ninterface Rectangle {\n  kind: \"rectangle\";\n  width: number;\n  height: number;\n}\n\ntype Shape = Circle | Rectangle;\n\nfunction getArea(shape: Shape): number {\n  if (shape.kind === \"circle\") {\n    return Math.PI * shape.radius ** 2;\n  }\n  return shape.width * shape.height;\n}\n```\nLa propriété `kind` (champ discriminant) permet à TypeScript de savoir, après la vérification, quel type exact est utilisé. Dans la branche `shape.kind === \"circle\"`, `shape` est automatiquement traité comme `Circle` ; dans le `else`, comme `Rectangle`.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Que se passe-t-il si on ajoute un troisième type `Square` sans modifier le `if` ?",
+        "niveau": "hard",
+        "reponse": "Si on ajoute `Square` à l'union sans modifier `getArea`, TypeScript signalera une erreur de compilation indiquant que la fonction ne gère pas tous les cas (exhaustiveness checking). Pour résoudre, on peut ajouter une clause `default` dans un `switch` qui lève une erreur, ou ajouter un `if` pour `square`. C'est un avantage des unions discriminées.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Manipuler des types intersection pour combiner des objets",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>On a deux interfaces : `User` avec `name: string` et `email: string`, et `Preferences` avec `theme: \"light\" | \"dark\"` et `notifications: boolean`. Créer un type `UserWithPreferences` qui est l'intersection des deux. Puis écrire une fonction `createUserProfile` qui prend un objet de ce type et retourne une chaîne de description.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Définir le type `UserWithPreferences` et implémenter la fonction.",
+        "niveau": "medium",
+        "reponse": "```typescript\ninterface User {\n  name: string;\n  email: string;\n}\n\ninterface Preferences {\n  theme: \"light\" | \"dark\";\n  notifications: boolean;\n}\n\ntype UserWithPreferences = User & Preferences;\n\nfunction createUserProfile(profile: UserWithPreferences): string {\n  return `${profile.name} (${profile.email}) utilise le thème ${profile.theme}, notifications ${profile.notifications ? \"activées\" : \"désactivées\"}`;\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Que se passe-t-il si on essaie d'utiliser une intersection avec des propriétés de types incompatibles ? Exemple : `type T = { a: string } & { a: number }`.",
+        "niveau": "hard",
+        "reponse": "Le type résultant serait `{ a: string & number }`. Comme `string & number` n'a aucune valeur possible (jamais une valeur n'est à la fois une chaîne et un nombre), ce type est équivalent à `never`. Il est impossible d'assigner une valeur à une variable de ce type. TypeScript ne génère pas d'erreur à la définition, mais l'utilisation devient impossible.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Maîtriser le narrowing avec l'opérateur in",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Écrire une fonction `processValue` qui accepte un paramètre de type `{ value: number } | { count: number }`. La fonction doit afficher la valeur (value) ou le double du count selon le type reçu.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémenter la fonction en utilisant l'opérateur `in` pour le narrowing.",
+        "niveau": "medium",
+        "reponse": "```typescript\nfunction processValue(data: { value: number } | { count: number }): void {\n  if (\"value\" in data) {\n    console.log(\"Value:\", data.value);\n  } else {\n    console.log(\"Double du count:\", data.count * 2);\n  }\n}\n```\n`\"value\" in data` permet de vérifier si la propriété `value` existe dans l'objet. TypeScript affine alors le type : dans le `if`, `data` est traité comme `{ value: number }` ; dans le `else`, comme `{ count: number }` (car l'union n'a que ces deux possibilités et l'une a été exclue).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Pourquoi ne peut-on pas utiliser `typeof data === \"object\"` ici pour distinguer les cas ?",
+        "niveau": "hard",
+        "reponse": "Les deux types sont des objets, donc `typeof data === \"object\"` serait vrai pour les deux cas et ne permettrait pas de les distinguer. `in` vérifie la présence d'une propriété spécifique, ce qui est pertinent quand les types ont des structures différentes (propriétés distinctes).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyser les erreurs de narrowing incorrect",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Voici un code qui tente de faire du narrowing, mais contient une erreur :</p><pre><code>function process(data: string | number) {\n  if (data) {\n    return data.toUpperCase();\n  }\n  return 0;\n}</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier l'erreur et expliquer pourquoi TypeScript la signale.",
+        "niveau": "hard",
+        "reponse": "L'erreur est que `data.toUpperCase()` n'existe pas pour le type `number`. Le narrowing par `if (data)` vérifie seulement que `data` n'est pas une valeur falsy (0, \"\", false, null, undefined, NaN). Mais `data` pourrait être le nombre `0` (falsy, donc non exécuté) ou une chaîne vide (falsy), mais si `data` est un nombre non nul comme `42`, la condition est vraie (truthy) et on appelle `toUpperCase()` sur un nombre, ce qui est impossible. TypeScript ne peut pas garantir que `data` est une chaîne dans cette branche, d'où l'erreur.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer une correction pour que le code fonctionne.",
+        "niveau": "hard",
+        "reponse": "Il faut utiliser un narrowing plus précis : `if (typeof data === \"string\")`. Ainsi, le code devient :\n```typescript\nfunction process(data: string | number) {\n  if (typeof data === \"string\") {\n    return data.toUpperCase();\n  }\n  return data * 2; // ou une autre opération sur le nombre\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Créer une fonction générique avec union types",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Écrire une fonction `safeParse` qui prend une chaîne JSON et retourne soit l'objet parsé (de type générique `T`), soit une erreur avec un message. La fonction doit retourner un type union `{ success: true; data: T } | { success: false; error: string }`.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémenter la fonction `safeParse` avec le typage approprié.",
+        "niveau": "very hard",
+        "reponse": "```typescript\ntype Result<T> =\n  | { success: true; data: T }\n  | { success: false; error: string };\n\nfunction safeParse<T>(jsonString: string): Result<T> {\n  try {\n    const data = JSON.parse(jsonString) as T;\n    return { success: true, data };\n  } catch (error) {\n    return {\n      success: false,\n      error: error instanceof Error ? error.message : \"Erreur inconnue\"\n    };\n  }\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Utiliser la fonction pour parser un objet `{ name: string; age: number }` et afficher le résultat.",
+        "niveau": "very hard",
+        "reponse": "```typescript\ninterface Person {\n  name: string;\n  age: number;\n}\n\nconst result = safeParse<Person>('{\"name\":\"Alice\",\"age\":30}');\n\nif (result.success) {\n  console.log(`Nom: ${result.data.name}, Âge: ${result.data.age}`);\n} else {\n  console.error(`Erreur: ${result.error}`);\n}\n```\nLe narrowing par `result.success` permet à TypeScript de savoir que dans le `if`, `result` est de type `{ success: true; data: Person }` et donc `result.data` est accessible ; dans le `else`, `result` a `success: false` et `error`.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

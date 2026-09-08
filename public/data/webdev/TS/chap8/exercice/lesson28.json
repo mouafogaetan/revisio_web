@@ -1,0 +1,131 @@
+[
+  {
+    "intitule": "Configuration des décorateurs",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Les décorateurs sont une fonctionnalité expérimentale de TypeScript. Pour les utiliser, il faut activer une option spécifique dans le fichier <code>tsconfig.json</code>.</p><p><strong>Question :</strong> Quelle est l'option à activer dans <code>tsconfig.json</code> pour pouvoir utiliser les décorateurs ? Quelle est sa valeur ?</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifiez et expliquez la configuration nécessaire dans tsconfig.json pour activer les décorateurs.",
+        "niveau": "easy",
+        "reponse": "L'option à activer est `experimentalDecorators` et elle doit être définie à `true`. La configuration complète est :\n```json\n{\n  \"compilerOptions\": {\n    \"experimentalDecorators\": true\n  }\n}\n```\nIl est également recommandé d'activer `emitDecoratorMetadata` pour utiliser les métadonnées des décorateurs.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Décorateur de classe - Journalisation",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous travaillez pour une entreprise de e-commerce. L'équipe souhaite ajouter un système de journalisation (logging) automatique pour toutes les classes qui gèrent des commandes. Chaque fois qu'une instance de ces classes est créée, on doit afficher dans la console le message : <code>\"[NOM_CLASSE] Instance créée à [DATE_HEURE]\"</code>.</p><p>Un développeur a déjà commencé à implémenter le décorateur mais il est incomplet.</p><pre><code>function Logger(className: string) {\n  return function (constructor: Function) {\n    // Code manquant ici\n  };\n}\n\n@Logger(\"Gestionnaire\")\nclass GestionnaireCommandes {\n  constructor(public client: string) {}\n}\n\nconst gestionnaire = new GestionnaireCommandes(\"Alice\");\n// Devrait afficher : [Gestionnaire] Instance créée à 2024-01-15 14:30:00</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Complétez le décorateur `Logger` pour qu'il affiche le message de journalisation lors de la création de chaque instance.",
+        "niveau": "medium",
+        "reponse": "```typescript\nfunction Logger(className: string) {\n  return function (constructor: Function) {\n    const originalConstructor = constructor;\n    \n    const newConstructor: any = function (...args: any[]) {\n      const instance = new originalConstructor(...args);\n      const date = new Date().toLocaleString();\n      console.log(`[${className}] Instance créée à ${date}`);\n      return instance;\n    };\n    \n    newConstructor.prototype = originalConstructor.prototype;\n    return newConstructor;\n  };\n}\n```\nOu une version plus simple en remplaçant directement le constructeur.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez pourquoi on doit retourner un nouveau constructeur plutôt que de modifier directement l'original.",
+            "niveau": "medium",
+            "reponse": "Il faut retourner un nouveau constructeur car le décorateur de classe remplace le constructeur original. En retournant un nouveau constructeur qui enveloppe l'original, on peut ajouter du comportement (comme le logging) avant ou après l'appel au constructeur original tout en conservant l'héritage et les prototypes correctement."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Décorateur de méthode - Contrôle d'accès",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Dans une application bancaire, certaines méthodes sensibles (comme <code>effectuerVirement</code>) ne doivent être accessibles qu'aux utilisateurs ayant le rôle \"admin\" ou \"manager\".</p><p>Créez un décorateur <code>@AutoriserRole(['admin', 'manager'])</code> qui vérifie le rôle de l'utilisateur avant d'exécuter la méthode. Si l'utilisateur n'a pas le bon rôle, la méthode ne doit pas s'exécuter et un message d'erreur <code>\"Accès refusé : rôle insuffisant\"</code> doit être affiché.</p><p>Le rôle de l'utilisateur est stocké dans une propriété <code>userRole</code> de l'instance.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémentez le décorateur `@AutoriserRole` avec sa factory.",
+        "niveau": "hard",
+        "reponse": "```typescript\nfunction AutoriserRole(rolesAutorises: string[]) {\n  return function (\n    target: any,\n    propertyKey: string,\n    descriptor: PropertyDescriptor\n  ) {\n    const methodeOriginale = descriptor.value;\n    \n    descriptor.value = function (...args: any[]) {\n      if (rolesAutorises.includes(this.userRole)) {\n        return methodeOriginale.apply(this, args);\n      } else {\n        console.error(\"Accès refusé : rôle insuffisant\");\n        return null;\n      }\n    };\n    \n    return descriptor;\n  };\n}\n\n// Utilisation\nclass BanqueService {\n  userRole: string;\n  \n  constructor(role: string) {\n    this.userRole = role;\n  }\n  \n  @AutoriserRole(['admin', 'manager'])\n  effectuerVirement(montant: number, destinataire: string) {\n    console.log(`Virement de ${montant}€ à ${destinataire} effectué`);\n  }\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quels sont les trois paramètres reçus par un décorateur de méthode ? Expliquez leur rôle.",
+            "niveau": "medium",
+            "reponse": "1. `target` : le prototype de la classe (pour une méthode d'instance) ou le constructeur (pour une méthode statique).\n2. `propertyKey` : le nom de la méthode décorée (string ou symbol).\n3. `descriptor` : le PropertyDescriptor de la méthode, qui contient des propriétés comme `value` (la fonction originale), `writable`, `enumerable`, `configurable`. C'est en modifiant `descriptor.value` qu'on peut wrapper la méthode originale."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Décorateur de propriété - Validation",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans un formulaire d'inscription, on souhaite valider automatiquement les propriétés des objets. Créez un décorateur <code>@MinLength(3)</code> qui vérifie qu'une propriété de type chaîne a une longueur minimale de 3 caractères. Si la validation échoue, une erreur <code>\"La propriété [nom] doit contenir au moins X caractères\"</code> doit être levée lors de l'affectation.</p><p><strong>Contrainte technique :</strong> Utilisez un décorateur de propriété avec un accesseur (getter/setter) pour intercepter les modifications.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémentez le décorateur `@MinLength` qui valide la longueur minimale d'une propriété string.",
+        "niveau": "medium",
+        "reponse": "```typescript\nfunction MinLength(min: number) {\n  return function (target: any, propertyKey: string) {\n    let valeur: string;\n    \n    const getter = function () {\n      return valeur;\n    };\n    \n    const setter = function (nouvelleValeur: string) {\n      if (nouvelleValeur.length < min) {\n        throw new Error(\n          `La propriété ${propertyKey} doit contenir au moins ${min} caractères. ` +\n          `Valeur actuelle : \"${nouvelleValeur}\" (${nouvelleValeur.length} caractères)`\n        );\n      }\n      valeur = nouvelleValeur;\n    };\n    \n    Object.defineProperty(target, propertyKey, {\n      get: getter,\n      set: setter,\n      enumerable: true,\n      configurable: true\n    });\n  };\n}\n\n// Utilisation\nclass Utilisateur {\n  @MinLength(3)\n  nom: string;\n  \n  constructor(nom: string) {\n    this.nom = nom;\n  }\n}\n\nconst user = new Utilisateur(\"Alice\"); // OK\nconst user2 = new Utilisateur(\"Bo\"); // Erreur : doit contenir au moins 3 caractères\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Décorateur de paramètre - Injection de dépendances",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Dans le framework NestJS, les décorateurs de paramètre sont très utilisés pour l'injection de dépendances. Inspiré de ce concept, créez un décorateur <code>@Inject('serviceName')</code> qui permet d'injecter automatiquement un service dans un paramètre de méthode.</p><p>Vous devez également créer un conteneur d'injection simple (<code>Container</code>) qui enregistre les services et les instancie. Le décorateur doit remplacer le paramètre original par l'instance du service correspondant au moment de l'appel.</p><p>Structure attendue :</p><pre><code>class UserController {\n  getUser(@Inject('UserService') userService: any) {\n    return userService.getUsers();\n  }\n}\n\nconst controller = new UserController();\ncontroller.getUser(); // userService doit être automatiquement injecté\n</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémentez le décorateur `@Inject` et le conteneur d'injection associé.",
+        "niveau": "very hard",
+        "reponse": "```typescript\n// Conteneur d'injection\nclass Container {\n  private static services = new Map<string, any>();\n  \n  static register(name: string, service: any) {\n    this.services.set(name, service);\n  }\n  \n  static get(name: string) {\n    const service = this.services.get(name);\n    if (!service) {\n      throw new Error(`Service ${name} non trouvé`);\n    }\n    return service;\n  }\n}\n\n// Décorateur de paramètre\nconst INJECTION_METADATA_KEY = Symbol('inject_params');\n\nfunction Inject(serviceName: string) {\n  return function (target: any, methodName: string, parameterIndex: number) {\n    const existingInjections = Reflect.getOwnMetadata(INJECTION_METADATA_KEY, target, methodName) || [];\n    existingInjections.push({ index: parameterIndex, serviceName });\n    Reflect.defineMetadata(INJECTION_METADATA_KEY, existingInjections, target, methodName);\n  };\n}\n\n// Fonction pour wrapper les méthodes avec injection\nfunction applyInjection(target: any) {\n  const prototype = target.prototype;\n  const methodNames = Object.getOwnPropertyNames(prototype).filter(\n    name => name !== 'constructor' && typeof prototype[name] === 'function'\n  );\n  \n  methodNames.forEach(methodName => {\n    const originalMethod = prototype[methodName];\n    const injections = Reflect.getOwnMetadata(INJECTION_METADATA_KEY, prototype, methodName) || [];\n    \n    prototype[methodName] = function (...args: any[]) {\n      injections.forEach((injection: any) => {\n        args[injection.index] = Container.get(injection.serviceName);\n      });\n      return originalMethod.apply(this, args);\n    };\n  });\n}\n\n// Utilisation\nclass UserService {\n  getUsers() {\n    return ['Alice', 'Bob', 'Charlie'];\n  }\n}\n\nContainer.register('UserService', new UserService());\n\n@applyInjection\nclass UserController {\n  getUser(@Inject('UserService') userService: any) {\n    return userService.getUsers();\n  }\n}\n\nconst controller = new UserController();\nconsole.log(controller.getUser()); // ['Alice', 'Bob', 'Charlie']\n```\n*Note : Cette implémentation nécessite l'activation de `emitDecoratorMetadata` et l'installation de `reflect-metadata`.*",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quelle est la principale difficulté technique des décorateurs de paramètre par rapport aux autres types de décorateurs ?",
+            "niveau": "hard",
+            "reponse": "La principale difficulté est que les décorateurs de paramètre ne peuvent pas modifier directement la valeur du paramètre. Ils ne reçoivent que le `target`, le nom de la méthode et l'index du paramètre. Pour appliquer l'injection, il faut : 1) stocker les métadonnées via `Reflect.defineMetadata`, 2) créer un décorateur de classe (ou une fonction wrapper) qui parcourt toutes les méthodes de la classe, récupère les métadonnées et remplace chaque méthode par une version qui injecte les dépendances avant l'appel. Sans cette étape supplémentaire, l'injection ne peut pas se faire automatiquement."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Cas d'usage des décorateurs",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Les décorateurs sont largement utilisés dans certains frameworks populaires.</p><p><strong>Question :</strong> Citez deux frameworks JavaScript/TypeScript qui utilisent intensivement les décorateurs et donnez un exemple concret d'utilisation dans chacun.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifiez deux frameworks utilisant les décorateurs et expliquez comment ils les exploitent.",
+        "niveau": "easy",
+        "reponse": "1. **Angular** : Utilise les décorateurs pour définir les composants (`@Component`), les modules (`@NgModule`), les services (`@Injectable`), les inputs/outputs (`@Input()`, `@Output()`). Exemple : `@Component({ selector: 'app-root', templateUrl: './app.component.html' })`\n\n2. **NestJS** : Utilise les décorateurs pour les contrôleurs (`@Controller()`), les routes (`@Get()`, `@Post()`), l'injection de dépendances (`@Injectable()`), les paramètres (`@Body()`, `@Param()`, `@Query()`). Exemple : `@Controller('users')` et `@Get(':id')` pour définir une route REST.\n\nAutres frameworks : TypeORM (`@Entity()`, `@Column()`), TypeGraphQL (`@ObjectType()`, `@Field()`), Vue.js (avec vue-property-decorator).",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

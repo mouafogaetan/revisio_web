@@ -1,0 +1,153 @@
+[
+  {
+    "intitule": "Comprendre le principe du VPN (tunnel chiffré)",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Observez le schéma ci-dessous d'un télétravailleur se connectant au réseau de son entreprise via un VPN. Expliquez le rôle du tunnel chiffré et pourquoi on utilise le terme \"tunnel\".</p>",
+      "images": [
+        "Schéma d'un VPN site-to-site et client-to-site : un ordinateur portable à domicile se connecte à Internet, puis à un serveur VPN dans l'entreprise, avec un tunnel chiffré en pointillé."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez ce qu’est un tunnel chiffré dans le contexte d’un VPN.",
+        "niveau": "easy",
+        "reponse": "Un tunnel chiffré est une connexion logique établie entre deux points (client VPN et serveur VPN) où toutes les données échangées sont encapsulées et cryptées. Même si elles traversent l’Internet public, elles ne sont pas lisibles par des tiers.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi parle-t-on de « tunnel » plutôt que de simple connexion ?",
+            "niveau": "easy",
+            "reponse": "Parce que les données « passent à l’intérieur » d’un conduit sécurisé (le tunnel) alors que le réseau extérieur (Internet) ne voit qu’un flux chiffré sans comprendre son contenu."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Comparaison des protocoles VPN",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous êtes consultant en sécurité pour une PME camerounaise. L’entreprise souhaite connecter ses deux bureaux (Douala et Yaoundé) via un VPN permanent (site-à-site) et permettre à certains employés de se connecter à distance (client-serveur). On vous demande de choisir entre <strong>IPsec</strong>, <strong>OpenVPN</strong> et <strong>WireGuard</strong>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Comparez ces trois protocoles selon les critères : facilité de configuration, performance, sécurité et compatibilité multi-plateforme.",
+        "niveau": "medium",
+        "reponse": "- IPsec : très sécurisé, standard industriel, mais configuration complexe (surtout site-à-site). Bonnes performances. Compatible avec presque tout matériel réseau.\n- OpenVPN : très flexible, bonne sécurité, configuration modérée, performances correctes. Multi-plateforme.\n- WireGuard : configuration très simple, excellentes performances, code base réduite donc moins de failles potentielles. Encore récent mais support grandissant.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pour le cas site-à-site (bureaux fixes), quel protocole recommandez-vous ? Justifiez.",
+            "niveau": "medium",
+            "reponse": "IPsec (ou WireGuard selon l’existant). IPsec est le plus répandu sur les firewalls d’entreprise. WireGuard plus simple si le matériel le supporte. OpenVPN reste possible mais moins optimisé pour site-à-site pur."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Pour le télétravail (client-serveur), lequel est le plus adapté ? Pourquoi ?",
+            "niveau": "medium",
+            "reponse": "OpenVPN ou WireGuard. OpenVPN est très fiable et bien intégré dans les outils de gestion d’accès distant. WireGuard gagne du terrain pour sa rapidité et simplicité, notamment sous Linux/Android."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Configuration d’un VPN client-serveur avec WireGuard (simulation)",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous êtes administrateur système. Vous devez configurer un VPN WireGuard pour qu’un employé (IP client : 10.0.0.2/24) accède au réseau interne de l’entreprise (192.168.1.0/24) via le serveur VPN (IP publique 203.0.113.10). Le serveur a une IP interne 192.168.1.250. Écrivez les extraits de configuration (format WireGuard) pour le serveur et pour le client.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez la configuration <code>wg0.conf</code> pour le serveur VPN.",
+        "niveau": "hard",
+        "reponse": "[Interface]\nAddress = 10.0.0.1/24\nPrivateKey = (clé privée serveur)\nListenPort = 51820\nPostUp = iptables -A FORWARD -i wg0 -j ACCEPT; iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE\nPostDown = iptables -D FORWARD -i wg0 -j ACCEPT; iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE\n\n[Peer]\nPublicKey = (clé publique client)\nAllowedIPs = 10.0.0.2/32",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposez la configuration pour le client (ordinateur de l’employé).",
+            "niveau": "hard",
+            "reponse": "[Interface]\nAddress = 10.0.0.2/24\nPrivateKey = (clé privée client)\nDNS = 192.168.1.1\n\n[Peer]\nPublicKey = (clé publique serveur)\nEndpoint = 203.0.113.10:51820\nAllowedIPs = 192.168.1.0/24, 10.0.0.0/24\nPersistentKeepalive = 25"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Que permet la directive <code>AllowedIPs = 192.168.1.0/24, 10.0.0.0/24</code> du côté client ?",
+            "niveau": "medium",
+            "reponse": "Elle indique au client que tout trafic destiné au réseau local de l’entreprise (192.168.1.0/24) ou au réseau VPN (10.0.0.0/24) doit passer par le tunnel WireGuard. Le reste du trafic (ex: navigation web) sort directement par la passerelle par défaut du client."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Analyser un problème de connexion VPN",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Un télétravailleur se plaint : \"Je me connecte au VPN (OpenVPN) avec succès, je reçois une IP <strong>10.8.0.6</strong>, mais je ne peux pas accéder au serveur de fichiers de l’entreprise dont l’adresse est <strong>192.168.10.5</strong>. Par contre, je peux pinger le serveur VPN (10.8.0.1).\"</p><p>À partir de cette description, diagnostiquez la panne et proposez trois causes possibles.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifiez et classez les causes probables de ce problème, en justifiant chaque hypothèse.",
+        "niveau": "very hard",
+        "reponse": "1. Routage manquant sur le serveur VPN : Le serveur ne sait pas rediriger le trafic vers 192.168.10.0/24 (pas de NAT ou de route).\n2. Absence de poussée de route côté client : Le client ne reçoit pas l’instruction d’envoyer le trafic pour 192.168.10.0/24 via le tunnel.\n3. Pare-feu sur le serveur cible (192.168.10.5) bloquant les paquets venant du VPN (10.8.0.0/24).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quelle commande utiliser sur le client pour vérifier si la route vers 192.168.10.0/24 existe ?",
+            "niveau": "medium",
+            "reponse": "Sur Linux : <code>ip route show</code> ou <code>route -n</code>. Sur Windows : <code>route print</code>. On cherche une ligne mentionnant 192.168.10.0 avec passerelle via l’interface du tunnel (ex: 10.8.0.1)."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Proposez une correction sur le serveur OpenVPN (fichier server.conf) pour pousser automatiquement la route du réseau 192.168.10.0/24 aux clients.",
+            "niveau": "hard",
+            "reponse": "Ajouter la ligne : <code>push \"route 192.168.10.0 255.255.255.0\"</code> puis redémarrer OpenVPN. Ainsi chaque client recevra cette route statique au moment de la connexion."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Avantages et risques d’un VPN pour une entreprise",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un dirigeant d’entreprise hésite à déployer un VPN pour ses commerciaux en déplacement. Il craint que cela ralentisse le travail ou augmente les risques de sécurité.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Énumérez trois avantages majeurs d’un VPN pour cette entreprise.",
+        "niveau": "easy",
+        "reponse": "1. Confidentialité des données en transit (chiffrement).\n2. Accès sécurisé aux ressources internes depuis l’extérieur.\n3. Protection contre l’espionnage sur les réseaux publics (Wi-Fi hôtel, aéroport).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Citez deux risques ou inconvénients que le dirigeant devrait connaître.",
+            "niveau": "medium",
+            "reponse": "1. Ralentissement possible du débit à cause du chiffrement/déchiffrement.\n2. Risque de compromission si un client VPN est infecté (porte dérobée vers le réseau interne) → d’où l’importance du contrôle d’accès et du poste sécurisé."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Proposez une mesure pour réduire le risque lié à un poste infecté se connectant au VPN.",
+            "niveau": "hard",
+            "reponse": "Mettre en place un NAC (Network Access Control) ou une vérification d’intégrité du poste avant connexion (posture check) : antivirus à jour, pare-feu actif, système patché. Solution comme OpenVPN avec check de script ou un client qui impose des règles."
+          }
+        ]
+      }
+    ]
+  }
+]

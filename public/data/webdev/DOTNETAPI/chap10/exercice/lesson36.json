@@ -1,0 +1,112 @@
+[
+  {
+    "intitule": "Santé d'une API : Diagnostic et surveillance",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous êtes administrateur DevOps d’une API .NET Core 8 déployée en production sur Azure Container Instances. Les utilisateurs signalent des lenteurs et des erreurs 500 intermittentes. Vous décidez d’implémenter des <strong>health checks</strong> pour surveiller la disponibilité de l’API, de la base de données SQL Server et d’un service externe (exemple : une API de météo).</p><p>Questions :</p>",
+      "images": [
+        "schéma d’une API .NET avec health checks vers une base de données et un service externe",
+        "exemple de réponse JSON de l’endpoint /health avec status Healthy/Degraded/Unhealthy"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer à quoi servent les health checks dans une API .NET Core et citer deux avantages pour une équipe de production.",
+        "niveau": "easy",
+        "reponse": "Les health checks permettent de surveiller l'état de santé d'une application et de ses dépendances (base de données, services externes, disque, etc.). Deux avantages : (1) Détection proactive des pannes pour redémarrer automatiquement le conteneur ou l'instance ; (2) Intégration avec des outils d'orchestration (Kubernetes, Azure App Service) pour ne pas envoyer de trafic vers une instance défaillante.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Rédiger le code C# nécessaire pour ajouter un health check personnalisé qui vérifie la connexion à SQL Server en utilisant `AddHealthChecks()` et le package `AspNetCore.HealthChecks.SqlServer`. Expliquer chaque étape.",
+        "niveau": "medium",
+        "reponse": "1. Installer le package : `dotnet add package AspNetCore.HealthChecks.SqlServer`\n2. Dans Program.cs :\n```csharp\nbuilder.Services.AddHealthChecks()\n    .AddSqlServer(\n        builder.Configuration.GetConnectionString(\"DefaultConnection\"),\n        healthQuery: \"SELECT 1\",\n        name: \"sqlserver\",\n        failureStatus: HealthStatus.Degraded);\n```\n3. Ajouter l'endpoint : `app.MapHealthChecks(\"/health\");`\n4. (Optionnel) Pour plus de détails : `app.MapHealthChecks(\"/health/detailed\", new HealthCheckOptions { ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse });`\nExplication : AddHealthChecks enregistre le service, AddSqlServer ajoute un check spécifique, et MapHealthChecks expose l'endpoint HTTP.",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Justifier pourquoi on utilise `HealthStatus.Degraded` plutôt que `Unhealthy` en cas d’échec de la base de données.",
+            "niveau": "medium",
+            "reponse": "Pour qu’une indisponibilité temporaire de la base (ex. timeout) ne marque pas immédiatement l’API comme complètement morte (Unhealthy). Degraded indique que l’API fonctionne mais que ses performances ou dépendances sont altérées, permettant un routage partiel du trafic ou une alerte moins critique."
+          }
+        ]
+      },
+      {
+        "numero": 3,
+        "texte": "Créer un health check personnalisé (classe qui implémente `IHealthCheck`) pour un service externe fictif d’analyse de sentiment. La vérification consiste à appeler un endpoint GET `/ping` et à s’assurer que la réponse est 200 en moins de 500 ms.",
+        "niveau": "hard",
+        "reponse": "```csharp\npublic class SentimentApiHealthCheck : IHealthCheck\n{\n    private readonly HttpClient _httpClient;\n    public SentimentApiHealthCheck(HttpClient httpClient)\n    {\n        _httpClient = httpClient;\n    }\n\n    public async Task<HealthCheckResult> CheckHealthAsync(\n        HealthCheckContext context,\n        CancellationToken cancellationToken = default)\n    {\n        try\n        {\n            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);\n            cts.CancelAfter(TimeSpan.FromMilliseconds(500));\n            var response = await _httpClient.GetAsync(\"/ping\", cts.Token);\n            if (response.IsSuccessStatusCode)\n                return HealthCheckResult.Healthy(\"Sentiment API répond correctement.\");\n            return HealthCheckResult.Degraded($\"API retourne {response.StatusCode}\");\n        }\n        catch (TaskCanceledException)\n        {\n            return HealthCheckResult.Unhealthy(\"Timeout > 500 ms.\");\n        }\n        catch (Exception ex)\n        {\n            return HealthCheckResult.Unhealthy(ex.Message);\n        }\n    }\n}\n```\nPuis enregistrement : `builder.Services.AddHealthChecks().AddCheck<SentimentApiHealthCheck>(\"sentiment_api\");`",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Implémentation guide des health checks",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous devez rédiger une fiche de procédure pour les développeurs juniors. Répondez aux questions suivantes sur la mise en place des health checks dans ASP.NET Core.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Lister trois packages NuGet couramment utilisés pour les health checks prêts à l’emploi (autres que le package Microsoft de base).",
+        "niveau": "easy",
+        "reponse": "1. AspNetCore.HealthChecks.SqlServer\n2. AspNetCore.HealthChecks.Redis\n3. AspNetCore.HealthChecks.Uris (pour les URL externes)\n(N’importe quelle combinaison valide issue de la communauté Xabaril.)",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Décrire la différence entre un health check \"liveness\" et un health check \"readiness\" dans un environnement orchestré comme Kubernetes.",
+        "niveau": "medium",
+        "reponse": "Liveness probe : vérifie si l’application est encore vivante (non bloquée). En cas d’échec, Kubernetes redémarre le conteneur. Readiness probe : vérifie si l’application est prête à recevoir du trafic (bases de données accessibles, cache chaud). En cas d’échec, Kubernetes retire le pod des endpoints du service, sans le redémarrer.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Rédiger l’extrait de code pour configurer un endpoint `/health/readiness` qui n’exécute que les checks de type \"readiness\" et un autre `/health/liveness` pour les checks de survie uniquement.",
+        "niveau": "hard",
+        "reponse": "```csharp\nbuilder.Services.AddHealthChecks()\n    .AddCheck<DatabaseHealthCheck>(\"database\", tags: new[] { \"readiness\" })\n    .AddCheck<MemoryHealthCheck>(\"memory\", tags: new[] { \"liveness\", \"readiness\" });\n\napp.MapHealthChecks(\"/health/liveness\", new HealthCheckOptions\n{\n    Predicate = check => check.Tags.Contains(\"liveness\")\n});\n\napp.MapHealthChecks(\"/health/readiness\", new HealthCheckOptions\n{\n    Predicate = check => check.Tags.Contains(\"readiness\")\n});\n```\nExplication : On filtre par tags lors de l’enregistrement des endpoints.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Audit de santé d'une API e-commerce",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Une API de e-commerce (.NET 8) utilise : SQL Server, Redis pour le cache, et une API externe de paiement Stripe. L’équipe a déployé l’API sur Azure Kubernetes Service (AKS). On observe qu’environ une fois par heure, le pod redémarre. Les logs montrent une exception \"SQL timeout\" avant le crash.</p><p>Proposez une stratégie complète de health checks permettant de détecter, signaler et éventuellement éviter ces redémarrages intempestifs, tout en maintenant la disponibilité.</p>",
+      "images": [
+        "Diagramme d’une API e-commerce avec dépendances SQL, Redis, Stripe",
+        "Exemple de dégradation progressive avec circuit breaker et health check"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevoir deux health checks : un pour SQL Server avec un seuil de dégradation après 2 secondes, un pour Redis qui teste SET/GET.",
+        "niveau": "hard",
+        "reponse": "**SQL Server avec seuil personnalisé** :\n```csharp\nbuilder.Services.AddHealthChecks()\n    .AddSqlServer(\n        connectionString: config[\"DbConnection\"],\n        healthQuery: \"SELECT 1\",\n        name: \"sql\",\n        failureStatus: HealthStatus.Degraded,\n        timeout: TimeSpan.FromSeconds(2));\n```\n**Redis personnalisé** :\n```csharp\npublic class RedisHealthCheck : IHealthCheck\n{\n    private readonly IConnectionMultiplexer _redis;\n    public RedisHealthCheck(IConnectionMultiplexer redis) => _redis = redis;\n    public async Task<HealthCheckResult> CheckHealthAsync(...)\n    {\n        var db = _redis.GetDatabase();\n        if (await db.PingAsync() > TimeSpan.FromMilliseconds(100))\n            return HealthCheckResult.Degraded(\"Redis lent\");\n        await db.StringSetAsync(\"health:ping\", \"ok\", TimeSpan.FromSeconds(5));\n        var val = await db.StringGetAsync(\"health:ping\");\n        return val == \"ok\" ? HealthCheckResult.Healthy() : HealthCheckResult.Unhealthy();\n    }\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposer une règle de décision pour que Kubernetes n’utilise que le health check de liveness sur le endpoint `/health/liveness` (sans SQL) et le readiness sur `/health/readiness` (avec SQL + Redis).",
+            "niveau": "hard",
+            "reponse": "Dans le déploiement Kubernetes :\n```yaml\nlivenessProbe:\n  httpGet:\n    path: /health/liveness\n    port: 8080\n  initialDelaySeconds: 15\n  periodSeconds: 10\nreadinessProbe:\n  httpGet:\n    path: /health/readiness\n    port: 8080\n  initialDelaySeconds: 5\n  periodSeconds: 5\n```\nAinsi, si SQL est lent, readiness échoue → plus de trafic vers ce pod, mais liveness reste OK → pas de redémarrage. Cela évite le crash à répétition.",
+            "sousQuestions": []
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer comment la combinaison d’un health check et d’un circuit breaker (Polly) peut améliorer la résilience vis-à-vis de l’API Stripe. Donner un exemple de code.",
+        "niveau": "very hard",
+        "reponse": "Le health check vérifie périodiquement Stripe (endpoint /status). Le circuit breaker (Polly) court-circuite les appels réels quand Stripe est défaillant, évitant les timeouts.\n\n```csharp\n// Health check Stripe\n.AddUrlGroup(new Uri(\"https://api.stripe.com/v1/status\"), HttpMethod.Get, \"stripe\")\n\n// Politique Circuit Breaker\nvar stripePolicy = Policy<HttpResponseMessage>\n    .Handle<HttpRequestException>()\n    .CircuitBreakerAsync(2, TimeSpan.FromMinutes(1));\n\n// Dans le service d’appel Stripe\nvar response = await stripePolicy.ExecuteAsync(() => _httpClient.GetAsync(...));\n```\nLe health check alimente un tableau de bord ; le circuit breaker protège l’API des appels inutiles. Les deux ensemble évitent que l’API ne ralentisse à cause d’un tiers défaillant.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

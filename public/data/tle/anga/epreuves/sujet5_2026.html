@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+  "matiere": "Anglais Tle A",
+  "classe": "Terminale",
+  "sequence": "Sequence 5",
+  "anneeScolaire": "2025-2026",
+  "exercices": [
+    {
+      "titre": "Reading Comprehension: Youth Unemployment and Civic Engagement",
+      "points": "8 pts",
+      "enonce": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 8px; color: #1a1a1a;'><p>Read the text carefully and answer the questions that follow.</p><div style='background-color: #f0f8ff; padding: 15px; border-radius: 8px; border-left: 4px solid #2980b9;'><p><strong>Youth Unemployment: A Growing Concern</strong></p><p>Youth unemployment has become one of the most pressing social issues in Cameroon and across Africa. According to recent statistics, over 30% of young people in urban areas are without formal employment. This situation has serious consequences for individuals and society as a whole.</p><p>Several factors contribute to this problem. Firstly, the mismatch between education and the job market means that many graduates lack the skills employers need. Secondly, the informal sector, while providing some opportunities, often offers low pay and no social protection. Thirdly, corruption and nepotism in recruitment processes prevent qualified young people from accessing available positions.</p><p>The consequences of youth unemployment are far-reaching. Many young people become discouraged and lose hope for the future. Some turn to crime or substance abuse as an escape. Others are forced to emigrate in search of better opportunities, contributing to brain drain in the country. This situation also leads to social tensions and instability in communities.</p><p>However, there is still hope. Volunteering has proven to be an effective way for young people to gain experience and develop skills. Through community service, young people can build their CVs, network with professionals, and demonstrate their commitment. The government and NGOs are also implementing programs to support youth entrepreneurship and vocational training.</p></div></div>",
+      "questions": [
+        {
+          "question": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p><strong>1. Comprehension Questions</strong> (4 pts)</p><p style='margin-left: 20px;'>a) According to the text, what percentage of young people in urban areas are without formal employment?</p><p style='margin-left: 20px;'>b) List three factors that contribute to youth unemployment mentioned in the text.</p><p style='margin-left: 20px;'>c) What are two consequences of youth unemployment mentioned in the text?</p><p style='margin-left: 20px;'>d) According to the text, how can volunteering help young people?</p></div>",
+          "reponse": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p><strong>Correction:</strong></p><p>a) <strong>Over 30%</strong> of young people in urban areas are without formal employment.</p><p>b) The three factors are: <strong>mismatch between education and the job market</strong>, <strong>low pay and lack of social protection in the informal sector</strong>, and <strong>corruption and nepotism in recruitment processes</strong>.</p><p>c) Two consequences are: <strong>young people lose hope for the future</strong> and <strong>some turn to crime or substance abuse</strong>. (Also acceptable: forced emigration/brain drain).</p><p>d) Volunteering helps young people <strong>gain experience, develop skills, build their CVs, network with professionals, and demonstrate their commitment</strong>.</p></div>"
+        },
+        {
+          "question": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p><strong>2. Vocabulary</strong> (2 pts)</p><p style='margin-left: 20px;'>Find in the text the word that matches each definition.</p><p style='margin-left: 20px;'>a) The state of being without a job (paragraph 1) → ______</p><p style='margin-left: 20px;'>b) The process of finding people for a job (paragraph 2) → ______</p></div>",
+          "reponse": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p><strong>Correction:</strong></p><p>a) <strong>unemployment</strong></p><p>b) <strong>recruitment</strong></p></div>"
+        },
+        {
+          "question": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p><strong>3. Grammar: Relative Pronouns</strong> (2 pts)</p><p style='margin-left: 20px;'>Complete the following sentences using the correct relative pronoun: <em>who, which, whose, whom</em>.</p><p style='margin-left: 20px;'>a) Young people ______ are unemployed often face discrimination.</p><p style='margin-left: 20px;'>b) The informal sector, ______ provides some employment, often has low pay.</p><p style='margin-left: 20px;'>c) Those ______ CVs are impressive still struggle to find jobs.</p><p style='margin-left: 20px;'>d) The professionals ______ I met at the career fair offered good advice.</p></div>",
+          "reponse": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p><strong>Correction:</strong></p><p>a) <strong>who</strong> (subject referring to people)</p><p>b) <strong>which</strong> (subject referring to things)</p><p>c) <strong>whose</strong> (possession)</p><p>d) <strong>whom</strong> (object of the verb)</p></div>"
+        }
+      ]
+    },
+    {
+      "titre": "Grammar and Language Use",
+      "points": "6 pts",
+      "enonce": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 8px; color: #1a1a1a;'><p>This section tests your mastery of key grammatical structures covered in Terminale: passive voice, reported speech, conditionals, modals, and causative forms.</p></div>",
+      "questions": [
+        {
+          "question": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p><strong>1. Passive Voice</strong> (1 pt)</p><p style='margin-left: 20px;'>Transform the following sentence from active to passive voice.</p><p style='background-color: #f0f8ff; padding: 10px; border-radius: 8px; border-left: 4px solid #2980b9;'>The government will implement new measures to reduce unemployment.</p></div>",
+          "reponse": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p><strong>Correction:</strong></p><p><strong>New measures will be implemented by the government to reduce unemployment.</strong></p></div>"
+        },
+        {
+          "question": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p><strong>2. Reported Speech</strong> (1 pt)</p><p style='margin-left: 20px;'>Transform the direct speech into reported speech.</p><p style='background-color: #f0f8ff; padding: 10px; border-radius: 8px; border-left: 4px solid #2980b9;'>The minister said, \"We are creating more jobs for young graduates.\"</p></div>",
+          "reponse": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p><strong>Correction:</strong></p><p><strong>The minister said that they were creating more jobs for young graduates.</strong></p></div>"
+        },
+        {
+          "question": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p><strong>3. Conditional Sentences (Type 1)</strong> (1 pt)</p><p style='margin-left: 20px;'>Complete the conditional sentence.</p><p style='background-color: #f0f8ff; padding: 10px; border-radius: 8px; border-left: 4px solid #2980b9;'>If young people _____ (receive) proper training, they _____ (find) better jobs.</p></div>",
+          "reponse": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p><strong>Correction:</strong></p><p><strong>receive</strong> / <strong>will find</strong></p></div>"
+        },
+        {
+          "question": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p><strong>4. Modals of Obligation and Advice</strong> (1 pt)</p><p style='margin-left: 20px;'>Choose the correct modal to complete the sentence.</p><p style='background-color: #f0f8ff; padding: 10px; border-radius: 8px; border-left: 4px solid #2980b9;'>You _____ submit your application before the deadline if you want to be considered for the position.</p></div>",
+          "reponse": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p><strong>Correction:</strong></p><p><strong>have to</strong> (external obligation)</p></div>"
+        },
+        {
+          "question": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p><strong>5. Causative 'have'</strong> (1 pt)</p><p style='margin-left: 20px;'>Complete the sentence using the causative structure.</p><p style='background-color: #f0f8ff; padding: 10px; border-radius: 8px; border-left: 4px solid #2980b9;'>We _____ (our garbage / collect) every week.</p></div>",
+          "reponse": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p><strong>Correction:</strong></p><p><strong>have our garbage collected</strong></p></div>"
+        },
+        {
+          "question": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p><strong>6. Expressing Purpose</strong> (1 pt)</p><p style='margin-left: 20px;'>Complete the sentence to express purpose.</p><p style='background-color: #f0f8ff; padding: 10px; border-radius: 8px; border-left: 4px solid #2980b9;'>Many young people volunteer _____ (gain) valuable work experience.</p></div>",
+          "reponse": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p><strong>Correction:</strong></p><p><strong>to gain</strong> or <strong>in order to gain</strong></p></div>"
+        }
+      ]
+    },
+    {
+      "titre": "Vocabulary and Word Formation",
+      "points": "6 pts",
+      "enonce": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 8px; color: #1a1a1a;'><p>This section assesses your knowledge of vocabulary related to social issues, health, environment, and technology.</p></div>",
+      "questions": [
+        {
+          "question": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p><strong>1. Vocabulary in Context</strong> (3 pts)</p><p style='margin-left: 20px;'>Complete the sentences with the correct word from the box.</p><p style='background-color: #f0f8ff; padding: 10px; border-radius: 8px; border-left: 4px solid #2980b9;'><strong>Word Box:</strong> <em>vaccine, CV, curriculum, perpetrators, emigrate, recycle, symptoms, warranty</em></p><p style='margin-left: 20px;'>a) The _____ of the crime were arrested by the police.</p><p style='margin-left: 20px;'>b) Before the interview, make sure you update your _____ with your latest experience.</p><p style='margin-left: 20px;'>c) The new _____ includes courses on digital literacy.</p><p style='margin-left: 20px;'>d) Common _____ of COVID-19 include fever and cough.</p><p style='margin-left: 20px;'>e) We should _____ our waste to protect the environment.</p><p style='margin-left: 20px;'>f) The product has a two-year _____ period.</p></div>",
+          "reponse": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p><strong>Correction:</strong></p><p>a) <strong>perpetrators</strong></p><p>b) <strong>CV</strong></p><p>c) <strong>curriculum</strong></p><p>d) <strong>symptoms</strong></p><p>e) <strong>recycle</strong></p><p>f) <strong>warranty</strong></p></div>"
+        },
+        {
+          "question": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p><strong>2. Word Formation</strong> (3 pts)</p><p style='margin-left: 20px;'>Complete the sentences with the correct form of the word in brackets.</p><p style='margin-left: 20px;'>a) The _____ (prevent) of diseases is better than cure.</p><p style='margin-left: 20px;'>b) Young people need to be _____ (employ) if the economy is to grow.</p><p style='margin-left: 20px;'>c) _____ (recycle) helps preserve our natural resources.</p><p style='margin-left: 20px;'>d) There is a _____ (grow) concern about climate change.</p><p style='margin-left: 20px;'>e) We must protect the _____ (environment) balance of our planet.</p><p style='margin-left: 20px;'>f) The _____ (apply) process can be very competitive.</p></div>",
+          "reponse": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p><strong>Correction:</strong></p><p>a) <strong>prevention</strong></p><p>b) <strong>employed</strong></p><p>c) <strong>Recycling</strong> (gerund as subject)</p><p>d) <strong>growing</strong></p><p>e) <strong>environmental</strong></p><p>f) <strong>application</strong></p></div>"
+        }
+      ]
+    },
+    {
+      "titre": "Composition: Writing a Speech",
+      "points": "4 pts",
+      "enonce": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 8px; color: #1a1a1a;'><p><strong>Choose ONE of the following topics and write an essay of 200 to 250 words.</strong></p><p>The essay will be assessed on:</p><ul><li>Content and organization (clear introduction, development, and conclusion)</li><li>Grammar and vocabulary (accuracy and range)</li><li>Use of linking words (because, therefore, however, although)</li><li>Appropriate register and tone</li></ul></div>",
+      "questions": [
+        {
+          "question": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p><strong>Topic 1: Address on the Importance of Education and Professional Qualifications</strong></p><p>You are the Senior Prefect of your school. Write a speech to address your schoolmates on the importance of education and professional qualifications for their future careers.</p><hr style='border: 1px solid #ddd; margin: 15px 0;'><p><strong>Topic 2: A Speech on Youth, Violence, and the Consequences of Drug Consumption</strong></p><p>You are the Senior Prefect of your school. Write a speech to address your schoolmates on the dangers of violence and drug consumption. Give the causes, consequences, and possible solutions to these problems.</p></div>",
+          "reponse": "<div style='font-family: \"Segoe UI\", Roboto, system-ui, sans-serif; padding: 5px; color: #1a1a1a;'><p><strong>Sample Answer for Topic 1:</strong></p><p style='margin-left: 20px;'><strong>THE KEY TO OUR FUTURE: EDUCATION AND PROFESSIONAL QUALIFICATIONS</strong></p><p style='margin-left: 20px;'>Fellow students, teachers, and distinguished guests, it is an honour to address you today on a topic that concerns each and every one of us: the importance of education and professional qualifications.</p><p style='margin-left: 20px;'>First and foremost, education is the foundation of a successful career. It equips us with the knowledge and skills we need to pursue our chosen professions. Without a solid educational background, we will struggle to compete in today's competitive job market. Therefore, we must take our studies seriously and strive for excellence in all our subjects.</p><p style='margin-left: 20px;'>Furthermore, professional qualifications are crucial for career advancement. Employers are always looking for candidates who have relevant certificates and diplomas. These qualifications demonstrate that we have the necessary expertise and commitment to perform well in our jobs. As a result, we should consider vocational training and internships to complement our academic education.</p><p style='margin-left: 20px;'>However, education is not just about getting a job. It is also about becoming responsible citizens who can contribute positively to society. Education helps us to think critically, solve problems, and make informed decisions.</p><p style='margin-left: 20px;'>In conclusion, I urge you all to value your education and pursue professional qualifications. Our future depends on it. Together, let us build a brighter future for ourselves and our community. Thank you.</p></div>"
+        }
+      ]
+    }
+  ]
+};
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

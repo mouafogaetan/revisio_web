@@ -1,0 +1,150 @@
+[
+  {
+    "intitule": "Création et manipulation du panier avec Zustand",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Dans une application e-commerce React utilisant Zustand pour la gestion d'état, vous devez créer un store de panier (<code>cartStore</code>) qui gère une liste d'articles. Chaque article contient : <code>id</code>, <code>name</code>, <code>price</code>, <code>quantity</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire la structure minimale du store cartStore avec les propriétés items, total et les actions addItem, removeItem, updateQuantity.",
+        "niveau": "easy",
+        "reponse": "Le store doit contenir : `items: []` (tableau d'articles), `total: 0` (nombre total d'articles ou montant total). Les actions : `addItem: (product) => void` qui ajoute un produit ou incrémente sa quantité, `removeItem: (id) => void` qui supprime un article, `updateQuantity: (id, quantity) => void` qui modifie la quantité d'un article spécifique.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer pourquoi on utilise `set()` dans les actions d'un store Zustand.",
+            "niveau": "easy",
+            "reponse": "`set()` est la fonction fournie par Zustand pour fusionner ou remplacer l'état. Elle permet de modifier l'état de manière immuable et de déclencher un re-render des composants qui écoutent le store."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Implémenter la fonction `addItem` qui ajoute un produit au panier. Si le produit existe déjà, elle doit incrémenter sa quantité de 1.",
+        "niveau": "medium",
+        "reponse": "```typescript\naddItem: (product) => set((state) => {\n  const existingItem = state.items.find((item) => item.id === product.id);\n  if (existingItem) {\n    return {\n      items: state.items.map((item) =>\n        item.id === product.id\n          ? { ...item, quantity: item.quantity + 1 }\n          : item\n      ),\n    };\n  }\n  return { items: [...state.items, { ...product, quantity: 1 }] };\n});\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Calcul du total et des sous-totaux",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Le panier contient plusieurs articles. Chaque article a un <code>price</code> (prix unitaire HT) et une <code>quantity</code>. La TVA est de <span class=\"math inline\">$20\\%$</span>. Les frais de livraison sont de <span class=\"math inline\">$2500\\;FCFA$</span> si le total HT est inférieur à <span class=\"math inline\">$50000\\;FCFA$</span>, sinon ils sont gratuits.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire la formule permettant de calculer le total TTC du panier en fonction des articles, de la TVA et des frais de livraison.",
+        "niveau": "medium",
+        "reponse": "Soit $n$ le nombre d'articles, $p_i$ le prix unitaire HT de l'article $i$, $q_i$ sa quantité. Le total HT = $\\sum_{i=1}^{n} p_i \\times q_i$. Les frais de livraison $f = 2500$ si total HT $< 50000$, sinon $f = 0$. Le total TTC = total HT $\\times (1 + 0.20) + f =$ total HT $\\times 1.20 + f$.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Calculer le total TTC pour un panier contenant : 2 articles à 10000 FCFA chacun et 3 articles à 5000 FCFA chacun.",
+            "niveau": "medium",
+            "reponse": "Total HT = (2 × 10000) + (3 × 5000) = 20000 + 15000 = 35000 FCFA. 35000 < 50000 donc f = 2500 FCFA. Total TTC = 35000 × 1.20 + 2500 = 42000 + 2500 = 44500 FCFA."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer comment on peut dériver le total TTC automatiquement dans un store Zustand à l'aide d'une propriété dérivée (getter).",
+        "niveau": "hard",
+        "reponse": "On peut utiliser `create` avec un getter ou utiliser la fonction `subscribe` pour recalculer. Exemple avec Zustand : `totalTTC: (state) => { const ht = state.items.reduce((sum, item) => sum + item.price * item.quantity, 0); const frais = ht < 50000 ? 2500 : 0; return ht * 1.20 + frais; }`. On peut aussi utiliser un middleware `devtools` ou un selector dans le composant.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Synchronisation du panier avec le backend après connexion",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Un client navigue sur votre site e-commerce sans être connecté. Il ajoute des produits dans son panier (panier localStorage). Lorsqu'il se connecte, vous devez fusionner ce panier local avec son panier existant sur le backend (API REST) et mettre à jour le store Zustand.</p>",
+      "images": [
+        "schéma de fusion de deux paniers : panier local (non authentifié) et panier distant (authentifié) avec gestion des quantités cumulées"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire les étapes à suivre dans le composant de connexion pour synchroniser le panier local avec le panier distant après une authentification réussie.",
+        "niveau": "hard",
+        "reponse": "1. Récupérer le panier local depuis localStorage (ou le store Zustand avant logout). 2. Appeler l'API pour récupérer le panier distant de l'utilisateur (GET /cart). 3. Fusionner les deux paniers : pour chaque article local, s'il existe déjà dans le panier distant, additionner les quantités ; sinon l'ajouter. 4. Envoyer le panier fusionné au backend (PUT /cart ou PATCH). 5. Mettre à jour le store Zustand avec le panier fusionné. 6. Effacer le panier local (localStorage) pour éviter double fusion au prochain login.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer comment gérer le cas où le même article est présent avec des variations différentes (taille, couleur) dans les deux paniers.",
+            "niveau": "hard",
+            "reponse": "Il faut comparer les articles avec une clé unique composite : `productId_variationId` (ou `sku`). Si les variations sont identiques (même taille et couleur), on additionne les quantités. Si les variations sont différentes, on les traite comme des articles distincts et on les conserve tous."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer une stratégie pour éviter les conflits si l'utilisateur connecté modifie son panier pendant que la fusion asynchrone est en cours.",
+        "niveau": "very hard",
+        "reponse": "On peut : (1) Désactiver temporairement les actions de modification du panier pendant la fusion (afficher un loader). (2) Utiliser un verrou (flag `isSyncing`) dans le store pour bloquer `addItem`, `removeItem` jusqu'à la fin. (3) Implémenter une file d'attente des actions (queue) qui seront rejouées après la fusion. (4) Ou bien utiliser des mutations optimistes avec rollback en cas d'erreur. La meilleure approche pour un e-commerce simple est d'afficher un overlay de chargement et de désactiver les boutons.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Persistance du panier avec localStorage",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Pour que le panier survive à un rechargement de page, on veut persister son contenu dans <code>localStorage</code>. Le panier est géré par Zustand avec le middleware <code>persist</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer comment configurer le middleware `persist` de Zustand pour sauvegarder le panier sous la clé 'cart-storage'.",
+        "niveau": "easy",
+        "reponse": "```typescript\nimport { create } from 'zustand';\nimport { persist } from 'zustand/middleware';\n\nconst useCartStore = create(\n  persist(\n    (set, get) => ({\n      items: [],\n      addItem: (product) => set(...),\n      // autres actions\n    }),\n    {\n      name: 'cart-storage', // clé dans localStorage\n    }\n  )\n);\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Identifier un problème potentiel de sécurité si on persiste des données sensibles (ex: token) dans localStorage, et expliquer pourquoi ce n'est pas un risque pour le panier.",
+        "niveau": "medium",
+        "reponse": "localStorage est accessible par tout script JavaScript sur la même origine, donc vulnérable aux attaques XSS. Pour un panier (items, quantités), le risque est faible car ce ne sont pas des données sensibles. En revanche, ne jamais stocker de token JWT ou données personnelles (adresse, email) dans localStorage. Le panier contient uniquement des identifiants de produits et quantités, sans impact financier direct.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Validation d'intégrité du panier (stocks)",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Avant de valider une commande, il faut vérifier que chaque article du panier est toujours disponible en stock dans la quantité demandée. L'API backend fournit un endpoint <code>GET /products/stock</code> qui retourne pour chaque produit le stock restant.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevoir une fonction asynchrone `validateCartStock(cartItems)` qui retourne la liste des articles en rupture ou en quantité insuffisante, et met à jour le store pour corriger les quantités.",
+        "niveau": "hard",
+        "reponse": "```typescript\nasync function validateCartStock(cartItems) {\n  const productIds = cartItems.map(item => item.id);\n  const stocks = await api.getStock(productIds); // { productId: availableStock }\n  const invalidItems = [];\n  const updatedItems = cartItems.map(item => {\n    const available = stocks[item.id];\n    if (item.quantity > available) {\n      invalidItems.push({ id: item.id, requested: item.quantity, available });\n      return { ...item, quantity: available }; // ajuste à la dispo\n    }\n    return item;\n  });\n  if (invalidItems.length > 0) {\n    useCartStore.getState().setItems(updatedItems);\n    toast.warning(`Certains produits ont été ajustés (stock insuffisant)`);\n  }\n  return { isValid: invalidItems.length === 0, invalidItems };\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer comment tester cette fonction avec des données mockées en utilisant Jest.",
+        "niveau": "medium",
+        "reponse": "On mock le module API avec `jest.mock('./api')` et on simule une réponse de `getStock`. On crée un panier de test. On appelle `validateCartStock` et on vérifie que la fonction retourne les articles invalides et que le store a été mis à jour (en espionnant `setItems`). On teste également le cas où tout est valide (aucun appel à setItems).",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

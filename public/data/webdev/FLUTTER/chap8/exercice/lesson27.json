@@ -1,0 +1,120 @@
+[
+  {
+    "intitule": "Configuration du thème sombre dans Flutter",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Après avoir suivi la leçon 27, vous devez configurer un thème sombre personnalisé pour votre application Flutter. Vous allez utiliser <code>ThemeData</code> et la propriété <code>darkTheme</code> de <code>MaterialApp</code>.</p>",
+      "images": [
+        "Capture d'écran d'une application Flutter en thème clair avec barre d'app bleue",
+        "Capture d'écran de la même application Flutter en thème sombre avec barre d'app gris foncé"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier les paramètres de base (couleur primaire, couleur d'arrière-plan et couleur du texte) que vous définiriez pour un thème sombre cohérent.",
+        "niveau": "easy",
+        "reponse": "Couleur primaire : `Colors.blueGrey[800]` ou `Color(0xFF121212)`, couleur d'arrière-plan : `Color(0xFF1E1E1E)`, couleur du texte : `Colors.white` ou `Colors.white70`.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer le rôle de l'attribut `darkTheme: ThemeData.dark()` dans le widget `MaterialApp`. Que se passe-t-il si cet attribut est omis ?",
+        "niveau": "medium",
+        "reponse": "L'attribut `darkTheme` permet de spécifier un thème différent à appliquer lorsque le système d'exploitation de l'utilisateur est en mode sombre. S'il est omis, l'application utilisera toujours le thème défini dans `theme: ThemeData(...)`, même si le système est en mode sombre.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Implémentez un bouton de bascule de thème",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous développez une application de lecture. Vous devez créer un bouton dans l'<code>AppBar</code> permettant à l'utilisateur de basculer manuellement entre le thème clair et le thème sombre. La préférence de l'utilisateur doit être sauvegardée.</p>",
+      "images": [
+        "Icône de lune pour activer le thème sombre",
+        "Icône de soleil pour activer le thème clair"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Imaginer la logique de gestion d'état nécessaire pour ce composant. Quel type de widget (StatefulWidget, ou un widget utilisant un provider comme Riverpod) choisiriez-vous et pourquoi ?",
+        "niveau": "medium",
+        "reponse": "Un `StatefulWidget` avec `setState` serait suffisant pour une petite app, mais pour une meilleure maintenabilité et partage de l'état, un `ChangeNotifier` avec `Provider` ou un `StateNotifierProvider` (Riverpod) est préférable. Cela permet de séparer la logique de l'interface et de persister l'état plus facilement.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Décrire la structure d'un `ChangeNotifier` simple nommé `ThemeNotifier` qui contient un booléen `isDarkMode` et une méthode `toggleTheme()`.",
+            "niveau": "easy",
+            "reponse": "```dart\nclass ThemeNotifier extends ChangeNotifier {\n  bool isDarkMode = false;\n\n  void toggleTheme() {\n    isDarkMode = !isDarkMode;\n    notifyListeners();\n  }\n}\n```"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Rédiger le code du widget `IconButton` dans l'AppBar. Ce bouton doit afficher une icône (lune ou soleil) en fonction de l'état actuel du thème et appeler la méthode de basculement lorsqu'il est pressé.",
+        "niveau": "medium",
+        "reponse": "```dart\n// En supposant que nous avons accès au provider (ex: avec Provider.of<ThemeNotifier>(context))\nIconButton(\n  icon: Icon(isDarkMode ? Icons.light_mode : Icons.dark_mode),\n  onPressed: () {\n    final notifier = Provider.of<ThemeNotifier>(context, listen: false);\n    notifier.toggleTheme();\n  },\n)\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse de performance des changements de thème",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Dans une grande application Flutter utilisant un `Provider` pour le thème, la bascule entre les thèmes provoque un <em>rebuild</em> de tous les widgets consommateurs. Vous observez des ralentissements sur certains écrans très complexes.</p>",
+      "images": [
+        "Diagramme du widget tree Flutter avant et après un changement de thème",
+        "Capture d'écran des DevTools Flutter montrant le temps de rebuild"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Déterminer les causes possibles des lenteurs observées lors du changement de thème.",
+        "niveau": "hard",
+        "reponse": "Les lenteurs peuvent être causées par : 1) Un trop grand nombre de widgets utilisant `Consumer` ou `Provider.of` écoutant les changements. 2) Des widgets complexes (ex: longues listes, animations) qui ne sont pas optimisés et se rebuildent entièrement. 3) Absence de `const` constructeurs là où c'est possible. 4) Calculs lourds dans la méthode `build` des widgets impactés.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer une stratégie d'optimisation pour limiter ces rebuilds inutiles. Vous utiliserez des connaissances sur `Selector` (Provider) ou `Consumer` avec `select` (Riverpod). Justifiez votre choix.",
+        "niveau": "very hard",
+        "reponse": "Au lieu d'écouter l'objet `ThemeNotifier` entier, il faut écouter uniquement la propriété qui change. Avec `Provider`, on utilise `Selector` : `Selector<ThemeNotifier, bool>(selector: (_, notifier) => notifier.isDarkMode, builder: (_, isDark, __) { ... })`. Avec Riverpod, on utilise `ref.watch(themeProvider.select((state) => state.isDarkMode))`. Ainsi, seuls les widgets qui dépendent de la valeur booléenne `isDarkMode` sont rebuilds, et non tous ceux qui utilisent d'autres propriétés du notifier. De plus, pour les widgets qui n'utilisent que le thème via `Theme.of(context)`, ils sont automatiquement rebuilds par Flutter, donc il faut s'assurer que ces widgets sont aussi minimisés.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Persistance des préférences utilisateur",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous devez améliorer votre application pour que la préférence de thème (clair/sombre) choisie par l'utilisateur soit sauvegardée et restaurée au prochain lancement de l'application.</p>",
+      "images": [
+        "Schéma de sauvegarde d'une donnée dans SharedPreferences"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire les étapes pour utiliser le package `shared_preferences` afin de sauvegarder l'état du thème.",
+        "niveau": "hard",
+        "reponse": "1. Ajouter `shared_preferences: ^2.0.15` dans `pubspec.yaml` et lancer `flutter pub get`. 2. Importer `import 'package:shared_preferences/shared_preferences.dart';`. 3. Dans le `ThemeNotifier`, charger la valeur sauvegardée dans le constructeur (async) : `_loadTheme()`. 4. Dans `_loadTheme()`, récupérer l'instance `prefs = await SharedPreferences.getInstance()`, puis lire `isDarkMode = prefs.getBool('isDarkMode') ?? false`. 5. Dans la méthode `toggleTheme()`, après avoir changé la valeur et appelé `notifyListeners()`, sauvegarder la nouvelle valeur : `await prefs.setBool('isDarkMode', isDarkMode)`. 6. Gérer l'asynchronisme du chargement initial (ex: utiliser un FutureBuilder ou un écran de chargement).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Réaliser le code de la méthode `loadTheme()` dans le `ChangeNotifier`, en incluant la gestion des erreurs.",
+        "niveau": "very hard",
+        "reponse": "```dart\nFuture<void> loadTheme() async {\n  try {\n    final prefs = await SharedPreferences.getInstance();\n    isDarkMode = prefs.getBool('isDarkMode') ?? false;\n    notifyListeners();\n  } catch (e) {\n    print('Erreur lors du chargement du thème: $e');\n    isDarkMode = false; // Valeur par défaut en cas d'erreur\n  }\n}\n\n// Dans le constructeur du notifier\nThemeNotifier() {\n  loadTheme();\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

@@ -1,0 +1,99 @@
+[
+  {
+    "intitule": "Configuration de l’instance Axios pour l’API NestJS",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous avez développé une API NestJS sécurisée avec JWT. L’URL de base est <code>https://api.ecommerce.com/v1</code>. Vous devez configurer Axios dans votre frontend React pour communiquer avec cette API.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le code de création d’une instance Axios avec l’URL de base, un timeout de 10 secondes, et un intercepteur de requête qui ajoute le token JWT stocké dans localStorage (clé <code>access_token</code>) à l’en-tête <code>Authorization</code>.",
+        "niveau": "easy",
+        "reponse": "```ts\nimport axios from 'axios';\n\nconst api = axios.create({\n  baseURL: 'https://api.ecommerce.com/v1',\n  timeout: 10000,\n});\n\napi.interceptors.request.use((config) => {\n  const token = localStorage.getItem('access_token');\n  if (token) {\n    config.headers.Authorization = `Bearer ${token}`;\n  }\n  return config;\n});\n\nexport default api;\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion des erreurs réseau et des timeouts",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Lors d’un appel API pour récupérer les produits, une erreur réseau ou un timeout peut survenir. Vous devez afficher un message adapté à l’utilisateur (toast ou message d’erreur) et permettre un réessai.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémentez une fonction <code>fetchProducts</code> qui utilise l’instance Axios configurée, gère les erreurs avec try/catch, et distingue : <code>ECONNABORTED</code> (timeout), <code>Network Error</code> (hors ligne), et les erreurs 4xx/5xx. Retournez un objet <code>{ data, error }</code>.",
+        "niveau": "medium",
+        "reponse": "```ts\nasync function fetchProducts() {\n  try {\n    const { data } = await api.get('/products');\n    return { data, error: null };\n  } catch (err) {\n    if (err.code === 'ECONNABORTED') {\n      return { data: null, error: 'Timeout : le serveur ne répond pas' };\n    }\n    if (err.message === 'Network Error') {\n      return { data: null, error: 'Vérifiez votre connexion internet' };\n    }\n    if (err.response) {\n      return { data: null, error: err.response.data?.message || `Erreur ${err.response.status}` };\n    }\n    return { data: null, error: 'Une erreur inattendue est survenue' };\n  }\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Intégration de tous les modules (auth, produits, panier, commandes)",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Votre application e-commerce doit connecter tous les endpoints de l’API NestJS : authentification, catalogue produits, gestion du panier, création de commande et paiement. Vous devez centraliser la logique d’appel dans des services et les utiliser dans les composants avec React Query.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevez une architecture de services (authService, productService, cartService, orderService) qui utilisent l’instance Axios commune. Pour chaque service, créez des fonctions asynchrones avec gestion d’erreur standardisée. Expliquez comment les intégrer avec <code>@tanstack/react-query</code> pour la gestion du cache.",
+        "niveau": "hard",
+        "reponse": "Services : chaque service exporte des fonctions (ex: `login`, `getProducts`, `addToCart`, `createOrder`). Elles utilisent l’instance Axios et attrapent les erreurs pour les propager. Dans les composants, on utilise `useQuery` pour les requêtes GET (ex: `useQuery({ queryKey: ['products'], queryFn: productService.getAll })`) et `useMutation` pour les écritures. Les mutations invalident les requêtes associées via `queryClient.invalidateQueries`. Centraliser la gestion des tokens rafraîchis dans un intercepteur de réponse Axios. Les erreurs réseau sont affichées via toast.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment gérez-vous le refresh token automatique lorsque l’access_token expire ?",
+            "niveau": "hard",
+            "reponse": "Dans l’intercepteur de réponse Axios, on détecte une erreur 401, on tente un refresh via un appel à `/auth/refresh`, on met à jour le token dans localStorage, et on rejoue la requête originale. On implémente un système de file d’attente pour éviter plusieurs appels simultanés."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Diagnostic d’une erreur CORS lors de l’appel API",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Après avoir déployé l’API NestJS sur <code>https://api.monsite.com</code> et l’application React sur <code>https://www.monsite.com</code>, les appels API échouent avec l’erreur <code>Access-Control-Allow-Origin</code>. Vous suspectez un problème CORS.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez l’origine de cette erreur et proposez les modifications nécessaires côté backend (NestJS) et côté frontend (Axios) pour la résoudre.",
+        "niveau": "medium",
+        "reponse": "CORS bloque les requêtes跨域. Côté NestJS, il faut activer CORS avec `app.enableCors({ origin: 'https://www.monsite.com', credentials: true })`. Côté frontend, dans Axios, configurer `withCredentials: true` si on utilise des cookies. Si l’API autorise toutes les origines en développement, on peut mettre `origin: true`. En production, spécifier les origines autorisées.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation des appels API avec debounce et aborController",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Dans la barre de recherche de produits, chaque frappe de l’utilisateur déclenche un appel API à <code>/products/search?q=...</code>. Cela génère trop de requêtes. Vous devez implémenter un debounce (300ms) et annuler les requêtes précédentes lorsqu’elles sont encore en vol.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémentez un hook personnalisé <code>useDebouncedSearch</code> qui utilise <code>axios.CancelToken</code> (ou AbortController) pour annuler les requêtes en cours. Le hook doit retourner les résultats, un état de chargement, et une fonction pour mettre à jour le terme de recherche.",
+        "niveau": "very hard",
+        "reponse": "```ts\nimport { useState, useEffect, useRef } from 'react';\nimport api from '@/services/api';\n\nexport const useDebouncedSearch = (delay = 300) => {\n  const [query, setQuery] = useState('');\n  const [results, setResults] = useState([]);\n  const [isLoading, setIsLoading] = useState(false);\n  const abortControllerRef = useRef(null);\n\n  useEffect(() => {\n    const handler = setTimeout(async () => {\n      if (!query) {\n        setResults([]);\n        return;\n      }\n      if (abortControllerRef.current) {\n        abortControllerRef.current.abort();\n      }\n      abortControllerRef.current = new AbortController();\n      setIsLoading(true);\n      try {\n        const { data } = await api.get(`/products/search?q=${query}`, {\n          signal: abortControllerRef.current.signal,\n        });\n        setResults(data);\n      } catch (err) {\n        if (err.name !== 'AbortError') console.error(err);\n      } finally {\n        setIsLoading(false);\n      }\n    }, delay);\n\n    return () => clearTimeout(handler);\n  }, [query, delay]);\n\n  return { query, setQuery, results, isLoading };\n};\n```",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

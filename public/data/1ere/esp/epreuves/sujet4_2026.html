@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+  "matiere": "Espagnol",
+  "classe": "Première",
+  "sequence": "Séquence 4",
+  "anneeScolaire": "2025-2026",
+  "exercices": [
+    {
+      "titre": "Ejercicio 1: Comprensión escrita y expresión personal",
+      "points": "6 pts",
+      "enonce": "<div style='font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 10px;'><b>Documento 1: La carta de Ana</b><br><br><div style='background-color: #f0f8ff; padding: 15px; border-radius: 8px; color: #212529;'>\n<i>Querido amigo:<br><br>\n¿Cómo estás? Hace mucho que no sé nada de ti. Espero que todo vaya bien en tu nueva ciudad. Te escribo para contarte que mi familia y yo hemos empezado a planear las vacaciones de verano. Mis padres quieren ir a la playa, pero mi hermana y yo preferimos la montaña. ¡Es un conflicto familiar!<br><br>\nAdemás, en mi barrio han organizado una campaña de reciclaje de plásticos. Es muy interesante porque todos participan, incluso los niños. Esto me ha hecho reflexionar sobre el problema de la contaminación. El cambio climático está afectando la salud de las personas y, a veces, parece que no hacemos lo suficiente para proteger el medio ambiente.<br><br>\nCuéntame qué tal te va y si tienes algún proyecto para este verano. ¡Espero tu respuesta!<br><br>\nUn abrazo,<br>\nAna\n</i>\n</div><br><br><b>Consigna:</b> Lee la carta de Ana y responde a las siguientes preguntas en español, justificando tus respuestas con el texto.</div>",
+      "questions": [
+        {
+          "question": "<div style='margin-bottom: 15px;'><b>1)</b> ¿Cuál es el motivo principal del conflicto familiar que menciona Ana? <i>(1.5 pts)</i></div>",
+          "reponse": "<div style='background-color: #f8f9fa; padding: 15px; border-radius: 8px; color: #212529;'>El motivo principal del conflicto familiar es la elección del destino de las vacaciones: los padres quieren ir a la playa, mientras que Ana y su hermana prefieren la montaña.</div>"
+        },
+        {
+          "question": "<div style='margin-bottom: 15px;'><b>2)</b> ¿Qué acción concreta menciona Ana que se está realizando en su barrio y qué problema social más amplio le hace reflexionar? <i>(2 pts)</i></div>",
+          "reponse": "<div style='background-color: #f8f9fa; padding: 15px; border-radius: 8px; color: #212529;'>Ana menciona que en su barrio han organizado una campaña de reciclaje de plásticos. Esta acción le hace reflexionar sobre el problema más amplio de la contaminación y el cambio climático, y cómo afecta a la salud de las personas.</div>"
+        },
+        {
+          "question": "<div style='margin-bottom: 15px;'><b>3)</b> ¿Qué tipo de lenguaje y qué fórmulas de cortesía utiliza Ana en su carta? Da dos ejemplos. <i>(2.5 pts)</i></div>",
+          "reponse": "<div style='background-color: #f8f9fa; padding: 15px; border-radius: 8px; color: #212529;'>Ana utiliza un lenguaje coloquial y familiar, propio de una carta informal. Ejemplos de fórmulas de cortesía y lenguaje utilizado son: <br>- <b>Saludo afectuoso:</b> \"Querido amigo\" y \"Un abrazo\" <br>- <b>Interés personal:</b> \"¿Cómo estás?\" y \"Espero que todo vaya bien en tu nueva ciudad\", lo que muestra interés por la vida del destinatario.</div>"
+        }
+      ]
+    },
+    {
+      "titre": "Ejercicio 2: Expresión escrita",
+      "points": "8 pts",
+      "enonce": "<div style='font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 10px;'><b>Documento 2: La inmigración clandestina</b><br><br><div style='background-color: #f0f8ff; padding: 15px; border-radius: 8px; color: #212529;'>\n\"Cada año, miles de personas de países africanos arriesgan su vida cruzando el mar para llegar a Europa en busca de una vida mejor. Muchos de ellos viajan en pateras o cayucos, embarcaciones precarias que no siempre llegan a su destino. Las causas de esta emigración son múltiples: la falta de oportunidades laborales, la pobreza, los conflictos armados y la inestabilidad política. Sin embargo, en los países de destino, los inmigrantes a menudo se enfrentan a la discriminación, la explotación y la falta de acceso a derechos básicos.\"\n</div><br><br><b>Consigna:</b> Redacta una carta formal dirigida a las autoridades de tu país en la que propongas soluciones para luchar contra la inmigración clandestina y mejorar las condiciones de vida que la provocan. Tu carta debe tener una estructura formal y contener al menos 120 palabras.</div>",
+      "questions": [
+        {
+          "question": "<div>Escribe tu carta formal en el espacio proporcionado. Asegúrate de incluir lugar y fecha, destinatario, un saludo formal, el cuerpo con tus propuestas, una despedida formal y tu firma.</div>",
+          "reponse": "<div style='background-color: #f8f9fa; padding: 15px; border-radius: 8px; color: #212529;'><b>Ejemplo de respuesta:</b><br><br>\n<i>Yaundé, 20 de junio de 2026</i><br><br>\n<i>Excelentísimas Autoridades:</i><br><br>\n<i>Por medio de la presente, me dirijo a ustedes para expresar mi profunda preocupación por la creciente problemática de la inmigración clandestina que afecta a nuestro continente. Esta situación, que causa pérdidas humanas y sufrimiento, requiere una respuesta urgente y coordinada.</i><br><br>\n<i>En primer lugar, es fundamental abordar las causas profundas de este fenómeno. Propongo que se implementen programas de desarrollo económico sostenible en las regiones más desfavorecidas, creando empleos y oportunidades para que los jóvenes no se vean obligados a emigrar. Asimismo, es necesario reforzar la cooperación internacional para luchar contra las redes de tráfico de personas que explotan la desesperación de los migrantes.</i><br><br>\n<i>En segundo lugar, considero esencial mejorar la información y la prevención. Se deben lanzar campañas de sensibilización que informen sobre los peligros reales de la emigración clandestina y sobre las vías legales y seguras para migrar. Además, es crucial fomentar una cultura de paz y respeto por los derechos humanos en todos los países.</i><br><br>\n<i>En espera de que mis propuestas sean consideradas y de que se tomen medidas concretas, les saluda atentamente,</i><br><br>\n<i>Firma</i></div>"
+        }
+      ]
+    },
+    {
+      "titre": "Ejercicio 3: Vocabulario y gramática",
+      "points": "6 pts",
+      "enonce": "<div style='font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 10px;'>Este ejercicio evalúa tu conocimiento del vocabulario relacionado con los temas estudiados y tu capacidad para utilizar las estructuras gramaticales adecuadas.</div>",
+      "questions": [
+        {
+          "question": "<div style='margin-bottom: 15px;'><b>1)</b> Completa las siguientes frases con el verbo entre paréntesis en el tiempo adecuado (presente, pretérito perfecto o futuro): <i>(2 pts)</i><br><br>a) Ana ______ (escribir) una carta a su amigo la semana pasada.<br>b) Todos los días, los vecinos ______ (participar) en la campaña de reciclaje.<br>c) Si no tomamos medidas, el cambio climático ______ (afectar) gravemente la salud de las personas.<br>d) Mi hermana y yo ______ (preferir) siempre la montaña a la playa.</div>",
+          "reponse": "<div style='background-color: #f8f9fa; padding: 15px; border-radius: 8px; color: #212529;'>a) escribió <br>b) participan <br>c) afectará <br>d) hemos preferido / preferimos <br><br><i>Nota: Se acepta \"preferimos\" para indicar una preferencia general.</i></div>"
+        },
+        {
+          "question": "<div style='margin-bottom: 15px;'><b>2)</b> Relaciona cada palabra de la izquierda con su sinónimo o definición correcta de la derecha: <i>(2 pts)</i><br><br>1. Contaminación      a) Persona que se va de su país.<br>2. Emigrante      b) Protección del medio ambiente.<br>3. Reciclaje      c) Introducción de agentes dañinos en el medio ambiente.<br>4. Preservación      d) Transformación de residuos para su reutilización.</div>",
+          "reponse": "<div style='background-color: #f8f9fa; padding: 15px; border-radius: 8px; color: #212529;'>1-c, 2-a, 3-d, 4-b</div>"
+        },
+        {
+          "question": "<div style='margin-bottom: 15px;'><b>3)</b> Escribe una frase utilizando la expresión \"a pesar de\" para mostrar un contraste entre dos ideas relacionadas con la inmigración o el medio ambiente. <i>(2 pts)</i></div>",
+          "reponse": "<div style='background-color: #f8f9fa; padding: 15px; border-radius: 8px; color: #212529;'><b>Ejemplo de respuesta:</b><br><br>\"A pesar de los peligros, muchos emigrantes deciden arriesgar su vida para cruzar el mar.\"<br><br>\"A pesar de las campañas de concienciación, la contaminación sigue aumentando en muchas ciudades.\"</div>"
+        }
+      ]
+    }
+  ]
+};
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

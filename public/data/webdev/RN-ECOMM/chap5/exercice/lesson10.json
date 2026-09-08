@@ -1,0 +1,140 @@
+[
+  {
+    "intitule": "Implémentation d'une Barre de Recherche avec Autocomplétion",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Dans le cadre du développement de l'écran de recherche de l'application mobile e-commerce Sawamart, vous devez implémenter une barre de recherche avec autocomplétion en utilisant un store Zustand dédié. L'objectif est de comprendre comment structurer la logique de recherche et de gestion d'état.</p>",
+      "images": [
+        "Capture d'écran d'une barre de recherche mobile avec une liste de suggestions affichée en dessous."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez la structure d'un store Zustand nommé `searchStore` pour gérer l'état de la recherche (terme saisi, résultats, suggestions). Quelles propriétés et actions incluriez-vous ?",
+        "niveau": "easy",
+        "reponse": "Le store doit contenir des propriétés comme : `query` (terme de recherche saisi), `suggestions` (liste des suggestions issues de l'API ou du cache), `results` (liste des produits correspondant à la recherche), `isLoading` (état de chargement) et `recentSearches` (historique des recherches). Les actions incluraient : `setQuery(query)`, `fetchSuggestions(query)` (appel API ou filtrage local), `fetchResults(query)` (appel API avec pagination), `addRecentSearch(query)` et `clearRecentSearches()`.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez comment vous intégreriez ce store avec un composant `SearchBar` pour mettre à jour la liste des suggestions en temps réel (au fur et à mesure que l'utilisateur tape).",
+            "niveau": "easy",
+            "reponse": "Le composant `SearchBar` utiliserait le hook `useSearchStore` pour accéder à l'état `query` et à l'action `setQuery`. À chaque changement de texte (via `onChangeText`), on appelle `setQuery` avec la nouvelle valeur. Un `useEffect` dans le composant ou un `subscribe` dans le store écouterait les changements de `query` et déclencherait l'action `fetchSuggestions` avec un délai (debounce) pour éviter des appels API trop fréquents. Les suggestions retournées sont ensuite affichées dynamiquement sous la barre de recherche."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Évaluez l'importance d'utiliser une technique de debounce sur l'input de la barre de recherche. Quels problèmes cette technique résout-elle et quels sont ses avantages en termes de performance et d'expérience utilisateur ?",
+        "niveau": "medium",
+        "reponse": "Le debounce est crucial pour éviter d'effectuer un appel API ou une opération de filtrage intensive à chaque caractère saisi par l'utilisateur. Sans debounce, l'application enverrait de nombreuses requêtes en très peu de temps, ce qui pourrait saturer le serveur, ralentir l'application (notamment sur des appareils mobiles moins puissants) et générer une expérience utilisateur saccadée avec des résultats qui se rafraîchissent constamment de manière instable. Le debounce permet d'attendre que l'utilisateur ait fini de taper (ou fasse une pause) avant de lancer la recherche, ce qui réduit le nombre d'appels réseau, améliore la fluidité de l'UI, économise la batterie et la bande passante, tout en offrant des résultats plus pertinents.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion des Filtres et de la Pagination",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>L'écran de recherche de Sawamart doit permettre aux utilisateurs de filtrer les produits selon plusieurs critères : catégorie, tranche de prix (minimum et maximum), état (neuf/occasion) et localisation (ville). De plus, les résultats doivent être chargés par pagination (charge infinie). Vous devez implémenter un modal de filtres et intégrer la logique de pagination.</p>",
+      "images": [
+        "Maquette d'un écran de recherche mobile avec les résultats affichés en grille, un champ de recherche en haut et un bouton 'Filtres'."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez une structure de données pour l'état des filtres dans un store Zustand (par exemple, `filterStore`). Comment géreriez-vous la combinaison des filtres pour construire une requête API ?",
+        "niveau": "medium",
+        "reponse": "Le `filterStore` contiendrait un objet `filters` avec des propriétés comme `category: string | null`, `priceMin: number | null`, `priceMax: number | null`, `condition: 'new' | 'used' | null`, `location: string | null`. Une action `setFilter(key, value)` mettrait à jour l'objet. Une action `resetFilters()` réinitialiserait l'état à `null`. La construction de la requête API se ferait en transformant cet objet en paramètres de requête (query string), par exemple : `?category=electronics&priceMin=10000&priceMax=50000&condition=new`. Il est important de gérer l'exclusion des filtres `null` pour ne pas les envoyer dans la requête.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Décrivez la logique du chargement infini (infinite scroll) dans l'écran de recherche. Comment utiliseriez-vous `onEndReached` (de la `FlatList`) et gérez-vous les états de chargement et de fin de liste ?",
+            "niveau": "medium",
+            "reponse": "On utilise une `FlatList` avec son prop `onEndReached`. La logique implique d'avoir dans le store (ou un hook associé) des variables d'état : `page` (numéro de page actuel), `hasMore` (booléen indiquant s'il y a d'autres pages), `isLoadingMore` (pour éviter les doubles appels). Lorsque `onEndReached` est déclenché et que `isLoadingMore` est false et `hasMore` est true, on incrémente `page`, on passe `isLoadingMore` à true, et on effectue l'appel API pour la page suivante avec les filtres actuels. Les nouveaux résultats sont ajoutés à la liste existante, puis `isLoadingMore` repasse à false. `hasMore` est mis à jour en fonction de la réponse de l'API (par exemple, le nombre total d'items ou un flag)."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Analysez l'impact de l'application de plusieurs filtres simultanés sur les performances de l'application et du backend. Proposez deux optimisations possibles.",
+        "niveau": "hard",
+        "reponse": "L'application de plusieurs filtres peut entraîner des requêtes API complexes avec de nombreuses conditions, ce qui peut ralentir le backend et augmenter le temps de réponse, dégradant l'expérience utilisateur. En frontend, la manipulation de grands volumes de données filtrées localement peut aussi être lourde.\n\nOptimisations proposées :\n1. **Optimisation des requêtes API (Backend) :** Indexer les champs de la base de données utilisés pour le filtrage (catégorie, prix, état, localisation). Utiliser des requêtes efficaces avec des index composés si nécessaire. Mettre en cache les résultats des requêtes fréquentes (par exemple, les catégories et les gammes de prix populaires).\n2. **Gestion Frontend :** Implémenter un délai (debounce) sur les changements de filtres pour ne déclencher la recherche que lorsque l'utilisateur a fini de sélectionner ses critères. Afficher un indicateur de chargement pendant les appels API pour informer l'utilisateur. Utiliser le cache des résultats de recherche pour éviter de refaire la même requête si les filtres n'ont pas changé. Considérer l'utilisation de la pagination pour ne charger qu'une partie des résultats.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Journalisation des Recherches (Interaction Service)",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Pour améliorer le moteur de recommandations et analyser le comportement des utilisateurs, chaque recherche effectuée sur la plateforme doit être journalisée. Un service `interactionService.logSearch` est fourni pour envoyer les données de recherche au backend.</p>",
+      "images": [
+        "Schéma représentant le flux de données entre l'application mobile (SearchScreen), le service interactionService et le backend."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "À quel moment de la vie de la recherche (composant `SearchScreen`) appelleriez-vous la fonction `interactionService.logSearch` ? Justifiez votre réponse.",
+        "niveau": "medium",
+        "reponse": "Idéalement, on devrait appeler `interactionService.logSearch` lorsque l'utilisateur soumet sa recherche, c'est-à-dire au moment où il appuie sur le bouton de recherche du clavier ou lorsqu'on déclenche la recherche après le debounce. Il ne faut pas logger chaque frappe de caractère, car cela générerait un volume de données trop important et peu pertinent. On peut également logger l'application de filtres en tant qu'événements de recherche distincts ou enrichir l'événement de recherche initial avec les filtres appliqués. Il est essentiel de loguer les informations clés : le terme recherché, les filtres utilisés, l'heure, l'ID de l'utilisateur.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quelles données spécifiques devraient être envoyées au backend par `interactionService.logSearch` pour qu'elles soient utiles au système de recommandations ?",
+            "niveau": "medium",
+            "reponse": "Les données suivantes sont cruciales :\n- `query`: Le texte exact de la recherche.\n- `userId`: L'identifiant de l'utilisateur connecté.\n- `filters`: Un objet JSON contenant tous les filtres appliqués (catégorie, prix min/max, état, localisation).\n- `resultsCount`: Le nombre total de résultats trouvés pour cette recherche.\n- `timestamp`: L'horodatage de la recherche.\n- `deviceInfo`: Des informations sur l'appareil (facultatif mais utile pour l'analyse).\n- `sessionId`: Un identifiant de session pour regrouper les actions d'un même utilisateur.",
+            "reponse": "Les données suivantes sont cruciales :\n- `query`: Le texte exact de la recherche.\n- `userId`: L'identifiant de l'utilisateur connecté.\n- `filters`: Un objet JSON contenant tous les filtres appliqués (catégorie, prix min/max, état, localisation).\n- `resultsCount`: Le nombre total de résultats trouvés pour cette recherche.\n- `timestamp`: L'horodatage de la recherche.\n- `deviceInfo`: Des informations sur l'appareil (facultatif mais utile pour l'analyse).\n- `sessionId`: Un identifiant de session pour regrouper les actions d'un même utilisateur."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Imaginez que le backend soit temporairement indisponible et que l'appel à `interactionService.logSearch` échoue. Proposez une stratégie de gestion d'erreur appropriée pour ne pas pénaliser l'expérience utilisateur.",
+        "niveau": "hard",
+        "reponse": "Une stratégie robuste doit considérer que le log est une tâche secondaire qui ne doit pas bloquer l'utilisateur. Si l'appel échoue, il faut d'abord intercepter l'erreur (catch). On pourrait mettre en place une file d'attente (queue) gérée par un service tel que `offlineQueue` (vu dans les leçons de résilience). L'action de log serait alors ajoutée à cette file avec un timestamp et un identifiant unique. Une tâche en arrière-plan (par exemple, un service qui s'exécute lorsque l'application est en ligne ou à intervalles réguliers) tenterait de rejouer les appels échoués. L'utilisateur ne doit voir aucune alerte d'erreur ; l'échec doit être silencieux du point de vue de l'UI. Une solution alternative serait de stocker le log en local (AsyncStorage) et de le synchroniser au prochain démarrage de l'application ou au retour de la connexion.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Création d'un Écran de Recherche Complet pour Sawamart",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous êtes chargé de développer l'écran de recherche complet (SearchScreen) pour l'application Sawamart. L'écran doit intégrer une barre de recherche avec autocomplétion, un modal de filtres avancés, une grille de résultats avec chargement infini, et un affichage des recherches récentes. Vous devez concevoir l'architecture de cet écran et ses interactions avec les différents stores et services.</p>",
+      "images": [
+        "Maquette complète de l'écran SearchScreen avec tous ses éléments : barre de recherche, suggestions, filtres, résultats en grille, et historique."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décomposez le composant `SearchScreen` en sous-composants fonctionnels (par exemple : `SearchBar`, `SuggestionList`, `FilterModal`, `ResultsGrid`, `RecentSearches`). Pour chaque sous-composant, décrivez brièvement son rôle et les données qu'il reçoit de l'état global.",
+        "niveau": "hard",
+        "reponse": "1. **SearchBar :** Barre de recherche avec un champ `TextInput`. Il reçoit `query` et `setQuery` du `searchStore`. Il gère le focus et la soumission.\n2. **SuggestionList :** Affiche une liste de suggestions. Il reçoit `suggestions` et une action `onSelectSuggestion` (qui déclenche la recherche) du `searchStore`.\n3. **FilterModal :** Modal ou écran superposé pour les filtres. Il reçoit l'état des filtres (`filters`) et les actions de mise à jour (`setFilter`, `resetFilters`) du `filterStore`.\n4. **RecentSearches :** Affiche une liste d'historique des recherches. Il reçoit `recentSearches` et une action `addRecentSearch` (pour les ajouts) ou `clearRecentSearches` du `searchStore`.\n5. **ResultsGrid :** Affiche les résultats de recherche dans une `FlatList` en grille. Il reçoit `results`, `isLoading`, `isLoadingMore`, `hasMore` du `searchStore`, ainsi que les actions `loadMoreResults` et `refreshResults`. Il gère `pull-to-refresh`.\nL'écran `SearchScreen` orchestre ces composants et gère la logique d'affichage conditionnel (ex : afficher les suggestions ou les résultats).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Décrivez comment se fait la communication entre le `SearchScreen` et le `FilterModal` pour appliquer les filtres et mettre à jour la liste de résultats.",
+            "niveau": "hard",
+            "reponse": "Le `SearchScreen` ouvre le `FilterModal`. Dans le modal, l'utilisateur modifie les filtres via des composants d'input (sliders, pickers, etc.) qui appellent les actions du `filterStore`. Lorsque l'utilisateur valide les filtres (appuie sur 'Appliquer'), le modal se ferme et déclenche une recherche. Pour ce faire, il peut appeler une fonction passée en prop par `SearchScreen` (ex: `onApplyFilters`) qui va alors faire un appel à une action du `searchStore` (ex: `performSearch` avec les paramètres de recherche et les filtres). Ceci va réinitialiser la pagination (page = 1, hasMore = true), effacer les résultats existants, et lancer une nouvelle requête API. Les filtres appliqués sont également affichés de manière synthétique sur l'écran de recherche (en badges).",
+            "reponse": "Le `SearchScreen` ouvre le `FilterModal`. Dans le modal, l'utilisateur modifie les filtres via des composants d'input (sliders, pickers, etc.) qui appellent les actions du `filterStore`. Lorsque l'utilisateur valide les filtres (appuie sur 'Appliquer'), le modal se ferme et déclenche une recherche. Pour ce faire, il peut appeler une fonction passée en prop par `SearchScreen` (ex: `onApplyFilters`) qui va alors faire un appel à une action du `searchStore` (ex: `performSearch` avec les paramètres de recherche et les filtres). Ceci va réinitialiser la pagination (page = 1, hasMore = true), effacer les résultats existants, et lancer une nouvelle requête API. Les filtres appliqués sont également affichés de manière synthétique sur l'écran de recherche (en badges)."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Évaluez les défis liés à la synchronisation de l'état entre le `searchStore` (terme de recherche, résultats), le `filterStore` (filtres actifs) et les composants UI (SearchBar, ResultsGrid, FilterModal). Proposez une stratégie pour maintenir cette synchronisation et éviter les incohérences.",
+        "niveau": "very hard",
+        "reponse": "Les défis incluent :\n1. **Double source de vérité :** Les filtres sont dans `filterStore`, mais les résultats dans `searchStore`. Si les filtres changent, les résultats doivent être mis à jour.\n2. **Incohérence lors de la navigation :** Si l'utilisateur revient sur l'écran de recherche, l'état précédent doit être restauré (terme de recherche, filtres, résultats, page actuelle) ou réinitialisé selon le cas d'usage.\n3. **Mise à jour asynchrone :** Les requêtes API sont asynchrones, il faut gérer correctement les états de chargement et éviter les courses-poursuites (race conditions).\n\n**Stratégies de synchronisation :**\n- **Single Source of Truth :** Créer un `searchState` qui encapsule à la fois `query`, `filters`, `results`, et `pagination`. `filterStore` peut être un store séparé mais ses modifications déclencheront une action dans `searchStore`.\n- **Utiliser des Actions Composées :** Une action `applyFilters(newFilters)` dans `searchStore` qui met à jour `filters`, reset `results` et `page`, et lance la recherche.\n- **Middleware ou Effets :** Utiliser des effets (comme dans `useEffect` ou via les `subscribe` de Zustand) pour réagir aux changements de `filters` ou de `query` et déclencher automatiquement une nouvelle recherche.\n- **Gestion de la Navigation :** Utiliser le `useFocusEffect` de React Navigation pour vérifier si l'état doit être réinitialisé ou restauré. Par exemple, on pourrait choisir de garder l'état si l'utilisateur revient de l'écran de détail d'un produit.\n- **Race Conditions :** Pour éviter les appels API concurrents, on peut annuler les requêtes précédentes ou utiliser un identifiant de requête (requestId) pour ignorer les réponses obsolètes.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

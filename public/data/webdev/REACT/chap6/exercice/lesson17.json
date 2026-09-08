@@ -1,0 +1,145 @@
+[
+  {
+    "intitule": "Comprendre useRef : définition et usages",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Le hook <code>useRef</code> est l'un des hooks fondamentaux de React. Il permet de créer une référence mutable qui persiste pendant toute la vie du composant.</p>",
+      "images": ["schéma comparant useState (déclenche re-rendu) et useRef (pas de re-rendu)"]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Définir ce qu'est useRef et citer ses deux principaux cas d'utilisation.",
+        "niveau": "easy",
+        "reponse": "useRef est un hook React qui retourne un objet mutable avec une propriété .current. Ses deux principaux cas d'utilisation sont : 1) Accéder directement à un élément du DOM (ex: focus, scroll, mesure) ; 2) Stocker une valeur qui persiste entre les rendus sans déclencher de re-rendu lorsqu'elle est modifiée.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer la différence fondamentale entre useState et useRef concernant le déclenchement des re-rendus.",
+        "niveau": "easy",
+        "reponse": "useState déclenche un re-rendu du composant lorsque la fonction setter est appelée. useRef, en revanche, ne déclenche JAMAIS de re-rendu lorsqu'on modifie sa propriété .current. C'est pourquoi useRef est idéal pour stocker des valeurs qui n'affectent pas l'affichage (timers, compteurs internes, éléments DOM).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Accès direct au DOM pour le focus automatique",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous développez un formulaire de connexion pour une application bancaire camerounaise. Lorsque le formulaire s'affiche, le champ \"email\" doit automatiquement recevoir le focus (curseur actif) pour que l'utilisateur puisse commencer à taper immédiatement.</p>",
+      "images": ["formulaire de connexion avec champ email en surbrillance (focus)", "schéma d'un input recevant le focus via useRef"]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire le code d'un composant LoginForm qui utilise useRef pour donner le focus au champ email au montage du composant.",
+        "niveau": "medium",
+        "reponse": "import { useRef, useEffect } from 'react';\n\nfunction LoginForm() {\n  const emailRef = useRef(null);\n\n  useEffect(() => {\n    emailRef.current.focus();\n  }, []);\n\n  return (\n    <form>\n      <input ref={emailRef} type=\"email\" placeholder=\"Email\" />\n      <input type=\"password\" placeholder=\"Mot de passe\" />\n      <button type=\"submit\">Se connecter</button>\n    </form>\n  );\n}",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer pourquoi on utilise useEffect avec un tableau de dépendances vide pour cette opération.",
+            "niveau": "medium",
+            "reponse": "On utilise useEffect avec un tableau de dépendances vide pour exécuter le code une seule fois après le montage du composant. À ce moment, l'input est déjà présent dans le DOM et la référence emailRef.current est correctement définie. Si on essayait de faire focus() directement dans le corps du composant, la référence serait encore null car l'élément n'est pas encore attaché au DOM."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Stocker un timer sans provoquer de re-rendu",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous construisez un jeu de réaction simple : un chronomètre démarre au clic sur \"Démarrer\", et un message apparaît après 5 secondes. L'utilisateur peut annuler le timer avant la fin. Il faut pouvoir stocker l'ID du timer (setTimeout) sans provoquer de re-rendu à chaque modification.</p>",
+      "images": ["interface d'un jeu de réaction avec boutons Démarrer et Annuler", "schéma du cycle de vie d'un timer avec clearTimeout"]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire un composant ReactionGame qui utilise useRef pour stocker l'ID du timer et useState pour gérer le message affiché.",
+        "niveau": "hard",
+        "reponse": "import { useRef, useState } from 'react';\n\nfunction ReactionGame() {\n  const [message, setMessage] = useState('En attente...');\n  const timerRef = useRef(null);\n\n  const handleStart = () => {\n    if (timerRef.current) clearTimeout(timerRef.current);\n    setMessage('Timer démarré ! 5 secondes...');\n    timerRef.current = setTimeout(() => {\n      setMessage('🎉 BRAVO ! 5 secondes sont écoulées !');\n      timerRef.current = null;\n    }, 5000);\n  };\n\n  const handleCancel = () => {\n    if (timerRef.current) {\n      clearTimeout(timerRef.current);\n      timerRef.current = null;\n      setMessage('Timer annulé !');\n    }\n  };\n\n  return (\n    <div>\n      <p>{message}</p>\n      <button onClick={handleStart}>Démarrer</button>\n      <button onClick={handleCancel}>Annuler</button>\n    </div>\n  );\n}",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Justifier pourquoi on utilise useRef plutôt que useState pour stocker timerRef.",
+            "niveau": "hard",
+            "reponse": "Si on utilisait useState pour stocker l'ID du timer, chaque appel à setTimerId provoquerait un re-rendu inutile du composant. Le timerId n'affecte pas directement l'affichage, il n'a donc pas besoin de déclencher de re-rendu. useRef est parfait car il permet de modifier la valeur sans re-rendre le composant, tout en conservant la valeur entre les rendus."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Mesurer la taille d'un élément dynamique",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous créez un composant <code>ResizableBox</code> qui affiche un conteneur redimensionnable (par l'utilisateur via une poignée) et qui affiche en temps réel les dimensions (largeur, hauteur) du conteneur. Utilisez <code>useRef</code> pour accéder à l'élément DOM et mesurer ses dimensions.</p>",
+      "images": ["interface avec une boîte redimensionnable affichant ses dimensions", "schéma d'une boîte avec poignée de redimensionnement"]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire un composant ResizableBox qui utilise useRef pour obtenir la référence de la div et affiche ses dimensions dans un paragraphe.",
+        "niveau": "hard",
+        "reponse": "import { useRef, useState, useEffect } from 'react';\n\nfunction ResizableBox() {\n  const boxRef = useRef(null);\n  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });\n\n  const updateDimensions = () => {\n    if (boxRef.current) {\n      setDimensions({\n        width: boxRef.current.clientWidth,\n        height: boxRef.current.clientHeight\n      });\n    }\n  };\n\n  useEffect(() => {\n    updateDimensions();\n    window.addEventListener('resize', updateDimensions);\n    return () => window.removeEventListener('resize', updateDimensions);\n  }, []);\n\n  return (\n    <div>\n      <div\n        ref={boxRef}\n        style={{\n          width: '200px',\n          height: '150px',\n          resize: 'both',\n          overflow: 'auto',\n          border: '2px solid blue',\n          padding: '10px'\n        }}\n      >\n        Redimensionnez-moi !\n      </div>\n      <p>Dimensions : {dimensions.width} x {dimensions.height} px</p>\n    </div>\n  );\n}",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer pourquoi on appelle updateDimensions() dans un useEffect avec écouteur resize et non directement dans le corps du composant.",
+            "niveau": "hard",
+            "reponse": "On place l'appel dans useEffect pour garantir que la référence DOM (boxRef.current) existe déjà. De plus, l'écouteur resize permet de réagir au redimensionnement global. On pourrait aussi utiliser un ResizeObserver pour être plus précis. Sans useEffect, la mesure serait effectuée avant que l'élément ne soit attaché au DOM, et les valeurs seraient nulles."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "useRef vs useState : choisir le bon outil",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Analysez les situations suivantes et déterminez si <code>useState</code> ou <code>useRef</code> est la solution appropriée.</p>",
+      "images": ["tableau comparatif des caractéristiques de useState et useRef", "schéma décisionnel pour choisir entre useState et useRef"]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier dans chaque cas quel hook utiliser et justifier la réponse :\nA) Stocker le nombre de clics sur un bouton (affiché à l'écran)\nB) Stocker l'ID d'un intervalle setInterval pour pouvoir le nettoyer\nC) Donner le focus à un champ de texte après validation d'un formulaire\nD) Conserver un compteur interne de rendus (à des fins de debugging)",
+        "niveau": "medium",
+        "reponse": "A) useState : la valeur doit être affichée et doit déclencher un re-rendu à chaque clic.\nB) useRef : l'ID de l'intervalle est une donnée interne qui ne doit pas déclencher de re-rendu. Il faut juste pouvoir appeler clearInterval plus tard.\nC) useRef : pour manipuler directement le DOM, on utilise useRef et .focus() dans un useEffect.\nD) useRef : car on ne veut pas que l'incrémentation du compteur déclenche un re-rendu infini ; on peut incrémenter renderCountRef.current à chaque rendu sans boucle.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "forwardRef : transmettre une ref à un composant enfant",
+    "type": "ressource",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Par défaut, on ne peut pas passer une ref directement à un composant personnalisé car les refs ne sont pas transmises comme les props. React fournit <code>forwardRef</code> pour résoudre ce problème.</p>",
+      "images": ["schéma de forwardRef permettant de transmettre une ref du parent à un enfant", "exemple de focus sur un bouton dans un composant enfant"]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer le problème que résout forwardRef et décrire sa syntaxe.",
+        "niveau": "very hard",
+        "reponse": "forwardRef résout le problème du passage de ref à travers les composants personnalisés. Sans forwardRef, si on essaie d'ajouter une ref sur un composant enfant (ex: <Child ref={myRef} />), React ne l'associera pas à un élément DOM mais lancera un avertissement. forwardRef permet au composant enfant d'accepter une ref et de l'attacher à un élément DOM spécifique. Syntaxe : const Child = forwardRef((props, ref) => <input ref={ref} />);",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Écrire un exemple où un composant parent App utilise forwardRef pour donner le focus à un input dans un composant enfant CustomInput.",
+            "niveau": "very hard",
+            "reponse": "// Composant enfant\nconst CustomInput = forwardRef((props, ref) => {\n  return <input ref={ref} type=\"text\" placeholder={props.placeholder} />;\n});\n\n// Composant parent\nfunction App() {\n  const inputRef = useRef(null);\n\n  const focusInput = () => {\n    inputRef.current.focus();\n  };\n\n  return (\n    <div>\n      <CustomInput ref={inputRef} placeholder=\"Tapez ici...\" />\n      <button onClick={focusInput}>Focus</button>\n    </div>\n  );\n}"
+          }
+        ]
+      }
+    ]
+  }
+]

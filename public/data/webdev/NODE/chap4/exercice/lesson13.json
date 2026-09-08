@@ -1,0 +1,126 @@
+[
+  {
+    "intitule": "Identifier les middlewares dans une application Express",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Observez l’extrait de code Express suivant :</p><pre><code>const express = require('express');\nconst app = express();\n\napp.use(express.json());\napp.use(express.static('public'));\n\napp.use((req, res, next) => {\n  console.log(`Requête reçue : ${req.method} ${req.url}`);\n  next();\n});\n\napp.get('/', (req, res) => {\n  res.send('Bonjour');\n});\n\napp.listen(3000);\n</code></pre><p>Répondez aux questions ci-dessous en justifiant vos réponses.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Listez tous les middlewares présents dans ce code et précisez pour chacun s’il s’agit d’un middleware intégré, d’un middleware personnalisé ou d’un middleware de routage.",
+        "niveau": "easy",
+        "reponse": "<p>1. <code>express.json()</code> : middleware intégré (analyse le corps JSON).<br>2. <code>express.static('public')</code> : middleware intégré (sert des fichiers statiques).<br>3. <code>(req, res, next) => { console.log(...); next(); }</code> : middleware personnalisé (logging).<br>4. <code>app.get('/', ...)</code> : middleware de routage (gère la requête GET sur /).</p>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez pourquoi le middleware de logging doit impérativement appeler la fonction <code>next()</code>.",
+        "niveau": "medium",
+        "reponse": "<p>Sans <code>next()</code>, la requête resterait bloquée dans ce middleware. <code>next()</code> permet de passer la main au middleware suivant dans la pile (ici la route <code>/</code>). Sinon, le serveur ne répondrait jamais.</p>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Organiser l’ordre des middlewares pour un serveur sécurisé",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous développez une API pour une école camerounaise. Vous devez appliquer dans l’ordre :</p><ul><li>un logging de chaque requête</li><li>une vérification que l’utilisateur est authentifié (pour toutes les routes sauf <code>/login</code>)</li><li>une limitation de débit (rate limiting) pour éviter les abus</li><li>le middleware <code>express.json()</code></li><li>le middleware <code>helmet()</code> (sécurité des en-têtes)</li></ul><p>Écrivez l’ordre d’enregistrement correct et expliquez votre choix.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez un ordre d’exécution pour ces middlewares et justifiez chaque position.",
+        "niveau": "medium",
+        "reponse": "<p>Ordre proposé :<br>1. <code>helmet()</code> : doit être le premier pour sécuriser les en-têtes avant tout traitement.<br>2. <code>express.json()</code> : avant les middlewares qui lisent le corps (ex: authentification).<br>3. <code>rate limiting</code> : avant l’authentification pour bloquer les abus en amont.<br>4. <code>logging</code> : après la protection de base, mais avant l’authentification pour tracer toutes les requêtes.<br>5. authentification : après le log mais avant la logique métier.<br>Attention : la route /login doit être exclue du middleware d’auth (via une condition ou un .use sans la route).</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment exclure la route /login du middleware d’authentification sans bloquer l’accès ?",
+            "niveau": "medium",
+            "reponse": "<p>Soit placer <code>app.post('/login', ...)</code> avant <code>app.use(authMiddleware)</code>, soit utiliser un <code>if (req.path === '/login') return next();</code> à l’intérieur du middleware d’auth.</p>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Créer un middleware personnalisé de protection contre les accès non autorisés",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Dans une application de gestion de notes d’élèves, seuls les enseignants et les admins peuvent consulter la route <code>/notes</code>. Un token JWT est transmis dans l’en-tête <code>Authorization</code>.</p><p>Écrivez un middleware <code>restrictTo('teacher', 'admin')</code> qui vérifie le rôle contenu dans le token (après un premier middleware d’authentification qui ajoute <code>req.user</code>). Si l’utilisateur n’a pas le bon rôle, renvoyez une erreur 403 avec un message approprié.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez la fonction <code>restrictTo(...roles)</code> en respectant la signature <code>(req, res, next)</code>. Incluez la gestion d’erreur.",
+        "niveau": "hard",
+        "reponse": "<pre><code>const restrictTo = (...roles) => {\n  return (req, res, next) => {\n    if (!req.user) {\n      return res.status(401).json({ message: 'Non authentifié' });\n    }\n    if (!roles.includes(req.user.role)) {\n      return res.status(403).json({ message: 'Droits insuffisants' });\n    }\n    next();\n  };\n};\n\n// Utilisation :\napp.get('/notes', authenticate, restrictTo('teacher', 'admin'), getNotes);\n</code></pre>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi utilise-t-on le pattern <code>(...roles) => (req, res, next) => {...}</code> ?",
+            "niveau": "hard",
+            "reponse": "<p>C’est une closure qui permet de paramétrer le middleware avec une liste de rôles lors de son enregistrement. Cela évite de dupliquer le code pour chaque ensemble de rôles différents.</p>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Que se passe-t-il si aucun rôle n’est passé à <code>restrictTo()</code> ? Proposez une amélioration.",
+            "niveau": "hard",
+            "reponse": "<p>Avec <code>restrictTo()</code>, <code>roles</code> serait un tableau vide, donc <code>roles.includes(...)</code> serait toujours faux → tout le monde est bloqué (sauf si on ajoute un cas par défaut). On pourrait améliorer en levant une erreur explicite si aucun rôle n’est fourni, ou en autorisant tous les rôles (rare).</p>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Tester l’ordre d’exécution des middlewares avec une chaîne d’opérations",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Soit le code suivant. Sans exécuter réellement, déterminez l’ordre d’affichage dans la console pour une requête <code>GET /test</code>.</p><pre><code>app.use((req, res, next) => {\n  console.log('A');\n  next();\n  console.log('B');\n});\n\napp.use((req, res, next) => {\n  console.log('C');\n  next();\n});\n\napp.get('/test', (req, res) => {\n  console.log('D');\n  res.send('OK');\n});\n\napp.use((req, res) => {\n  console.log('E');\n});\n</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Donnez la séquence exacte des lettres affichées et expliquez pourquoi <code>next()</code> ne provoque pas un retour immédiat.",
+        "niveau": "hard",
+        "reponse": "<p>Séquence : A, C, D, puis B (et jamais E).<br>Explication : <code>next()</code> passe au middleware suivant (C). Après C, <code>next()</code> passe à la route (D). Une fois D terminé, on remonte la pile : le code après <code>next()</code> du middleware C n’existe pas, puis on revient au middleware A qui exécute son <code>console.log('B')</code>. Le dernier middleware (E) n’est jamais atteint car la réponse a déjà été envoyée par la route.</p>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Déboguer un middleware de gestion d’erreurs manquant",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Un étudiant a écrit ce code. La route <code>/users/me</code> lance une erreur asynchrone. Le serveur plante (réponse jamais envoyée). Corrigez le code en utilisant un middleware d’erreur et <code>next(error)</code>.</p><pre><code>app.get('/users/me', async (req, res) => {\n  const user = await User.findById(req.userId);\n  if (!user) throw new Error('User not found');\n  res.json(user);\n});\n</code></pre><p>Écrivez la version corrigée de la route et le middleware de gestion d’erreurs global.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez la correction complète (route + middleware d’erreur) en respectant la signature <code>(err, req, res, next)</code>.",
+        "niveau": "very hard",
+        "reponse": "<pre><code>// Route corrigée :\napp.get('/users/me', async (req, res, next) => {\n  try {\n    const user = await User.findById(req.userId);\n    if (!user) throw new Error('User not found');\n    res.json(user);\n  } catch (error) {\n    next(error); // passe l'erreur au middleware spécialisé\n  }\n});\n\n// Middleware d'erreur (à placer APRÈS toutes les routes) :\napp.use((err, req, res, next) => {\n  console.error(err.stack);\n  res.status(500).json({ message: 'Erreur interne', error: err.message });\n});\n</code></pre>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Que se passe-t-il si on oublie <code>next(error)</code> et qu’on ne gère pas l’exception ?",
+            "niveau": "hard",
+            "reponse": "<p>Express ne peut pas rattraper les erreurs asynchrones non gérées. La promesse rejetée ne sera jamais transmise à un middleware d’erreur, et la requête restera pendante (sans réponse) ou plantera le serveur selon la version.</p>"
+          }
+        ]
+      }
+    ]
+  }
+]

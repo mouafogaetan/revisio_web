@@ -1,0 +1,135 @@
+[
+  {
+    "intitule": "Exercice 1 : Configuration de Jest pour React Native",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Dans une application React Native/Expo, les tests sont essentiels pour garantir la qualité et la stabilité du code. Jest est le framework de test recommandé.</p><p>Analysez les objectifs de la leçon 23 et répondez aux questions suivantes.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Quel est le rôle du fichier <code>jest.config.js</code> dans un projet React Native ?",
+        "niveau": "easy",
+        "reponse": "Le fichier <code>jest.config.js</code> permet de configurer Jest pour l'environnement React Native. Il définit les options de test comme le répertoire des tests, les extensions de fichiers, les transformations, les mocks, et les rapports de couverture."
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez l'utilité de <code>@testing-library/react-native</code> dans le contexte des tests d'écrans.",
+        "niveau": "easy",
+        "reponse": "La bibliothèque <code>@testing-library/react-native</code> fournit des utilitaires pour tester les composants React Native en simulant les interactions utilisateur et en vérifiant le rendu. Elle permet de tester les composants de manière isolée et fiable, en se concentrant sur le comportement plutôt que sur les détails d'implémentation."
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 2 : Tests unitaires des stores Zustand",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous devez tester le store d'authentification (<code>authStore</code>) de l'application Sawamart.</p><p>Le store gère l'état d'authentification, le token JWT et les informations de l'utilisateur. Il contient des méthodes pour se connecter, se déconnecter et rafraîchir le token.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez un test unitaire pour la méthode <code>login</code> du <code>authStore</code> qui vérifie que le token et les données utilisateur sont correctement stockés en cas de succès.",
+        "niveau": "hard",
+        "reponse": "```typescript\nimport { act } from '@testing-library/react-native';\nimport { useAuthStore } from '../stores/authStore';\nimport { authService } from '../services/authService';\n\n// Mock du service d'authentification\njest.mock('../services/authService', () => ({\n  authService: {\n    login: jest.fn(),\n  },\n}));\n\ndescribe('authStore', () => {\n  beforeEach(() => {\n    jest.clearAllMocks();\n    // Réinitialiser le store avant chaque test\n    useAuthStore.setState({ user: null, token: null, isAuthenticated: false });\n  });\n\n  test('login should store token and user data on success', async () => {\n    const mockResponse = {\n      token: 'fake-jwt-token',\n      user: { id: '123', name: 'Jean', email: 'jean@example.com' },\n    };\n    \n    (authService.login as jest.Mock).mockResolvedValue(mockResponse);\n\n    await act(async () => {\n      await useAuthStore.getState().login('jean@example.com', 'password123');\n    });\n\n    const state = useAuthStore.getState();\n    expect(state.token).toBe('fake-jwt-token');\n    expect(state.user).toEqual(mockResponse.user);\n    expect(state.isAuthenticated).toBe(true);\n  });\n\n  test('login should handle errors', async () => {\n    (authService.login as jest.Mock).mockRejectedValue(new Error('Invalid credentials'));\n\n    await act(async () => {\n      try {\n        await useAuthStore.getState().login('jean@example.com', 'wrong-password');\n      } catch (error) {\n        // L'erreur doit être propagée\n      }\n    });\n\n    const state = useAuthStore.getState();\n    expect(state.token).toBeNull();\n    expect(state.user).toBeNull();\n    expect(state.isAuthenticated).toBe(false);\n  });\n});\n```"
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez comment vous testeriez la persistance du store avec <code>AsyncStorage</code>.",
+        "niveau": "hard",
+        "reponse": "Pour tester la persistance, on peut utiliser un mock de <code>AsyncStorage</code> avec <code>@react-native-async-storage/async-storage/jest/async-storage-mock</code>. On vérifie que les données sont sauvegardées lors des actions (login, updateProfile) et qu'elles sont correctement restaurées au chargement de l'application."
+      },
+      {
+        "numero": 3,
+        "texte": "Comment mockez-vous les appels API dans les tests unitaires des stores ?",
+        "niveau": "medium",
+        "reponse": "On utilise <code>jest.mock</code> pour remplacer les services API par des fonctions simulées (mocks). On peut ensuite contrôler les réponses des appels API avec <code>mockResolvedValue</code> ou <code>mockRejectedValue</code> selon les cas de test."
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 3 : Tests d'intégration des services API",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous devez tester le service <code>authService</code> qui communique avec le backend NestJS.</p><p>Le service expose des méthodes pour l'inscription, la connexion, l'OTP et le refresh token.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez un test d'intégration pour la méthode <code>login</code> du <code>authService</code> en utilisant <code>jest.mock</code> pour simuler la réponse de l'API.",
+        "niveau": "very hard",
+        "reponse": "```typescript\nimport { authService } from '../services/authService';\nimport api from '../services/api';\n\n// Mock du module api\njest.mock('../services/api', () => ({\n  post: jest.fn(),\n}));\n\ndescribe('authService', () => {\n  beforeEach(() => {\n    jest.clearAllMocks();\n  });\n\n  test('login should call the correct endpoint and return user data', async () => {\n    const mockResponse = {\n      data: {\n        token: 'fake-jwt-token',\n        user: { id: '123', name: 'Jean', email: 'jean@example.com' },\n      },\n    };\n    \n    (api.post as jest.Mock).mockResolvedValue(mockResponse);\n\n    const result = await authService.login('jean@example.com', 'password123');\n\n    expect(api.post).toHaveBeenCalledWith('/auth/login', {\n      email: 'jean@example.com',\n      password: 'password123',\n    });\n    expect(result).toEqual(mockResponse.data);\n  });\n\n  test('login should throw an error when credentials are invalid', async () => {\n    const mockError = {\n      response: {\n        status: 401,\n        data: { message: 'Invalid credentials' },\n      },\n    };\n    \n    (api.post as jest.Mock).mockRejectedValue(mockError);\n\n    await expect(\n      authService.login('jean@example.com', 'wrong-password')\n    ).rejects.toThrow('Email ou mot de passe incorrect');\n  });\n});\n```"
+      },
+      {
+        "numero": 2,
+        "texte": "Comment tester le mécanisme de refresh token dans les intercepteurs Axios ?",
+        "niveau": "very hard",
+        "reponse": "On peut simuler une requête qui retourne une erreur 401, puis vérifier que l'intercepteur appelle automatiquement l'endpoint de refresh token, met à jour le token, et réessaie la requête originale. On utilise des mocks pour contrôler les réponses de l'API et vérifier le comportement de l'intercepteur."
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 4 : Tests de navigation et d'écrans",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous devez tester l'écran de connexion (<code>LoginScreen</code>) de l'application.</p><p>L'écran contient deux champs (email et mot de passe), un bouton de connexion, et un lien vers l'inscription.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez comment tester la navigation vers l'écran d'inscription lorsque l'utilisateur clique sur le lien.",
+        "niveau": "hard",
+        "reponse": "On utilise <code>@testing-library/react-native</code> pour rendre l'écran avec un navigateur mocké. On simule un clic sur le lien d'inscription et on vérifie que la fonction <code>navigation.navigate</code> a été appelée avec le bon nom de route."
+      },
+      {
+        "numero": 2,
+        "texte": "Écrivez un test qui vérifie que le bouton de connexion est désactivé lorsque les champs sont vides.",
+        "niveau": "hard",
+        "reponse": "```typescript\nimport { render, screen, fireEvent } from '@testing-library/react-native';\nimport { LoginScreen } from '../screens/LoginScreen';\n\ndescribe('LoginScreen', () => {\n  test('should disable login button when fields are empty', () => {\n    render(<LoginScreen />);\n    \n    const loginButton = screen.getByTestId('login-button');\n    expect(loginButton).toBeDisabled();\n  });\n\n  test('should enable login button when both fields are filled', () => {\n    render(<LoginScreen />);\n    \n    const emailInput = screen.getByPlaceholderText('Email');\n    const passwordInput = screen.getByPlaceholderText('Mot de passe');\n    \n    fireEvent.changeText(emailInput, 'test@example.com');\n    fireEvent.changeText(passwordInput, 'password123');\n    \n    const loginButton = screen.getByTestId('login-button');\n    expect(loginButton).toBeEnabled();\n  });\n});\n```"
+      },
+      {
+        "numero": 3,
+        "texte": "Comment mocker le <code>authStore</code> dans un test d'écran pour simuler un état authentifié ?",
+        "niveau": "medium",
+        "reponse": "On utilise <code>jest.mock</code> pour remplacer le store par un mock, puis on modifie l'état du store avec <code>useAuthStore.setState({ isAuthenticated: true, user: mockUser })</code> avant de rendre l'écran. Cela permet de tester le comportement de l'écran dans différents états d'authentification."
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 5 : Couverture de code et bonnes pratiques",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Les tests sont un élément clé du développement professionnel. Une bonne couverture de code et des tests bien conçus garantissent la qualité de l'application.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Qu'est-ce que la couverture de code et pourquoi est-elle importante ?",
+        "niveau": "easy",
+        "reponse": "La couverture de code mesure le pourcentage de code qui est exécuté par les tests. Elle est importante car elle permet d'identifier les parties du code qui ne sont pas testées, ce qui peut cacher des bugs potentiels. Une bonne couverture (généralement > 80%) est un indicateur de qualité mais ne garantit pas l'absence de bugs."
+      },
+      {
+        "numero": 2,
+        "texte": "Décrivez les différentes stratégies de test (unitaires, intégration, end-to-end) et leur utilité.",
+        "niveau": "hard",
+        "reponse": "Les tests unitaires vérifient des composants isolés (stores, services). Les tests d'intégration vérifient l'interaction entre plusieurs composants (ex: service API + store). Les tests end-to-end simulent l'utilisation complète de l'application par un utilisateur (ex: via Detox ou Maestro). Chaque stratégie a son utilité pour garantir la qualité à différents niveaux de l'application."
+      },
+      {
+        "numero": 3,
+        "texte": "Quelle est la différence entre <code>jest.fn()</code> et <code>jest.mock()</code> dans Jest ?",
+        "niveau": "medium",
+        "reponse": "<code>jest.fn()</code> crée une fonction simulée (spy) qui peut être utilisée pour tester les appels de fonctions. <code>jest.mock()</code> permet de remplacer un module entier par des mocks, ce qui est utile pour simuler des dépendances externes comme des services API."
+      }
+    ]
+  }
+]

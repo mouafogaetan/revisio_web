@@ -1,0 +1,143 @@
+[
+  {
+    "intitule": "Création et utilisation d'un EventEmitter personnalisé",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un serveur Node.js doit notifier plusieurs modules lorsqu'un nouvel utilisateur s'inscrit. Vous devez utiliser le module <code>events</code> pour créer un émetteur d'événements personnalisé.</p><p>L'événement doit s'appeler <code>user_registered</code> et transporter les données suivantes : <code>{ id: 123, email: 'test@exemple.com' }</code>.</p>",
+      "images": [
+        "Schéma du pattern Observer avec EventEmitter (listeners et émetteur)",
+        "Capture d’écran d’un exemple d’EventEmitter dans la console Node.js"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire le code Node.js qui : (a) crée une instance d'EventEmitter, (b) enregistre un listener sur l'événement <code>user_registered</code> qui affiche 'Nouvel utilisateur : ' + email dans la console, (c) émet l'événement avec les données de l'utilisateur.",
+        "niveau": "medium",
+        "reponse": "const EventEmitter = require('events'); const myEmitter = new EventEmitter(); myEmitter.on('user_registered', (user) => { console.log(`Nouvel utilisateur : ${user.email}`); }); myEmitter.emit('user_registered', { id: 123, email: 'test@exemple.com' });",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer ce que fait la méthode <code>once()</code> par rapport à <code>on()</code>. Donner un exemple concret où l'utilisation de <code>once()</code> serait plus appropriée.",
+        "niveau": "medium",
+        "reponse": "once() écoute l'événement une seule fois, puis le listener est automatiquement supprimé. Utile pour une initialisation unique (ex: premier démarrage d'un service, notification unique après connexion).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Manipulation de données binaires avec Buffer",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous recevez des données binaires d'un capteur sous forme d'un buffer. Le buffer contient 4 octets représentant un entier non signé 32 bits en big-endian. Vous devez convertir ce buffer en nombre JavaScript.</p><p>Soit le buffer : <code>const buffer = Buffer.from([0x00, 0x00, 0x01, 0x2C]);</code> (0x012C = 300 en décimal).</p>",
+      "images": [
+        "Représentation mémoire d’un buffer (octets et index)",
+        "Tableau de conversion endianness (big-endian vs little-endian)"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Utiliser la méthode appropriée de Buffer pour lire l’entier 32 bits non signé big-endian. Quelle valeur sera affichée ?",
+        "niveau": "easy",
+        "reponse": "buffer.readUInt32BE(0) retourne 300.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Créer un nouveau buffer contenant la chaîne de caractères 'Node.js' (en utilisant l'encodage UTF-8). Puis extraire les octets et afficher le buffer sous forme hexadécimale.",
+        "niveau": "medium",
+        "reponse": "const strBuffer = Buffer.from('Node.js', 'utf8'); console.log(strBuffer.toString('hex')); // '4e6f64652e6a73'",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "idTuile": "lireFichierStream",
+    "intitule": "Lecture et écriture de fichiers avec Streams",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous devez copier un fichier volumineux (plusieurs Go) d’un emplacement à un autre. Une lecture classique avec <code>fs.readFile</code> saturerait la mémoire. Vous devez utiliser les streams pour une copie efficace avec backpressure.</p><p>Le fichier source est <code>source.bin</code>, la destination <code>dest.bin</code>.</p>",
+      "images": [
+        "Diagramme du pipeline stream (readable → writable) avec gestion de backpressure",
+        "Illustration du buffer interne d’un stream"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire le code Node.js utilisant <code>fs.createReadStream</code> et <code>fs.createWriteStream</code> pour copier le fichier, avec gestion de l’erreur et événement 'finish'. Expliquer pourquoi cette méthode est préférable pour les gros fichiers.",
+        "niveau": "hard",
+        "reponse": "const readStream = fs.createReadStream('source.bin'); const writeStream = fs.createWriteStream('dest.bin'); readStream.on('error', console.error); writeStream.on('error', console.error); writeStream.on('finish', () => console.log('Copie terminée')); readStream.pipe(writeStream); Cette méthode évite de charger tout le fichier en mémoire (streaming par paquets), gère automatiquement la backpressure.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Qu’est-ce que le mécanisme de backpressure dans les streams Node.js ? Pourquoi est-il important ?",
+        "niveau": "hard",
+        "reponse": "La backpressure se produit quand le stream en lecture est plus rapide que le stream en écriture. Node.js met automatiquement en pause le readable jusqu’à ce que le writable soit prêt. Cela évite une accumulation de données en mémoire et des crashs par saturation.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Création d’un stream transform (transform stream)",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous devez créer un stream qui lit un fichier texte contenant des nombres (un par ligne) et qui émet la racine carrée de chaque nombre (arrondie à 2 décimales). Formule : $\\sqrt{x}$.</p><p>Exemple d’entrée :<br><code>4\\n9\\n16\\n</code><br>Sortie attendue :<br><code>2.00\\n3.00\\n4.00\\n</code></p>",
+      "images": [
+        "Schéma d’un transform stream (entrée → transformation → sortie)",
+        "Exemple de pipeline avec un stream transform personnalisé"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémenter une classe <code>SqrtTransform</code> qui hérite de <code>stream.Transform</code> et qui applique la transformation décrite. Utiliser la méthode <code>_transform(chunk, encoding, callback)</code>.",
+        "niveau": "very hard",
+        "reponse": "const { Transform } = require('stream'); class SqrtTransform extends Transform { _transform(chunk, encoding, callback) { const lines = chunk.toString().split('\\n'); for (const line of lines) { if (line.trim()) { const num = parseFloat(line); const sqrtVal = Math.sqrt(num).toFixed(2); this.push(sqrtVal + '\\n'); } } callback(); } }",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer la différence entre <code>_transform</code> et <code>_flush</code>. Dans quel cas utiliseriez-vous <code>_flush</code> ?",
+        "niveau": "hard",
+        "reponse": "_transform est appelé pour chaque chunk de données entrant. _flush est appelé une fois à la fin, lorsque plus aucun chunk n’arrive, pour traiter les données résiduelles (ex: écrire un dernier morceau, fermer des ressources).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse de code : EventEmitter et fuites mémoire",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Un développeur a écrit le code suivant :<br><code>const EventEmitter = require('events'); class MonApp extends EventEmitter { start() { this.on('data', (msg) => { console.log(msg); }); setInterval(() => { this.emit('data', 'ping'); }, 1000); } } const app = new MonApp(); app.start();</code></p><p>Ce code fonctionne mais présente un risque potentiel.</p>",
+      "images": [
+        "Graphique d’évolution du nombre de listeners dans le temps",
+        "Exemple d’avertissement Node.js : MaxListenersExceededWarning"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier le problème potentiel dans ce code (lié aux EventEmitters) et proposer une correction.",
+        "niveau": "hard",
+        "reponse": "Le listener est ajouté à chaque appel de start(). Si start() est appelé plusieurs fois, plusieurs listeners s’accumulent (pas de removeListener). Node.js émet un avertissement si plus de 10 listeners sont attachés. Correction : déplacer l’appel this.on() dans le constructeur, ou utiliser this.once() ou this.removeAllListeners() avant d’ajouter.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Quelle méthode permet de limiter le nombre maximal de listeners pour un EventEmitter ? Comment éviter les avertissements tout en restant sécurisé ?",
+        "niveau": "medium",
+        "reponse": "myEmitter.setMaxListeners(20) augmente la limite. Mais mieux vaut revoir l’architecture : s’assurer qu’un même listener n’est pas ajouté plusieurs fois, ou utiliser une seule instance d’EventEmitter partagée.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

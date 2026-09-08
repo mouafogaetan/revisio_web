@@ -1,0 +1,142 @@
+[
+  {
+    "intitule": "Mise en place des notifications locales avec flutter_local_notifications",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous devez intégrer des notifications locales dans une application Flutter pour rappeler à l’utilisateur de boire de l’eau toutes les 2 heures. Le package <code>flutter_local_notifications</code> est installé.</p><p>Rappel : La fonction de planification utilise l’API <code>zonedSchedule</code> avec un <code>AndroidScheduleMode.alarmClock</code>.</p>",
+      "images": [
+        "Schéma d’initialisation du plugin flutter_local_notifications avec Android et iOS",
+        "Capture d’une notification locale affichée sur un smartphone Android"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire les étapes nécessaires pour initialiser le plugin <code>flutter_local_notifications</code> au démarrage de l’application et demander les permissions (Android/iOS).",
+        "niveau": "medium",
+        "reponse": "1. Créer une instance de <code>FlutterLocalNotificationsPlugin</code>. 2. Définir les paramètres d’initialisation (AndroidInitializationSettings, IOSInitializationSettings). 3. Appeler <code>initialize()</code>. 4. Pour Android, demander la permission <code>android.permission.RECEIVE_BOOT_COMPLETED</code> si nécessaire, pour iOS utiliser <code>requestPermissions()</code>.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrire une fonction Dart qui envoie une notification locale simple avec titre \"Rappel\" et corps \"Pensez à boire de l’eau\".",
+        "niveau": "medium",
+        "reponse": "void showSimpleNotification() async {\n  const AndroidNotificationDetails androidDetails = AndroidNotificationDetails('channel_id', 'channel_name', importance: Importance.high);\n  const NotificationDetails platformDetails = NotificationDetails(android: androidDetails);\n  await flutterLocalNotificationsPlugin.show(0, 'Rappel', 'Pensez à boire de l’eau', platformDetails);\n}",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Planification périodique et interaction avec l'utilisateur",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Dans une application de gestion de tâches, l’utilisateur souhaite recevoir un rappel 10 minutes avant l’échéance de chaque tâche. Vous devez planifier dynamiquement une notification locale pour chaque nouvelle tâche créée.</p><p>Les tâches ont une propriété <code>deadline</code> (DateTime). La notification doit être déclenchée à $deadline - 10$ minutes.</p>",
+      "images": [
+        "Diagramme de séquence de la planification de notification avec flutter_local_notifications",
+        "Exemple de formulaire de création de tâche avec date et heure"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer comment calculer l’heure de déclenchement et utiliser <code>zonedSchedule</code> pour programmer la notification. Quels paramètres sont obligatoires pour iOS et Android ?",
+        "niveau": "hard",
+        "reponse": "DateTime triggerTime = deadline.subtract(Duration(minutes: 10)); Utiliser <code>zonedSchedule</code> avec un timezone. Pour Android, fournir <code>AndroidScheduleMode.alarmClock</code> pour une fiabilité maximale et <code>matchDateTimeComponents</code>. Pour iOS, utiliser <code>DarwinInitializationSettings</code> et gérer les autorisations.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Rédiger une méthode <code>scheduleReminder(int taskId, DateTime deadline, String taskTitle)</code> qui programme la notification. Incluez un payload pour identifier la tâche lorsque l’utilisateur clique sur la notification.",
+        "niveau": "very hard",
+        "reponse": "void scheduleReminder(int id, DateTime deadline, String title) async {\n  final scheduledTime = deadline.subtract(Duration(minutes: 10));\n  const AndroidNotificationDetails androidDetails = AndroidNotificationDetails('task_channel', 'Rappels tâches', payload: 'task_$id');\n  const NotificationDetails platformDetails = NotificationDetails(android: androidDetails);\n  await flutterLocalNotificationsPlugin.zonedSchedule(id, 'Tâche à échoir', 'La tâche \"$title\" arrive bientôt', scheduledTime, platformDetails,\n      androidAllowWhileIdle: true, uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime);\n}",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Configuration et réception de notifications FCM (Firebase Cloud Messaging)",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Une startup souhaite envoyer des promotions à tous ses utilisateurs via Firebase Cloud Messaging. Vous devez configurer l’application Flutter pour recevoir les notifications push (même lorsque l’app est en arrière-plan).</p>",
+      "images": [
+        "Écran de configuration du projet Firebase (google-services.json, GoogleService-Info.plist)",
+        "Diagramme de flux FCM : serveur → Firebase → appareil"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Énumérer les fichiers de configuration nécessaires pour Android et iOS, et expliquer brièvement où les placer dans le projet Flutter.",
+        "niveau": "medium",
+        "reponse": "Android : <code>google-services.json</code> dans <code>android/app/</code>. iOS : <code>GoogleService-Info.plist</code> dans <code>ios/Runner/</code>. Il faut aussi activer les capacités Push Notifications et Remote notifications dans Xcode.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Citer les étapes d’initialisation de Firebase Messaging dans <code>main.dart</code> et expliquer comment gérer les messages en arrière-plan (callback).",
+        "niveau": "hard",
+        "reponse": "1. Appeler <code>Firebase.initializeApp()</code>. 2. Récupérer le token FCM avec <code>FirebaseMessaging.instance.getToken()</code>. 3. Configurer <code>FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler)</code>. 4. Définir un <code>top-level</code> function pour le handler (annotée <code>@pragma('vm:entry-point')</code>). 5. Gérer <code>onMessage</code> (premier plan) et <code>onMessageOpenedApp</code>.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse de l'impact des notifications sur l'expérience utilisateur",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Une étude montre que les utilisateurs se plaignent de recevoir trop de notifications (spam). Le chef de produit souhaite mettre en place un centre de préférences pour que l’utilisateur puisse choisir quels types de notifications recevoir (promotions, rappels, nouvelles fonctionnalités).</p>",
+      "images": [
+        "Maquette d’écran de paramètres des notifications avec des interrupteurs",
+        "Graphique montrant la corrélation entre nombre de notifications et désinstallation d’application"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposer une architecture simple de gestion des préférences (SharedPreferences ou Hive) pour stocker les choix de l’utilisateur. Illustrer avec un extrait de code Dart.",
+        "niveau": "medium",
+        "reponse": "Utiliser SharedPreferences : `await prefs.setBool('notif_promo', true);` Récupérer : `bool promo = prefs.getBool('notif_promo') ?? true;`. Avant d’envoyer une notification, vérifier la préférence. Exemple : `if (prefs.getBool('allow_reminders') == true) { showNotification(...); }`",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer pourquoi il est important de ne pas demander les autorisations de notification trop tôt au lancement de l’application. Quelle bonne pratique recommandez-vous ?",
+        "niveau": "easy",
+        "reponse": "Demander trop tôt peut frustrer l’utilisateur et le pousser à refuser. Bonne pratique : attendre un contexte pertinent (ex: après un premier achat, ou lorsque l’utilisateur active une fonctionnalité nécessitant les notifications). Utiliser un message contextuel avant la demande (pré-permission).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Débogage et tests des notifications (local + FCM)",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Pendant le développement, vous constatez que les notifications planifiées ne s’affichent pas sur Android (version 12+). Sur iOS, les notifications push ne parviennent pas à l’appareil en mode Release.</p>",
+      "images": [
+        "Capture de la console Android Logcat avec erreur de permission",
+        "Console Xcode affichant des erreurs de certificat APNs"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier les causes probables sur Android (API 31+) et donner les solutions.",
+        "niveau": "medium",
+        "reponse": "Cause : les notifications planifiées précises nécessitent la permission <code>SCHEDULE_EXACT_ALARM</code> (Android 12+). Solution : déclarer dans <code>AndroidManifest.xml</code> la permission et vérifier avec <code>AlarmManager.canScheduleExactAlarms()</code>. Autre cause : canal de notification mal configuré. Vérifier importance et ID.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Quelles vérifications effectuer côté iOS pour résoudre le problème des notifications push en production ?",
+        "niveau": "hard",
+        "reponse": "1. Vérifier que les certificats APNs (développement/production) sont valides dans Firebase. 2. S’assurer que le fichier <code>GoogleService-Info.plist</code> est bien inclus. 3. Activer Push Notifications et Background Modes (Remote notifications) dans le projet Xcode. 4. Tester avec un <code>aps-environment</code> correct dans l’entitlement. 5. Utiliser un vrai appareil (simulateur iOS ne reçoit pas les FCM).",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

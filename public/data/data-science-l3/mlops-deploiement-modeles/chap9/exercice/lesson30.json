@@ -1,0 +1,130 @@
+[
+  {
+    "intitule": "Mise en Place d'un Monitoring Complet pour un Modèle de Scoring",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous êtes data engineer dans une banque camerounaise qui a déployé un modèle de scoring de crédit en production. Le modèle est exposé via une API REST et reçoit environ 10 000 requêtes par jour. La direction souhaite avoir une visibilité complète sur les performances du modèle et sa santé opérationnelle.</p><p><strong>Objectif :</strong> Mettre en place une solution de monitoring avec Prometheus et Grafana pour surveiller les métriques suivantes :</p><ul><li>Nombre de requêtes par minute</li><li>Temps de réponse (latence) : p50, p95, p99</li><li>Taux d'erreur (HTTP 5xx)</li><li>Distribution des scores de crédit</li><li>Utilisation des ressources (CPU, mémoire) des conteneurs</li></ul>",
+      "images": [
+        "Architecture de monitoring montrant l'API Flask/FastAPI exposant des métriques, Prometheus qui scrape les métriques, et Grafana qui visualise les dashboards avec des alertes configurées"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez comment vous allez exposer les métriques depuis l'API de scoring pour que Prometheus puisse les collecter. Fournissez un exemple de code.",
+        "niveau": "hard",
+        "reponse": "<p>Pour exposer les métriques depuis l'API, j'utiliserai <code>prometheus_flask_exporter</code> (pour Flask) ou <code>prometheus-fastapi-instrumentator</code> (pour FastAPI). Voici un exemple avec FastAPI :</p><pre style='background:#f7fafc; padding:12px; border-radius:6px; font-size:0.9rem; overflow-x:auto;'>from fastapi import FastAPI, Request\nfrom prometheus_fastapi_instrumentator import Instrumentator\nfrom prometheus_client import Counter, Histogram, Gauge\nimport time\n\napp = FastAPI()\n\n# Métriques personnalisées\nREQUEST_COUNT = Counter('http_requests_total', 'Total HTTP requests', ['method', 'endpoint', 'status'])\nREQUEST_LATENCY = Histogram('http_request_duration_seconds', 'HTTP request latency', ['method', 'endpoint'])\nSCORE_DISTRIBUTION = Histogram('model_score_distribution', 'Distribution of credit scores', buckets=[0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0])\n\n@app.middleware(\"http\")\nasync def monitor_requests(request: Request, call_next):\n    start_time = time.time()\n    response = await call_next(request)\n    duration = time.time() - start_time\n    \n    # Incrémenter le compteur\n    REQUEST_COUNT.labels(method=request.method, endpoint=request.url.path, status=response.status_code).inc()\n    # Enregistrer la latence\n    REQUEST_LATENCY.labels(method=request.method, endpoint=request.url.path).observe(duration)\n    \n    return response\n\n@app.post(\"/predict\")\nasync def predict(data: dict):\n    # Logique de prédiction\n    score = model.predict(data)\n    # Enregistrer la distribution des scores\n    SCORE_DISTRIBUTION.observe(score)\n    return {\"score\": score}\n\n# Instrumentation automatique pour les métriques par défaut\nInstrumentator().instrument(app).expose(app)</pre>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez pourquoi vous avez choisi un Histogram pour la distribution des scores plutôt qu'une Gauge ou un Counter.",
+            "niveau": "medium",
+            "reponse": "<p>Un Histogram est le choix le plus adapté car :</p><ul><li>Il permet de calculer des <strong>percentiles</strong> (p50, p95, p99) sur la distribution des scores, ce qui est utile pour comprendre la répartition des prédictions.</li><li>Il peut mesurer la <strong>fréquence</strong> des scores dans différentes plages (buckets), par exemple combien de clients ont un score entre 0.7 et 0.8.</li><li>Une Gauge ne mesure qu'une valeur instantanée (ex: score moyen), pas la distribution.</li><li>Un Counter ne fait que compter des événements, il ne mesure pas de valeurs continues.</li></ul>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Proposez une requête PromQL pour calculer le taux d'erreur (HTTP 5xx) sur les 5 dernières minutes.",
+            "niveau": "hard",
+            "reponse": "<p>La requête PromQL pour calculer le taux d'erreur est :</p><pre style='background:#f7fafc; padding:12px; border-radius:6px; font-size:0.9rem; overflow-x:auto;'>rate(http_requests_total{status=~\"5..\"}[5m]) / rate(http_requests_total[5m]) * 100</pre><p><strong>Explication :</strong></p><ul><li><code>rate(http_requests_total{status=~\"5..\"}[5m])</code> : calcule le nombre moyen de requêtes en erreur (status 5xx) par seconde sur 5 minutes.</li><li><code>rate(http_requests_total[5m])</code> : calcule le nombre total moyen de requêtes par seconde sur 5 minutes.</li><li>Le ratio donne le pourcentage d'erreurs sur la période.</li><li>On peut créer une alerte si ce ratio dépasse 5% pendant 5 minutes.</li></ul>"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Configurez un dashboard Grafana pour visualiser les métriques. Décrivez les panels que vous allez créer et les requêtes PromQL associées.",
+        "niveau": "medium",
+        "reponse": "<p><strong>Dashboard Grafana proposé :</strong></p><table style='border-collapse: collapse; width: 100%;'><tr style='background:#f7fafc;'><th style='border:1px solid #ccc; padding:8px;'>Panel</th><th style='border:1px solid #ccc; padding:8px;'>Type</th><th style='border:1px solid #ccc; padding:8px;'>Requête PromQL</th></tr><tr><td style='border:1px solid #ccc; padding:8px;'>Nombre de requêtes</td><td style='border:1px solid #ccc; padding:8px;'>Graphique</td><td style='border:1px solid #ccc; padding:8px;'><code>rate(http_requests_total[1m])</code></td></tr><tr><td style='border:1px solid #ccc; padding:8px;'>Latence (p50, p95, p99)</td><td style='border:1px solid #ccc; padding:8px;'>Graphique</td><td style='border:1px solid #ccc; padding:8px;'><code>histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))</code></td></tr><tr><td style='border:1px solid #ccc; padding:8px;'>Taux d'erreur</td><td style='border:1px solid #ccc; padding:8px;'>Stat (single)</td><td style='border:1px solid #ccc; padding:8px;'><code>sum(rate(http_requests_total{status=~\"5..\"}[5m])) / sum(rate(http_requests_total[5m])) * 100</code></td></tr><tr><td style='border:1px solid #ccc; padding:8px;'>Distribution des scores</td><td style='border:1px solid #ccc; padding:8px;'>Heatmap</td><td style='border:1px solid #ccc; padding:8px;'><code>sum(rate(model_score_distribution_bucket[5m])) by (le)</code></td></tr><tr><td style='border:1px solid #ccc; padding:8px;'>CPU/Mémoire</td><td style='border:1px solid #ccc; padding:8px;'>Graphique</td><td style='border:1px solid #ccc; padding:8px;'><code>container_cpu_usage_seconds_total</code> / <code>container_memory_usage_bytes</code></td></tr></table>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse des Défis du Monitoring de Modèles ML",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Le monitoring des modèles ML en production présente des défis spécifiques qui vont au-delà du monitoring traditionnel des applications.</p>",
+      "images": [
+        "Schéma illustrant la différence entre le monitoring d'application (métriques techniques) et le monitoring de modèle (métriques métier, data drift, concept drift)"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Comparez le monitoring d'une application web classique avec celui d'un modèle de Machine Learning en production. Identifiez au moins 3 différences majeures.",
+        "niveau": "medium",
+        "reponse": "<table style='border-collapse: collapse; width: 100%;'><tr style='background:#f7fafc;'><th style='border:1px solid #ccc; padding:8px;'>Aspect</th><th style='border:1px solid #ccc; padding:8px;'>Application Web Classique</th><th style='border:1px solid #ccc; padding:8px;'>Modèle ML en Production</th></tr><tr><td style='border:1px solid #ccc; padding:8px;'><strong>Métriques surveillées</strong></td><td style='border:1px solid #ccc; padding:8px;'>Latence, débit, taux d'erreur, CPU, mémoire</td><td style='border:1px solid #ccc; padding:8px;'>Toutes les métriques techniques + <strong>métriques de performance du modèle</strong> (précision, rappel, F1) + <strong>détection de drift</strong> (data drift, concept drift)</td></tr><tr><td style='border:1px solid #ccc; padding:8px;'><strong>Vérité terrain</strong></td><td style='border:1px solid #ccc; padding:8px;'>La réponse est soit correcte (200) soit incorrecte (5xx)</td><td style='border:1px solid #ccc; padding:8px;'>La réponse est une prédiction, la vérité terrain arrive avec un <strong>délai</strong> (ex: un prêt est remboursé ou non après plusieurs mois)</td></tr><tr><td style='border:1px solid #ccc; padding:8px;'><strong>Dérive</strong></td><td style='border:1px solid #ccc; padding:8px;'>Pas de concept de dérive (sauf changement de charge)</td><td style='border:1px solid #ccc; padding:8px;'>Le <strong>Data Drift</strong> (changement de la distribution des données d'entrée) et le <strong>Concept Drift</strong> (changement de la relation entrée-sortie) sont des phénomènes propres au ML</td></tr></table>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez la différence entre Data Drift et Concept Drift. Donnez un exemple concret pour chaque type dans le contexte d'un modèle de détection de fraude.",
+            "niveau": "hard",
+            "reponse": "<p><strong>Data Drift :</strong> La distribution des données d'entrée change, mais la relation entre les entrées et la sortie reste la même.</p><ul><li><strong>Exemple :</strong> Les transactions bancaires changent de profil. Avant, les montants moyens étaient de 50 000 FCFA, maintenant ils sont de 150 000 FCFA. Le modèle a été entraîné sur d'anciennes données, donc il considère peut-être les nouveaux montants comme suspects, ce qui augmente les faux positifs.</li></ul><p><strong>Concept Drift :</strong> La relation entre les variables d'entrée et la variable cible change.</p><ul><li><strong>Exemple :</strong> Les fraudeurs changent de stratégie. Avant, la fraude était associée à des transactions internationales. Maintenant, les fraudeurs utilisent des montants ronds sur des transactions locales. La relation (international = frauduleux) n'est plus vraie, le modèle devient obsolète.</li></ul>"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Évaluez les avantages et les limites de l'utilisation de Prometheus et Grafana pour le monitoring des modèles ML par rapport à une solution dédiée comme Seldon Alibi ou Evidently AI.",
+        "niveau": "medium",
+        "reponse": "<table style='border-collapse: collapse; width: 100%;'><tr style='background:#f7fafc;'><th style='border:1px solid #ccc; padding:8px;'>Aspect</th><th style='border:1px solid #ccc; padding:8px;'>Prometheus + Grafana</th><th style='border:1px solid #ccc; padding:8px;'>Solutions spécialisées (Seldon, Evidently)</th></tr><tr><td style='border:1px solid #ccc; padding:8px;'><strong>Avantages</strong></td><td style='border:1px solid #ccc; padding:8px;'>- Écosystème mature et standard<br>- Grande flexibilité (customisation)<br>- Intégration avec d'autres outils<br>- Gratuit et open source</td><td style='border:1px solid #ccc; padding:8px;'>- Fonctionnalités ML dédiées (data drift, concept drift)<br>- Dashboards pré-construits pour les métriques ML<br>- Intégration avec des frameworks ML</td></tr><tr><td style='border:1px solid #ccc; padding:8px;'><strong>Limites</strong></td><td style='border:1px solid #ccc; padding:8px;'>- Pas de détection native du drift<br>- Requêtes PromQL complexes pour les métriques ML<br>- Nécessite du développement supplémentaire</td><td style='border:1px solid #ccc; padding:8px;'>- Moins flexibles<br>- Écosystème moins mature (si payant)<br>- Intégration parfois limitée avec d'autres outils</td></tr></table><p><strong>Recommandation :</strong> Utiliser Prometheus + Grafana pour les métriques opérationnelles, et compléter avec Evidently AI ou Seldon pour la détection de drift et les métriques de performance du modèle.</p>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Configuration d'Alerte pour un Modèle de Prédiction",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous avez mis en place Prometheus et Grafana pour un modèle de prédiction des prix de l'immobilier à Douala. Vous devez maintenant configurer des alertes pour être prévenu en cas de problème.</p><p>Les métriques suivantes sont disponibles :</p><ul><li><code>http_requests_total</code> (Counter) - Nombre total de requêtes HTTP</li><li><code>http_request_duration_seconds</code> (Histogram) - Latence des requêtes</li><li><code>model_prediction_total</code> (Counter) - Nombre total de prédictions</li><li><code>model_accuracy</code> (Gauge) - Précision du modèle (calculée quotidiennement)</li><li><code>container_memory_usage_bytes</code> (Gauge) - Utilisation mémoire des conteneurs</li></ul>",
+      "images": [
+        "Interface Grafana Alerting montrant la création d'une règle d'alerte avec une condition PromQL, un seuil, et un canal de notification (email, Slack)"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez 3 règles d'alerte avec leurs conditions PromQL, leurs seuils, et leur sévérité (critique, warning, info). Justifiez le choix des seuils.",
+        "niveau": "hard",
+        "reponse": "<p><strong>1. Alerte de latence élevée</strong></p><ul><li><strong>Condition :</strong> <code>histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m])) > 1.0</code></li><li><strong>Seuil :</strong> > 1.0 seconde</li><li><strong>Niveau :</strong> <span style='color:#e74c3c;'>Critique</span></li><li><strong>Justification :</strong> Si le 99ème percentile de latence dépasse 1 seconde, cela signifie que 1% des requêtes sont très lentes. Cela peut indiquer une saturation du système ou un problème de performance du modèle.</li></ul><p><strong>2. Alerte de baisse de performance du modèle</strong></p><ul><li><strong>Condition :</strong> <code>model_accuracy < 0.80</code></li><li><strong>Seuil :</strong> Précision < 80%</li><li><strong>Niveau :</strong> <span style='color:#f39c12;'>Warning</span></li><li><strong>Justification :</strong> La précision du modèle a été mesurée à 90% en test. Une baisse sous 80% indique une dégradation significative des performances, potentiellement due à un Concept Drift.</li></ul><p><strong>3. Alerte de saturation mémoire</strong></p><ul><li><strong>Condition :</strong> <code>container_memory_usage_bytes / container_memory_limit_bytes > 0.85</code></li><li><strong>Seuil :</strong> > 85% de la limite mémoire</li><li><strong>Niveau :</strong> <span style='color:#f39c12;'>Warning</span></li><li><strong>Justification :</strong> Une utilisation mémoire supérieure à 85% peut entraîner un ralentissement des requêtes ou un crash du conteneur (OOM). Il faut alors augmenter la mémoire allouée ou optimiser le code.</li></ul>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez comment vous allez configurer ces alertes dans Grafana et choisir les canaux de notification appropriés.",
+            "niveau": "medium",
+            "reponse": "<p><strong>Configuration des alertes dans Grafana :</strong></p><ol><li><strong>Création des règles :</strong><ul><li>Aller dans l'onglet 'Alerting' de Grafana.</li><li>Créer une nouvelle règle pour chaque alerte.</li><li>Sélectionner la source de données Prometheus.</li><li>Entrer la requête PromQL dans le champ 'Query'.</li><li>Définir la condition (ex: 'WHEN last() > 1.0 FOR 5m').</li><li>Configurer la durée de persistance (ex: 5 minutes pour éviter les faux positifs).</li></ul></li><li><strong>Canaux de notification :</strong><ul><li><strong>Critique (latence > 1s) :</strong> Envoyer un email à l'équipe d'astreinte + un message dans le canal #alerts-critiques de Slack.</li><li><strong>Warning (précision < 80%) :</strong> Envoyer un email à l'équipe Data Science + créer un ticket Jira pour investigation.</li><li><strong>Warning (mémoire > 85%) :</strong> Envoyer un message à l'équipe DevOps sur Slack + notifier sur le canal Teams.</li></ul></li><li><strong>Configuration des contacts :</strong><ul><li>Configurer les points de contact (Contact Points) dans Grafana pour email, Slack, Webhook.</li><li>Définir les politiques de notification (Notification Policies) pour router les alertes vers les bons contacts selon leur niveau de sévérité.</li></ul></li></ol>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Audit de Monitorin g d'un Modèle Existant",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous êtes consultant MLOps et vous réalisez un audit du monitoring d'un modèle de recommandation de produits pour une plateforme e-commerce camerounaise.</p><p>Vous identifiez les problèmes suivants :</p><ul><li>Le modèle est déployé depuis 8 mois sans monitoring de performance.</li><li>Les logs de l'API sont conservés mais non analysés.</li><li>Le CPU moyen est à 40% mais il y a des pics à 95% sans déclenchement d'alerte.</li><li>Il n'y a pas de suivi de la qualité des prédictions.</li></ul>",
+      "images": [
+        "Schéma d'un dashboard de monitoring idéal pour un modèle ML montrant : métriques techniques (latence, débit), métriques métier (taux de clic, revenu), détection de drift, et alertes"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifiez les lacunes du monitoring actuel et proposez un plan d'action pour les corriger.",
+        "niveau": "easy",
+        "reponse": "<p><strong>Lacunes identifiées :</strong></p><ul><li><strong>Absence de monitoring de performance :</strong> Le modèle n'est pas évalué sur ses métriques métier (taux de clic, conversion).</li><li><strong>Absence d'analyse des logs :</strong> Les logs ne sont pas utilisés pour détecter des anomalies ou des tendances.</li><li><strong>Absence d'alertes :</strong> Les pics CPU ne déclenchent aucune alerte, ce qui peut entraîner des ralentissements.</li><li><strong>Absence de suivi de la qualité :</strong> On ne sait pas si les prédictions sont bonnes ou mauvaises.</li></ul><p><strong>Plan d'action :</strong></p><ol><li><strong>Monitoring de performance :</strong><ul><li>Calculer quotidiennement le taux de clic moyen des recommandations.</li><li>Configurer Prometheus pour collecter les métriques métier (ex: nombre de clics par recommandation).</li></ul></li><li><strong>Analyse des logs :</strong><ul><li>Mettre en place ELK (Elasticsearch, Logstash, Kibana) ou Loki pour centraliser et analyser les logs.</li><li>Créer des dashboards pour visualiser les erreurs, les patterns de requêtes.</li></ul></li><li><strong>Alertes CPU :</strong><ul><li>Configurer une alerte Prometheus : <code>container_cpu_usage_seconds_total > 0.90</code> avec une persistance de 2 minutes.</li><li>Notifier l'équipe d'astreinte.</li></ul></li><li><strong>Qualité des prédictions :</strong><ul><li>Mettre en place un système de feedback pour collecter les retours utilisateurs (ex: 'Cette recommandation est-elle pertinente ?').</li><li>Comparer les prédictions du modèle avec les comportements réels des utilisateurs.</li><li>Détecter le Data Drift sur les caractéristiques des produits.</li></ul></li></ol>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposez 3 métriques supplémentaires qui seraient importantes pour ce modèle de recommandation.",
+            "niveau": "easy",
+            "reponse": "<p><strong>Métriques supplémentaires pour un modèle de recommandation :</strong></p><ul><li><strong>Click-Through Rate (CTR) :</strong> Nombre de clics / Nombre d'impressions. Mesure l'efficacité des recommandations.</li><li><strong>Conversion Rate :</strong> Nombre d'achats suite à une recommandation / Nombre de clics. Mesure l'impact business du modèle.</li><li><strong>Diversité des recommandations :</strong> Pourcentage de produits uniques recommandés sur une période. Évite que le modèle ne recommande toujours les mêmes produits.</li><li><strong>Taux de couverture :</strong> Pourcentage du catalogue de produits qui est recommandé au moins une fois.</li></ul>"
+          }
+        ]
+      }
+    ]
+  }
+]

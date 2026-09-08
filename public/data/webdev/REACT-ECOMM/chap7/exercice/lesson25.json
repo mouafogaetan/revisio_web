@@ -1,0 +1,102 @@
+[
+  {
+    "intitule": "Implémentation d'une barre de recherche avec autocomplétion",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans le cadre du développement d'un site e-commerce, vous devez implémenter une barre de recherche avec autocomplétion. L'API backend expose un endpoint <code>GET /products/search?q={query}</code> qui retourne jusqu'à 5 produits correspondant au début du nom. Un deuxième endpoint <code>GET /products/search/suggestions?q={query}</code> retourne des suggestions de mots-clés (historique des recherches populaires).</p><p>Vous utiliserez React pour le frontend avec gestion d'état local, debounce pour limiter les appels API, et affichage des suggestions dans une liste déroulante.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer le rôle du debounce dans une barre de recherche et coder la fonction de debounce personnalisée.",
+        "niveau": "medium",
+        "reponse": "Le debounce permet d'attendre que l'utilisateur ait fini de taper avant d'envoyer la requête API. Il évite d'effectuer un appel à chaque frappe (ce qui surcharge le serveur et l'interface).\n\n```javascript\nfunction debounce(func, delay) {\n  let timeoutId;\n  return function(...args) {\n    clearTimeout(timeoutId);\n    timeoutId = setTimeout(() => func.apply(this, args), delay);\n  };\n}\n\n// Utilisation avec React\nconst debouncedSearch = useCallback(\n  debounce((query) => {\n    if (query.length >= 2) fetchSuggestions(query);\n  }, 300),\n  []\n);\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Rédiger le code d'un composant <code>SearchBar</code> avec les fonctionnalités suivantes : champ de saisie, affichage des suggestions sous forme de liste, gestion du chargement (loading), et navigation au clavier (flèches haut/bas, Entrée).",
+        "niveau": "hard",
+        "reponse": "```jsx\nimport { useState, useEffect, useRef, useCallback } from 'react';\nimport { debounce } from 'lodash'; // ou votre propre implémentation\n\nconst SearchBar = () => {\n  const [query, setQuery] = useState('');\n  const [suggestions, setSuggestions] = useState([]);\n  const [loading, setLoading] = useState(false);\n  const [selectedIndex, setSelectedIndex] = useState(-1);\n  const inputRef = useRef(null);\n\n  const fetchSuggestions = useCallback(async (searchTerm) => {\n    if (searchTerm.length < 2) {\n      setSuggestions([]);\n      return;\n    }\n    setLoading(true);\n    try {\n      const response = await fetch(`/api/products/search?q=${encodeURIComponent(searchTerm)}`);\n      const data = await response.json();\n      setSuggestions(data);\n    } catch (error) {\n      console.error('Erreur recherche:', error);\n    } finally {\n      setLoading(false);\n    }\n  }, []);\n\n  const debouncedFetch = useCallback(debounce(fetchSuggestions, 300), [fetchSuggestions]);\n\n  const handleChange = (e) => {\n    const value = e.target.value;\n    setQuery(value);\n    setSelectedIndex(-1);\n    debouncedFetch(value);\n  };\n\n  const handleKeyDown = (e) => {\n    if (e.key === 'ArrowDown') {\n      e.preventDefault();\n      setSelectedIndex((prev) => Math.min(prev + 1, suggestions.length - 1));\n    } else if (e.key === 'ArrowUp') {\n      e.preventDefault();\n      setSelectedIndex((prev) => Math.max(prev - 1, -1));\n    } else if (e.key === 'Enter' && selectedIndex >= 0) {\n      const selected = suggestions[selectedIndex];\n      window.location.href = `/product/${selected.id}`;\n    }\n  };\n\n  return (\n    <div className=\"search-container\">\n      <input\n        ref={inputRef}\n        type=\"text\"\n        value={query}\n        onChange={handleChange}\n        onKeyDown={handleKeyDown}\n        placeholder=\"Rechercher un produit...\"\n        className=\"w-full p-2 border rounded\"\n      />\n      {loading && <div className=\"loader\">Chargement...</div>}\n      {suggestions.length > 0 && (\n        <ul className=\"suggestions-list absolute bg-white shadow-lg rounded mt-1 w-full z-10\">\n          {suggestions.map((item, idx) => (\n            <li\n              key={item.id}\n              className={`p-2 hover:bg-gray-100 cursor-pointer ${idx === selectedIndex ? 'bg-gray-200' : ''}`}\n              onClick={() => window.location.href = `/product/${item.id}`}\n            >\n              {item.name}\n            </li>\n          ))}\n        </ul>\n      )}\n    </div>\n  );\n};\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Filtrage en temps réel avec debounce et gestion d'état",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Un site e-commerce affiche une liste de produits filtrée par prix et catégorie. Le client souhaite que les filtres s'appliquent en temps réel lorsque l'utilisateur modifie les curseurs ou coche des cases, sans bouton \"Valider\".</p><p>Les produits sont déjà chargés initialement (200 produits en mémoire côté client). Le filtrage doit se faire localement pour une réactivité maximale.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier les défis de performance liés au filtrage en temps réel sur une liste de 200 produits. Proposer une solution utilisant <code>useMemo</code> et <code>debounce</code> pour les filtres à saisie continue (prix min/max).",
+        "niveau": "medium",
+        "reponse": "Les défis sont :\n- Recalcul du filtrage à chaque changement de filtre (potentiel ralentissement)\n- Saisie utilisateur rapide qui déclenche trop de re-renders\n\n**Solution :**\n1. Utiliser <code>useMemo</code> pour mémoriser les produits filtrés et ne recalculer que si <code>products</code>, <code>minPrice</code>, <code>maxPrice</code> ou <code>categories</code> changent.\n2. Pour les champs de saisie continue (prix), utiliser <code>debounce</code> sur l'état local avant de mettre à jour l'état global des filtres.\n\n```jsx\nconst filteredProducts = useMemo(() => {\n  return products.filter(product => \n    product.price >= minPrice &&\n    product.price <= maxPrice &&\n    (selectedCategories.length === 0 || selectedCategories.includes(product.category))\n  );\n}, [products, minPrice, maxPrice, selectedCategories]);\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": "2",
+        "texte": "Coder un hook personnalisé <code>useDebouncedState</code> qui retarde la mise à jour d'une valeur. Utilisez-le pour un curseur de prix min (slider) qui ne déclenche le filtrage qu'après 300ms d'inactivité.",
+        "niveau": "hard",
+        "reponse": "```javascript\n// hooks/useDebouncedState.js\nimport { useState, useCallback, useRef } from 'react';\n\nexport function useDebouncedState(initialValue, delay) {\n  const [value, setValue] = useState(initialValue);\n  const [debouncedValue, setDebouncedValue] = useState(initialValue);\n  const timeoutRef = useRef(null);\n\n  const updateValue = useCallback((newValue) => {\n    setValue(newValue);\n    if (timeoutRef.current) clearTimeout(timeoutRef.current);\n    timeoutRef.current = setTimeout(() => {\n      setDebouncedValue(newValue);\n    }, delay);\n  }, [delay]);\n\n  return [value, debouncedValue, updateValue];\n}\n\n// Utilisation dans le composant\nconst PriceFilter = () => {\n  const [localMin, debouncedMin, setLocalMin] = useDebouncedState(0, 300);\n  \n  useEffect(() => {\n    // Le filtrage se déclenche uniquement sur debouncedMin\n    applyFilter({ minPrice: debouncedMin });\n  }, [debouncedMin]);\n\n  return (\n    <input\n      type=\"range\"\n      value={localMin}\n      onChange={(e) => setLocalMin(Number(e.target.value))}\n    />\n  );\n};\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Affichage des recherches récentes et tendances",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Pour améliorer l'expérience utilisateur, vous devez afficher sous la barre de recherche : les 5 dernières recherches de l'utilisateur (stockées dans localStorage) et les 5 recherches les plus populaires du site (fournies par l'API <code>GET /search/trends</code>).</p><p>Chaque terme cliqué doit déclencher la recherche correspondante.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevoir la structure de données pour stocker l'historique des recherches dans localStorage. Expliquer comment gérer la limite (max 5) et l'ordre (du plus récent au plus ancien).",
+        "niveau": "medium",
+        "reponse": "Structure recommandée : un tableau d'objets avec <code>{ term, timestamp }</code> ou simplement un tableau de chaînes avec ordre implicite.\n\n```javascript\nconst MAX_RECENT = 5;\n\nfunction addToRecentSearches(term) {\n  let recent = JSON.parse(localStorage.getItem('recent_searches') || '[]');\n  // Supprimer l'entrée si elle existe déjà\n  recent = recent.filter(t => t !== term);\n  // Ajouter en tête\n  recent.unshift(term);\n  // Garder max 5 éléments\n  if (recent.length > MAX_RECENT) recent.pop();\n  localStorage.setItem('recent_searches', JSON.stringify(recent));\n}\n```\n\nOrdre : du plus récent (index 0) au plus ancien (index 4).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Rédiger le code du composant <code>SearchHistory</code> qui affiche l'historique local et les tendances. Inclure la gestion du chargement des tendances et un bouton pour effacer l'historique.",
+        "niveau": "hard",
+        "reponse": "```jsx\nimport { useState, useEffect } from 'react';\n\nconst SearchHistory = ({ onSearch }) => {\n  const [recentSearches, setRecentSearches] = useState([]);\n  const [trends, setTrends] = useState([]);\n  const [loading, setLoading] = useState(true);\n\n  useEffect(() => {\n    // Charger l'historique local\n    const stored = localStorage.getItem('recent_searches');\n    if (stored) setRecentSearches(JSON.parse(stored));\n    \n    // Charger les tendances API\n    fetch('/api/search/trends')\n      .then(res => res.json())\n      .then(data => {\n        setTrends(data);\n        setLoading(false);\n      })\n      .catch(() => setLoading(false));\n  }, []);\n\n  const clearHistory = () => {\n    localStorage.removeItem('recent_searches');\n    setRecentSearches([]);\n  };\n\n  const handleTermClick = (term) => {\n    onSearch(term);\n  };\n\n  return (\n    <div className=\"search-history p-2 bg-gray-50 rounded\">\n      {recentSearches.length > 0 && (\n        <div className=\"mb-3\">\n          <div className=\"flex justify-between items-center\">\n            <span className=\"text-sm font-semibold\">Récentes :</span>\n            <button onClick={clearHistory} className=\"text-xs text-red-500\">Effacer</button>\n          </div>\n          <div className=\"flex flex-wrap gap-2 mt-1\">\n            {recentSearches.map((term, idx) => (\n              <button\n                key={idx}\n                onClick={() => handleTermClick(term)}\n                className=\"text-sm bg-white px-2 py-1 rounded shadow hover:bg-gray-100\"\n              >\n                {term}\n              </button>\n            ))}\n          </div>\n        </div>\n      )}\n      \n      <div>\n        <span className=\"text-sm font-semibold\">Tendances :</span>\n        {loading ? (\n          <div className=\"text-xs text-gray-400\">Chargement...</div>\n        ) : (\n          <div className=\"flex flex-wrap gap-2 mt-1\">\n            {trends.map((term, idx) => (\n              <button\n                key={idx}\n                onClick={() => handleTermClick(term)}\n                className=\"text-sm bg-indigo-50 text-indigo-700 px-2 py-1 rounded hover:bg-indigo-100\"\n              >\n                🔥 {term}\n              </button>\n            ))}\n          </div>\n        )}\n      </div>\n    </div>\n  );\n};\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation de la recherche avec React Query et cache",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>L'application e-commerce reçoit de nombreuses requêtes de recherche. Les mêmes termes reviennent fréquemment (ex: \"iphone\", \"laptop\", \"casque\"). Vous souhaitez mettre en cache les résultats pour 5 minutes et précharger les résultats des tendances au chargement de la page.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer comment utiliser React Query pour mettre en cache les résultats de recherche. Écrire le hook <code>useSearch</code> qui gère le cache, le staleTime et le loading.",
+        "niveau": "hard",
+        "reponse": "```javascript\nimport { useQuery } from '@tanstack/react-query';\n\nconst searchProducts = async (query) => {\n  if (!query || query.length < 2) return [];\n  const response = await fetch(`/api/products/search?q=${encodeURIComponent(query)}`);\n  if (!response.ok) throw new Error('Erreur recherche');\n  return response.json();\n};\n\nexport const useSearch = (query) => {\n  return useQuery({\n    queryKey: ['search', query],\n    queryFn: () => searchProducts(query),\n    enabled: query && query.length >= 2, // Ne s'exécute que si query valide\n    staleTime: 5 * 60 * 1000, // 5 minutes de cache\n    gcTime: 10 * 60 * 1000,\n    placeholderData: (previousData) => previousData,\n  });\n};\n\n// Utilisation dans le composant\nconst { data, isLoading, isError } = useSearch(debouncedQuery);\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Décrire la stratégie de préchargement (prefetch) des résultats des tendances. Coder le <code>useEffect</code> qui précharge les 5 termes les plus populaires au montage du composant.",
+        "niveau": "very hard",
+        "reponse": "```javascript\nimport { useQueryClient } from '@tanstack/react-query';\n\nconst SearchPage = () => {\n  const queryClient = useQueryClient();\n  const [trends, setTrends] = useState([]);\n\n  useEffect(() => {\n    // 1. Récupérer les tendances\n    fetch('/api/search/trends')\n      .then(res => res.json())\n      .then(trendsList => {\n        setTrends(trendsList);\n        // 2. Précharger les résultats pour chaque tendance\n        trendsList.forEach(term => {\n          queryClient.prefetchQuery({\n            queryKey: ['search', term],\n            queryFn: () => searchProducts(term),\n            staleTime: 5 * 60 * 1000,\n          });\n        });\n      });\n  }, [queryClient]);\n\n  // ...\n};\n```\n\nAvantages :\n- L'utilisateur voit les résultats instantanément en cliquant sur une tendance\n- Réduction du temps de chargement perçu\n- Meilleure expérience utilisateur mobile",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

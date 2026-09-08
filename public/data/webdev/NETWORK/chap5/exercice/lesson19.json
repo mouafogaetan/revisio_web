@@ -1,0 +1,126 @@
+[
+  {
+    "intitule": "Identification des protocoles de transfert et d'accès distant",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Voici une liste de services réseau : <strong>FTP, SSH, SFTP, SCP, Telnet</strong>.</p><p>Pour chaque protocole, identifiez : le numéro de port par défaut, s'il est sécurisé (chiffré) ou non, et son usage principal.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Compléter le tableau suivant en associant chaque protocole à son port et ses caractéristiques.",
+        "niveau": "medium",
+        "reponse": "FTP : ports 20 (données) et 21 (contrôle) - Non sécurisé (texte clair) - Transfert de fichiers.\nSSH : port 22 - Sécurisé - Accès distant à un shell sécurisé.\nSFTP : port 22 (via SSH) - Sécurisé - Transfert de fichiers sur SSH.\nSCP : port 22 (via SSH) - Sécurisé - Copie sécurisée de fichiers.\nTelnet : port 23 - Non sécurisé - Accès distant à un shell (obsolète).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Comparaison FTP actif vs passif",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Le protocole FTP utilise deux canaux : un canal de contrôle (port 21) et un canal de données (port 20 en mode actif, ou port aléatoire en mode passif).</p><p>Un client derrière un pare-feu (NAT) n'arrive pas à établir la connexion de données en mode actif.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer la différence entre le mode actif et le mode passif de FTP, et justifier pourquoi le mode passif est recommandé pour les clients derrière un NAT.",
+        "niveau": "hard",
+        "reponse": "Mode actif : le client envoie une commande PORT avec son adresse IP et un port, puis le serveur initie la connexion de données depuis son port 20 vers le port client. Problème : le pare-feu client bloque souvent les connexions entrantes.\nMode passif : le client envoie PASV, le serveur répond avec un port aléatoire (>1023) sur lequel il écoute, puis le client initie la connexion de données. Ainsi, toutes les connexions partent du client, ce qui traverse mieux les NAT/pare-feux.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Citer un avantage de SFTP par rapport au mode passif de FTP.",
+            "niveau": "medium",
+            "reponse": "SFTP est sécurisé (chiffrement SSH), utilise un seul port (22), et traverse plus facilement les pare-feux. Il offre aussi plus de fonctionnalités (reprise de transfert, gestion des permissions)."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Diagnostic de connexion SSH et SFTP",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un administrateur souhaite se connecter à un serveur distant (IP 192.168.1.100) pour transférer des fichiers de configuration. Il utilise la commande : <code>ssh admin@192.168.1.100</code> mais obtient <code>Connection refused</code>. Il teste ensuite <code>ping 192.168.1.100</code> qui répond correctement.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Diagnostiquer le problème probable. Proposer trois causes possibles et les solutions associées.",
+        "niveau": "hard",
+        "reponse": "Causes possibles :\n1. Le service SSH n'est pas en cours d'exécution sur le serveur → démarrer sshd.\n2. Le pare-feu bloque le port 22 → autoriser TCP/22.\n3. Le serveur écoute sur un port non standard (ex: 2222) → utiliser -p 2222.\n4. Le serveur refuse les connexions par mot de passe et la clé SSH n'est pas configurée → configurer l'authentification.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Après avoir résolu la connexion SSH, l'administrateur veut copier sécurisée le fichier <code>/etc/config.conf</code> vers sa machine locale. Quelle commande SCP ou SFTP interactive utiliser ? Donner les deux syntaxes.",
+            "niveau": "medium",
+            "reponse": "Avec SCP : <code>scp admin@192.168.1.100:/etc/config.conf .</code>\nAvec SFTP : <code>sftp admin@192.168.1.100</code> puis <code>get /etc/config.conf</code>."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Configuration d'un serveur FTP sécurisé vs SFTP",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Une entreprise à Douala doit mettre en place un service de transfert de fichiers pour ses employés. Les exigences :</p><ul><li>Chiffrement des données en transit</li><li>Authentification par mot de passe et clé publique</li><li>Traverse un pare-feu d'entreprise (seul le port 22 est ouvert vers l'extérieur)</li><li>Journalisation des transferts</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Justifier pourquoi SFTP est plus adapté que FTPS (FTP over TLS) dans ce contexte.",
+        "niveau": "hard",
+        "reponse": "SFTP utilise un seul port (22), ce qui correspond à la règle de pare-feu existante. FTPS nécessite plusieurs ports (21 pour contrôle, et une plage dynamique pour les données), complexifiant le filtrage. De plus, SFTP est natif sur SSH, supporte l'authentification par clé publique et offre une meilleure intégration avec les outils Unix.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposer une commande pour générer une paire de clés SSH (RSA 4096 bits) pour un utilisateur, ainsi que la commande pour copier la clé publique sur le serveur.",
+            "niveau": "medium",
+            "reponse": "Génération : <code>ssh-keygen -t rsa -b 4096 -C \"utilisateur@entreprise\"</code>\nCopie de la clé publique : <code>ssh-copy-id utilisateur@serveur</code> (ou ajout manuel dans ~/.ssh/authorized_keys)."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Expliquer pourquoi l'utilisation de SCP est déconseillée pour des transferts récurrents de nombreux fichiers par rapport à SFTP ou rsync over SSH.",
+            "niveau": "hard",
+            "reponse": "SCP est simple mais ne permet pas la reprise de transfert, n'affiche pas de progression détaillée, et gère mal les noms de fichiers avec espaces. SFTP permet de lister, naviguer, reprendre les transferts. rsync over SSH est encore plus efficace pour les synchronisations incrémentales (différences)."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse de traces Wireshark (FTP non sécurisé)",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Un analyste capture le trafic d'une session FTP classique (non chiffrée). Il observe les trames suivantes :</p><pre>Trame 12: 192.168.1.10:54321 -> 10.0.0.5:21 [SYN]\nTrame 14: 10.0.0.5:21 -> 192.168.1.10:54321 [SYN, ACK]\nTrame 16: 192.168.1.10:54321 -> 10.0.0.5:21 [ACK]\nTrame 18: 10.0.0.5:21 -> 192.168.1.10:54321 [PUSH, ACK] (220 FTP Server ready)\nTrame 20: 192.168.1.10:54321 -> 10.0.0.5:21 [PUSH, ACK] (USER alice)</pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier les différentes phases de la session FTP visibles dans cette capture. Quel est le principal risque de sécurité avec FTP non chiffré ?",
+        "niveau": "medium",
+        "reponse": "Phases : établissement du canal de contrôle (3-way handshake TCP), puis le serveur envoie un message de bienvenue (220), le client envoie le nom d'utilisateur (USER). Principal risque : tous les échanges (identifiants, mots de passe, données) sont en clair, donc sniffables. Un attaquant peut capturer le mot de passe (USER alice).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quels protocoles remplacent avantageusement FTP non sécurisé en conservant la compatibilité avec les serveurs FTP traditionnels ?",
+            "niveau": "medium",
+            "reponse": "FTPS (FTP over TLS) ajoute une couche de chiffrement SSL/TLS sur FTP. SFTP (SSH File Transfer Protocol) est complètement différent mais plus sécurisé. Pour les transferts ponctuels, SCP ou rsync over SSH."
+          }
+        ]
+      }
+    ]
+  }
+]

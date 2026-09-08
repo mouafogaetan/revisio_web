@@ -1,0 +1,146 @@
+[
+  {
+    "intitule": "Analyse des vulnérabilités d’une image Docker",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous êtes consultant en sécurité pour une startup qui déploie une application web avec Docker. L’équipe a construit une image Docker à partir de <code>ubuntu:latest</code> sans aucune étape de sécurisation. On vous fournit le Dockerfile suivant :</p><pre><code>FROM ubuntu:latest<br>RUN apt-get update && apt-get install -y python3 curl netcat<br>COPY app.py /app/<br>CMD [\"python3\", \"/app/app.py\"]<br></code></pre><p>En vous basant sur les bonnes pratiques de sécurisation des images (scan de vulnérabilités, réduction de la surface d’attaque), répondez aux questions suivantes.</p>",
+      "images": [
+        "exemple de Dockerfile non sécurisé avec des paquets inutiles et image latest",
+        "processus de scan de vulnérabilités sur une image Docker"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier trois risques majeurs liés à ce Dockerfile selon les principes de sécurisation des conteneurs.",
+        "niveau": "medium",
+        "reponse": "1. Utilisation de 'latest' comme tag (version non figée, risquant d’introduire des vulnérabilités non contrôlées). 2. Installation de paquets superflus (curl, netcat) augmentant la surface d’attaque. 3. Exécution en tant que root par défaut (absence d’utilisateur non privilégié).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer trois corrections concrètes à appliquer dans le Dockerfile pour renforcer la sécurité.",
+        "niveau": "medium",
+        "reponse": "1. Remplacer 'ubuntu:latest' par une version spécifique (ex: ubuntu:22.04). 2. Supprimer les paquets inutiles (curl, netcat) ou utiliser une image minimale (python:3.11-slim). 3. Ajouter 'RUN useradd -m appuser' puis 'USER appuser' avant le CMD.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Justifier pourquoi un scan de vulnérabilités (ex: Trivy, Clair) est indispensable avant de déployer une image en production.",
+        "niveau": "hard",
+        "reponse": "Un scan de vulnérabilités détecte les CVE (Common Vulnerabilities and Exposures) présentes dans les couches de l’image (OS, bibliothèques, dépendances). Il permet de corriger les failles avant déploiement, évitant ainsi des compromissions (ex: exécution de code, élévation de privilèges). C’est une étape clé de la chaîne CI/CD sécurisée.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Configuration de politiques de sécurité Kubernetes",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Une plateforme Kubernetes héberge plusieurs microservices. L’équipe doit empêcher qu’un conteneur compromis puisse accéder au système de fichiers de l’hôte ou escalader ses privilèges.</p><p>Vous devez rédiger un extrait de <strong>PodSecurityPolicy</strong> (ou <strong>Pod Security Standards</strong>) pour restreindre :</p><ul><li>L’exécution en tant que root</li><li>L’ajout de capacités dangereuses (ex: CAP_SYS_ADMIN)</li><li>L’accès au socket Docker ou au répertoire /proc de l’hôte</li></ul>",
+      "images": [
+        "schéma d’un pod Kubernetes avec conteneur isolé via namespaces et cgroups",
+        "exemple de PodSecurityPolicy YAML"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer le rôle des namespaces et cgroups dans l’isolation des conteneurs.",
+        "niveau": "medium",
+        "reponse": "Les namespaces permettent d’isoler les ressources système (PID, réseau, montage, utilisateur) entre conteneurs. Les cgroups limitent et contrôlent l’utilisation des ressources CPU, mémoire, disque, évitant qu’un conteneur ne monopolise l’hôte.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Rédiger un extrait YAML de PodSecurityPolicy (ou Pod Security Standard au mode 'restricted') interdisant l’exécution root et l’ajout de capacités dangereuses.",
+        "niveau": "hard",
+        "reponse": "```yaml\napiVersion: policy/v1beta1\nkind: PodSecurityPolicy\nmetadata:\n  name: restricted-psp\nspec:\n  privileged: false\n  allowPrivilegeEscalation: false\n  requiredDropCapabilities:\n    - ALL\n  runAsUser:\n    rule: MustRunAsNonRoot\n  seLinux:\n    rule: RunAsAny\n  fsGroup:\n    rule: MustRunAs\n    ranges:\n      - min: 1000\n        max: 1000\n  volumes:\n    - 'configMap'\n    - 'emptyDir'\n    - 'secret'\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": "3",
+        "texte": "Décrire comment la combinaison PodSecurityPolicy + OPA (Open Policy Agent) renforce la sécurité en production.",
+        "niveau": "very hard",
+        "reponse": "PSP (ou PSS) applique des règles statiques au niveau du pod. OPA permet de définir des politiques plus fines et contextuelles (ex: empêcher un conteneur d’utiliser une image provenant d’un registre non approuvé, ou interdire certains labels). Ensemble, ils créent une sécurité par défaut (PSP) et une gouvernance dynamique (OPA) pour le zero trust.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Cas pratique : Atténuation d’une fuite de privilèges dans un conteneur",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Lors d’un audit, vous découvrez qu’un conteneur Java tourne en root et a accès au socket Docker (<code>/var/run/docker.sock</code>). Un attaquant qui compromettrait cette application pourrait créer de nouveaux conteneurs sur l’hôte.</p><p><strong>Votre mission</strong> : Proposer une stratégie de remédiation en moins de 500 mots, incluant des changements au niveau de l’image, de l’orchestrateur (Kubernetes) et du runtime.</p>",
+      "images": [
+        "schéma d’attaque via socket Docker monté dans un conteneur",
+        "architecture de runtime security avec Falco ou AppArmor"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analyser les conséquences immédiates de l’accès au socket Docker depuis un conteneur.",
+        "niveau": "hard",
+        "reponse": "Le socket Docker permet de contrôler le daemon Docker de l’hôte. Un attaquant peut créer, supprimer, exécuter des commandes dans d’autres conteneurs, voire monter le système de fichiers hôte dans un nouveau conteneur pour exfiltrer des données ou installer un backdoor. C’est une escalade de privilèges critique.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer des correctifs pour chaque couche (image, Kubernetes, runtime) en respectant le principe du moindre privilège.",
+        "niveau": "very hard",
+        "reponse": "<ul><li><strong>Image</strong> : Utiliser un utilisateur non root, supprimer les paquets inutiles, scanner avec Trivy.</li><li><strong>Kubernetes</strong> : Ne pas monter le socket Docker ; utiliser PodSecurityPolicy interdisant les mounts sensibles ; définir `securityContext.runAsNonRoot: true` et `allowPrivilegeEscalation: false`.</li><li><strong>Runtime</strong> : Activer Falco pour détecter les tentatives d’accès au socket ; appliquer un profil AppArmor ou seccomp limitant les appels système.</li></ul>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Évaluer l’efficacité de ces mesures si l’application nécessite réellement une interaction avec Docker (ex: outil de CI/CD). Quelle alternative plus sécurisée proposeriez-vous ?",
+        "niveau": "very hard",
+        "reponse": "Dans ce cas, utiliser Docker-in-Docker (DinD) est risqué. Alternative : utiliser un orchestrateur comme Jenkins avec Kubernetes (pods éphémères) ou Kaniko pour construire des images sans privilèges root, ou encore un sidecar container avec un socket proxy restreignant les opérations autorisées (ex: authorization plugin). Isoler complètement le job dans un namespace dédié + RBAC strict.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Quiz : Bonnes pratiques de sécurisation des images",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Répondez par Vrai ou Faux aux affirmations suivantes concernant la sécurisation des images Docker.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Utiliser une image de base officielle évite tout risque de vulnérabilité.",
+        "niveau": "easy",
+        "reponse": "Faux. Les images officielles peuvent aussi contenir des CVE ; il faut les scanner et les mettre à jour régulièrement.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Le multi-stage build permet de réduire la taille de l’image et d’exclure les outils de compilation non nécessaires en production.",
+        "niveau": "medium",
+        "reponse": "Vrai. Le multi-stage build copie uniquement les artefacts finaux, évitant d’inclure des compilateurs, débogueurs, etc.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Les conteneurs partagent le même noyau que l’hôte, donc une vulnérabilité du noyau affecte tous les conteneurs.",
+        "niveau": "medium",
+        "reponse": "Vrai. C’est une limite de la conteneurisation. D’où l’importance de maintenir l’hôte à jour et d’utiliser des namespaces / seccomp.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 4,
+        "texte": "Ajouter 'USER root' dans le Dockerfile est recommandé pour faciliter l’installation de paquets.",
+        "niveau": "easy",
+        "reponse": "Faux. Root doit être utilisé uniquement pour les instructions qui nécessitent des privilèges, puis basculer vers un utilisateur non root avant le CMD/ENTRYPOINT.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

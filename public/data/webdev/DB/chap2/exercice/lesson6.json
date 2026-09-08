@@ -1,0 +1,124 @@
+[
+  {
+    "intitule": "Transformer un diagramme EA en tables (bibliothèque)",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Une bibliothèque souhaite modéliser son système de prêt de livres. Voici les éléments du diagramme entité-association (EA) :<br> Entités : <strong>LIVRE</strong> (codeLivre, titre, nbPages) et <strong>AUTEUR</strong> (codeAuteur, nom, prenom).<br> Association : <strong>ECRIT</strong> (cardinalités : Un livre est écrit par un ou plusieurs auteurs ; un auteur peut écrire zéro ou plusieurs livres).<br><br> En utilisant les règles de transformation :<br> 1. Transformez les entités en tables.<br> 2. Transformez l’association ECRIT (N,N) en une table d’association.<br> 3. Justifiez pourquoi vous avez ajouté cette table.</p>",
+      "images": [
+        "diagramme entité association bibliothèque livre auteur relation ecrit"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez la structure complète des tables (noms des tables, colonnes, clés primaires et clés étrangères) en langage SQL (DDL).",
+        "niveau": "medium",
+        "reponse": "```sql\nCREATE TABLE LIVRE (\n    codeLivre INT PRIMARY KEY,\n    titre VARCHAR(255),\n    nbPages INT\n);\n\nCREATE TABLE AUTEUR (\n    codeAuteur INT PRIMARY KEY,\n    nom VARCHAR(100),\n    prenom VARCHAR(100)\n);\n\nCREATE TABLE ECRIT (\n    codeLivre INT,\n    codeAuteur INT,\n    PRIMARY KEY (codeLivre, codeAuteur),\n    FOREIGN KEY (codeLivre) REFERENCES LIVRE(codeLivre),\n    FOREIGN KEY (codeAuteur) REFERENCES AUTEUR(codeAuteur)\n);\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez pourquoi l’association ECRIT n’a pas été fusionnée dans une des tables existantes.",
+            "niveau": "medium",
+            "reponse": "Parce que la cardinalité est *plusieurs-à-plusieurs* (N,N). Fusionner cette relation dans LIVRE ou AUTEUR créerait des répétitions (plusieurs valeurs dans une colonne) ou nécessiterait d’ajouter plusieurs colonnes impossibles à prévoir. Une table d’association est donc obligatoire."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Normalisation et transformation d’une entité faible",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Dans une base de données de facturation :<br> Entité <strong>FACTURE</strong> avec attributs (numFacture (PK), date, totalHT).<br> Entité <strong>LIGNE_FACTURE</strong> (numLigne, quantite, prixUnitaire). Cette entité est une entité faible car elle dépend de FACTURE.<br> Association entre FACTURE et LIGNE_FACTURE : (1,N).<br><br> Questions :</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez les instructions CREATE TABLE pour ces deux entités en respectant la dépendance d’entité faible.",
+        "niveau": "hard",
+        "reponse": "```sql\nCREATE TABLE FACTURE (\n    numFacture INT PRIMARY KEY,\n    date DATE,\n    totalHT DECIMAL(10,2)\n);\n\nCREATE TABLE LIGNE_FACTURE (\n    numFacture INT,\n    numLigne INT,\n    quantite INT,\n    prixUnitaire DECIMAL(10,2),\n    PRIMARY KEY (numFacture, numLigne),\n    FOREIGN KEY (numFacture) REFERENCES FACTURE(numFacture)\n);\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Identifiez la clé primaire de LIGNE_FACTURE et justifiez son choix.",
+            "niveau": "medium",
+            "reponse": "La clé primaire est (numFacture, numLigne). numLigne seul ne suffit pas car il pourrait être identique pour deux factures différentes. En ajoutant numFacture, on rend chaque ligne unique au sein de la facture, ce qui reflète la dépendance d’entité faible."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Des associations 1,1 et 1,N au schéma relationnel",
+    "type": "competence",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Soit le modèle EA suivant :<br> - Entité <strong>PROFESSEUR</strong> (idProf, nom)<br> - Entité <strong>DEPARTEMENT</strong> (codeDept, nomDept)<br> Association <strong>DIRIGER</strong> : cardinalité (1,1) du côté DEPARTEMENT et (0,1) du côté PROFESSEUR.<br><br> Traduisez cette association en clé étrangère, sans créer de table supplémentaire.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez la structure des tables PROFESSEUR et DEPARTEMENT avec les clés étrangères adaptées.",
+        "niveau": "easy",
+        "reponse": "```sql\nCREATE TABLE PROFESSEUR (\n    idProf INT PRIMARY KEY,\n    nom VARCHAR(100)\n);\n\nCREATE TABLE DEPARTEMENT (\n    codeDept INT PRIMARY KEY,\n    nomDept VARCHAR(100),\n    idProf INT UNIQUE, -- UNIQUE car 1,1 du côté DEPARTEMENT\n    FOREIGN KEY (idProf) REFERENCES PROFESSEUR(idProf)\n);\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi a-t-on ajouté la contrainte UNIQUE sur idProf dans DEPARTEMENT ?",
+            "niveau": "easy",
+            "reponse": "Parce que la cardinalité (1,1) signifie qu’un département a exactement un directeur (1) et qu’un professeur dirige au plus un département (0,1). La contrainte UNIQUE empêche qu’un même professeur soit référencé par plusieurs départements."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Passage aux tables et analyse des anomalies",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un étudiant a transformé un diagramme EA en une seule table :<br> <strong>COMMANDE_PRODUIT</strong>(numCommande, dateCommande, client, refProduit, libelleProduit, quantite, prixUnitaire)<br> avec (numCommande, refProduit) comme clé primaire.<br><br> 1. Identifiez les anomalies potentielles (redondances).<br> 2. Proposez une décomposition en respectant les règles de transformation vues dans la leçon.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Listez les dépendances fonctionnelles et les anomalies de mise à jour.",
+        "niveau": "medium",
+        "reponse": "Dépendances : numCommande → dateCommande, client ; refProduit → libelleProduit.<br>Anomalies :<br>- Insertion : impossible d’ajouter un produit sans commande.<br>- Suppression : supprimer la dernière commande d’un produit supprime le produit.<br>- Mise à jour : modifier le libellé d’un produit nécessite de changer toutes les lignes contenant ce produit.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Donnez le schéma relationnel normalisé en 3NF à partir de cette table unique.",
+            "niveau": "medium",
+            "reponse": "COMMANDE(numCommande, dateCommande, client) PK : numCommande<br>PRODUIT(refProduit, libelleProduit) PK : refProduit<br>LIGNE_COMMANDE(numCommande, refProduit, quantite, prixUnitaire) PK : (numCommande, refProduit) , FK : numCommande → COMMANDE, refProduit → PRODUIT"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Projet pédagogique : modéliser une petite librairie",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous devez concevoir une base de données pour une librairie. Règles de gestion :<br> - Un livre (ISBN, titre, prix) est écrit par un ou plusieurs auteurs (idAuteur, nom).<br> - Un auteur peut écrire plusieurs livres.<br> - Une commande (numCommande, dateCommande) regroupe plusieurs livres (quantité).<br> - Chaque ligne de commande concerne un seul livre avec un prix à l’instant T (prixVente).<br> - Un client (idClient, nom, email) passe plusieurs commandes.</p>",
+      "images": [
+        "diagramme entité association librairie livre auteur commande client"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Construisez le diagramme entité-association simplifié, puis transformez-le en tables SQL (uniquement les CREATE TABLE avec clés primaires/étrangères).",
+        "niveau": "very hard",
+        "reponse": "```sql\nCREATE TABLE LIVRE (\n    ISBN VARCHAR(13) PRIMARY KEY,\n    titre VARCHAR(255),\n    prix DECIMAL(10,2)\n);\n\nCREATE TABLE AUTEUR (\n    idAuteur INT PRIMARY KEY,\n    nom VARCHAR(100)\n);\n\nCREATE TABLE ECRIT (\n    ISBN VARCHAR(13),\n    idAuteur INT,\n    PRIMARY KEY (ISBN, idAuteur),\n    FOREIGN KEY (ISBN) REFERENCES LIVRE(ISBN),\n    FOREIGN KEY (idAuteur) REFERENCES AUTEUR(idAuteur)\n);\n\nCREATE TABLE CLIENT (\n    idClient INT PRIMARY KEY,\n    nom VARCHAR(100),\n    email VARCHAR(150)\n);\n\nCREATE TABLE COMMANDE (\n    numCommande INT PRIMARY KEY,\n    dateCommande DATE,\n    idClient INT,\n    FOREIGN KEY (idClient) REFERENCES CLIENT(idClient)\n);\n\nCREATE TABLE LIGNE_COMMANDE (\n    numCommande INT,\n    ISBN VARCHAR(13),\n    quantite INT,\n    prixVente DECIMAL(10,2),\n    PRIMARY KEY (numCommande, ISBN),\n    FOREIGN KEY (numCommande) REFERENCES COMMANDE(numCommande),\n    FOREIGN KEY (ISBN) REFERENCES LIVRE(ISBN)\n);\n```",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

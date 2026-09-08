@@ -1,0 +1,102 @@
+[
+  {
+    "intitule": "Comprendre l'origine des requêtes et les blocages CORS",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Un navigateur web bloque une requête HTTP vers une API .NET Core hébergée sur <code>https://api.education.cm</code> depuis un frontend hébergé sur <code>https://ecole.cm</code>. Le message d’erreur indique : <em>Access-Control-Allow-Origin</em> manquant.</p><p>Explique pourquoi le navigateur bloque cette requête et quel mécanisme de sécurité est impliqué.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rappeler le rôle de la politique Same-Origin (même origine) dans les navigateurs.",
+        "niveau": "easy",
+        "reponse": "La politique Same-Origin interdit à une page web de faire des requêtes vers une origine différente (protocole, domaine, port différents) pour éviter les attaques cross-site.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Identifier l’origine du frontend et celle de l’API dans l’exemple.",
+        "niveau": "easy",
+        "reponse": "Frontend : https://ecole.cm, API : https://api.education.cm. Les origines sont différentes (sous-domaines différents), donc le navigateur bloque la requête.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Configurer CORS dans une API .NET pour autoriser un frontend spécifique",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Une API ASP.NET Core doit être consommée par deux applications : une application Vue.js hébergée sur <code>https://mon-ecole.cm</code> et une application React hébergée sur <code>https://dashboard.cm</code>. Aucune autre origine ne doit être autorisée.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire la configuration CORS dans <code>Program.cs</code> permettant d’autoriser ces deux origines.",
+        "niveau": "medium",
+        "reponse": "builder.Services.AddCors(options => { options.AddPolicy(\"FrontendPolicy\", policy => { policy.WithOrigins(\"https://mon-ecole.cm\", \"https://dashboard.cm\") .AllowAnyHeader() .AllowAnyMethod(); }); }); puis app.UseCors(\"FrontendPolicy\");",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer pourquoi <code>AllowAnyHeader()</code> et <code>AllowAnyMethod()</code> sont souvent utilisés avec <code>WithOrigins()</code>.",
+        "niveau": "medium",
+        "reponse": "Pour simplifier le développement en acceptant tous les en-têtes et toutes les méthodes HTTP (GET, POST, PUT, DELETE, etc.) sans restriction supplémentaire. En production, on peut restreindre.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Dépannage d’une API qui refuse les requêtes après déploiement",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Une API .NET 8 est déployée sur un serveur au Cameroun. L’équipe frontend signale qu’elle reçoit une erreur CORS uniquement en production, pas en développement. La configuration CORS autorise toutes les origines avec <code>AllowAnyOrigin()</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analyser pourquoi <code>AllowAnyOrigin()</code> peut poser problème avec certains en-têtes comme Authorization ou méthodes non standard.",
+        "niveau": "hard",
+        "reponse": "AllowAnyOrigin() ne permet pas d’utiliser AllowCredentials() ni d’envoyer des cookies ou en-têtes d’authentification. Si le frontend envoie un token JWT (Authorization header), la requête échoue.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer une correction pour que l’API accepte les requêtes authentifiées depuis l’origine spécifique <code>https://app.cm</code>.",
+        "niveau": "hard",
+        "reponse": "Remplacer AllowAnyOrigin() par .WithOrigins(\"https://app.cm\").AllowCredentials().AllowAnyHeader().AllowAnyMethod(). Et supprimer AllowAnyOrigin() qui est incompatible avec AllowCredentials().",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Implémenter une politique CORS personnalisée avec gestion dynamique des origines",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Un centre de formation au Cameroun possède plusieurs sous-domaines autorisés à appeler l’API (ex. <code>eleves.centre.cm</code>, <code>professeurs.centre.cm</code>, <code>admin.centre.cm</code>). La liste des origines autorisées est stockée dans <code>appsettings.json</code> et peut changer sans redéployer l’API.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevoir une politique CORS qui lit les origines autorisées depuis IConfiguration et les applique dynamiquement.",
+        "niveau": "very hard",
+        "reponse": "Dans Program.cs : var allowedOrigins = configuration.GetSection(\"CorsSettings:AllowedOrigins\").Get<string[]>(); builder.Services.AddCors(options => { options.AddPolicy(\"DynamicPolicy\", policy => { policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod(); }); });",
+        "sousQuestions": []
+      },
+      {
+        "numero": "2",
+        "texte": "Évaluer les avantages et inconvénients de cette approche par rapport à des origines en dur.",
+        "niveau": "very hard",
+        "reponse": "Avantages : flexibilité, modification sans recompilation. Inconvénients : risque d’erreur de configuration, vérification à chaque démarrage, nécessite un redémarrage pour appliquer les changements (sauf si on utilise IOptionsMonitor avec rechargement à chaud).",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

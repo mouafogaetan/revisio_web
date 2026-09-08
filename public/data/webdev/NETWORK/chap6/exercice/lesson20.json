@@ -1,0 +1,158 @@
+[
+  {
+    "intitule": "Fonctionnement de base d'un switch et apprentissage MAC",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un switch Ethernet non géré possède une table MAC initialement vide. Les ordinateurs suivants sont connectés :</p><ul><li>PC1 (MAC: AA:AA:AA:AA:AA:AA) sur le port 1</li><li>PC2 (MAC: BB:BB:BB:BB:BB:BB) sur le port 2</li><li>PC3 (MAC: CC:CC:CC:CC:CC:CC) sur le port 3</li></ul><p>On réalise les transmissions suivantes dans l'ordre :</p><ol><li>PC1 envoie une trame à PC2</li><li>PC2 répond à PC1</li><li>PC3 envoie une trame à PC1</li></ol>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez l'état de la table MAC du switch après chaque étape en justifiant le comportement d'apprentissage et d'inondation (flooding).",
+        "niveau": "hard",
+        "reponse": "État initial : table MAC vide.\n\nÉtape 1 (PC1 → PC2) :\n- Le switch apprend que AA:AA:AA:AA:AA:AA est sur le port 1.\n- Comme il ne connaît pas encore PC2 (BB:BB:BB:BB:BB:BB), il inonde (flood) la trame sur tous les ports sauf le port 1 (ports 2 et 3).\n- Table après : {AA:AA:AA:AA:AA:AA → port 1}\n\nÉtape 2 (PC2 → PC1) :\n- Le switch apprend que BB:BB:BB:BB:BB:BB est sur le port 2.\n- Il connaît déjà PC1 (port 1), donc il transmet la trame uniquement sur le port 1 (pas d'inondation).\n- Table après : {AA:AA:AA:AA:AA:AA → port 1, BB:BB:BB:BB:BB:BB → port 2}\n\nÉtape 3 (PC3 → PC1) :\n- Le switch apprend que CC:CC:CC:CC:CC:CC est sur le port 3.\n- Il connaît PC1 (port 1), donc il transmet uniquement sur le port 1.\n- Table finale : {AA→port1, BB→port2, CC→port3}",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Que se passerait-il si PC3 envoyait une trame à une adresse MAC inconnue (DD:DD:DD:DD:DD:DD) ?",
+            "niveau": "medium",
+            "reponse": "Le switch ne trouverait pas l'adresse destination dans sa table MAC. Il inonderait (flood) la trame sur tous ses ports (sauf le port d'entrée, donc ports 1 et 2). C'est le comportement par défaut d'un switch face à une destination inconnue."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse de boucle réseau et Spanning Tree Protocol (STP)",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Dans une salle informatique à l'Université de Dschang, trois switches (SW1, SW2, SW3) sont interconnectés en triangle : SW1 relié à SW2, SW2 relié à SW3, et SW3 relié à SW1. Le réseau utilise STP (802.1D) pour éviter les boucles.</p><p>On suppose les priorités suivantes : SW1 (priorité 32768, MAC 00:11:22:33:44:55), SW2 (priorité 32768, MAC 00:11:22:33:44:66), SW3 (priorité 4096, MAC 00:11:22:33:44:77).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Déterminez le switch racine (Root Bridge) dans ce réseau STP. Justifiez avec la règle d'élection.",
+        "niveau": "hard",
+        "reponse": "Le switch racine est celui qui a la plus petite priorité. SW3 a une priorité de 4096, inférieure à 32768 des deux autres. Même si les priorités étaient égales, on comparerait les adresses MAC (la plus petite). Donc SW3 est le root bridge.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez quel port sera bloqué par STP pour casser la boucle et pourquoi.",
+            "niveau": "very hard",
+            "reponse": "STP bloque le port qui a le coût de chemin le plus élevé vers la racine, ou en cas d'égalité, la plus petite adresse de switch ou l'ID de port.\n\n1. Tous les ports de SW3 sont des ports désignés (racine).\n2. Sur SW1 et SW2, chacun a un chemin direct vers SW3 et un chemin via l'autre switch.\n   - SW1 a deux ports : vers SW3 (coût 19 pour 100Mbps) et vers SW2 (coût 19+19=38). Le port vers SW3 devient le port racine (RP).\n   - SW2 : port vers SW3 (coût 19) devient racine.\n3. Sur le lien SW1-SW2, STP désigne un port désigné sur le switch le plus proche de la racine (SW1). L'autre port (sur SW2) est bloqué.\nLe port bloqué est donc le port de SW2 connecté à SW1 (car SW2 a une distance de 19 vers racine, SW1 aussi, mais on compare les IDs : SW1 a plus petite MAC ? En réalité, on compare les IDs de bridge : le plus petit BID devient désigné. Avec priorités égales, SW1 a plus petite MAC, donc SW1 garde le port désigné, SW2 bloque son port)."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Quel est le principal inconvénient de STP en termes de performance réseau ?",
+            "niveau": "medium",
+            "reponse": "STP désactive les liens redondants pour éviter les boucles, ce qui signifie qu'une partie de la bande passante disponible n'est pas utilisée. De plus, en cas de panne d'un lien actif, la reconvergence STP peut prendre entre 30 et 50 secondes (états Listening, Learning, Forwarding)."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Switch géré vs non géré : fonctionnalités avancées",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Une entreprise de 200 employés à Douala souhaite séparer le trafic des services RH, Comptabilité et Technique tout en partageant la même infrastructure physique. Le réseau actuel utilise des switches non gérés basiques.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez une solution utilisant des switches gérés pour isoler les trafics des trois services sans acheter de nouveaux câbles.",
+        "niveau": "hard",
+        "reponse": "La solution est d'utiliser la technologie VLAN (Virtual Local Area Network).\n- Remplacer les switches non gérés par des switches gérés compatibles VLAN.\n- Créer trois VLAN : VLAN 10 (RH), VLAN 20 (Comptabilité), VLAN 30 (Technique).\n- Assigner les ports des switches aux VLAN correspondants selon le service.\n- Les VLANs isolent le trafic au niveau de la couche 2 : les broadcasts sont confinés au VLAN.\n- Pour permettre la communication entre VLANs (ex: RH vers imprimante partagée), ajouter un routeur ou un switch de couche 3 pour le routage inter-VLAN.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Citez deux autres fonctionnalités avancées des switches gérés, absentes des switches non gérés.",
+            "niveau": "easy",
+            "reponse": "1. QoS (Quality of Service) : priorisation du trafic (ex: VoIP prioritaire).\n2. Port mirroring (SPAN) : copie du trafic d'un port vers un autre pour analyse (Wireshark).\n3. SNMP (Simple Network Management Protocol) : supervision et alertes à distance.\n4. LACP (Link Aggregation) : regroupement de plusieurs ports pour augmenter la bande passante."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Commutation et adresses MAC : unicast, broadcast, multicast",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un switch possède dans sa table MAC les entrées suivantes :</p><ul><li>MAC A → port 1</li><li>MAC B → port 2</li><li>MAC C → port 3</li></ul><p>Des trames arrivent avec les adresses MAC destinations suivantes :</p><ol><li>MAC A</li><li>MAC D (inconnue)</li><li>FF:FF:FF:FF:FF:FF</li><li>01:00:5E:00:00:01 (adresse multicast IPv4)</li></ol>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Pour chaque cas, déterminez si le switch transmet la trame sur un port spécifique, inonde (flood), ou ignore, en justifiant.",
+        "niveau": "hard",
+        "reponse": "1. MAC A → connue (port 1) → transmission uniquement sur le port 1 (commutation).\n\n2. MAC D → inconnue → inondation (flood) sur tous les ports SAUF le port d'entrée.\n\n3. FF:FF:FF:FF:FF:FF → adresse de broadcast (tous les hôtes) → inondation sur tous les ports SAUF le port d'entrée. (Broadcast toujours flood)\n\n4. 01:00:5E:00:00:01 → adresse multicast (IPv4, plage 01:00:5E:00:00:00 à 01:00:5E:7F:FF:FF). Par défaut, un switch non configuré pour IGMP snooping traite le multicast comme du broadcast et inonde. Avec IGMP snooping activé, il ne transmet qu'aux ports qui ont rejoint ce groupe multicast.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi le broadcast et le multicast non snoopé sont-ils problématiques dans un grand réseau ?",
+            "niveau": "medium",
+            "reponse": "Le broadcast et le multicast floodé sont reçus par tous les hôtes du réseau (ou du VLAN). Cela augmente la charge CPU de chaque ordinateur qui doit traiter ces trames inutilement, et réduit la bande passante disponible. Dans un grand réseau (plusieurs centaines d'hôtes), les tempêtes de broadcast peuvent saturer le réseau."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Délai de commutation et file d'attente (QoS)",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Un switch géré doit transmettre simultanément :</p><ul><li>Un flux VoIP (petits paquets, très sensible à la latence, priorité haute)</li><li>Un transfert FTP volumineux (moins prioritaire)</li><li>Un flux vidéo de surveillance (priorité moyenne)</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez comment la QoS (Quality of Service) peut être configurée sur un switch géré pour garantir la qualité de la voix.",
+        "niveau": "very hard",
+        "reponse": "On configure la QoS sur le switch avec les étapes suivantes :\n1. Classification : identifier les paquets VoIP (généralement via DSCP (Differentiated Services Code Point) marqué par le téléphone IP ou via le port source/destination UDP 5060 (SIP) et RTP 10000-20000).\n2. Marquage : assigner une priorité (CoS - Class of Service) dans l'en-tête 802.1Q.\n3. Mise en file d'attente : configurer plusieurs files (queues) avec différents algorithmes :\n   - PQ (Priority Queuing) : la file VoIP est toujours vidée en premier.\n   - WFQ (Weighted Fair Queuing) : répartition pondérée.\n4. Gestion de la congestion : éviter la perte de paquets VoIP en utilisant WRED (Weighted Random Early Detection).\nL'objectif : la latence VoIP < 150ms, la gigue < 30ms, et la perte < 1%.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Que signifie l'acronyme STP dans le contexte des switches et quel est son rôle ?",
+            "niveau": "medium",
+            "reponse": "STP signifie Spanning Tree Protocol (802.1D). Son rôle est d'empêcher les boucles de niveau 2 dans un réseau redondant. Il bloque certains ports de manière à créer une topologie logique sans boucle (arbre couvrant). Si un lien actif tombe en panne, STP débloque un port de secours automatiquement."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Apprentissage MAC et tempête de broadcast",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Deux switches SW1 et SW2 sont interconnectés par deux câbles (redondance) sans protocole STP activé. Un ordinateur A envoie une trame de broadcast (ARP who-has).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez ce qui se produit lorsque les deux câbles sont actifs sans STP. Justifiez le phénomène.",
+        "niveau": "hard",
+        "reponse": "Il se produit une tempête de broadcast (broadcast storm) :\n1. A émet un broadcast → SW1 le reçoit et le flood sur tous ses ports, y compris les deux liens vers SW2.\n2. SW2 reçoit le même broadcast par deux ports différents. Il flood à son tour le broadcast sur tous ses ports (y compris retour vers SW1).\n3. SW1 reçoit à nouveau le broadcast de SW2 et le reflood.\nCe cycle se répète indéfiniment, saturant complètement la bande passante et rendant le réseau inutilisable. C'est pourquoi STP est obligatoire dans les réseaux redondants.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment STP résout-il ce problème ?",
+            "niveau": "medium",
+            "reponse": "STP détecte automatiquement la topologie en boucle et élit un port racine. Il place l'un des ports redondants à l'état 'bloqué' (alternate/backup), ce qui casse logiquement la boucle. Le trafic n'emprunte qu'un seul chemin actif, éliminant la tempête."
+          }
+        ]
+      }
+    ]
+  }
+]

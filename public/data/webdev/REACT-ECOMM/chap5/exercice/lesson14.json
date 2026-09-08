@@ -1,0 +1,113 @@
+[
+  {
+    "intitule": "Configuration d'Axios et interception des tokens",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Dans une application React e-commerce, vous devez configurer Axios pour communiquer avec l'API NestJS sécurisée. L'API utilise des tokens JWT stockés dans <code>localStorage</code> sous la clé <code>'access_token'</code>.</p><p><strong>Rappel :</strong> Un intercepteur de requête permet d'ajouter automatiquement le token JWT dans l'en-tête <code>Authorization: Bearer &lt;token&gt;</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez les étapes à suivre pour créer une instance Axios avec une URL de base et configurer un intercepteur de requête qui attache le token JWT à chaque requête sortante.",
+        "niveau": "easy",
+        "reponse": "1. Importer axios. 2. Créer une instance avec axios.create({ baseURL: 'https://api.exemple.com' }). 3. Utiliser instance.interceptors.request.use() pour modifier la config : récupérer le token depuis localStorage, si présent, config.headers.Authorization = 'Bearer ' + token. 4. Retourner la config modifiée. 5. Exporter l'instance pour l'utiliser dans les services.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez pourquoi il est préférable d'utiliser une instance Axios plutôt que d'importer axios directement dans chaque composant.",
+        "niveau": "easy",
+        "reponse": "Utiliser une instance unique permet de centraliser la configuration (baseURL, intercepteurs, timeout) et d'éviter la duplication de code. Cela facilite la maintenance et les modifications globales (exemple : changement d'URL de l'API).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Implémentation du refresh token automatique",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Votre API e-commerce utilise un mécanisme de refresh token : l'access_token expire après 15 minutes, tandis que le refresh_token (stocké dans un cookie httpOnly ou localStorage) a une durée de vie plus longue. Lorsqu'une requête échoue avec une erreur 401 (non autorisé), vous devez tenter de rafraîchir le token avant de réessayer la requête originale.</p><p>L'endpoint <code>POST /auth/refresh</code> attend un refresh_token valide et retourne un nouvel access_token.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevez un intercepteur de réponse Axios qui intercepte les erreurs 401, tente de rafraîchir le token via un appel à /auth/refresh, met à jour le token dans localStorage, puis rejoue automatiquement la requête initiale. Gérez également le cas où le refresh échoue (redirection vers login).",
+        "niveau": "hard",
+        "reponse": "L'intercepteur de réponse : (1) utilise response interceptor avec deux callbacks. (2) En cas d'erreur 401, on récupère le refresh_token stocké. (3) On effectue une requête POST /auth/refresh pour obtenir un nouveau token. (4) On met à jour localStorage avec le nouveau token. (5) On modifie la config originale avec le nouveau token et on relance la requête avec axios(originalRequest). (6) Si le rafraîchissement échoue (refresh expiré), on supprime les tokens et on redirige vers /login. (7) Important : éviter les boucles infinies en marquant la requête de refresh comme 'retry'. (8) On peut aussi mettre en file d'attente les requêtes simultanées pendant le refresh.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quel mécanisme utiliseriez-vous pour éviter que plusieurs appels simultanés ne déclenchent plusieurs requêtes de rafraîchissement en parallèle ?",
+            "niveau": "medium",
+            "reponse": "On peut utiliser une promesse globale (isRefreshing) et un système de file d'attente : la première requête 401 déclenche le refresh, les suivantes sont mises en attente (pendingRequests) et réexécutées après l'obtention du nouveau token."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Sécurisation des requêtes avec gestion de session",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans une boutique e-commerce, l'utilisateur connecté peut consulter ses commandes. Sans authentification, la route <code>/api/orders</code> renvoie une erreur 401. Vous avez déjà un store Zustand (<code>useAuthStore</code>) avec les méthodes <code>logout()</code> et <code>setTokens()</code>.</p><p>L'API renvoie également un refresh_token stocké de manière sécurisée (httpOnly cookie). Cependant votre frontend doit gérer l'expiration des tokens.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémentez une fonction utilitaire `setupAxiosInterceptors(axiosInstance, authStore)` qui lie les intercepteurs à l'instance Axios. L'intercepteur de requête ajoute le token. L'intercepteur de réponse gère le rafraîchissement et appelle `authStore.logout()` en cas d'échec. Fournissez le code JavaScript/TypeScript correspondant.",
+        "niveau": "medium",
+        "reponse": "```typescript\nexport function setupAxiosInterceptors(axiosInstance: AxiosInstance, authStore: any) {\n  axiosInstance.interceptors.request.use((config) => {\n    const token = localStorage.getItem('access_token');\n    if (token) config.headers.Authorization = `Bearer ${token}`;\n    return config;\n  });\n\n  axiosInstance.interceptors.response.use(\n    (response) => response,\n    async (error) => {\n      const originalRequest = error.config;\n      if (error.response?.status === 401 && !originalRequest._retry) {\n        originalRequest._retry = true;\n        try {\n          const { data } = await axiosInstance.post('/auth/refresh');\n          localStorage.setItem('access_token', data.access_token);\n          authStore.setTokens(data.access_token);\n          originalRequest.headers.Authorization = `Bearer ${data.access_token}`;\n          return axiosInstance(originalRequest);\n        } catch (refreshError) {\n          authStore.logout();\n          window.location.href = '/login';\n          return Promise.reject(refreshError);\n        }\n      }\n      return Promise.reject(error);\n    }\n  );\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Diagnostic et correction d'une configuration Axios défaillante",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un développeur junior a écrit le code suivant pour configurer Axios. Cependant, les requêtes ne contiennent jamais le token JWT et les erreurs 401 ne sont pas gérées correctement.</p><pre><code>import axios from 'axios';\n\nexport const api = axios.create();\n\napi.interceptors.request.use(config => {\n  const token = localStorage.getItem('token');\n  config.headers.Authorization = token;\n  return config;\n});\n\napi.interceptors.response.use(\n  response => response,\n  error => {\n    if (error.status === 401) {\n      localStorage.removeItem('token');\n      window.location = '/login';\n    }\n    return error;\n  }\n);\n</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifiez au moins trois erreurs ou mauvaises pratiques dans ce code et proposez les corrections nécessaires.",
+        "niveau": "medium",
+        "reponse": "1. L'en-tête Authorization doit être 'Bearer ' + token, pas seulement le token. 2. La baseURL n'est pas définie, ce qui peut causer des appels relatifs. 3. Dans l'intercepteur d'erreur, on accède à error.status au lieu de error.response?.status. 4. L'intercepteur retourne error au lieu de Promise.reject(error), ce qui peut casser le chaînage. 5. Le rafraîchissement du token n'est pas implémenté, on déconnecte immédiatement. 6. Aucune gestion des tentatives multiples (pas de _retry).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Synchronisation du store cart après authentification",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Votre application e-commerce conserve un panier local (Zustand store) même pour les utilisateurs non authentifiés. Dès qu'un utilisateur se connecte, vous devez fusionner le panier local avec son panier distant (API) et mettre à jour le backend.</p><p>L'API propose deux endpoints : <code>GET /cart/merge</code> (pour envoyer le panier local et recevoir le panier fusionné) et <code>POST /cart/sync</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez une stratégie utilisant Axios et un intercepteur ou une fonction dédiée pour fusionner automatiquement le panier après une connexion réussie. Incluez la gestion des erreurs réseau et une indication de chargement.",
+        "niveau": "very hard",
+        "reponse": "Après login, on appelle une fonction `syncCartAfterLogin(localCart, userId)`. On utilise axios.post('/cart/merge', { items: localCart }) avec le token nouvellement acquis. En cas de succès, on met à jour le store Zustand du panier avec la réponse (panier fusionné). En cas d'échec réseau, on réessaie avec un mécanisme de retry (ex: 3 tentatives). On peut aussi désactiver certaines actions pendant la synchronisation. On implémente une mutation React Query pour gérer l'état de chargement et la réexécution.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment garantir que le panier local ne soit pas écrasé par un panier distant vide si la requête échoue ?",
+            "niveau": "hard",
+            "reponse": "On peut d'abord envoyer le panier local, puis attendre la réponse de l'API. Si la requête échoue, on conserve le panier local et on affiche un message d'erreur. On peut également stocker un flag de synchronisation en attente et relancer la tentative plus tard. On évite de vider le store avant d'avoir la confirmation du backend."
+          }
+        ]
+      }
+    ]
+  }
+]

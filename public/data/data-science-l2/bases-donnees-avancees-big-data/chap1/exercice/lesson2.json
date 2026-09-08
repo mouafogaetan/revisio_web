@@ -1,0 +1,132 @@
+[
+  {
+    "intitule": "Analyse d'un système de gestion des commandes",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Une entreprise de e-commerce souhaite modéliser les données de ses commandes en intégrant une dimension temporelle pour suivre les changements d'état et les informations historiques. Le système doit permettre de suivre l'évolution des informations des clients, des produits et des commandes au fil du temps.</p><p>Voici les spécifications fonctionnelles :</p><ul><li>Un client peut modifier son adresse (SCD Type 2 pour garder l'historique)</li><li>Une commande a un statut (en cours, expédiée, livrée, annulée) et une date de changement de statut</li><li>Le prix des produits peut varier dans le temps</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez un modèle de données relationnel (schéma entité-association ou schéma de base de données) pour répondre aux besoins. Identifiez clairement les clés primaires, les clés étrangères et les attributs. Expliquez comment vous gérez les données historiques (dimension temps).",
+        "niveau": "medium",
+        "reponse": "<p>Schéma proposé :</p><ul><li><strong>Client</strong> (id_client PK, nom, prenom, date_naissance, date_creation, date_fin, est_actif) - SCD Type 2</li><li><strong>Adresse</strong> (id_adresse PK, id_client FK, rue, ville, code_postal, pays, date_debut, date_fin, est_actif) - SCD Type 2 pour historique</li><li><strong>Produit</strong> (id_produit PK, nom, description, date_creation)</li><li><strong>Prix_Produit</strong> (id_prix PK, id_produit FK, prix_unitaire, date_debut, date_fin) - historique des prix</li><li><strong>Commande</strong> (id_commande PK, id_client FK, date_commande, montant_total, statut, date_statut)</li><li><strong>Ligne_Commande</strong> (id_ligne PK, id_commande FK, id_produit FK, quantite, prix_unitaire_historique)</li></ul><p>Les attributs date_debut, date_fin et est_actif permettent la modélisation temporelle (dimension temps) et le suivi de l'historique des modifications.</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez ce qu'est une table de validité (SCD Type 2) et comment elle est mise en œuvre dans votre modèle.",
+            "niveau": "easy",
+            "reponse": "Une table de validité (SCD Type 2) permet de conserver l'historique des modifications d'un enregistrement. À chaque modification, au lieu de mettre à jour l'enregistrement existant, on crée un nouvel enregistrement avec les nouvelles valeurs. Les anciens enregistrements sont marqués avec une date de fin (date_fin) et un indicateur est_actif à FALSE. Le nouvel enregistrement a une date_debut = date de modification, date_fin = NULL et est_actif = TRUE. Cela permet de reconstituer l'historique complet des changements."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Justifiez l'ajout des attributs date_statut dans la table Commande. Quel type d'analyse cela permet-il ?",
+            "niveau": "medium",
+            "reponse": "L'attribut date_statut dans la table Commande permet de suivre la durée passée dans chaque statut. Cela permet d'analyser le temps moyen de traitement des commandes, d'identifier les goulots d'étranglement (ex : commandes bloquées en statut 'en cours' trop longtemps), de calculer des indicateurs de performance (temps de livraison) et de détecter des anomalies (commandes annulées après une longue période)."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Modélisation des données d'un réseau social",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Une start-up souhaite créer un réseau social permettant aux utilisateurs de publier des messages, de commenter et de réagir. Ils veulent également suivre l'évolution des relations entre utilisateurs (amis) dans le temps.</p><p>Voici les besoins identifiés :</p><ul><li>Un utilisateur a un profil (nom, prénom, date de naissance, email, bio)</li><li>Les utilisateurs peuvent être amis (relation symétrique)</li><li>Les utilisateurs peuvent publier des messages (texte, date, image optionnelle)</li><li>Les utilisateurs peuvent commenter les messages (texte, date)</li><li>Les utilisateurs peuvent réagir aux messages (like, love, laugh) - réaction avec une date</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez un schéma de base de données relationnelle pour modéliser ce réseau social. Détaillez les tables, les clés primaires, les clés étrangères et les contraintes.",
+        "niveau": "hard",
+        "reponse": "<p>Schéma proposé :</p><ul><li><strong>Utilisateur</strong> (id_utilisateur PK, nom, prenom, date_naissance, email UNIQUE, bio, date_creation, date_derniere_connexion)</li><li><strong>Profil_Utilisateur</strong> (id_profil PK, id_utilisateur FK, nom, prenom, date_naissance, email, bio, date_debut, date_fin) - pour garder l'historique des modifications de profil</li><li><strong>Amitie</strong> (id_utilisateur1 FK, id_utilisateur2 FK, date_debut_amitie, date_fin_amitie, est_active) - PK composite (id_utilisateur1, id_utilisateur2, date_debut_amitie)</li><li><strong>Publication</strong> (id_publication PK, id_utilisateur FK, texte, date_publication, image_url)</li><li><strong>Commentaire</strong> (id_commentaire PK, id_publication FK, id_utilisateur FK, texte, date_commentaire, id_commentaire_parent FK - pour les commentaires en réponse)</li><li><strong>Reaction</strong> (id_reaction PK, id_publication FK, id_utilisateur FK, type_reaction (enum: like, love, laugh, etc.), date_reaction) - contrainte UNIQUE (id_utilisateur, id_publication) pour éviter les doublons de réaction</li></ul>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment modéliseriez-vous la relation d'amitié dans le temps ?",
+            "niveau": "medium",
+            "reponse": "La relation d'amitié est modélisée par une table Amitie avec les attributs date_debut_amitie, date_fin_amitie et est_active. Un couple d'utilisateurs peut avoir plusieurs enregistrements si la relation a été interrompue puis rétablie. La clé primaire est composée de id_utilisateur1, id_utilisateur2 et date_debut_amitie. Cela permet de suivre l'historique des relations d'amitié (date de début, date de fin, durée de la relation, interruptions) et de réaliser des analyses temporelles sur le réseau social."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Proposez une requête SQL pour obtenir le nombre de publications par utilisateur sur les 7 derniers jours.",
+            "niveau": "medium",
+            "reponse": "<pre><code>SELECT id_utilisateur, COUNT(*) AS nb_publications\nFROM Publication\nWHERE date_publication >= DATE_SUB(NOW(), INTERVAL 7 DAY)\nGROUP BY id_utilisateur\nORDER BY nb_publications DESC;</code></pre>"
+          },
+          {
+            "numero": "1.c",
+            "texte": "Évaluez comment votre modèle pourrait être étendu pour prendre en compte les mentions légales et le RGPD.",
+            "niveau": "medium",
+            "reponse": "Pour la conformité RGPD, il faudrait ajouter :<br/>- Une table Consentement (id_utilisateur FK, type_consentement, date_don, date_revocation) pour tracer les consentements.<br/>- Une table Journal_Acces (id_log, id_utilisateur, ip, date_acces, action) pour le suivi des accès aux données personnelles.<br/>- Une table Droit_Suppression (id_demande, id_utilisateur, date_demande, date_traitement, statut) pour gérer les demandes de suppression.<br/>- Ajouter des attributs comme date_derniere_modification et source_modification pour tracer les modifications.<br/>Ces extensions permettent de répondre aux exigences de transparence, de traçabilité et de droit à l'oubli."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Dimension temps et SCD dans un système de gestion des ressources humaines",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Une entreprise souhaite modéliser les données de ses employés en intégrant la dimension temps pour suivre les évolutions de carrière et les changements de poste. Le système doit permettre de répondre aux questions suivantes :</p><ul><li>Quels étaient les employés présents en 2020 ?</li><li>À quel poste travaillait un employé à une date donnée ?</li><li>Quel est l'historique des salaires d'un employé ?</li><li>Quelle est l'évolution des effectifs par service au fil des années ?</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Définissez une table Employé et une table Affectation qui permettent de suivre l'historique des postes, services et salaires. Justifiez votre choix des clés.",
+        "niveau": "medium",
+        "reponse": "<p><strong>Table Employé :</strong> (id_employé PK, numéro_sécurité_sociale, nom, prénom, date_naissance, date_embauche, date_départ, statut_actif)</p><p><strong>Table Affectation :</strong> (id_affectation PK, id_employé FK, id_service FK, id_poste FK, salaire_mensuel, date_debut_affectation, date_fin_affectation, est_affectation_active) - PK composite possible (id_employé, date_debut_affectation) pour assurer l'unicité de la période pour un employé.</p><p><strong>Table Service :</strong> (id_service PK, nom_service, code_service, date_creation, date_fin_service) - si les services évoluent aussi dans le temps.</p><p><strong>Table Poste :</strong> (id_poste PK, intitulé_poste, niveau_hierarchique, date_creation) - similaire.</p><p>Ce modèle permet de répondre aux questions :<br/>- Présence en 2020 : condition date_debut_affectation <= '2020-12-31' ET (date_fin_affectation >= '2020-01-01' OU date_fin_affectation IS NULL).<br/>- Historique des salaires : requête sur Affectation avec les dates.<br/>- Évolution des effectifs : GROUP BY année, service.</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez comment vous géreriez un changement de poste en cours de mois (ex : augmentation de salaire au 15 du mois).",
+            "niveau": "hard",
+            "reponse": "La gestion se fait par la création d'un nouvel enregistrement dans la table Affectation. L'ancien enregistrement reçoit une date_fin_affectation = '2024-06-14' (si le changement a lieu le 15). Le nouvel enregistrement a une date_debut_affectation = '2024-06-15' et la nouvelle valeur du salaire. L'historique est ainsi complet. Il peut être nécessaire d'ajouter une règle de validation pour éviter les chevauchements de dates entre deux affectations d'un même employé (ex : date_debut_affectation d'une nouvelle affectation doit être supérieure à la date_fin_affectation de l'ancienne)."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Quelle serait la requête SQL pour obtenir la liste des employés présents au 1er janvier 2022 ?",
+            "niveau": "easy",
+            "reponse": "<pre><code>SELECT DISTINCT id_employé\nFROM Affectation\nWHERE date_debut_affectation <= '2022-01-01'\nAND (date_fin_affectation >= '2022-01-01' OR date_fin_affectation IS NULL)\nAND est_affectation_active = TRUE;</code></pre><p>La condition 'est_affectation_active = TRUE' permet de ne conserver que la dernière affectation en cours. Mais si on veut toutes les affectations, on peut la retirer. L'utilisation de IS NULL est cruciale pour les affectations en cours.</p>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Modélisation d'une bibliothèque avec historique",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Une bibliothèque municipale souhaite modéliser son système de prêts en intégrant la dimension temps pour suivre l'historique des prêts et des retours. Le système doit permettre de connaître :</p><ul><li>Qui a emprunté quel livre et à quelle date</li><li>Quels livres étaient empruntés à une date donnée</li><li>L'historique des retards et des amendes</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez un schéma de base de données pour modéliser ce système. Identifiez les clés primaires, les clés étrangères et les attributs. Expliquez comment vous gérez l'historique des prêts.",
+        "niveau": "easy",
+        "reponse": "<p>Schéma proposé :</p><ul><li><strong>Livre</strong> (id_livre PK, titre, auteur, isbn, date_publication, categorie)</li><li><strong>Membre</strong> (id_membre PK, nom, prenom, email, telephone, date_inscription)</li><li><strong>Pret</strong> (id_pret PK, id_livre FK, id_membre FK, date_pret, date_retour_prevue, date_retour_effectif, amende, statut - 'en cours'/'terminé')</li></ul><p>L'historique des prêts est conservé dans la table Pret, même après le retour du livre. L'attribut statut permet de distinguer les prêts en cours des prêts terminés. La date_retour_effectif permet de calculer les retards (si > date_retour_prevue) et de calculer les amendes. Le modèle permet de :</p><ul><li>Suivre l'historique complet de chaque livre et de chaque membre</li><li>Connaître les livres actuellement empruntés (statut='en cours')</li><li>Calculer les amendes pour chaque prêt en retard</li></ul>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Écrivez la requête SQL pour lister les livres actuellement empruntés (non rendus).",
+            "niveau": "easy",
+            "reponse": "<pre><code>SELECT l.titre, m.nom, m.prenom, p.date_pret, p.date_retour_prevue\nFROM Pret p\nJOIN Livre l ON p.id_livre = l.id_livre\nJOIN Membre m ON p.id_membre = m.id_membre\nWHERE p.statut = 'en cours';</code></pre>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Comment calculer le nombre total d'emprunts par livre sur une année donnée ?",
+            "niveau": "easy",
+            "reponse": "<pre><code>SELECT l.titre, COUNT(*) AS nb_emprunts\nFROM Pret p\nJOIN Livre l ON p.id_livre = l.id_livre\nWHERE YEAR(p.date_pret) = 2024\nGROUP BY l.id_livre, l.titre\nORDER BY nb_emprunts DESC;</code></pre><p>Cette requête compte le nombre de prêts pour chaque livre durant l'année 2024. On utilise la fonction YEAR sur la date de prêt pour filtrer sur l'année souhaitée. Le GROUP BY permet de regrouper les résultats par livre.</p>"
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -1,0 +1,79 @@
+[
+  {
+    "intitule": "Architecture et traduction d'adresses en virtualisation",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Considérez un hyperviseur de type 1 (bare-metal) sur un processeur Intel supportant la technologie VT-x avec EPT (Extended Page Tables). Un système d'exploitation invité (VM) s'exécute sur cet hyperviseur. La VM croit que sa mémoire physique commence à l'adresse <code>0x1000</code>. En réalité, le cadre mémoire (frame) physique correspondant sur l'hôte se trouve à l'adresse <code>0xFFAA0000</code>. Le processeur invité génère un accès à l'adresse virtuelle <code>0x00B2A4F8</code> et la table des pages de l'invité (GVA -&gt; GPA) donne la correspondance suivante : <code>0x00B2A4F8</code> → <code>0x00001000</code> + déplacement = <code>0x1000</code>.</p>",
+      "images": [
+        "diagramme montrant la double traduction GVA vers GPA via les tables d'invité puis GPA vers HPA via EPT/NPT",
+        "schéma comparatif hyperviseur type 1 (bare metal) et type 2 (hébergé)"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer la différence fondamentale entre la traduction d'adresses par 'Shadow Page Tables' et par 'EPT' (Extended Page Tables).",
+        "niveau": "hard",
+        "reponse": "Les Shadow Page Tables sont gérées directement par l'hyperviseur qui maintient une copie 'fantôme' de la table des pages de l'invité en mappant directement les adresses virtuelles invitées (GVA) vers les adresses physiques hôtes (HPA). L'hyperviseur doit intercepter et modifier la table des pages invité à chaque modification. EPT (ou NPT pour AMD) est une extension matérielle qui ajoute un niveau supplémentaire de traduction : le TLB du processeur gère une table EPT séparée qui traduit les adresses physiques invitées (GPA) en adresses physiques hôtes (HPA), ce qui réduit les interventions de l'hyperviseur et améliore les performances.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Calculer l'adresse physique réelle sur l'hôte (HPA) correspondant à l'accès mémoire demandé. Justifier chaque étape du calcul.",
+        "niveau": "medium",
+        "reponse": "L'adresse virtuelle invité (GVA) 0x00B2A4F8 est traduite par l'invité en GPA = 0x1000. Pour convertir cette GPA en HPA via EPT, la table EPT utilise la base 0xFFAA0000 (car la frame GPA 0x1000 est mappée sur la frame HPA 0xFFAA0000). Le déplacement reste identique car la taille d'une frame est de 4 Ko (0x1000). L'adresse de départ HPA = 0xFFAA0000 + (0x1000 - 0x1000) + offset = 0xFFAA0000 + 0 = 0xFFAA0000. L'adresse HPA exacte est donc 0xFFAA0000.",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Déterminer l'offset en octets à partir de l'adresse GPA 0x1000.",
+            "niveau": "easy",
+            "reponse": "L'adresse GPA = 0x1000 correspond au tout premier octet d'une frame (car 0x1000 est un multiple de la taille de page 4096). L'offset est donc 0."
+          }
+        ]
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquer pourquoi la virtualisation assistée par matériel (VT-x/SVM) est indispensable pour exécuter du code en mode noyau dans une VM sans modification de l'OS invité.",
+        "niveau": "medium",
+        "reponse": "Sans VT-x, les instructions privilégiées exécutées par le noyau invité (ex : CLI, STI, modification du CR3) causaient des fautes générales de protection interceptées par l'hyperviseur via une technique complexe de 'traduction binaire' ou 'patch de l'OS invité' (paravirtualisation). Avec VT-x, le processeur dispose de deux modes d'exécution : Root Mode (hyperviseur) et Non-root Mode (invité). Les instructions sensibles déclenchent automatiquement des 'VM-exits' vers l'hyperviseur sans perte de performance majeure, permettant une 'full virtualization' d'un OS non modifié.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Choix d'une stratégie de virtualisation pour un laboratoire",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous êtes consultant en infrastructure pour une école au Cameroun. L'école possède un serveur physique puissant (32 cœurs, 128 Go RAM, RAID SSD) et souhaite former 30 élèves à l'administration Linux. Chaque élève doit avoir sa propre machine virtuelle isolée (Ubuntu 22.04) avec 2 vCPU, 4 Go RAM et 50 Go disque. Les élèves utiliseront des clients légers (ordinateurs peu puissants) pour se connecter aux VMs. Deux options s'offrent à vous : Option A = Hyperviseur Type 2 (VirtualBox) sur le serveur, Option B = Hyperviseur Type 1 (Proxmox VE / KVM).</p>",
+      "images": [
+        "schéma comparatif de la surcharge CPU (overhead) entre VirtualBox (Type 2) et KVM (Type 1)",
+        "graphique montrant la consommation mémoire de plusieurs VMs en idle sur Proxmox vs VirtualBox"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Citer deux avantages décisifs de l'hyperviseur de type 1 (Option B) par rapport au type 2 (Option A) dans ce contexte de laboratoire avec 30 VMs simultanées.",
+        "niveau": "medium",
+        "reponse": "1) Performances : Le Type 1 s'exécute directement sur le matériel sans OS hôte intermédiaire, réduisant la latence et l'overhead CPU, permettant d'exécuter plus de VMs avec les mêmes ressources. 2) Gestion des ressources : Un Type 1 (comme KVM) intègre un scheduler avancé et une sur-allocations mémoire efficace (KSM - Kernel Samepage Merging) permettant de démarrer les 30 VMs avec 4 Go chacune même si la RAM totale est de 128 Go (et non 120 Go requis) grâce au partage de pages identiques.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Justifier pourquoi l'EPT (Extended Page Tables) est critique pour garantir la fluidité des 30 VMs simultanément.",
+        "niveau": "hard",
+        "reponse": "Avec 30 VMs, chacune gère sa propre mémoire virtuelle et ses tables de pages. Sans EPT, l'hyperviseur devrait maintenir des 'Shadow Page Tables' pour chaque VM, ce qui quadruplerait presque l'utilisation de la mémoire pour les structures de traduction (chaque entrée de table invité a une entrée fantôme). Pire, chaque 'page fault' dans une VM causerait un 'VM exit' coûteux. Avec EPT, le CPU gère nativement la traduction GPA → HPA via le TLB, les 'VM exits' ne se produisent que pour les fautes réelles EPT violations. La surcharge d'adressage est minimale, permettant aux 30 VMs de fonctionner avec des performances proches du natif.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposer une solution pour mutualiser l'installation du système (réduire l'espace disque total consommé par les 30 VMs) en utilisant une technique de virtualisation avancée. Expliquer le principe.",
+        "niveau": "very hard",
+        "reponse": "Solution : Utiliser des 'Linked Clones' ou des 'Templates' avec déduplication via 'qcow2 backing files' (sous KVM). Principe : Créer une VM 'maître' de référence (Ubuntu 22.04 installé, outils de base). Pour chaque élève, créer un disque 'différentiel' (qcow2) qui référence le disque maître comme 'backing file'. L'élève écrit uniquement ses modifications (fichiers créés, configurations). Ainsi, pour 30 VMs, le stockage consommé = taille du backing file (10 Go) + (delta moyen par élève ≈ 2 Go) = 70 Go au lieu de 30 * 50 Go = 1500 Go. Proxmox gère cela nativement via 'Full Clone' (optionnel) vs 'Linked Clone'.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

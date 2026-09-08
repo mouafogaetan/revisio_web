@@ -1,0 +1,118 @@
+[
+  {
+    "intitule": "Optimisation des coûts et résilience d'une infrastructure cloud",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous êtes consultant cloud pour une startup camerounaise e-commerce qui a déployé son application sur AWS. L’équipe constate une facture mensuelle élevée et une indisponibilité récente lors d’une panne dans une zone de disponibilité (AZ). L’architecture actuelle comprend : une seule instance EC2 t2.large (région eu-west-3, Paris) avec un volume EBS gp2 de 200 Go, un load balancer (classic) distribuant le trafic vers cette unique instance, aucune alarme configurée, et une base de données RDS PostgreSQL db.t3.micro (single-AZ). Les sauvegardes sont quotidiennes mais jamais testées.</p>",
+      "images": [
+        "Diagramme architecture cloud simple avec un seul serveur web et une base de données sans haute disponibilité"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier trois causes principales de dérive des coûts dans cette architecture. Justifier chaque cause avec un concept de la leçon 35.",
+        "niveau": "medium",
+        "reponse": "1. Instance t2.large surdimensionnée pour une charge modérée (violation du rightsizing). 2. Pas d'instances spot ou réservées pour les workloads non critiques. 3. Stockage EBS gp2 de 200 Go peut-être inutilisé (pas de monitoring des métriques de volume).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer trois actions concrètes pour améliorer la résilience (simuler une panne d’AZ) en respectant le principe de ‘coût minimal’.",
+        "niveau": "hard",
+        "reponse": "1. Passer RDS en Multi-AZ (standby dans une autre AZ) pour bascule automatique. 2. Utiliser un Auto Scaling Group avec minimum 2 instances EC2 dans deux AZ différentes. 3. Créer une alarme CloudWatch sur ‘StatusCheckFailed’ pour notifier l’équipe.",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Décrire comment simuler une panne pour tester cette résilience sans coût supplémentaire.",
+            "niveau": "medium",
+            "reponse": "Arrêter manuellement une instance EC2 dans une AZ via la console ou AWS CLI, vérifier que l'ASG relance une instance dans l'autre AZ et que le load balancer redirige le trafic. Pour RDS, forcer un basculement manuel dans l'onglet 'Actions' de RDS."
+          }
+        ]
+      },
+      {
+        "numero": 3,
+        "texte": "Élaborer un budget mensuel sur AWS Cost Explorer avec une alerte à 80 % et 100 % du budget prévisionnel (estimé à 500 $/mois). Expliquer les étapes et l’utilité d’un tel budget pour la startup.",
+        "niveau": "easy",
+        "reponse": "Étapes : 1. Aller dans AWS Budgets. 2. Créer un budget 'Cost budget'. 3. Saisir 500 $, période mensuelle. 4. Ajouter deux alertes : seuil 80 % (envoi email à finance@startup.cm) et 100 % (email + SNS). Utilité : éviter les dépassements imprévus, responsabiliser les équipes, détecter rapidement une anomalie (ex: instance oubliée).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse de métriques CloudWatch pour diagnostiquer un incident",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Voici un extrait des métriques CloudWatch pour un serveur web (EC2) entre 14h00 et 14h30 :</p><ul><li>CPUUtilization : moyenne 85 %, pics à 98 %</li><li>NetworkIn : 50 MB/s constant</li><li>NetworkOut : 5 MB/s</li><li>StatusCheckFailed_Instance : 1 (à 14h12)</li><li>DiskReadOps : 200 ops/s, DiskWriteOps : 50 ops/s</li></ul><p>Le site est devenu lent puis inaccessible pendant 2 minutes.</p>",
+      "images": [
+        "Graphique CloudWatch montrant une CPU élevée et un pic d'erreur de statut d'instance"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Associer chaque métrique à une possible cause racine parmi : saturation CPU, attaque réseau (DDoS), défaillance matérielle de l’hôte, problème de disque.",
+        "niveau": "easy",
+        "reponse": "CPUUtilization élevée → saturation CPU ; StatusCheckFailed_Instance → défaillance matérielle de l’hôte ; NetworkIn élevé et constant → possible DDoS ; DiskReadOps/DiskWriteOps normaux → pas de problème disque",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer pourquoi l’utilisation de ‘CloudWatch Logs’ pour les journaux d’accès Apache (access.log) aurait aidé à diagnostiquer plus précisément cet incident.",
+        "niveau": "medium",
+        "reponse": "Les logs d’accès montrent les adresses IP source, les codes HTTP (ex: 503), et les URI. On aurait pu identifier si le pic venait d’une même IP (attaque) ou d’un pic légitime de trafic. De plus, les logs peuvent être filtrés avec CloudWatch Logs Insights pour trouver les requêtes lentes.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Justifier pourquoi une alarme sur ‘CPUUtilization > 80 % pendant 5 minutes’ n’aurait pas empêché l’indisponibilité, mais aurait permis de réagir plus vite.",
+        "niveau": "hard",
+        "reponse": "L’alarme ne prévient pas la panne, car le seuil est déjà dépassé. Cependant, elle permet d’envoyer une notification (email, SMS, webhook) à l’équipe d’exploitation avant que le serveur ne devienne totalement inaccessible. En automatisant une action (ex: redimensionnement de l’ASG ou redémarrage), on peut réduire le temps de récupération (MTTR).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Documentation technique et présentation d’architecture cloud",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Dans le cadre du projet final (lesson 35), vous devez documenter une architecture serverless pour une application de vote en temps réel (utilisée lors d’un événement panafricain de technologie). L’architecture utilise : API Gateway, Lambda (Python), DynamoDB, S3 pour l’hébergement statique, CloudFront, et Cognito pour l’authentification.</p>",
+      "images": [
+        "Schéma d'architecture serverless avec API Gateway, Lambda, DynamoDB, S3 et CloudFront"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créer un plan de documentation technique comprenant au moins 5 sections obligatoires selon les bonnes pratiques vues en cours.",
+        "niveau": "medium",
+        "reponse": "1. Vue d’ensemble et objectifs métier. 2. Diagramme d’architecture (avec flèches de flux de données). 3. Description des composants (rôle de chaque service). 4. Procédure de déploiement (Terraform/SAM). 5. Monitoring et alertes (métriques Lambda, DynamoDB throttling). 6. Plan de reprise après sinistre (DRP).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer une démonstration de résilience à présenter au jury. Décrire une panne à simuler et comment montrer que le système reste disponible sans intervention manuelle.",
+        "niveau": "hard",
+        "reponse": "Panne simulée : Arrêt brutal de toutes les instances Lambda (en supprimant temporairement les permissions d’exécution ou en simulant un timeout général). Résilience : Lambda est serverless, AWS relance automatiquement de nouvelles invocations. Pour démontrer : lancer un script d’envoi de requêtes via l’API pendant la panne, montrer que les réponses HTTP 500 n’apparaissent pas (car AWS retente) ou que le système récupère en moins de 2 minutes. Alternative : simuler une région entière défaillante (failover vers une région secondaire).",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Quel indicateur CloudWatch utiliser pour prouver la reprise automatique ?",
+            "niveau": "easy",
+            "reponse": "La métrique ‘Invocations’ (retour à la normale après la panne) et ‘Errors’ (nombre d’erreurs temporaires). Aussi, les ‘Duration’ pour vérifier que le cold start n’a pas trop affecté les performances."
+          }
+        ]
+      },
+      {
+        "numero": 3,
+        "texte": "Juger de la qualité de cette architecture pour un budget de 100 $/mois pour 10 000 utilisateurs simultanés. Donner un avis argumenté et proposer une optimisation.",
+        "niveau": "very hard",
+        "reponse": "Avis : Adaptée car serverless scale automatiquement. Critique : DynamoDB en mode provisionné avec 100 WCU/RCU pourrait coûter ~70 $/mois, API Gateway ~20 $, Lambda ~10 $, reste 0 $ pour CloudFront (gratuit jusqu’à 1 To/mois). Pour 10k utilisateurs simultanés, mieux vaut passer DynamoDB en mode ‘on-demand’ pour éviter le throttling. Optimisation : mettre un cache API Gateway (5 $/mois) pour réduire les appels Lambda. Utiliser Compute Optimizer pour ajuster la mémoire Lambda.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

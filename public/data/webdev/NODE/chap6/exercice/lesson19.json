@@ -1,0 +1,119 @@
+[
+  {
+    "intitule": "Comprendre le hachage et le salage des mots de passe",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>En sécurité informatique, stocker les mots de passe en clair dans une base de données est une pratique dangereuse. Le hachage permet de transformer un mot de passe en une chaîne fixe non réversible. bcrypt ajoute un <strong>sel (salt)</strong> pour résister aux attaques par tables arc-en-ciel.</p>",
+      "images": [
+        "Diagramme expliquant le processus de hachage d'un mot de passe avec bcrypt : entrée du mot de passe, ajout du sel, fonction de hachage, sortie du hash final."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Définir ce qu'est une fonction de hachage cryptographique et citer deux propriétés essentielles.",
+        "niveau": "easy",
+        "reponse": "Une fonction de hachage cryptographique est une fonction mathématique qui transforme une entrée (mot de passe) en une sortie de taille fixe (hash). Deux propriétés essentielles : (1) elle est à sens unique (irréversible), (2) une petite modification de l'entrée produit un hash complètement différent.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer pourquoi le salage est nécessaire même si l'on utilise un algorithme de hachage comme SHA-256.",
+        "niveau": "medium",
+        "reponse": "Le salage est nécessaire car deux utilisateurs ayant le même mot de passe produiraient le même hash avec SHA-256. Un attaquant pourrait alors utiliser des tables pré-calculées (tables arc-en-ciel) pour retrouver les mots de passe. Le sel (chaîne aléatoire unique par utilisateur) rend chaque hash différent même pour des mots de passe identiques, forçant l'attaquant à recalculer pour chaque sel.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Comparer les algorithmes bcrypt, SHA-256 et PBKDF2 en termes de résistance aux attaques par brute force.",
+        "niveau": "hard",
+        "reponse": "SHA-256 est rapide, donc vulnérable au brute force sur GPU. bcrypt est volontairement lent (facteur de coût ajustable) et intègre le sel automatiquement, ce qui ralentit les attaques. PBKDF2 est aussi lent mais moins résistant aux attaques ASIC que bcrypt. bcrypt est considéré comme le meilleur pour les mots de passe.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Implémenter l'authentification sécurisée avec bcrypt",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous développez une API d'authentification pour une plateforme e-commerce camerounaise. Les utilisateurs doivent pouvoir s'inscrire (fournir email et mot de passe) et se connecter. Vous allez utiliser bcrypt pour sécuriser les mots de passe.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire la commande npm pour installer bcrypt dans un projet Node.js.",
+        "niveau": "easy",
+        "reponse": "npm install bcrypt",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Analyser le code suivant et expliquer ce qu'il fait ligne par ligne :",
+        "niveau": "medium",
+        "reponse": "",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "const saltRounds = 10;",
+            "niveau": "easy",
+            "reponse": "Définit le facteur de coût de bcrypt. Plus il est élevé, plus le hachage est lent et sécurisé. 10 est une valeur standard."
+          },
+          {
+            "numero": "2.b",
+            "texte": "const hashedPassword = await bcrypt.hash(password, saltRounds);",
+            "niveau": "medium",
+            "reponse": "Génère un sel aléatoire (intégré automatiquement) et hache le mot de passe fourni. Retourne une chaîne contenant l'algorithme, le sel et le hash. Cette opération est asynchrone."
+          },
+          {
+            "numero": "2.c",
+            "texte": "const isMatch = await bcrypt.compare(inputPassword, storedHash);",
+            "niveau": "medium",
+            "reponse": "Compare un mot de passe en clair (inputPassword) avec un hash stocké (storedHash). Extrait le sel du hash, hache le mot de passe fourni et compare le résultat. Retourne true ou false."
+          }
+        ]
+      },
+      {
+        "numero": 3,
+        "texte": "Implémenter une fonction register(email, password) qui hache le mot de passe avant de l'enregistrer dans une base MongoDB (simulée par un tableau). Gérer l'erreur si l'email existe déjà.",
+        "niveau": "hard",
+        "reponse": "Voici une implémentation complète :\n\n```javascript\nconst bcrypt = require('bcrypt');\nconst users = []; // Simulation base de données\n\nasync function register(email, password) {\n  // Vérifier si l'utilisateur existe\n  const existingUser = users.find(u => u.email === email);\n  if (existingUser) {\n    throw new Error('Email déjà utilisé');\n  }\n  \n  // Hacher le mot de passe\n  const saltRounds = 10;\n  const hashedPassword = await bcrypt.hash(password, saltRounds);\n  \n  // Stocker l'utilisateur\n  const newUser = { email, password: hashedPassword };\n  users.push(newUser);\n  \n  return { message: 'Utilisateur créé avec succès', email };\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 4,
+        "texte": "Implémenter une fonction login(email, password) qui vérifie les identifiants et retourne un token JWT si réussite, sinon une erreur.",
+        "niveau": "very hard",
+        "reponse": "```javascript\nconst bcrypt = require('bcrypt');\nconst jwt = require('jsonwebtoken');\n\nasync function login(email, password) {\n  // Rechercher l'utilisateur\n  const user = users.find(u => u.email === email);\n  if (!user) {\n    throw new Error('Email ou mot de passe incorrect');\n  }\n  \n  // Comparer les mots de passe\n  const isValid = await bcrypt.compare(password, user.password);\n  if (!isValid) {\n    throw new Error('Email ou mot de passe incorrect');\n  }\n  \n  // Générer un token JWT valable 1 heure\n  const token = jwt.sign(\n    { userId: user.email, role: 'user' },\n    process.env.JWT_SECRET,\n    { expiresIn: '1h' }\n  );\n  \n  return { token, message: 'Connexion réussie' };\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Audit de sécurité d'un système d'authentification existant",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous êtes consultant en sécurité. Une startup camerounaise utilise le code suivant pour authentifier ses utilisateurs. Identifiez les failles et proposez des corrections avec bcrypt.</p>\n<pre><code>\n// Code vulnérable actuel\nconst users = [\n  { email: \"alice@example.com\", password: \"5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8\" } // hash SHA-256 de \"password\"\n];\n\nfunction login(email, password) {\n  const user = users.find(u => u.email === email);\n  if (!user) return false;\n  const hash = crypto.createHash('sha256').update(password).digest('hex');\n  return hash === user.password;\n}\n</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier au moins trois vulnérabilités dans ce système d'authentification.",
+        "niveau": "hard",
+        "reponse": "1. Absence de sel : deux utilisateurs avec même mot de passe ont le même hash. 2. SHA-256 est trop rapide, vulnérable au brute force. 3. Stockage du hash brut sans facteur de coût. 4. Absence de limitation des tentatives de connexion. 5. Le hash est affiché directement dans le code (secret exposé).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer une correction complète en utilisant bcrypt, avec gestion asynchrone et variables d'environnement.",
+        "niveau": "very hard",
+        "reponse": "```javascript\nconst bcrypt = require('bcrypt');\nrequire('dotenv').config();\n\n// Base de données simulée avec sel intégré\nconst users = [];\n\nasync function register(email, password) {\n  const saltRounds = parseInt(process.env.BCRYPT_ROUNDS) || 12;\n  const hashedPassword = await bcrypt.hash(password, saltRounds);\n  users.push({ email, password: hashedPassword });\n}\n\nasync function login(email, password, maxAttempts = 5) {\n  const user = users.find(u => u.email === email);\n  if (!user) throw new Error('Identifiants invalides');\n  \n  // Compteur de tentatives (à stocker en base)\n  const isValid = await bcrypt.compare(password, user.password);\n  if (!isValid) throw new Error('Identifiants invalides');\n  \n  return { success: true, message: 'Authentifié' };\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

@@ -1,0 +1,158 @@
+[
+  {
+    "intitule": "Exercice 1 : Architecture des services API",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans une application mobile e-commerce, les services API jouent un rôle crucial dans la communication avec le backend. Ils permettent de centraliser la logique d'appel réseau et de fournir une interface claire aux stores Zustand.</p><p>Analysez la structure des services API présentée dans la leçon 6 et répondez aux questions suivantes.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez le rôle d'un service API comme `authService` dans l'architecture d'une application React Native/Expo.",
+        "niveau": "medium",
+        "reponse": "Un service API agit comme une couche d'abstraction entre les composants de l'application et l'API backend. Il centralise les appels HTTP, gère les erreurs, et expose des méthodes claires pour les opérations spécifiques (inscription, connexion, etc.). Cela facilite la maintenance et permet de réutiliser la même logique à travers toute l'application."
+      },
+      {
+        "numero": 2,
+        "texte": "Quelle est l'importance de définir des types TypeScript pour toutes les réponses et requêtes API ?",
+        "niveau": "easy",
+        "reponse": "La définition de types TypeScript pour les réponses et requêtes API permet d'assurer la sécurité des types dans toute l'application. Cela évite les erreurs de typage, facilite le développement avec l'autocomplétion, et rend le code plus maintenable en documentant clairement la structure des données échangées."
+      },
+      {
+        "numero": 3,
+        "texte": "Pourquoi est-il recommandé de créer un service distinct pour chaque domaine fonctionnel (authService, productService, walletService) plutôt qu'un seul service centralisé ?",
+        "niveau": "hard",
+        "reponse": "La séparation par domaine fonctionnel respecte le principe de responsabilité unique (SRP). Chaque service gère un domaine métier spécifique, ce qui rend le code plus organisé, plus facile à tester, et permet d'évoluer ou de modifier un domaine sans impacter les autres. Cela facilite également la collaboration en équipe où chaque développeur peut travailler sur son service."
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 2 : Implémentation du AuthService",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>En tant que développeur mobile sur la plateforme Sawamart, vous devez implémenter le service d'authentification (`authService`) pour gérer l'inscription, la connexion, l'OTP et le rafraîchissement du token JWT.</p><p>Le backend NestJS expose les endpoints suivants :</p><ul><li><code>POST /auth/register</code> : Inscription d'un nouvel utilisateur</li><li><code>POST /auth/login</code> : Connexion avec email/mot de passe</li><li><code>POST /auth/send-otp</code> : Envoi d'un code OTP</li><li><code>POST /auth/verify-otp</code> : Vérification du code OTP</li><li><code>POST /auth/refresh</code> : Rafraîchissement du token JWT</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez la méthode `login` du `authService` qui prend un email et un mot de passe, effectue l'appel à l'API, et retourne les données utilisateur et les tokens.",
+        "niveau": "hard",
+        "reponse": "```typescript\nasync login(email: string, password: string): Promise<LoginResponse> {\n  try {\n    const response = await api.post('/auth/login', { email, password });\n    return response.data;\n  } catch (error) {\n    if (error.response?.status === 401) {\n      throw new Error('Email ou mot de passe incorrect');\n    }\n    throw new Error('Une erreur est survenue lors de la connexion');\n  }\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment gérez-vous les erreurs spécifiques comme les identifiants incorrects (401) dans cette méthode ?",
+            "niveau": "medium",
+            "reponse": "On intercepte l'erreur et on vérifie le code de statut de la réponse. En cas de 401 (Unauthorized), on lève une erreur avec un message clair pour l'utilisateur. Les autres erreurs sont propagées avec un message générique pour ne pas exposer de détails techniques."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Pourquoi est-il important de stocker le token JWT après une connexion réussie ?",
+            "niveau": "easy",
+            "reponse": "Le token JWT est nécessaire pour authentifier les requêtes ultérieures. Il est généralement stocké dans un stockage sécurisé (comme SecureStore) et sera ajouté automatiquement dans l'en-tête `Authorization` des futures requêtes via les intercepteurs Axios."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Implémentez la méthode `register` qui envoie les données d'inscription au backend. Incluez la validation côté client pour vérifier que le mot de passe contient au moins 8 caractères.",
+        "niveau": "hard",
+        "reponse": "```typescript\nasync register(data: RegisterData): Promise<RegisterResponse> {\n  // Validation côté client\n  if (data.password.length < 8) {\n    throw new Error('Le mot de passe doit contenir au moins 8 caractères');\n  }\n  \n  try {\n    const response = await api.post('/auth/register', data);\n    return response.data;\n  } catch (error) {\n    if (error.response?.status === 409) {\n      throw new Error('Cet email est déjà utilisé');\n    }\n    throw new Error('Une erreur est survenue lors de l\\'inscription');\n  }\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Quelle est la différence entre la validation côté client et la validation côté serveur ?",
+            "niveau": "medium",
+            "reponse": "La validation côté client améliore l'expérience utilisateur en fournissant un retour immédiat, mais elle n'est pas sécurisée car elle peut être contournée. La validation côté serveur est obligatoire pour garantir l'intégrité et la sécurité des données. Les deux doivent être implémentées."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 3 : Services spécialisés - ProductService et ChatService",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>La plateforme Sawamart nécessite des services spécifiques pour gérer les produits et le chat en temps réel. Vous devez implémenter les méthodes du `productService` et du `chatService`.</p><p>Le backend expose les endpoints suivants :</p><ul><li><code>GET /products</code> : Récupérer la liste des produits avec filtres et pagination</li><li><code>GET /products/:id</code> : Récupérer un produit par son ID</li><li><code>POST /products</code> : Créer un nouveau produit</li><li><code>GET /chats</code> : Récupérer la liste des chats de l'utilisateur</li><li><code>GET /chats/:id/messages</code> : Récupérer les messages d'un chat</li><li><code>POST /chats/:id/messages</code> : Envoyer un message dans un chat</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez la méthode `getProducts` du `productService` qui supporte la pagination, le filtrage et la recherche. Utilisez les paramètres de requête pour implémenter ces fonctionnalités.",
+        "niveau": "very hard",
+        "reponse": "```typescript\nasync getProducts(params: ProductParams): Promise<PaginatedResponse<Product>> {\n  const queryParams = new URLSearchParams();\n  \n  if (params.page) queryParams.append('page', String(params.page));\n  if (params.limit) queryParams.append('limit', String(params.limit));\n  if (params.search) queryParams.append('search', params.search);\n  if (params.categoryId) queryParams.append('categoryId', params.categoryId);\n  if (params.minPrice) queryParams.append('minPrice', String(params.minPrice));\n  if (params.maxPrice) queryParams.append('maxPrice', String(params.maxPrice));\n  if (params.status) queryParams.append('status', params.status);\n  \n  const url = `/products?${queryParams.toString()}`;\n  const response = await api.get(url);\n  return response.data;\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment gérer les cas où l'utilisateur filtre par prix avec des valeurs non numériques ?",
+            "niveau": "medium",
+            "reponse": "On peut ajouter une validation dans la méthode pour s'assurer que `minPrice` et `maxPrice` sont des nombres valides. Si les valeurs ne sont pas valides, on peut soit les ignorer, soit lever une erreur avec un message clair indiquant le problème."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Implémentez la méthode `sendMessage` du `chatService` qui envoie un message dans un chat spécifique. Que faire si la connexion Internet est perdue pendant l'envoi ?",
+        "niveau": "very hard",
+        "reponse": "```typescript\nasync sendMessage(chatId: string, message: { content: string; type: 'text' | 'image' }): Promise<Message> {\n  try {\n    const response = await api.post(`/chats/${chatId}/messages`, message);\n    return response.data;\n  } catch (error) {\n    // Si l'erreur est liée à la connexion, stocker le message dans une file d'attente offline\n    if (error.message?.includes('Network Error')) {\n      // Ajouter le message à la file d'attente offline\n      await this.offlineQueue.enqueue('sendMessage', { chatId, message });\n      throw new Error('Message enregistré. Il sera envoyé automatiquement lorsque la connexion sera rétablie.');\n    }\n    throw error;\n  }\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Comment garantir l'optimisme (affichage immédiat du message) tout en gérant la persistance ?",
+            "niveau": "hard",
+            "reponse": "On peut générer un ID temporaire pour le message, l'ajouter immédiatement à l'état du store avec un statut 'pending'. La réponse du backend contient l'ID réel et le statut final. Si l'envoi échoue, on peut mettre à jour le message avec un statut 'failed' et permettre à l'utilisateur de réessayer."
+          }
+        ]
+      },
+      {
+        "numero": 3,
+        "texte": "Écrivez la méthode `getChatMessages` avec gestion de la pagination. Pourquoi est-il important de gérer le chargement infini pour les messages de chat ?",
+        "niveau": "hard",
+        "reponse": "```typescript\nasync getChatMessages(chatId: string, cursor?: string, limit: number = 20): Promise<PaginatedMessages> {\n  const params = new URLSearchParams();\n  if (cursor) params.append('cursor', cursor);\n  params.append('limit', String(limit));\n  \n  const url = `/chats/${chatId}/messages?${params.toString()}`;\n  const response = await api.get(url);\n  return response.data;\n}\n```\n\nLa pagination est essentielle pour les messages de chat car la liste peut être très longue. Le chargement infini améliore l'expérience utilisateur en ne chargeant que les messages récents d'abord, et en chargeant les anciens messages progressivement lorsque l'utilisateur fait défiler vers le haut."
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 4 : Services financiers - WalletService et DepositService",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>La plateforme Sawamart intègre des fonctionnalités financières. Vous devez implémenter le `walletService` et le `depositService` pour gérer les transactions.</p><p>Le backend expose les endpoints suivants :</p><ul><li><code>GET /wallet/me</code> : Récupérer le solde du wallet</li><li><code>GET /wallet/transactions</code> : Récupérer l'historique des transactions</li><li><code>POST /deposits/initiate</code> : Initier un dépôt mobile money</li><li><code>GET /deposits/:id/status</code> : Vérifier le statut d'un dépôt</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez la méthode `getWalletBalance` du `walletService` qui récupère le solde. Comment gérez-vous le cas où l'utilisateur n'a pas encore de wallet ?",
+        "niveau": "medium",
+        "reponse": "```typescript\nasync getWalletBalance(): Promise<WalletData> {\n  try {\n    const response = await api.get('/wallet/me');\n    return response.data;\n  } catch (error) {\n    if (error.response?.status === 404) {\n      // L'utilisateur n'a pas encore de wallet, on en crée un automatiquement\n      const response = await api.post('/wallet/create');\n      return response.data;\n    }\n    throw error;\n  }\n}\n```"
+      },
+      {
+        "numero": 2,
+        "texte": "Implémentez la méthode `initiateDeposit` qui prend le montant et l'opérateur mobile money, envoie la demande au backend et retourne les informations de paiement.",
+        "niveau": "hard",
+        "reponse": "```typescript\nasync initiateDeposit(amount: number, operator: 'MTN' | 'ORANGE' | 'CAMTEL'): Promise<DepositInitiationResponse> {\n  // Validation côté client\n  if (amount < 100) {\n    throw new Error('Le montant minimum de dépôt est 100 FCFA');\n  }\n  \n  if (amount > 1000000) {\n    throw new Error('Le montant maximum de dépôt est 1 000 000 FCFA');\n  }\n  \n  try {\n    const response = await api.post('/deposits/initiate', { amount, operator });\n    return response.data;\n  } catch (error) {\n    if (error.response?.status === 400) {\n      throw new Error('Les données de dépôt sont invalides. Vérifiez le montant et l\\'opérateur.');\n    }\n    throw new Error('Une erreur est survenue lors de l\\'initiation du dépôt');\n  }\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Pourquoi est-il important de valider le montant des dépôts côté client et côté serveur ?",
+            "niveau": "easy",
+            "reponse": "La validation côté client améliore l'expérience utilisateur en fournissant un retour immédiat en cas d'erreur. La validation côté serveur est essentielle pour la sécurité et l'intégrité des données, car elle ne peut pas être contournée par un utilisateur malveillant."
+          }
+        ]
+      },
+      {
+        "numero": 3,
+        "texte": "Quel type de structure de données utiliseriez-vous pour stocker l'historique des transactions dans un store Zustand ? Comment optimiseriez-vous l'affichage de longues listes de transactions ?",
+        "niveau": "medium",
+        "reponse": "On peut stocker les transactions dans un tableau avec un champ `hasMore` pour la pagination, et une structure clé/valeur pour un accès rapide par ID. L'affichage peut être optimisé avec `FlatList` de React Native qui ne rend que les éléments visibles, et en utilisant des clés uniques pour chaque élément."
+      }
+    ]
+  }
+]

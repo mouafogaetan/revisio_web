@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+  "matiere": "Initiation au C#",
+  "classe": "Développement Web",
+  "sequence": "Séquence 6 : Maîtrise de l'héritage, du polymorphisme et des concepts avancés de la POO",
+  "anneeScolaire": "2025-2026",
+  "exercices": [
+    {
+      "titre": "QCM - Concepts fondamentaux de la POO en C#",
+      "points": "8 pts",
+      "enonce": "Pour chacune des questions suivantes, choisissez la ou les bonnes réponses (une seule réponse par question).",
+      "questions": [
+        {
+          "question": "1. Quelle est la différence principale entre une classe abstraite et une interface en C# ?<br>A) Une classe abstraite peut avoir des champs, une interface non<br>B) Une interface peut avoir des méthodes implémentées, une classe abstraite non<br><strong>C) Une classe abstraite peut avoir des méthodes implémentées, une interface non (avant C# 8)</strong><br>D) Il n'y a aucune différence",
+          "reponse": "<strong>C) Une classe abstraite peut avoir des méthodes implémentées, une interface non (avant C# 8)</strong> - Les classes abstraites peuvent contenir des méthodes concrètes (implémentées), contrairement aux interfaces (avant C# 8). Les classes abstraites définissent une relation 'est-un' tandis que les interfaces définissent un contrat 'peut-faire'."
+        },
+        {
+          "question": "2. Que signifie le mot-clé 'sealed' appliqué à une méthode ?<br>A) La méthode est abstraite et doit être implémentée<br>B) La méthode est virtuelle et peut être redéfinie<br><strong>C) La méthode ne peut plus être redéfinie dans les classes dérivées</strong><br>D) La méthode ne peut être appelée qu'une seule fois",
+          "reponse": "<strong>C) La méthode ne peut plus être redéfinie dans les classes dérivées</strong> - sealed appliqué à une méthode override empêche les classes dérivées de la redéfinir à nouveau, arrêtant ainsi la chaîne d'héritage pour cette méthode."
+        },
+        {
+          "question": "3. En C#, que signifie le mot-clé 'abstract' ?<br>A) La classe ne peut avoir que des méthodes statiques<br>B) La classe ne peut pas hériter d'autres classes<br><strong>C) La classe ne peut pas être instanciée directement</strong><br>D) La classe peut être utilisée comme type de valeur",
+          "reponse": "<strong>C) La classe ne peut pas être instanciée directement</strong> - Une classe abstraite sert de modèle pour d'autres classes et ne peut pas être instanciée avec le mot-clé new."
+        },
+        {
+          "question": "4. Quelle est la bonne manière de faire hériter une classe 'Chien' d'une classe 'Animal' en C# ?<br>A) class Chien extends Animal<br><strong>B) class Chien : Animal</strong><br>C) class Chien inherits Animal<br>D) class Chien <- Animal",
+          "reponse": "<strong>B) class Chien : Animal</strong> - En C#, l'héritage s'exprime avec le symbole ':' entre le nom de la classe dérivée et la classe de base."
+        },
+        {
+          "question": "5. Que fait le mot-clé 'base' en C# ?<br>A) Il permet d'appeler une méthode de la classe dérivée<br><strong>B) Il permet d'appeler le constructeur ou une méthode de la classe parente</strong><br>C) Il définit la classe de base par défaut<br>D) Il est utilisé pour définir une classe sealed",
+          "reponse": "<strong>B) Il permet d'appeler le constructeur ou une méthode de la classe parente</strong> - base est utilisé dans une classe dérivée pour appeler le constructeur de la classe de base ou pour accéder à ses membres."
+        },
+        {
+          "question": "6. Quelle est la différence entre 'override' et 'new' pour une méthode en C# ?<br><strong>A) override redéfinit une méthode virtuelle, new cache la méthode de la classe de base</strong><br>B) new redéfinit une méthode virtuelle, override cache la méthode de la classe de base<br>C) Les deux mots-clés ont le même effet<br>D) new est utilisé pour les classes abstraites, override pour les interfaces",
+          "reponse": "<strong>A) override redéfinit une méthode virtuelle, new cache la méthode de la classe de base</strong> - override remplace l'implémentation d'une méthode virtuelle/abstraite, tandis que new cache la méthode de la classe de base sans redéfinir le polymorphisme."
+        },
+        {
+          "question": "7. Qu'est-ce qu'une méthode virtuelle en C# ?<br>A) Une méthode qui ne peut pas être redéfinie<br><strong>B) Une méthode qui peut être redéfinie dans les classes dérivées avec override</strong><br>C) Une méthode qui est automatiquement statique<br>D) Une méthode qui ne peut être appelée que par la classe de base",
+          "reponse": "<strong>B) Une méthode qui peut être redéfinie dans les classes dérivées avec override</strong> - Une méthode virtuelle est marquée avec le mot-clé virtual et peut être redéfinie dans une classe dérivée via override pour modifier son comportement."
+        },
+        {
+          "question": "8. Le polymorphisme en C# permet de :<br>A) Créer plusieurs constructeurs dans une classe<br>B) Définir des méthodes privées<br><strong>C) Traiter des objets de différents types à travers une interface commune</strong><br>D) Utiliser des types de valeur",
+          "reponse": "<strong>C) Traiter des objets de différents types à travers une interface commune</strong> - Le polymorphisme permet d'utiliser des objets de classes dérivées comme s'ils étaient des objets de la classe de base, ce qui rend le code plus flexible et réutilisable."
+        }
+      ]
+    },
+    {
+      "titre": "Questions théoriques",
+      "points": "8 pts",
+      "enonce": "Répondez de manière précise et structurée aux questions suivantes.",
+      "questions": [
+        {
+          "question": "1. Expliquez la différence entre une classe abstraite et une interface en C#. Dans quelles situations utiliseriez-vous l'un plutôt que l'autre ? Donnez un exemple concret pour chaque cas. (3 pts)",
+          "reponse": "<strong>Classe abstraite :</strong><br>• Peut contenir des champs, des constructeurs et des méthodes implémentées<br>• Définit une relation 'est-un' (ex: Un Chien est un Animal)<br>• Une classe ne peut hériter que d'une seule classe abstraite<br>• Exemple : Animal comme classe abstraite avec une méthode Manger() implémentée et une méthode abstraite FaireDuBruit()<br><br><strong>Interface :</strong><br>• Ne contient que des signatures de méthodes (ou des implémentations par défaut depuis C# 8)<br>• Définit un contrat 'peut-faire' (ex: Un Chien peut Nager)<br>• Une classe peut implémenter plusieurs interfaces<br>• Exemple : INageur comme interface avec une méthode Nager()<br><br><strong>Quand utiliser ?</strong><br>• Utiliser une classe abstraite quand les classes dérivées partagent un code commun (héritage)<br>• Utiliser une interface quand vous voulez définir un contrat pour des classes sans lien hiérarchique"
+        },
+        {
+          "question": "2. Expliquez le concept de polymorphisme en C#. Illustrez avec un exemple de code où une classe de base et ses classes dérivées utilisent le polymorphisme. (3 pts)",
+          "reponse": "Le <strong>polymorphisme</strong> est la capacité d'un objet à prendre plusieurs formes. En C#, il permet de traiter des objets de différentes classes dérivées comme s'ils étaient des objets de leur classe de base commune, en utilisant des méthodes virtuelles et override.<br><br><strong>Exemple :</strong><br><pre>public class Animal<br>{<br>    public virtual void Parler()<br>    {<br>        Console.WriteLine(\"L'animal fait un bruit\");<br>    }<br>}<br><br>public class Chien : Animal<br>{<br>    public override void Parler()<br>    {<br>        Console.WriteLine(\"Le chien aboie\");<br>    }<br>}<br><br>public class Chat : Animal<br>{<br>    public override void Parler()<br>    {<br>        Console.WriteLine(\"Le chat miaule\");<br>    }<br>}<br><br>// Utilisation polymorphique<br>Animal monAnimal = new Chien();<br>monAnimal.Parler(); // Affiche \"Le chien aboie\"<br>monAnimal = new Chat();<br>monAnimal.Parler(); // Affiche \"Le chat miaule\"</pre>"
+        },
+        {
+          "question": "3. Qu'est-ce que le mot-clé 'sealed' en C# ? Donnez deux cas d'utilisation (sur une classe et sur une méthode). (2 pts)",
+          "reponse": "Le mot-clé <strong>sealed</strong> empêche l'héritage d'une classe ou la redéfinition d'une méthode.<br><br><strong>Sur une classe :</strong><br><pre>public sealed class ConsoleLogger : ILogger<br>{<br>    public void Log(string message)<br>    {<br>        Console.WriteLine($\"[LOG] {message}\");<br>    }<br>}<br>// Aucune classe ne peut hériter de ConsoleLogger</pre><br><br><strong>Sur une méthode :</strong><br><pre>public class Vehicule<br>{<br>    public virtual void Demarrer() { }<br>}<br><br>public class Voiture : Vehicule<br>{<br>    public sealed override void Demarrer()<br>    {<br>        // Cette méthode ne peut plus être redéfinie dans les classes dérivées<br>    }<br>}</pre>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice pratique - Système de Gestion de Personnel",
+      "points": "10 pts",
+      "enonce": "Vous devez créer un système de gestion de personnel pour une entreprise camerounaise en C#. L'entreprise a des employés de différents types avec des comportements spécifiques.",
+      "questions": [
+        {
+          "question": "1. Créez une classe abstraite 'Employe' avec les propriétés : Nom (string), Matricule (string), SalaireBase (decimal). Ajoutez une méthode abstraite 'CalculerSalaire()' qui retourne un decimal. (2 pts)",
+          "reponse": "public abstract class Employe<br>{<br>    public string Nom { get; set; }<br>    public string Matricule { get; set; }<br>    public decimal SalaireBase { get; set; }<br><br>    public Employe(string nom, string matricule, decimal salaireBase)<br>    {<br>        Nom = nom;<br>        Matricule = matricule;<br>        SalaireBase = salaireBase;<br>    }<br><br>    public abstract decimal CalculerSalaire();<br><br>    public override string ToString()<br>    {<br>        return $\"{Matricule} - {Nom} : {CalculerSalaire():C}\";<br>    }<br>}"
+        },
+        {
+          "question": "2. Créez deux classes dérivées : 'Developpeur' (qui ajoute une propriété HeuresSup et calcule le salaire = SalaireBase + HeuresSup * 5000) et 'Manager' (qui ajoute une propriété Bonus et calcule le salaire = SalaireBase + Bonus). (3 pts)",
+          "reponse": "public class Developpeur : Employe<br>{<br>    public int HeuresSup { get; set; }<br><br>    public Developpeur(string nom, string matricule, decimal salaireBase, int heuresSup)<br>        : base(nom, matricule, salaireBase)<br>    {<br>        HeuresSup = heuresSup;<br>    }<br><br>    public override decimal CalculerSalaire()<br>    {<br>        return SalaireBase + (HeuresSup * 5000);<br>    }<br>}<br><br>public class Manager : Employe<br>{<br>    public decimal Bonus { get; set; }<br><br>    public Manager(string nom, string matricule, decimal salaireBase, decimal bonus)<br>        : base(nom, matricule, salaireBase)<br>    {<br>        Bonus = bonus;<br>    }<br><br>    public override decimal CalculerSalaire()<br>    {<br>        return SalaireBase + Bonus;<br>    }<br>}"
+        },
+        {
+          "question": "3. Dans la méthode Main, créez une liste d'Employe contenant au moins un Developpeur et un Manager. Parcourez la liste et affichez les informations de chaque employé. Montrez le polymorphisme en action. (3 pts)",
+          "reponse": "public static void Main(string[] args)<br>{<br>    List<Employe> employes = new List<Employe>();<br><br>    // Ajout de différents types d'employés<br>    employes.Add(new Developpeur(\"Jean Kamga\", \"DEV001\", 500000, 10));<br>    employes.Add(new Manager(\"Marie Ndi\", \"MGR001\", 800000, 150000));<br>    employes.Add(new Developpeur(\"Paul Essomba\", \"DEV002\", 450000, 5));<br>    employes.Add(new Manager(\"Sophie Atangana\", \"MGR002\", 750000, 100000));<br><br>    Console.WriteLine(\"=== Gestion du Personnel ===\\n\");<br><br>    // Parcours polymorphique - Le type concret détermine le comportement<br>    foreach (var employe in employes)<br>    {<br>        Console.WriteLine(employe.ToString());<br>    }<br><br>    // Calcul du total des salaires<br>    decimal totalSalaires = 0;<br>    foreach (var employe in employes)<br>    {<br>        totalSalaires += employe.CalculerSalaire();<br>    }<br>    Console.WriteLine($\"\\nTotal des salaires : {totalSalaires:C}\");<br><br>    /*<br>    Résultat attendu :<br>    DEV001 - Jean Kamga : 550 000,00 CFA<br>    MGR001 - Marie Ndi : 950 000,00 CFA<br>    DEV002 - Paul Essomba : 475 000,00 CFA<br>    MGR002 - Sophie Atangana : 850 000,00 CFA<br>    Total des salaires : 2 825 000,00 CFA<br>    */<br>}"
+        },
+        {
+          "question": "4. Ajoutez une interface 'IPrime' avec une méthode 'CalculerPrime()' qui retourne un decimal. Faites en sorte que Manager implémente cette interface (prime = Bonus * 0.1). Dans la méthode Main, affichez la prime pour chaque manager. (2 pts)",
+          "reponse": "// Interface<br>public interface IPrime<br>{<br>    decimal CalculerPrime();<br>}<br><br>// Modification de la classe Manager<br>public class Manager : Employe, IPrime<br>{<br>    public decimal Bonus { get; set; }<br><br>    public Manager(string nom, string matricule, decimal salaireBase, decimal bonus)<br>        : base(nom, matricule, salaireBase)<br>    {<br>        Bonus = bonus;<br>    }<br><br>    public override decimal CalculerSalaire()<br>    {<br>        return SalaireBase + Bonus;<br>    }<br><br>    // Implémentation de l'interface<br>    public decimal CalculerPrime()<br>    {<br>        return Bonus * 0.1m;<br>    }<br>}<br><br>// Dans la méthode Main<br>Console.WriteLine(\"\\n=== Primes des Managers ===\");<br>foreach (var employe in employes)<br>{<br>    if (employe is IPrime prime)<br>    {<br>        Console.WriteLine($\"{employe.Nom} - Prime: {prime.CalculerPrime():C}\");<br>    }<br>}"
+        }
+      ]
+    }
+  ]
+};
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

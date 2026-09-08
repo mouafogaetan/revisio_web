@@ -1,0 +1,101 @@
+[
+  {
+    "intitule": "Configuration de React Hook Form avec validation Zod",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans une application e-commerce React, vous devez créer un formulaire d'inscription avec les champs suivants :</p><ul><li><code>email</code> : obligatoire, format email valide</li><li><code>password</code> : obligatoire, minimum 8 caractères, au moins une majuscule, une minuscule et un chiffre</li><li><code>confirmPassword</code> : doit correspondre au mot de passe</li><li><code>newsletter</code> : booléen optionnel (inscription à la newsletter)</li></ul><p><strong>Question :</strong> Implémentez le formulaire en utilisant React Hook Form avec la validation Zod. Gérez les erreurs et affichez les messages appropriés sous chaque champ.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédiger le code complet du composant d'inscription avec React Hook Form, Zod et la gestion des erreurs.",
+        "niveau": "hard",
+        "reponse": "```typescript\nimport { useForm } from 'react-hook-form';\nimport { zodResolver } from '@hookform/resolvers/zod';\nimport { z } from 'zod';\n\n// Schéma de validation\nconst registerSchema = z.object({\n  email: z.string().email('Email invalide').min(1, 'Email requis'),\n  password: z.string()\n    .min(8, '8 caractères minimum')\n    .regex(/[A-Z]/, 'Au moins une majuscule')\n    .regex(/[a-z]/, 'Au moins une minuscule')\n    .regex(/[0-9]/, 'Au moins un chiffre'),\n  confirmPassword: z.string(),\n  newsletter: z.boolean().optional().default(false)\n}).refine((data) => data.password === data.confirmPassword, {\n  message: 'Les mots de passe ne correspondent pas',\n  path: ['confirmPassword']\n});\n\ntype RegisterFormData = z.infer<typeof registerSchema>;\n\nconst RegisterForm = () => {\n  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<RegisterFormData>({\n    resolver: zodResolver(registerSchema),\n    defaultValues: { newsletter: false }\n  });\n\n  const onSubmit = async (data: RegisterFormData) => {\n    try {\n      // Appel API vers l'inscription\n      console.log('Données:', data);\n    } catch (error) {\n      console.error('Erreur:', error);\n    }\n  };\n\n  return (\n    <form onSubmit={handleSubmit(onSubmit)} className=\"space-y-4\">\n      <div>\n        <input {...register('email')} placeholder=\"Email\" className=\"border p-2 w-full\" />\n        {errors.email && <p className=\"text-red-500 text-sm\">{errors.email.message}</p>}\n      </div>\n      <div>\n        <input {...register('password')} type=\"password\" placeholder=\"Mot de passe\" className=\"border p-2 w-full\" />\n        {errors.password && <p className=\"text-red-500 text-sm\">{errors.password.message}</p>}\n      </div>\n      <div>\n        <input {...register('confirmPassword')} type=\"password\" placeholder=\"Confirmer le mot de passe\" className=\"border p-2 w-full\" />\n        {errors.confirmPassword && <p className=\"text-red-500 text-sm\">{errors.confirmPassword.message}</p>}\n      </div>\n      <div>\n        <label>\n          <input {...register('newsletter')} type=\"checkbox\" />\n          S'inscrire à la newsletter\n        </label>\n      </div>\n      <button type=\"submit\" disabled={isSubmitting} className=\"bg-blue-600 text-white p-2 rounded\">\n        {isSubmitting ? 'Inscription...' : 'S'inscrire'}\n      </button>\n    </form>\n  );\n};\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer le rôle de `zodResolver` et pourquoi on utilise `refine` dans ce schéma.",
+            "niveau": "medium",
+            "reponse": "`zodResolver` est un adaptateur qui permet d'utiliser les schémas Zod avec React Hook Form. Il transforme les erreurs de validation Zod en format compatible avec l'état `errors` de React Hook Form. La méthode `refine` est utilisée pour créer des validations personnalisées qui dépendent de plusieurs champs (validation croisée). Ici, elle permet de vérifier que `confirmPassword` est égal à `password`. Sans `refine`, on ne pourrait pas comparer deux champs dans Zod."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Migration d'un formulaire traditionnel vers React Hook Form",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous héritez d'un composant React existant qui gère le formulaire de connexion avec `useState` pour chaque champ. Voici le code actuel :</p><pre><code>const LoginForm = () => {\n  const [email, setEmail] = useState('');\n  const [password, setPassword] = useState('');\n  const [loading, setLoading] = useState(false);\n  const [error, setError] = useState('');\n\n  const handleSubmit = async (e) => {\n    e.preventDefault();\n    if (!email || !password) {\n      setError('Veuillez remplir tous les champs');\n      return;\n    }\n    setLoading(true);\n    try {\n      await loginAPI(email, password);\n    } catch (err) {\n      setError(err.message);\n    } finally {\n      setLoading(false);\n    }\n  };\n\n  return (\n    <form onSubmit={handleSubmit}>\n      <input value={email} onChange={(e) => setEmail(e.target.value)} />\n      <input type=\"password\" value={password} onChange={(e) => setPassword(e.target.value)} />\n      {error && <p>{error}</p>}\n      <button disabled={loading}>Se connecter</button>\n    </form>\n  );\n};</code></pre><p><strong>Question :</strong> Refactorisez ce composant en utilisant React Hook Form avec validation Zod (email requis, password requis). Ajoutez la gestion de l'état de soumission et des erreurs serveur.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédiger le code refactorisé avec React Hook Form, Zod, et la gestion des erreurs API.",
+        "niveau": "hard",
+        "reponse": "```typescript\nimport { useForm } from 'react-hook-form';\nimport { zodResolver } from '@hookform/resolvers/zod';\nimport { z } from 'zod';\nimport { useState } from 'react';\n\nconst loginSchema = z.object({\n  email: z.string().email('Email invalide').min(1, 'Email requis'),\n  password: z.string().min(1, 'Mot de passe requis')\n});\n\ntype LoginFormData = z.infer<typeof loginSchema>;\n\nconst LoginForm = () => {\n  const [serverError, setServerError] = useState('');\n  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginFormData>({\n    resolver: zodResolver(loginSchema)\n  });\n\n  const onSubmit = async (data: LoginFormData) => {\n    setServerError('');\n    try {\n      await loginAPI(data.email, data.password);\n      // Redirection ou toast de succès\n    } catch (err: any) {\n      setServerError(err.message || 'Erreur de connexion');\n    }\n  };\n\n  return (\n    <form onSubmit={handleSubmit(onSubmit)} className=\"space-y-4\">\n      <div>\n        <input {...register('email')} placeholder=\"Email\" className=\"border p-2 w-full\" />\n        {errors.email && <p className=\"text-red-500 text-sm\">{errors.email.message}</p>}\n      </div>\n      <div>\n        <input {...register('password')} type=\"password\" placeholder=\"Mot de passe\" className=\"border p-2 w-full\" />\n        {errors.password && <p className=\"text-red-500 text-sm\">{errors.password.message}</p>}\n      </div>\n      {serverError && <p className=\"text-red-500 text-sm\">{serverError}</p>}\n      <button type=\"submit\" disabled={isSubmitting} className=\"bg-blue-600 text-white p-2 rounded\">\n        {isSubmitting ? 'Connexion...' : 'Se connecter'}\n      </button>\n    </form>\n  );\n};\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Identifier les avantages de React Hook Form par rapport à l'approche `useState` pour ce formulaire.",
+            "niveau": "easy",
+            "reponse": "Les avantages sont : 1) Moins de code boilerplate (pas de gestion manuelle des `onChange`), 2) Validation intégrée et centralisée avec Zod, 3) Gestion automatique de l'état de soumission (`isSubmitting`), 4) Réduction des re-renders car React Hook Form n'update pas le state à chaque frappe, 5) Messages d'erreur gérés automatiquement par le schéma, 6) Meilleure séparation des préoccupations (validation déclarative)."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Débogage d'un formulaire avec validation personnalisée",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un développeur junior a créé un formulaire de changement de mot de passe avec React Hook Form. Cependant, le formulaire ne se comporte pas comme attendu : les messages d'erreur n'apparaissent pas et la soumission ne fonctionne pas.</p><pre><code>const PasswordForm = () => {\n  const { register, handleSubmit, errors } = useForm();\n  \n  const validatePassword = (value) => {\n    if (value.length < 8) return 'Trop court';\n    return true;\n  };\n\n  const onSubmit = (data) => console.log(data);\n\n  return (\n    <form onSubmit={handleSubmit(onSubmit)}>\n      <input {...register('password', { validate: validatePassword })} />\n      {errors.password && <span>{errors.password.message}</span>}\n      <button type=\"submit\">Changer</button>\n    </form>\n  );\n};</code></pre><p><strong>Question :</strong> Identifiez au moins 3 erreurs dans ce code et proposez les corrections.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Lister les erreurs et fournir le code corrigé.",
+        "niveau": "medium",
+        "reponse": "Erreurs identifiées :\n1. `errors` n'est pas déstructuré correctement : il faut utiliser `formState: { errors }`\n2. La fonction `validatePassword` retourne `true` mais devrait retourner `undefined` ou `null` en cas de succès (ou un message d'erreur).\n3. Pas de type défini pour les données du formulaire (bonne pratique).\n\nCode corrigé :\n```typescript\nconst PasswordForm = () => {\n  const { register, handleSubmit, formState: { errors } } = useForm();\n  \n  const validatePassword = (value: string) => {\n    if (value.length < 8) return 'Le mot de passe doit contenir au moins 8 caractères';\n    return undefined; // ou true si on utilise la validation standard\n  };\n\n  const onSubmit = (data) => console.log(data);\n\n  return (\n    <form onSubmit={handleSubmit(onSubmit)}>\n      <input {...register('password', { validate: validatePassword })} />\n      {errors.password && <span>{errors.password.message}</span>}\n      <button type=\"submit\">Changer</button>\n    </form>\n  );\n};\n```\nOu mieux, utiliser Zod pour une validation plus complète.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Formulaire d'adresse de livraison avec champs dynamiques",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Dans le processus de checkout d'un e-commerce, l'utilisateur doit saisir son adresse de livraison. Le formulaire contient :</p><ul><li>Pays (select) → modifie la liste des villes</li><li>Ville (select) → chargée dynamiquement selon le pays</li><li>Code postal (input)</li><li>Adresse (input)</li><li>Option 'Utiliser une autre adresse de facturation' (checkbox) → affiche un second bloc d'adresse</li></ul><p><strong>Question :</strong> Implémentez ce formulaire avec React Hook Form, Zod, et la gestion des champs conditionnels (afficher/cacher le deuxième bloc). Utilisez `useWatch` ou `watch` pour réagir aux changements du pays et de la checkbox.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire le code complet du formulaire d'adresse avec champs dynamiques et validation.",
+        "niveau": "very hard",
+        "reponse": "```typescript\nimport { useForm, useWatch } from 'react-hook-form';\nimport { zodResolver } from '@hookform/resolvers/zod';\nimport { z } from 'zod';\nimport { useEffect, useState } from 'react';\n\n// Schéma pour une adresse\nconst addressSchema = z.object({\n  country: z.string().min(1, 'Choisissez un pays'),\n  city: z.string().min(1, 'Choisissez une ville'),\n  postalCode: z.string().regex(/^[0-9]{5}$/, 'Code postal à 5 chiffres'),\n  street: z.string().min(5, 'Adresse complète requise')\n});\n\n// Schéma principal avec champ conditionnel\nconst checkoutSchema = z.discriminatedUnion('useDifferentBilling', [\n  z.object({\n    useDifferentBilling: z.literal(false),\n    shippingAddress: addressSchema\n  }),\n  z.object({\n    useDifferentBilling: z.literal(true),\n    shippingAddress: addressSchema,\n    billingAddress: addressSchema\n  })\n]);\n\ntype CheckoutFormData = z.infer<typeof checkoutSchema>;\n\n// Simule le chargement des villes par pays\nconst citiesByCountry: Record<string, string[]> = {\n  France: ['Paris', 'Lyon', 'Marseille'],\n  Cameroun: ['Douala', 'Yaoundé', 'Garoua'],\n  Canada: ['Montréal', 'Toronto', 'Vancouver']\n};\n\nconst AddressForm = ({ prefix, label }: { prefix: 'shippingAddress' | 'billingAddress', label: string }) => {\n  const country = useWatch({ name: `${prefix}.country` });\n  const [cities, setCities] = useState<string[]>([]);\n\n  useEffect(() => {\n    setCities(citiesByCountry[country] || []);\n  }, [country]);\n\n  return (\n    <fieldset className=\"border p-4 rounded mb-4\">\n      <legend className=\"font-bold\">{label}</legend>\n      <select {...register(`${prefix}.country`)} className=\"border p-2 w-full mb-2\">\n        <option value=\"\">Sélectionnez un pays</option>\n        <option>France</option>\n        <option>Cameroun</option>\n        <option>Canada</option>\n      </select>\n      {errors[prefix]?.country && <p className=\"text-red-500\">{errors[prefix].country.message}</p>}\n      \n      <select {...register(`${prefix}.city`)} className=\"border p-2 w-full mb-2\" disabled={!cities.length}>\n        <option value=\"\">Sélectionnez une ville</option>\n        {cities.map(city => <option key={city}>{city}</option>)}\n      </select>\n      {errors[prefix]?.city && <p className=\"text-red-500\">{errors[prefix].city.message}</p>}\n      \n      <input {...register(`${prefix}.postalCode`)} placeholder=\"Code postal\" className=\"border p-2 w-full mb-2\" />\n      {errors[prefix]?.postalCode && <p className=\"text-red-500\">{errors[prefix].postalCode.message}</p>}\n      \n      <input {...register(`${prefix}.street`)} placeholder=\"Adresse\" className=\"border p-2 w-full mb-2\" />\n      {errors[prefix]?.street && <p className=\"text-red-500\">{errors[prefix].street.message}</p>}\n    </fieldset>\n  );\n};\n\nconst CheckoutForm = () => {\n  const { register, handleSubmit, control, formState: { errors } } = useForm<CheckoutFormData>({\n    resolver: zodResolver(checkoutSchema),\n    defaultValues: {\n      useDifferentBilling: false,\n      shippingAddress: { country: '', city: '', postalCode: '', street: '' }\n    }\n  });\n\n  const useDifferentBilling = useWatch({ control, name: 'useDifferentBilling' });\n\n  const onSubmit = (data: CheckoutFormData) => {\n    console.log('Commande validée:', data);\n  };\n\n  return (\n    <form onSubmit={handleSubmit(onSubmit)} className=\"max-w-lg mx-auto p-4\">\n      <AddressForm prefix=\"shippingAddress\" label=\"Adresse de livraison\" />\n      \n      <label className=\"flex items-center gap-2 my-4\">\n        <input type=\"checkbox\" {...register('useDifferentBilling')} />\n        Utiliser une adresse de facturation différente\n      </label>\n      \n      {useDifferentBilling && (\n        <AddressForm prefix=\"billingAddress\" label=\"Adresse de facturation\" />\n      )}\n      \n      <button type=\"submit\" className=\"bg-green-600 text-white p-2 rounded w-full\">\n        Valider la commande\n      </button>\n    </form>\n  );\n};\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Justifier l'utilisation de `useWatch` plutôt que `watch` dans le composant `AddressForm`.",
+            "niveau": "medium",
+            "reponse": "`useWatch` est plus performant que `watch` car il s'abonne uniquement aux champs spécifiés et ne déclenche pas de re-render du composant parent. Il est idéal pour les composants enfants qui ont besoin de réagir à des changements de champs spécifiques sans provoquer de re-renders inutiles dans toute l'arborescence. `watch` quant à lui entraîne un re-render du composant qui l'appelle à chaque changement, ce qui peut dégrader les performances sur des formulaires complexes."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Expliquer pourquoi on utilise `z.discriminatedUnion` dans le schéma Zod.",
+            "niveau": "hard",
+            "reponse": "`z.discriminatedUnion` permet de créer un schéma discriminant (union avec un tag). Ici, selon la valeur de `useDifferentBilling` (true ou false), la structure de l'objet attendu est différente : si false, seul `shippingAddress` est requis ; si true, `billingAddress` est également requis. C'est plus précis que d'utiliser `.optional()` sur `billingAddress` car cela garantit que les champs ne sont pas présents dans le cas false, évitant les données incohérentes."
+          }
+        ]
+      }
+    ]
+  }
+]

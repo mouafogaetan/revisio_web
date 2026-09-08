@@ -1,0 +1,177 @@
+[
+    {
+        "intitule": "Exercice 1 : Comprendre les bases de gRPC",
+        "type": "ressource",
+        "niveau": "easy",
+        "enonce": {
+            "texte": "<p>Vous venez d'intégrer une équipe de MLOps qui souhaite moderniser son infrastructure de déploiement de modèles. Actuellement, l'équipe utilise des API REST avec JSON pour servir ses modèles de Machine Learning. Le responsable technique vous demande d'expliquer les avantages de <strong>gRPC</strong> par rapport à REST.</p><p><strong>Question :</strong> Identifiez et expliquez <strong>trois</strong> avantages majeurs de gRPC par rapport aux API REST classiques dans le contexte du déploiement de modèles ML.</p>",
+            "images": []
+        },
+        "questions": [
+            {
+                "numero": 1,
+                "texte": "Expliquez trois avantages majeurs de gRPC par rapport aux API REST dans le contexte du déploiement de modèles ML.",
+                "niveau": "easy",
+                "reponse": "<p><strong>1. Performance et rapidité :</strong> gRPC utilise Protocol Buffers (protobuf) qui sérialise les données en format binaire, ce qui est plus compact et plus rapide à sérialiser/désérialiser que le JSON. Cela réduit la taille des messages et la latence, ce qui est crucial pour les modèles ML qui doivent répondre rapidement.</p><p><strong>2. Communication bidirectionnelle :</strong> gRPC supporte le streaming bidirectionnel, ce qui permet des interactions en temps réel. Par exemple, pour un modèle de traitement du langage naturel, on peut streamer des phrases et recevoir des prédictions au fur et à mesure.</p><p><strong>3. Typage fort et génération de code :</strong> Les fichiers .proto définissent strictement les types de données, ce qui permet de générer automatiquement du code client et serveur dans plusieurs langages. Cela réduit les erreurs et facilite la maintenance des API.</p>",
+                "sousQuestions": []
+            }
+        ]
+    },
+    {
+        "intitule": "Exercice 2 : Définir un service gRPC pour un modèle ML",
+        "type": "competence",
+        "niveau": "medium",
+        "enonce": {
+            "texte": "<p>Vous êtes Data Scientist dans une startup qui développe un système de recommandation de produits. Vous devez définir un service gRPC pour exposer votre modèle de prédiction. Le modèle prend en entrée un <code>user_id</code> et un <code>product_id</code> et retourne une <code>prediction_score</code> (un float entre 0 et 1) et une <code>recommendation_confidence</code> (un float).</p><p><strong>Consigne :</strong> Écrivez le fichier <strong>.proto</strong> complet pour ce service. Vous devez définir les messages et le service avec la méthode <code>Predict</code> qui prend un message <code>PredictionRequest</code> et retourne un message <code>PredictionResponse</code>.</p>",
+            "images": []
+        },
+        "questions": [
+            {
+                "numero": 1,
+                "texte": "Écrivez le fichier .proto pour le service de recommandation.",
+                "niveau": "medium",
+                "reponse": "<pre style='background: #1e272e; color: #dcdde1; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.9rem;'>syntax = \"proto3\";\n\npackage recommendation;\n\n// Message pour la requête de prédiction\nmessage PredictionRequest {\n    string user_id = 1;\n    string product_id = 2;\n}\n\n// Message pour la réponse de prédiction\nmessage PredictionResponse {\n    float prediction_score = 1;\n    float recommendation_confidence = 2;\n}\n\n// Service de recommandation\nservice RecommendationService {\n    rpc Predict(PredictionRequest) returns (PredictionResponse);\n}</pre><p><strong>Explication :</strong> Le fichier définit la syntaxe protobuf v3, les messages Request et Response avec leurs champs, et le service avec la méthode RPC Predict.</p>",
+                "sousQuestions": []
+            }
+        ]
+    },
+    {
+        "intitule": "Exercice 3 : Implémenter un serveur gRPC en Python",
+        "type": "competence",
+        "niveau": "medium",
+        "enonce": {
+            "texte": "<p>En utilisant le fichier <code>.proto</code> que vous avez défini dans l'exercice 2, vous devez maintenant implémenter un <strong>serveur gRPC en Python</strong> pour votre modèle de recommandation.</p><p>Votre modèle est une fonction <code>predict(user_id, product_id)</code> qui retourne un tuple <code>(score, confidence)</code>. Le serveur doit écouter sur le port <code>50051</code>.</p><p><strong>Consigne :</strong> Écrivez le code Python du serveur gRPC en utilisant <code>grpcio</code>.</p>",
+            "images": []
+        },
+        "questions": [
+            {
+                "numero": 1,
+                "texte": "Écrivez le code du serveur gRPC en Python.",
+                "niveau": "medium",
+                "reponse": "<pre style='background: #1e272e; color: #dcdde1; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.9rem;'>import grpc\nfrom concurrent import futures\nimport recommendation_pb2\nimport recommendation_pb2_grpc\n\n# Modèle de recommandation simulé\ndef predict(user_id, product_id):\n    # Exemple simple de prédiction\n    score = 0.75  # Score de prédiction\n    confidence = 0.85  # Confiance\n    return score, confidence\n\nclass RecommendationServicer(recommendation_pb2_grpc.RecommendationServiceServicer):\n    def Predict(self, request, context):\n        # Appel du modèle\n        score, confidence = predict(request.user_id, request.product_id)\n        # Construction de la réponse\n        return recommendation_pb2.PredictionResponse(\n            prediction_score=score,\n            recommendation_confidence=confidence\n        )\n\ndef serve():\n    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))\n    recommendation_pb2_grpc.add_RecommendationServiceServicer_to_server(\n        RecommendationServicer(), server\n    )\n    server.add_insecure_port('[::]:50051')\n    print(\"Serveur démarré sur le port 50051\")\n    server.start()\n    server.wait_for_termination()\n\nif __name__ == '__main__':\n    serve()</pre>",
+                "sousQuestions": []
+            }
+        ]
+    },
+    {
+        "intitule": "Exercice 4 : Implémenter un client gRPC en Python",
+        "type": "competence",
+        "niveau": "medium",
+        "enonce": {
+            "texte": "<p>Vous avez maintenant un serveur gRPC pour votre modèle de recommandation. Vous devez créer un <strong>client gRPC</strong> qui envoie des requêtes au serveur pour obtenir des prédictions.</p><p><strong>Consigne :</strong> Écrivez le code Python du client gRPC qui :</p><ul><li>Se connecte au serveur sur <code>localhost:50051</code></li><li>Envoie une requête pour l'utilisateur <code>\"user_123\"</code> et le produit <code>\"product_456\"</code></li><li>Affiche la réponse (score et confiance) dans la console.</li></ul>",
+            "images": []
+        },
+        "questions": [
+            {
+                "numero": 1,
+                "texte": "Écrivez le code du client gRPC en Python.",
+                "niveau": "medium",
+                "reponse": "<pre style='background: #1e272e; color: #dcdde1; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.9rem;'>import grpc\nimport recommendation_pb2\nimport recommendation_pb2_grpc\n\ndef run():\n    # Connexion au serveur\n    channel = grpc.insecure_channel('localhost:50051')\n    stub = recommendation_pb2_grpc.RecommendationServiceStub(channel)\n\n    # Création de la requête\n    request = recommendation_pb2.PredictionRequest(\n        user_id=\"user_123\",\n        product_id=\"product_456\"\n    )\n\n    try:\n        # Appel de la méthode Predict\n        response = stub.Predict(request)\n        print(f\"Score de prédiction : {response.prediction_score}\")\n        print(f\"Confiance : {response.recommendation_confidence}\")\n    except grpc.RpcError as e:\n        print(f\"Erreur : {e.code()} - {e.details()}\")\n\nif __name__ == '__main__':\n    run()</pre>",
+                "sousQuestions": []
+            }
+        ]
+    },
+    {
+        "intitule": "Exercice 5 : Comparer gRPC et REST pour un modèle ML",
+        "type": "competence",
+        "niveau": "hard",
+        "enonce": {
+            "texte": "<p>Votre entreprise doit choisir entre une API gRPC et une API REST pour servir son nouveau modèle de classification d'images. Le modèle est un réseau de neurones profond qui prend en entrée des images (taille moyenne 1MB) et retourne une classification avec un score de confiance. Les contraintes sont :</p><ul><li>Latence maximale : 200ms</li><li>Volume de requêtes : 10 000 par seconde en pic</li><li>Les clients utilisent plusieurs langages (Python, Java, C++)</li><li>L'équipe a une expérience limitée avec gRPC</li></ul><p><strong>Consigne :</strong> Rédigez une <strong>recommandation argumentée</strong> en comparant gRPC et REST pour ce cas d'usage. Justifiez votre choix avec des critères techniques et organisationnels.</p>",
+            "images": []
+        },
+        "questions": [
+            {
+                "numero": 1,
+                "texte": "Rédigez une recommandation argumentée pour le choix entre gRPC et REST.",
+                "niveau": "hard",
+                "reponse": "<p><strong>Recommandation :</strong> Dans ce cas d'usage, <strong>gRPC est plus adapté</strong> pour les raisons suivantes :</p><p><strong>Critères techniques :</strong></p><ul><li><strong>Performance :</strong> gRPC utilise Protocol Buffers (binaire), ce qui réduit la taille des messages (les images de 1MB gagnent en performance) et la latence (sérialisation plus rapide), ce qui est essentiel pour atteindre les 200ms de latence maximale.</li><li><strong>Volume de requêtes :</strong> gRPC est conçu pour les performances élevées et peut gérer 10 000 requêtes par seconde efficacement grâce à HTTP/2 et au multiplexage.</li><li><strong>Streaming :</strong> Pour des images volumineuses, on peut envisager un streaming pour envoyer l'image par morceaux.</li></ul><p><strong>Critères organisationnels :</strong></p><ul><li><strong>Support multi-langage :</strong> gRPC génère automatiquement des clients dans plusieurs langages à partir des fichiers .proto, ce qui facilite l'intégration avec Python, Java et C++.</li><li><strong>Documentation :</strong> Bien que l'équipe ait moins d'expérience avec gRPC, la génération de code et la documentation générée automatiquement peuvent compenser cela.</li></ul><p><strong>Conclusion :</strong> Malgré la courbe d'apprentissage, les avantages en performance et en scalabilité de gRPC justifient son adoption pour ce cas d'usage exigeant.</p>",
+                "sousQuestions": []
+            }
+        ]
+    },
+    {
+        "intitule": "Exercice 6 : Déployer un serveur gRPC avec Docker",
+        "type": "competence",
+        "niveau": "hard",
+        "enonce": {
+            "texte": "<p>Vous avez développé un serveur gRPC pour votre modèle de classification d'images. Vous devez maintenant le <strong>conteneuriser avec Docker</strong> et le déployer sur un cluster Kubernetes.</p><p><strong>Consigne :</strong></p><ol><li>Écrivez un <strong>Dockerfile</strong> pour conteneuriser le serveur gRPC.</li><li>Écrivez les <strong>manifestes Kubernetes</strong> (Deployment et Service) pour déployer ce serveur.</li></ol>",
+            "images": []
+        },
+        "questions": [
+            {
+                "numero": 1,
+                "texte": "Écrivez le Dockerfile pour conteneuriser le serveur gRPC.",
+                "niveau": "hard",
+                "reponse": "<pre style='background: #1e272e; color: #dcdde1; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.9rem;'># Dockerfile\nFROM python:3.9-slim\n\nWORKDIR /app\n\n# Copie des dépendances\nCOPY requirements.txt .\nRUN pip install --no-cache-dir -r requirements.txt\n\n# Copie du code\nCOPY . .\n\n# Génération des fichiers protobuf\nRUN python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. recommendation.proto\n\n# Exposition du port\nEXPOSE 50051\n\n# Commande de démarrage\nCMD [\"python\", \"server.py\"]</pre>",
+                "sousQuestions": [
+                    {
+                        "numero": "1.a",
+                        "texte": "Écrivez le manifeste Kubernetes pour le Deployment.",
+                        "niveau": "hard",
+                        "reponse": "<pre style='background: #1e272e; color: #dcdde1; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.9rem;'># deployment.yaml\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: grpc-recommendation-deployment\nspec:\n  replicas: 3\n  selector:\n    matchLabels:\n      app: grpc-recommendation\n  template:\n    metadata:\n      labels:\n        app: grpc-recommendation\n    spec:\n      containers:\n      - name: grpc-server\n        image: grpc-recommendation:latest\n        ports:\n        - containerPort: 50051\n        resources:\n          requests:\n            memory: \"512Mi\"\n            cpu: \"500m\"\n          limits:\n            memory: \"1Gi\"\n            cpu: \"1\"</pre>"
+                    },
+                    {
+                        "numero": "1.b",
+                        "texte": "Écrivez le manifeste Kubernetes pour le Service.",
+                        "niveau": "hard",
+                        "reponse": "<pre style='background: #1e272e; color: #dcdde1; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.9rem;'># service.yaml\napiVersion: v1\nkind: Service\nmetadata:\n  name: grpc-recommendation-service\nspec:\n  selector:\n    app: grpc-recommendation\n  ports:\n  - protocol: TCP\n    port: 50051\n    targetPort: 50051\n  type: LoadBalancer</pre>"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "intitule": "Exercice 7 : Analyser les performances de gRPC vs REST",
+        "type": "competence",
+        "niveau": "hard",
+        "enonce": {
+            "texte": "<p>Vous devez évaluer les performances de votre modèle de recommandation servi via gRPC. Vous avez effectué des tests de charge avec 1000 requêtes par seconde et vous avez obtenu les résultats suivants :</p><div style='background: #f8f9fa; padding: 15px; border-radius: 8px;'><table style='width: 100%; border-collapse: collapse;'><tr style='background: #3498db; color: white;'><th style='padding: 8px; border: 1px solid #ddd;'>Métrique</th><th style='padding: 8px; border: 1px solid #ddd;'>gRPC</th><th style='padding: 8px; border: 1px solid #ddd;'>REST</th></tr><tr><td style='padding: 8px; border: 1px solid #ddd;'>Latence moyenne</td><td style='padding: 8px; border: 1px solid #ddd;'>120ms</td><td style='padding: 8px; border: 1px solid #ddd;'>350ms</td></tr><tr><td style='padding: 8px; border: 1px solid #ddd;'>Throughput</td><td style='padding: 8px; border: 1px solid #ddd;'>1200 req/s</td><td style='padding: 8px; border: 1px solid #ddd;'>800 req/s</td></tr><tr><td style='padding: 8px; border: 1px solid #ddd;'>Taille des messages</td><td style='padding: 8px; border: 1px solid #ddd;'>350 bytes</td><td style='padding: 8px; border: 1px solid #ddd;'>820 bytes</td></tr></table></div><p><strong>Consigne :</strong> Interprétez ces résultats. Expliquez pourquoi gRPC offre de meilleures performances que REST dans ce contexte. Proposez des optimisations pour améliorer encore les performances de l'API gRPC.</p>",
+            "images": []
+        },
+        "questions": [
+            {
+                "numero": 1,
+                "texte": "Interprétez les résultats de performance et proposez des optimisations.",
+                "niveau": "hard",
+                "reponse": "<p><strong>Interprétation des résultats :</strong></p><ul><li><strong>Latence :</strong> gRPC est 3 fois plus rapide (120ms vs 350ms) grâce à la sérialisation binaire de Protobuf et à HTTP/2 qui permet le multiplexage des requêtes.</li><li><strong>Throughput :</strong> gRPC supporte 1200 requêtes par seconde contre 800 pour REST, soit une amélioration de 50%.</li><li><strong>Taille des messages :</strong> La taille des messages en gRPC est moins de la moitié de celle en REST (350 vs 820 bytes), ce qui réduit la bande passante et accélère les échanges.</li></ul><p><strong>Optimisations possibles :</strong></p><ul><li><strong>Compression :</strong> Activer la compression des messages avec <code>grpc.enable_compression(grpc.Compression.GZIP)</code>.</li><li><strong>Connection pooling :</strong> Utiliser des connexions persistantes pour réduire le temps de handshake.</li><li><strong>Load balancing :</strong> Utiliser un load balancer pour répartir la charge entre plusieurs serveurs.</li><li><strong>Asynchronous calls :</strong> Utiliser le mode asynchrone (<code>stub.Predict.future</code>) pour ne pas bloquer le client.</li></ul>",
+                "sousQuestions": []
+            }
+        ]
+    },
+    {
+        "intitule": "Exercice 8 : Sécuriser une API gRPC",
+        "type": "competence",
+        "niveau": "hard",
+        "enonce": {
+            "texte": "<p>Votre modèle de recommandation doit être accessible uniquement par des clients authentifiés. Vous devez sécuriser votre API gRPC en ajoutant une <strong>authentification</strong> et un <strong>chiffrement TLS</strong>.</p><p><strong>Consigne :</strong></p><ol><li>Expliquez comment ajouter un <strong>intercepteur d'authentification</strong> (Authentication Interceptor) côté serveur pour valider un token JWT passé dans les métadonnées de la requête.</li><li>Expliquez comment configurer le <strong>TLS</strong> (Transport Layer Security) pour que les communications soient chiffrées.</li></ol>",
+            "images": []
+        },
+        "questions": [
+            {
+                "numero": 1,
+                "texte": "Expliquez comment sécuriser une API gRPC avec authentification et TLS.",
+                "niveau": "hard",
+                "reponse": "<p><strong>1. Authentification avec intercepteur :</strong></p><pre style='background: #1e272e; color: #dcdde1; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.9rem;'>class AuthInterceptor(grpc.ServerInterceptor):\n    def intercept_service(self, continuation, handler_call_details):\n        metadata = dict(handler_call_details.invocation_metadata)\n        token = metadata.get('authorization')\n        if token and self.validate_token(token):\n            return continuation(handler_call_details)\n        else:\n            context.abort(grpc.StatusCode.UNAUTHENTICATED, 'Token invalide')\n\n# Ajout de l'intercepteur au serveur\ninterceptor = AuthInterceptor()\nserver = grpc.server(futures.ThreadPoolExecutor(max_workers=10),\n                     interceptors=[interceptor])</pre><p><strong>2. Configuration TLS :</strong></p><pre style='background: #1e272e; color: #dcdde1; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.9rem;'># Lecture des certificats\nwith open('server.key', 'rb') as f:\n    private_key = f.read()\nwith open('server.crt', 'rb') as f:\n    certificate_chain = f.read()\n\n# Création des credentials sécurisés\nserver_credentials = grpc.ssl_server_credentials(\n    [(private_key, certificate_chain)]\n)\n\n# Ajout du port sécurisé\nserver.add_secure_port('[::]:50051', server_credentials)</pre><p>Le client devra utiliser les certificats correspondants pour se connecter :</p><pre style='background: #1e272e; color: #dcdde1; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.9rem;'>with open('ca.crt', 'rb') as f:\n    ca_cert = f.read()\ncredentials = grpc.ssl_channel_credentials(ca_cert)\nchannel = grpc.secure_channel('server:50051', credentials)</pre>",
+                "sousQuestions": []
+            }
+        ]
+    },
+    {
+        "intitule": "Exercice 9 : Évaluer l'impact de gRPC sur l'architecture MLOps",
+        "type": "ressource",
+        "niveau": "hard",
+        "enonce": {
+            "texte": "<p>L'implémentation de gRPC pour le déploiement de modèles a des implications sur l'architecture MLOps globale. Dans le contexte d'une architecture de microservices, vous devez évaluer l'impact de l'adoption de gRPC sur les différents aspects de l'écosystème MLOps.</p><p><strong>Consigne :</strong> Rédigez une analyse des impacts de gRPC sur :</p><ol><li>Le <strong>monitoring</strong> des modèles (collecte de métriques, logs).</li><li>Le <strong>versionnement</strong> des API et des modèles.</li><li>La <strong>documentation</strong> et l'onboarding des développeurs.</li><li>L'<strong>intégration</strong> avec les outils MLOps existants.</li></ol>",
+            "images": []
+        },
+        "questions": [
+            {
+                "numero": 1,
+                "texte": "Analysez l'impact de gRPC sur l'architecture MLOps.",
+                "niveau": "hard",
+                "reponse": "<p><strong>1. Impact sur le monitoring :</strong></p><ul><li><strong>Avantages :</strong> gRPC permet de collecter des métriques détaillées sur les performances (latence, taux d'erreur, throughput). L'utilisation d'HTTP/2 facilite le tracing distribué.</li><li><strong>Défis :</strong> Les logs des messages binaires (protobuf) sont moins lisibles que JSON. Il faut implémenter un middleware pour intercepter et logger les requêtes/réponses.</li></ul><p><strong>2. Impact sur le versionnement :</strong></p><ul><li><strong>Avantages :</strong> Protobuf permet d'ajouter des champs optionnels sans casser la compatibilité (backward/forward compatibility).</li><li><strong>Défis :</strong> La gestion des versions nécessite de maintenir plusieurs fichiers .proto et de mettre à jour les clients.</li></ul><p><strong>3. Impact sur la documentation :</strong></p><ul><li><strong>Avantages :</strong> Les fichiers .proto servent de documentation contractuelle et technique. gRPC peut générer des docs via des outils comme protoc-gen-doc.</li><li><strong>Défis :</strong> Les nouvelles équipes doivent apprendre protobuf et la syntaxe .proto, ce qui augmente le temps d'onboarding par rapport à REST avec OpenAPI.</li></ul><p><strong>4. Impact sur l'intégration MLOps :</strong></p><ul><li><strong>Avantages :</strong> gRPC s'intègre bien avec les outils de service mesh comme Istio, facilitant la gestion du traffic.</li><li><strong>Défis :</strong> Les outils comme Airflow ou Kubeflow ont un support natif pour REST mais peuvent nécessiter des extensions pour gRPC. Il faut adapter les pipelines CI/CD pour la génération des stubs gRPC.</li></ul>",
+                "sousQuestions": []
+            }
+        ]
+    }
+]

@@ -1,0 +1,80 @@
+[
+  {
+    "intitule": "Manipulation des donn\u00E9es avec DbContext et EF Core",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous travaillez sur une API de gestion d\u2019\u00E9tudiants. Un service <code>IEtudiantRepository</code> a déjà \u00E9t\u00E9 inject\u00E9 dans un contrôleur. Le <code>DbContext</code> s\u2019appelle <code>AppDbContext</code> et expose <code>DbSet&lt;Etudiant&gt; Etudiants</code>. La classe <code>Etudiant</code> poss\u00E8de les propri\u00E9t\u00E9s <code>Id</code> (int), <code>Nom</code> (string), <code>Prenom</code> (string), <code>Email</code> (string).</p><p>Répondez aux questions suivantes en vous basant sur les m\u00E9thodes asynchrones d\u2019EF Core.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez la diff\u00E9rence entre <code>FirstOrDefaultAsync()</code> et <code>FindAsync()</code> dans le contexte d\u2019une recherche d\u2019un \u00E9tudiant par son identifiant.",
+        "niveau": "medium",
+        "reponse": "FindAsync cherche d'abord dans le cache local du DbContext avant d'envoyer une requ\u00EAte \u00E0 la base de donn\u00E9es, alors que FirstOrDefaultAsync ex\u00E9cute toujours une requ\u00EAte SQL m\u00EAme si l'entit\u00E9 est d\u00E9j\u00E0 suivie par le contexte.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "R\u00E9digez le code C# asynchrone permettant de r\u00E9cup\u00E9rer la liste compl\u00E8te des \u00E9tudiants via <code>_context.Etudiants</code>.",
+        "niveau": "easy",
+        "reponse": "var etudiants = await _context.Etudiants.ToListAsync();",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Cr\u00E9ez la m\u00E9thode asynchrone <code>AjouterEtudiantAsync</code> qui prend un objet <code>Etudiant</code> en param\u00E8tre, l’ajoute au contexte et enregistre les modifications.",
+        "niveau": "medium",
+        "reponse": "public async Task AjouterEtudiantAsync(Etudiant etudiant) { await _context.Etudiants.AddAsync(etudiant); await _context.SaveChangesAsync(); }",
+        "sousQuestions": []
+      },
+      {
+        "numero": 4,
+        "texte": "D’apr\u00E8s les m\u00E9thodes <code>Update</code> et <code>Remove</code>, expliquez pourquoi il est n\u00E9cessaire d’appeler <code>SaveChangesAsync()</code> apr\u00E8s chaque modification.",
+        "niveau": "hard",
+        "reponse": "EF Core suit les modifications des entit\u00E9s via son ChangeTracker. Update et Remove marquent seulement l’\u00E9tat de l’entit\u00E9 (Modified, Deleted). L’appel \u00E0 SaveChangesAsync() g\u00E9n\u00E8re et ex\u00E9cute les commandes SQL n\u00E9cessaires pour persister ces changements en base.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion des inscriptions dans une universit\u00E9",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous devez construire une API pour une universit\u00E9 camerounaise. Les \u00E9tudiants d\u00E9posent des dossiers d’inscription. Un \u00E9tudiant (<code>Etudiant</code>) poss\u00E8de <code>Id</code>, <code>NomComplet</code>, <code>Email</code>. Un dossier (<code>DossierInscription</code>) a <code>Id</code>, <code>DateDepot</code>, <code>EstValide</code> (bool), et une cl\u00E9 \u00E9trang\u00E8re <code>EtudiantId</code>. Utilisez les m\u00E9thodes <code>AddAsync</code>, <code>FindAsync</code>, <code>ToListAsync</code>, <code>SaveChangesAsync</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Mod\u00E9lisez les classes C# <code>Etudiant</code> et <code>DossierInscription</code> avec les relations n\u00E9cessaires pour Entity Framework Core.",
+        "niveau": "medium",
+        "reponse": "public class Etudiant { public int Id { get; set; } public string NomComplet { get; set; } public string Email { get; set; } public ICollection<DossierInscription> Dossiers { get; set; } } public class DossierInscription { public int Id { get; set; } public DateTime DateDepot { get; set; } public bool EstValide { get; set; } public int EtudiantId { get; set; } public Etudiant Etudiant { get; set; } }",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "G\u00E9rez l’ajout d’un nouvel \u00E9tudiant avec son premier dossier d’inscription en une seule transaction.",
+        "niveau": "hard",
+        "reponse": "var etudiant = new Etudiant { NomComplet = \"Ngo Martin\", Email = \"martin.ngo@example.com\" }; var dossier = new DossierInscription { DateDepot = DateTime.Now, EstValide = false, Etudiant = etudiant }; await _context.Etudiants.AddAsync(etudiant); await _context.Dossiers.AddAsync(dossier); await _context.SaveChangesAsync();",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "R\u00E9cup\u00E9rez tous les dossiers d’inscription valid\u00E9s (<code>EstValide == true</code>) avec le nom complet de l’\u00E9tudiant correspondant, sans faire de requ\u00EAte suppl\u00E9mentaire par dossier.",
+        "niveau": "very hard",
+        "reponse": "var dossiersValid\u00E9s = await _context.Dossiers.Where(d => d.EstValide).Include(d => d.Etudiant).ToListAsync();",
+        "sousQuestions": []
+      },
+      {
+        "numero": 4,
+        "texte": "Modifiez l’\u00E9tat de validation (<code>EstValide = true</code>) du dossier dont l’<code>Id</code> est 5, sans le charger compl\u00E8tement en m\u00E9moire si possible.",
+        "niveau": "hard",
+        "reponse": "var dossier = new DossierInscription { Id = 5, EstValide = true }; _context.Dossiers.Attach(dossier); _context.Entry(dossier).Property(d => d.EstValide).IsModified = true; await _context.SaveChangesAsync();",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

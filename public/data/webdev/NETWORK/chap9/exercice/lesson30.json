@@ -1,0 +1,130 @@
+[
+  {
+    "intitule": "Analyse d'une sortie ping et calculs RTT",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un administrateur réseau exécute la commande <code>ping google.com</code> depuis un poste client. Voici le résultat (extrait) :</p>\n<pre><code>Pinging google.com [142.250.185.46] with 32 bytes of data:\nReply from 142.250.185.46: bytes=32 time=24ms TTL=115\nReply from 142.250.185.46: bytes=32 time=28ms TTL=115\nReply from 142.250.185.46: bytes=32 time=22ms TTL=115\nReply from 142.250.185.46: bytes=32 time=26ms TTL=115\n\nPing statistics for 142.250.185.46:\n    Packets: Sent = 4, Received = 4, Lost = 0 (0% loss),\nApproximate round trip times in milli-seconds:\n    Minimum = 22ms, Maximum = 28ms, Average = 25ms</code></pre>\n<p>La commande ICMP Echo Request envoie une charge utile de 32 octets. L'en-tête ICMP fait 8 octets. L'en-tête IPv4 (sans options) fait 20 octets. La trame Ethernet (sans VLAN) a un en-tête de 14 octets et un FCS de 4 octets.</p>",
+      "images": ["diagramme paquet ICMP avec encapsulation Ethernet IP ICMP", "interface graphique ping Windows avec statistiques"]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Calculer la taille totale de la trame Ethernet envoyée sur le support physique pour une requête ping. Justifier chaque couche d'encapsulation.",
+        "niveau": "medium",
+        "reponse": "Calcul de la taille totale :\n\n- Charge utile ICMP (données) : 32 octets\n- En-tête ICMP : 8 octets\n- En-tête IPv4 : 20 octets\n- En-tête Ethernet : 14 octets (MAC destination 6 + source 6 + type 2)\n- FCS Ethernet (Frame Check Sequence) : 4 octets\n\nTaille totale = 32 + 8 + 20 + 14 + 4 = **78 octets**\n\nIl faut noter que certaines implémentations peuvent ajouter un préambule (8 octets) et un délimiteur de début de trame (1 octet) au niveau physique, mais ces octets ne sont pas comptés dans la trame Ethernet standard.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Interpréter la valeur TTL=115 dans les réponses. Combien de routeurs maximum le paquet a-t-il traversé ? Expliquer le mécanisme du TTL.",
+        "niveau": "medium",
+        "reponse": "Le TTL (Time To Live) est un champ de l'en-tête IPv4 qui limite le nombre de sauts (routeurs) qu'un paquet peut traverser. Chaque routeur diminue le TTL de 1. Si le TTL atteint 0, le paquet est rejeté et un message ICMP \"Time Exceeded\" est renvoyé.\n\nValeur initiale typique du TTL :\n- Windows : 128\n- Linux/Unix : 64\n- Certains routeurs Cisco : 255\n\nIci, TTL reçu = 115. Si la valeur initiale était 128 (probable car client Windows), alors :\n**Nombre de routeurs traversés = 128 - 115 = 13 routeurs.**\n\nAvec une valeur initiale de 64, cela donnerait un nombre négatif, impossible. Donc l'OS source utilise très probablement un TTL initial de 128.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquer ce que signifie la perte de paquets (packet loss) et comment interpréter un taux de perte non nul dans un contexte professionnel.",
+        "niveau": "easy",
+        "reponse": "La perte de paquets (packet loss) est le pourcentage de paquets envoyés qui n'ont pas reçu de réponse. Dans cet exemple, 0% de perte indique un réseau sain.\n\n**Interprétation des taux de perte :**\n- **0%** : Excellent, réseau fiable\n- **1-2%** : Acceptable pour la navigation web, mais peut dégrader VoIP et jeux\n- **3-5%** : Problème notable, ralentissements perceptibles\n- **>5%** : Sérieux, nécessite investigation\n- **>10%** : Réseau quasi inutilisable\n\n**Causes fréquentes :**\n- Saturation de lien (congestion)\n- Problèmes matériels (câble défectueux, switch défaillant)\n- Interférences WiFi\n- Filtrage par pare-feu bloquant ICMP\n- Routeur surchargé ou défaillant\n\n**Dans un contexte professionnel :** un taux > 1% sur un lien critique (liaison entre sites, serveur de base de données) déclenche généralement une alerte et une investigation.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 4,
+        "texte": "Calculer le temps de transmission théorique d'une trame Ethernet de cette taille sur un lien 100 Mbps. Formule : $temps = \\frac{taille\\_trame \\times 8}{d\\'ebit}$.",
+        "niveau": "hard",
+        "reponse": "Taille de la trame = 78 octets. Convertissons en bits : $78 \\times 8 = 624$ bits.\n\nDébit = 100 Mbps = $100 \\times 10^6$ bits/seconde\n\n$temps = \\frac{624}{100 \\times 10^6} = 6.24 \\times 10^{-6}$ secondes = **6.24 microsecondes**.\n\nIl s'agit du temps de transmission pur sur le support, sans compter les latences de traitement des équipements intermédiaires (routeurs, switches) ni la latence de propagation (fonction de la distance).\n\nLa latence mesurée par ping (environ 25 ms) est très supérieure car elle inclut :\n- Le temps d'aller-retour complet (RTT)\n- Les traitements dans chaque routeur (file d'attente, routage)\n- La latence de propagation sur les liaisons (fibre, cuivre)\n\nCe calcul montre que la latence est principalement due aux équipements réseau et à la distance, pas au débit nominal.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse de traceroute et identification de goulot d'étranglement",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Un utilisateur se plaint d'un accès très lent à un serveur distant. L'administrateur exécute <code>tracert 203.0.113.10</code> (sous Windows) et obtient les résultats suivants :</p>\n<pre><code>  1    <1 ms    <1 ms    <1 ms  192.168.1.1\n  2     2 ms     2 ms     2 ms  10.0.0.1\n  3     *        *        *     Délai d'attente de la demande expiré.\n  4    15 ms    16 ms    14 ms  172.16.5.1\n  5   145 ms   158 ms   162 ms  203.0.113.1\n  6   210 ms   220 ms   215 ms  203.0.113.10</code></pre>\n<p>La commande traceroute (tracert) envoie des paquets avec des TTL croissants (1, 2, 3, ...) pour identifier chaque routeur sur le chemin.</p>",
+      "images": ["sortie traceroute Windows avec astérisques et pics de latence", "schéma topologie réseau avec routeurs intermédiaires"]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analyser cette sortie traceroute. Identifier le saut problématique, la latence normale attendue, et la latence anormale. Calculer l'augmentation de latence au niveau critique.",
+        "niveau": "medium",
+        "reponse": "**Analyse saut par saut :**\n\n- **Saut 1** (192.168.1.1) : <1 ms → routeur domestique/box, latence excellente.\n- **Saut 2** (10.0.0.1) : 2 ms → point de présence FAI, toujours excellent.\n- **Saut 3** : * * * → routeur ne répond pas aux requêtes ICMP (pare-feu bloque ou priorité faible), mais le trafic continue.\n- **Saut 4** (172.16.5.1) : ~15 ms → acceptable (liaison régionale).\n- **Saut 5** (203.0.113.1) : ~150 ms → **forte augmentation** (passage de 15 ms à 150 ms).\n- **Saut 6** (203.0.113.10) : ~215 ms → latence finale très élevée.\n\n**Identification du goulot :** Saut 5 (203.0.113.1). L'augmentation est de :\n$150 - 15 = 135$ ms supplémentaires sur ce seul saut.\n\n**Latence normale attendue :**\n- Liaison locale : < 5 ms\n- Liaison régionale (même pays) : 10-30 ms\n- Liaison continentale (Europe-Afrique) : 80-120 ms\n- Liaison intercontinentale : 150-300 ms\n\nIci, la latence de 215 ms suggère un lien transatlantique ou transpacifique. Mais la forte hausse au saut 5 indique soit une saturation du routeur, soit un lien de qualité médiocre (satellite ?).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer la signification des astérisques (* * *) au saut 3. Quelles sont les causes possibles ? Comment l'administrateur peut-il confirmer que le trafic passe bien par ce routeur ?",
+        "niveau": "medium",
+        "reponse": "Les astérisques indiquent que le routeur intermédiaire (saut 3) n'a pas répondu aux requêtes ICMP dans le délai imparti.\n\n**Causes possibles :**\n\n1. **Pare-feu bloquant ICMP** : Le routeur est configuré pour ignorer les paquets ICMP Echo Request ou Time Exceeded pour des raisons de sécurité.\n2. **Priorité QoS basse** : Le routeur traite le trafic ICMP avec une priorité très basse, les réponses sont perdues ou trop lentes.\n3. **Problème de routage asymétrique** : Le chemin aller emprunte un routeur différent du chemin retour, et ce dernier ne répond pas.\n4. **Saturation temporaire** : Le routeur est surchargé et ne peut pas répondre.\n\n**Confirmation que le trafic passe :**\n\n- Le saut 4 répond avec une latence de 15 ms. Pour que le paquet atteigne le saut 4, il a nécessairement traversé le saut 3.\n- Administrateur peut utiliser une autre commande comme `pathping` (Windows) qui combine ping et traceroute.\n- Ou utiliser `traceroute` avec protocole TCP (ex: `tcptraceroute`) qui contourne les blocages ICMP en utilisant des paquets TCP sur un port spécifique (ex: port 80).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquer la différence fondamentale entre ping et traceroute. Dans quel cas utilise-t-on l'un plutôt que l'autre ?",
+        "niveau": "easy",
+        "reponse": "| Critère | ping | traceroute (tracert) |\n|---------|------|---------------------|\n| **Objectif** | Tester la connectivité de base (hôte joignable) | Tracer le chemin emprunté par les paquets |\n| **Mesure** | RTT aller-retour, perte de paquets globale | Latence par saut, identification de chaque routeur |\n| **Mécanisme** | Envoie des Echo Request avec TTL=255 | Envoie des paquets avec TTL croissant (1,2,3...) |\n| **Résultat** | \"Hôte répond\" ou non | Liste des routeurs intermédiaires avec leurs temps |\n\n**Cas d'utilisation :**\n\n- **`ping`** : Diagnostic rapide. Vérifier si un serveur est en ligne, tester un lien Wi-Fi instable, surveiller une liaison critique.\n- **`traceroute`** : Diagnostic approfondi. Identifier OÙ se situe le problème (routeur FAI, lien transatlantique, serveur final). Trouver le goulot d'étranglement.\n\n**Exemple concret :**\n- Ping échoue → utiliser traceroute pour savoir si le blocage est chez le FAI ou sur le serveur final.\n- Ping lent mais pas de perte → traceroute pour identifier quel routeur ajoute de la latence.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Calcul de distance approximative avec le RTT",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Un ingénieur réseau mesure un RTT (Round Trip Time) de 180 ms entre deux points distants. Il suppose que le signal voyage dans la fibre optique à une vitesse de $v = 2 \\times 10^8$ m/s (environ les deux tiers de la vitesse de la lumière dans le vide $c = 3 \\times 10^8$ m/s). Il néglige les latences de traitement des routeurs.</p>\n<p>Rappel : $distance = \\frac{vitesse \\times temps}{2}$ (car RTT = aller + retour)</p>",
+      "images": ["illustration trajet signal fibre optique avec aller-retour", "carte mondiale avec câbles sous-marins"]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Calculer la distance approximative entre les deux points, en kilomètres.",
+        "niveau": "medium",
+        "reponse": "Formule : $distance = \\frac{v \\times RTT}{2}$\n\nAvec $v = 2 \\times 10^8$ m/s et $RTT = 180$ ms $= 0.18$ s.\n\n$distance = \\frac{2 \\times 10^8 \\times 0.18}{2} = 10^8 \\times 0.18 = 1.8 \\times 10^7$ mètres.\n\n$1.8 \\times 10^7$ m = **18 000 km**.\n\nC'est approximativement la distance entre Paris et l'Australie, ou entre l'Afrique de l'Ouest et l'Asie du Sud-Est.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer pourquoi la distance réelle est souvent inférieure à ce calcul théorique. Quels facteurs ajoutent du temps au RTT ?",
+        "niveau": "hard",
+        "reponse": "Ce calcul donne une **distance maximale théorique**. La distance réelle (géographique) est souvent inférieure car plusieurs facteurs augmentent le RTT sans correspondre à de la distance parcourue :\n\n**Facteurs ajoutant de la latence :**\n\n1. **Traitement dans chaque routeur** : Délai de routage, consultation de table, file d'attente (queueing delay) : 0.1 à plusieurs ms par routeur.\n2. **Latence de série (serialization delay)** : Temps de placer les bits sur le support (calculé dans l'exercice précédent : quelques microsecondes, négligeable).\n3. **Satellites géostationnaires** : Un aller satellite = 120 ms (hauteur 36 000 km). Une liaison satellite ajoute ~500 ms de RTT, bien supérieur à la distance réelle.\n4. **Boucles de redondance** : Certains réseaux font transiter les paquets par des chemins plus longs que le chemin géodésique.\n5. **Retransmissions** : En cas d'erreurs, TCP retransmet, augmentant le RTT apparent.\n\n**Exemple :**\n- Distance Paris-New York : ~5 800 km en ligne droite.\n- RTT sur fibre optique théorique : $(5800 \\times 1000) / (2\\times10^8) \\times 2 = 58$ ms.\n- RTT réel mesuré : 70-80 ms à cause des routeurs intermédiaires.\n\nAinsi, notre calcul de 18 000 km suggère soit une très longue distance réelle, soit des latences de traitement importantes, soit l'utilisation de satellites.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Scénarios pratiques de diagnostic réseau",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Voici plusieurs situations de panne réseau. Pour chacune, identifiez la commande (ping / traceroute / netstat / ipconfig) la plus appropriée en premier diagnostic, et expliquez ce que vous cherchez à vérifier.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Scénario A : Un utilisateur n'arrive pas à accéder à internet. Il peut accéder aux serveurs internes de l'entreprise (intranet).",
+        "niveau": "easy",
+        "reponse": "**Commande :** `ping 8.8.8.8` (ou une IP publique connue)\n\n**Objectif :** Vérifier la connectivité jusqu'à internet.\n- Si ping fonctionne : problème de DNS (test ensuite avec `nslookup google.com`)\n- Si ping échoue : problème de passerelle par défaut, de NAT, ou de liaison FAI\n\n**Étapes suivantes possibles :**\n- Vérifier la passerelle : `ping <adresse_passarelle>`\n- Vérifier l'interface : `ipconfig` (Windows) ou `ifconfig` (Linux)\n- `traceroute 8.8.8.8` pour voir où le chemin s'arrête",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Scénario B : Le site web www.exemple.com est lent. Les autres sites web fonctionnent normalement.",
+        "niveau": "medium",
+        "reponse": "**Commande :** `traceroute www.exemple.com` (ou `tracert`)\n\n**Objectif :** Identifier le goulot d'étranglement spécifique à cette destination.\n- Comparer avec `traceroute google.com` (site rapide) pour voir la différence\n- Chercher un saut avec latence anormalement élevée\n\n**Ce qu'on cherche à vérifier :**\n- Si la latence augmente brutalement sur un routeur en particulier → problème chez ce fournisseur ou sur cette liaison\n- Si le chemin est très long (nombreux sauts) → latence normale\n- Si des astérisques apparaissent → peut indiquer un blocage ICMP\n\n**Alternative :** `pathping www.exemple.com` combine traceroute et ping statistique.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Scénario C : La connexion Internet fonctionne mais est très lente de manière intermittente. Les utilisateurs constatent des ralentissements surtout en fin d'après-midi.",
+        "niveau": "hard",
+        "reponse": "**Commande :** `ping -t 8.8.8.8` (ping continu sur Windows, `ping -i 0.2` sous Linux)\n\n**Objectif :** Mesurer la perte de paquets et la variation de latence (jitter) sur la durée.\n- Lancer le ping pendant 5-10 minutes\n- Observer si des paquets sont perdus ou si le RTT augmente périodiquement\n\n**Interprétation :**\n- Si pertes seulement en fin d'après-midi : **saturation de lien** (congestion aux heures de pointe)\n- Si pertes aléatoires : interférences WiFi, câble défectueux\n- Si RTT augmente progressivement puis chute : problème de bufferbloat\n\n**Outils complémentaires :**\n- `traceroute` pour identifier le lien saturé\n- `iperf` pour mesurer le débit réel\n\n**Solution possible :**\n- Contacter le FAI pour augmenter la bande passante\n- Mettre en place la QoS (Quality of Service) pour prioriser le trafic critique",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

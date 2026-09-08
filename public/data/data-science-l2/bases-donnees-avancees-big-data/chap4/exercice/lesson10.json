@@ -1,0 +1,126 @@
+[
+  {
+    "intitule": "Création d'une procédure de mise à jour des prix",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Une entreprise de e-commerce souhaite automatiser la mise à jour des prix de ses produits. La règle métier est la suivante : chaque mois, tous les produits doivent voir leur prix augmenter de 5% si le stock est inférieur à 50 unités. Le responsable souhaite exécuter cette opération via une procédure stockée qui lui permet de spécifier un pourcentage d'augmentation en paramètre.</p><p>La table <code>Produits</code> a la structure suivante :</p><ul><li><code>id_produit</code> (INT, PRIMARY KEY)</li><li><code>nom</code> (VARCHAR(100))</li><li><code>prix_unitaire</code> (DECIMAL(10,2))</li><li><code>stock</code> (INT)</li><li><code>date_derniere_maj</code> (DATE)</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créez une procédure stockée nommée <code>augmenter_prix</code> qui prend deux paramètres : <code>p_pourcentage</code> (en décimal) et <code>p_seuil_stock</code> (en entier). La procédure doit augmenter le prix des produits dont le stock est inférieur au seuil spécifié, du pourcentage donné. Elle doit également mettre à jour la date de dernière mise à jour.",
+        "niveau": "medium",
+        "reponse": "<p>Voici le code de la procédure stockée (en syntaxe PostgreSQL/PLpgSQL) :</p><pre><code>CREATE OR REPLACE PROCEDURE augmenter_prix(\n    p_pourcentage DECIMAL,\n    p_seuil_stock INT\n)\nLANGUAGE plpgsql\nAS $$\nBEGIN\n    UPDATE Produits\n    SET prix_unitaire = prix_unitaire * (1 + p_pourcentage / 100),\n        date_derniere_maj = CURRENT_DATE\n    WHERE stock < p_seuil_stock;\n    \n    RAISE NOTICE 'Mise à jour effectuée sur % produit(s)',\n        (SELECT COUNT(*) FROM Produits WHERE stock < p_seuil_stock);\nEND;\n$$;</code></pre><p>La procédure utilise un paramètre <code>p_pourcentage</code> pour le pourcentage d'augmentation et <code>p_seuil_stock</code> pour le seuil de stock. La mise à jour se fait en une seule requête SQL, ce qui est efficace. La commande RAISE NOTICE permet d'informer l'utilisateur du nombre de produits mis à jour.</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez comment exécuter cette procédure pour augmenter les prix de 5% sur les produits dont le stock est inférieur à 30 unités.",
+            "niveau": "easy",
+            "reponse": "<p>Pour exécuter la procédure, on utilise la commande CALL :</p><pre><code>CALL augmenter_prix(5, 30);</code></pre><p>Le premier paramètre (5) est le pourcentage d'augmentation. Le second paramètre (30) est le seuil de stock. Seuls les produits ayant un stock inférieur à 30 unités verront leur prix augmenter de 5%.</p>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Modifiez la procédure pour qu'elle prenne également un paramètre <code>p_categorie</code> permettant de ne mettre à jour que les produits d'une catégorie spécifique. Supposons qu'une table <code>Categories</code> existe avec une relation <code>Produits.id_categorie</code>.",
+            "niveau": "hard",
+            "reponse": "<p>Voici la version modifiée de la procédure :</p><pre><code>CREATE OR REPLACE PROCEDURE augmenter_prix_categorie(\n    p_pourcentage DECIMAL,\n    p_seuil_stock INT,\n    p_categorie VARCHAR(50)\n)\nLANGUAGE plpgsql\nAS $$\nBEGIN\n    UPDATE Produits p\n    SET prix_unitaire = prix_unitaire * (1 + p_pourcentage / 100),\n        date_derniere_maj = CURRENT_DATE\n    FROM Categories c\n    WHERE p.id_categorie = c.id_categorie\n      AND c.nom_categorie = p_categorie\n      AND p.stock < p_seuil_stock;\n    \n    RAISE NOTICE 'Mise à jour effectuée sur % produit(s) de la catégorie %',\n        (SELECT COUNT(*) \n         FROM Produits p \n         JOIN Categories c ON p.id_categorie = c.id_categorie \n         WHERE c.nom_categorie = p_categorie \n           AND p.stock < p_seuil_stock),\n        p_categorie;\nEND;\n$$;</code></pre><p>La procédure prend désormais un troisième paramètre <code>p_categorie</code> pour filtrer sur une catégorie spécifique. La mise à jour utilise une jointure avec la table <code>Categories</code> pour appliquer le filtre. Le message de notification indique également la catégorie concernée.</p>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Fonction de calcul de la TVA et validation des données",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Une entreprise doit gérer la TVA (Taux de 18%) sur ses factures. Elle souhaite automatiser le calcul du montant HT, du montant TTC et de la TVA dans sa base de données. Elle veut également pouvoir récupérer facilement ces informations par facture.</p><p>La table <code>Factures</code> a la structure suivante :</p><ul><li><code>id_facture</code> (INT, PRIMARY KEY)</li><li><code>id_client</code> (INT)</li><li><code>date_facture</code> (DATE)</li><li><code>montant_ht</code> (DECIMAL(10,2))</li><li><code>tva</code> (DECIMAL(10,2))</li><li><code>montant_ttc</code> (DECIMAL(10,2))</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créez une fonction stockée nommée <code>calculer_facture</code> qui prend en paramètre <code>p_id_facture</code> et retourne un tableau contenant le montant HT, le montant TTC et le montant de la TVA pour cette facture.",
+        "niveau": "medium",
+        "reponse": "<p>Voici le code de la fonction stockée (en syntaxe PostgreSQL) :</p><pre><code>CREATE OR REPLACE FUNCTION calculer_facture(\n    p_id_facture INT\n)\nRETURNS TABLE(\n    montant_ht DECIMAL,\n    tva DECIMAL,\n    montant_ttc DECIMAL\n) AS $$\nDECLARE\n    v_montant_ht DECIMAL;\n    v_tva DECIMAL;\n    v_montant_ttc DECIMAL;\nBEGIN\n    -- Récupérer le montant HT\n    SELECT f.montant_ht INTO v_montant_ht\n    FROM Factures f\n    WHERE f.id_facture = p_id_facture;\n    \n    -- Calculer la TVA et le TTC\n    v_tva := v_montant_ht * 0.18;\n    v_montant_ttc := v_montant_ht + v_tva;\n    \n    -- Retourner les valeurs\n    RETURN QUERY SELECT v_montant_ht, v_tva, v_montant_ttc;\nEND;\n$$ LANGUAGE plpgsql;</code></pre><p>La fonction retourne une table avec trois colonnes : montant_ht, tva et montant_ttc. Le taux de TVA est fixé à 18% (valeur constante).</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Écrivez une requête SQL qui utilise cette fonction pour afficher les détails de la facture numéro 42.",
+            "niveau": "easy",
+            "reponse": "<pre><code>SELECT * FROM calculer_facture(42);</code></pre><p>Cette requête exécute la fonction et retourne les colonnes montant_ht, tva et montant_ttc pour la facture dont l'id_facture est 42.</p>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Modifiez la fonction pour qu'elle prenne en paramètre le taux de TVA (au lieu de le fixer à 18%).",
+            "niveau": "medium",
+            "reponse": "<pre><code>CREATE OR REPLACE FUNCTION calculer_facture_taux(\n    p_id_facture INT,\n    p_taux_tva DECIMAL\n)\nRETURNS TABLE(\n    montant_ht DECIMAL,\n    tva DECIMAL,\n    montant_ttc DECIMAL\n) AS $$\nDECLARE\n    v_montant_ht DECIMAL;\n    v_tva DECIMAL;\n    v_montant_ttc DECIMAL;\nBEGIN\n    SELECT f.montant_ht INTO v_montant_ht\n    FROM Factures f\n    WHERE f.id_facture = p_id_facture;\n    \n    v_tva := v_montant_ht * p_taux_tva / 100;\n    v_montant_ttc := v_montant_ht + v_tva;\n    \n    RETURN QUERY SELECT v_montant_ht, v_tva, v_montant_ttc;\nEND;\n$$ LANGUAGE plpgsql;</code></pre><p>La fonction prend désormais un deuxième paramètre <code>p_taux_tva</code> qui permet de spécifier le taux de TVA. Par exemple, pour une facture avec un taux de 18% : <code>SELECT * FROM calculer_facture_taux(42, 18);</code></p>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Procédure de gestion des commandes avec gestion d'erreurs",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Une plateforme de vente en ligne souhaite créer une procédure stockée pour traiter une nouvelle commande. La procédure doit :</p><ul><li>Vérifier que le client existe</li><li>Vérifier que tous les produits commandés sont disponibles en stock</li><li>Réduire le stock des produits commandés</li><li>Créer la commande et les lignes de commande</li><li>Gérer les erreurs (client inexistant, stock insuffisant)</li></ul><p>Les tables sont :</p><ul><li><code>Clients</code> (id_client, nom, email)</li><li><code>Produits</code> (id_produit, nom, prix, stock)</li><li><code>Commandes</code> (id_commande, id_client, date_commande, montant_total)</li><li><code>Lignes_Commande</code> (id_ligne, id_commande, id_produit, quantite, prix_unitaire)</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créez une procédure stockée <code>creer_commande</code> qui prend en paramètres <code>p_id_client</code> et un tableau de produits commandés (id_produit, quantite). La procédure doit gérer les erreurs et retourner un message approprié en cas d'échec.",
+        "niveau": "hard",
+        "reponse": "<p>Voici le code de la procédure stockée (en syntaxe PostgreSQL avec gestion d'erreurs) :</p><pre><code>CREATE OR REPLACE PROCEDURE creer_commande(\n    p_id_client INT,\n    p_produits JSONB  -- Format: [{\"id_produit\": 1, \"quantite\": 2}, ...]\n)\nLANGUAGE plpgsql\nAS $$\nDECLARE\n    v_id_commande INT;\n    v_montant_total DECIMAL := 0;\n    v_produit RECORD;\n    v_stock_disponible INT;\n    v_prix_unitaire DECIMAL;\n    v_client_existe BOOLEAN;\nBEGIN\n    -- Vérifier que le client existe\n    SELECT EXISTS(SELECT 1 FROM Clients WHERE id_client = p_id_client) INTO v_client_existe;\n    IF NOT v_client_existe THEN\n        RAISE EXCEPTION 'Client % inexistant.', p_id_client;\n    END IF;\n    \n    -- Vérifier le stock et calculer le montant total\n    FOR v_produit IN SELECT * FROM jsonb_to_recordset(p_produits) AS x(id_produit INT, quantite INT)\n    LOOP\n        SELECT stock, prix_unitaire INTO v_stock_disponible, v_prix_unitaire\n        FROM Produits WHERE id_produit = v_produit.id_produit;\n        \n        IF v_stock_disponible IS NULL THEN\n            RAISE EXCEPTION 'Produit % inexistant.', v_produit.id_produit;\n        END IF;\n        \n        IF v_stock_disponible < v_produit.quantite THEN\n            RAISE EXCEPTION 'Stock insuffisant pour le produit %. Disponible: %, Demandé: %',\n                v_produit.id_produit, v_stock_disponible, v_produit.quantite;\n        END IF;\n        \n        v_montant_total := v_montant_total + (v_prix_unitaire * v_produit.quantite);\n    END LOOP;\n    \n    -- Insérer la commande\n    INSERT INTO Commandes (id_client, date_commande, montant_total)\n    VALUES (p_id_client, CURRENT_DATE, v_montant_total)\n    RETURNING id_commande INTO v_id_commande;\n    \n    -- Insérer les lignes de commande et mettre à jour le stock\n    FOR v_produit IN SELECT * FROM jsonb_to_recordset(p_produits) AS x(id_produit INT, quantite INT)\n    LOOP\n        SELECT prix_unitaire INTO v_prix_unitaire\n        FROM Produits WHERE id_produit = v_produit.id_produit;\n        \n        INSERT INTO Lignes_Commande (id_commande, id_produit, quantite, prix_unitaire)\n        VALUES (v_id_commande, v_produit.id_produit, v_produit.quantite, v_prix_unitaire);\n        \n        UPDATE Produits SET stock = stock - v_produit.quantite\n        WHERE id_produit = v_produit.id_produit;\n    END LOOP;\n    \n    RAISE NOTICE 'Commande % créée avec succès pour le client %. Montant total: %',\n        v_id_commande, p_id_client, v_montant_total;\n    \nEXCEPTION\n    WHEN OTHERS THEN\n        RAISE NOTICE 'Erreur lors de la création de la commande : %', SQLERRM;\n        ROLLBACK;\nEND;\n$$;</code></pre><p>La procédure utilise une validation préalable des stocks, une transaction implicite (car toutes les opérations sont regroupées) et une gestion d'erreurs avec ROLLBACK en cas d'échec.</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez comment appeler cette procédure pour créer une commande pour le client 3 avec les produits : 2 unités du produit 101 et 1 unité du produit 205.",
+            "niveau": "medium",
+            "reponse": "<pre><code>CALL creer_commande(3, '[{\"id_produit\": 101, \"quantite\": 2}, {\"id_produit\": 205, \"quantite\": 1}]'::JSONB);</code></pre><p>Le premier paramètre est l'identifiant du client. Le deuxième paramètre est un tableau JSONB contenant la liste des produits avec leurs quantités. La notation ::JSONB force la conversion en type JSONB pour correspondre à la signature de la procédure.</p>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Quel message serait retourné si le client n'existe pas ? Et si le stock est insuffisant ?",
+            "niveau": "easy",
+            "reponse": "<ul><li><strong>Client inexistant :</strong> <code>RAISE EXCEPTION 'Client X inexistant.'</code> (avec X l'identifiant du client)</li><li><strong>Stock insuffisant :</strong> <code>RAISE EXCEPTION 'Stock insuffisant pour le produit X. Disponible: Y, Demandé: Z'</code> (avec X l'ID du produit, Y le stock disponible et Z la quantité demandée)</li></ul><p>Ces messages d'erreur sont levés par les instructions RAISE EXCEPTION et sont renvoyés à l'appelant. La procédure effectue un ROLLBACK automatique de toutes les opérations si une erreur survient.</p>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse comparative : Procédure vs Fonction",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Dans une base de données, on trouve souvent deux types d'objets programmables côté serveur : les procédures stockées et les fonctions stockées. Il est important de savoir quand utiliser l'un ou l'autre.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Comparez les procédures stockées et les fonctions stockées en termes de : (a) retour de valeur, (b) utilisation dans une requête SELECT, (c) possibilité d'effectuer des opérations d'écriture (INSERT, UPDATE, DELETE).",
+        "niveau": "easy",
+        "reponse": "<ul><li><strong>(a) Retour de valeur :</strong><br/>- Fonction : Retourne obligatoirement une valeur (un scalaire ou un tableau de résultats).<br/>- Procédure : Peut ne rien retourner, mais peut utiliser des paramètres OUT pour retourner des valeurs.</li><li><strong>(b) Utilisation dans une requête SELECT :</strong><br/>- Fonction : Peut être utilisée directement dans une requête SELECT (ex: <code>SELECT ma_fonction()</code>).<br/>- Procédure : Ne peut pas être utilisée dans une requête SELECT, doit être appelée avec CALL.</li><li><strong>(c) Opérations d'écriture :</strong><br/>- Fonction : En général, ne doit pas contenir d'opérations d'écriture (INSERT/UPDATE/DELETE) car cela pourrait violer le principe de transparence (une fonction appelée plusieurs fois peut avoir des effets de bord).<br/>- Procédure : Conçue pour les opérations d'écriture, peut contenir des INSERT, UPDATE, DELETE, COMMIT, ROLLBACK.</li></ul>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Dans quel cas utiliseriez-vous une procédure plutôt qu'une fonction ? Donnez un exemple concret.",
+            "niveau": "easy",
+            "reponse": "Une procédure est utilisée quand on a besoin d'effectuer des opérations de modification de données ou des transactions complexes. Par exemple :<br/><br/>- <strong>Mise à jour des prix :</strong> Une procédure qui augmente les prix de tous les produits de 5% et enregistre l'opération dans un journal.<br/>- <strong>Traitement de commandes :</strong> Une procédure qui crée une commande, vérifie les stocks, met à jour les stocks et crée les lignes de commande.<br/>- <strong>Rapports complexes :</strong> Une procédure qui génère des rapports et les stocke dans une table de reporting (opérations d'écriture).<br/><br/>Une fonction serait préférée pour des calculs qui ne modifient pas les données, comme le calcul de la TVA, la conversion de devises, ou l'extraction d'informations spécifiques."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Dans quel cas utiliseriez-vous une fonction plutôt qu'une procédure ? Donnez un exemple concret.",
+            "niveau": "easy",
+            "reponse": "Une fonction est utilisée quand on a besoin de calculer une valeur ou de retourner un ensemble de données qui sera intégré dans une requête SQL. Par exemple :<br/><br/>- <strong>Calcul d'âge :</strong> <code>SELECT age(date_naissance) FROM clients;</code><br/>- <strong>Conversion de devises :</strong> <code>SELECT convertir_prix(prix, 'USD', 'EUR') FROM produits;</code><br/>- <strong>Extraction d'informations :</strong> <code>SELECT nom, get_nb_commandes(id_client) FROM clients;</code><br/><br/>Une fonction est idéale pour des opérations de lecture (SELECT) qui retournent des valeurs scalaires ou des ensembles de données utilisables directement dans une requête SQL."
+          }
+        ]
+      }
+    ]
+  }
+]

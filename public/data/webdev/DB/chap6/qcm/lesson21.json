@@ -1,0 +1,98 @@
+[
+  {
+    "questionText": "Quelle est la commande SQL standard pour analyser le plan d'exécution d'une requête sans exécuter la requête (ou en affichant uniquement le plan) dans la plupart des SGBD comme PostgreSQL et MySQL ?",
+    "options": [
+      "`ANALYZE SELECT ...`",
+      "`EXECUTE PLAN FOR SELECT ...`",
+      "`EXPLAIN SELECT ...`",
+      "`DESCRIBE SELECT ...`"
+    ],
+    "correctAnswer": 2,
+    "difficulty": "easy",
+    "explanation": "La commande `EXPLAIN` est la commande standard utilisée dans la majorité des SGBD relationnels (MySQL, PostgreSQL, SQLite, etc.) pour obtenir le plan d'exécution d'une requête. `ANALYZE` est utilisé pour les statistiques, `DESCRIBE` pour la structure d'une table."
+  },
+  {
+    "questionText": "Dans un plan d'exécution généré par `EXPLAIN`, que signifie généralement le terme **`Seq Scan`** (ou `TABLE SCAN` selon les SGBD) ?",
+    "options": [
+      "La base de données utilise un index pour trouver les lignes.",
+      "La base de données parcourt chaque ligne de la table séquentiellement (de la première à la dernière).",
+      "La base de données utilise la mémoire cache uniquement.",
+      "La base de données effectue une jointure de type 'hash join'."
+    ],
+    "correctAnswer": 1,
+    "difficulty": "easy",
+    "explanation": "Un `Seq Scan` (Scan séquentiel) signifie que le SGBD lit le bloc de données de la table dans son intégralité, de la première ligne à la dernière. C'est la méthode la moins efficace pour les grandes tables, mais elle peut être rapide pour les très petites tables."
+  },
+  {
+    "questionText": "Un étudiant exécute `EXPLAIN SELECT * FROM etudiants WHERE age &gt; 20;` et obtient `Index Scan using idx_age on etudiants`. Quel est le principal avantage de cet `Index Scan` par rapport à un `Seq Scan` sur une table contenant 1 million d'enregistrements ?",
+    "options": [
+      "Il verrouille moins de lignes.",
+      "Il lit uniquement les blocs de données correspondant aux lignes trouvées via l'index, ce qui est généralement plus rapide.",
+      "Il trie automatiquement les résultats par ordre alphabétique.",
+      "Il consomme plus de mémoire RAM mais moins de CPU."
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium",
+    "explanation": "L'`Index Scan` utilise l'index (comme le `idx_age`) pour localiser précisément les adresses (blocs) des lignes qui satisfont la condition `age &gt; 20`. Au lieu de scanner toute la table, le SGBD ne va chercher que les blocs concernés, réduisant ainsi drastiquement les entrées/sorties disque (I/O)."
+  },
+  {
+    "questionText": "En regardant un plan d'exécution PostgreSQL, vous voyez `cost=0.15..52.10`. Que représente la seconde valeur (ici `52.10`) dans l'estimation du `cost` ?",
+    "options": [
+      "Le temps d'exécution estimé en secondes.",
+      "Le nombre de lignes retournées par la requête.",
+      "Le coût estimé pour retourner la première ligne.",
+      "Le coût estimé pour retourner la *dernière* ligne (coût total)."
+    ],
+    "correctAnswer": 3,
+    "difficulty": "hard",
+    "explanation": "Dans PostgreSQL, la syntaxe `cost=X..Y` signifie : `X` est le coût estimé pour le démarrage (retourner la première ligne) et `Y` est le coût total estimé (retourner la dernière ligne). Ce coût est une unité abstraite qui combine le temps CPU et les I/O disque. Comparer `X` et `Y` permet de savoir si l'opération est \"bloquante\" (peut retourner vite des résultats ou non)."
+  },
+  {
+    "questionText": "Vous utilisez `EXPLAIN ANALYZE SELECT * FROM commandes WHERE client_id = 10;`. Quelle information supplémentaire critique `ANALYZE` apporte-t-elle par rapport à `EXPLAIN` seul ?",
+    "options": [
+      "Il crée automatiquement un index sur `client_id`.",
+      "Il exécute réellement la requête et affiche les temps d'exécution réels (actual time) et le nombre réel de lignes.",
+      "Il optimise la requête automatiquement avant de l'exécuter.",
+      "Il supprime les doublons du résultat avant affichage."
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium",
+    "explanation": "Alors que `EXPLAIN` donne une *estimation* (basée sur les statistiques), `EXPLAIN ANALYZE` exécute VRAIMENT la requête. Il affiche donc les temps d'exécution réels (`actual time`) et les nombres de lignes réelles. Cela permet de confronter les estimations du planificateur à la réalité et de détecter des problèmes de cardinalité mal estimée."
+  },
+  {
+    "questionText": "Dans un plan d'exécution, que signifie le terme **`Nested Loop`** dans le cadre d'une jointure entre deux tables `A` et `B` ?",
+    "options": [
+      "Les deux tables sont triées puis fusionnées.",
+      "Pour chaque ligne trouvée dans la table `A`, la base de données parcourt (scanne) la table `B` (ou un index dessus) à la recherche des correspondances.",
+      "Les deux tables sont hashées en mémoire avant d'être comparées.",
+      "La base de données crée une table temporaire croisée (produit cartésien) avant de filtrer."
+    ],
+    "correctAnswer": 1,
+    "difficulty": "hard",
+    "explanation": "La jointure `Nested Loop` (Boucle imbriquée) fonctionne comme une double boucle : elle lit une ligne de `A` (table externe), puis cherche les correspondances dans `B` (table interne). C'est très efficace si la table interne est petite ou si elle dispose d'un index sur la clé de jointure. C'est dangereux si `B` est grande et sans index (cela devient un produit cartésien)."
+  },
+  {
+    "questionText": "Un développeur voit que sa requête `SELECT * FROM produits WHERE nom LIKE '%ordi%';` utilise un `Seq Scan` alors qu'un index existe sur la colonne `nom`. Quelle en est la raison la plus probable ?",
+    "options": [
+      "L'index est corrompu.",
+      "La clause `LIKE` avec un joker `%` au début (recherche de sous-chaîne) rend un index B-Tree classique inutilisable pour un scan de recherche.",
+      "Il manque la commande `ANALYZE` sur la table.",
+      "Le SGBD préfère toujours le Seq Scan pour la sécurité."
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium",
+    "explanation": "Les index B-Tree standards (les plus courants) fonctionnent de la gauche vers la droite. Avec `%` au début (`'%ordi%'`), on cherche un fragment de texte au milieu de la chaîne. Le SGBD ne peut pas utiliser l'index pour trouver directement cette valeur (il faudrait un index Full-Text ou `LIKE 'ordi%'` - sans % au début)."
+  },
+  {
+    "questionText": "Quelle commande utilise-t-on pour mettre à jour les statistiques dont le planificateur de requêtes a besoin pour estimer correctement le nombre de lignes dans une table `employes` ?",
+    "options": [
+      "`REFRESH STATS employes;`",
+      "`UPDATE STATISTICS employes;`",
+      "`ANALYZE employes;` (ou `VACUUM ANALYZE` sous PostgreSQL)",
+      "`OPTIMIZE TABLE employes;`"
+    ],
+    "correctAnswer": 2,
+    "difficulty": "medium",
+    "explanation": "La commande `ANALYZE` (ou son équivalent selon le SGBD) collecte des statistiques sur la distribution des données dans les colonnes (ex: nombre de valeurs distinctes, valeurs les plus fréquentes, nullité). Sans statistiques à jour, le planificateur peut faire de mauvais choix (ex: choisir un Seq Scan alors qu'un Index Scan serait 1000 fois plus rapide)."
+  }
+]

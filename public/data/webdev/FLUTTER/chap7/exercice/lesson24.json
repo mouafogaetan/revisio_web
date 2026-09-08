@@ -1,0 +1,107 @@
+[
+  {
+    "intitule": "Manipulation d'une base de données SQLite en Flutter",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous développez une application Flutter de gestion de notes personnelles. Vous décidez d'utiliser <code>sqflite</code> pour stocker les notes localement. Une note est définie par :</p><ul><li>un <code>id</code> (entier, clé primaire auto-incrémentée)</li><li>un <code>titre</code> (texte)</li><li>un <code>contenu</code> (texte)</li><li>une <code>dateCreation</code> (texte au format 'yyyy-MM-dd')</li></ul><p>Écrivez les extraits de code Dart demandés en respectant l'architecture proposée.</p>",
+      "images": [
+        "Schéma d'une table SQLite avec les champs : id, titre, contenu, dateCreation",
+        "Exemple de code Flutter montrant l'initialisation d'une base de données avec sqflite"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez la méthode asynchrone `initDatabase()` qui crée la table `notes` avec la structure donnée.",
+        "niveau": "medium",
+        "reponse": "```dart\nFuture<Database> initDatabase() async {\n  return await openDatabase(\n    join(await getDatabasesPath(), 'notes.db'),\n    onCreate: (db, version) {\n      return db.execute(\n        'CREATE TABLE notes(id INTEGER PRIMARY KEY AUTOINCREMENT, titre TEXT, contenu TEXT, dateCreation TEXT)',\n      );\n    },\n    version: 1,\n  );\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Implémentez la fonction `insertNote(Note note)` qui insère une nouvelle note et retourne l'ID généré.",
+        "niveau": "medium",
+        "reponse": "```dart\nFuture<int> insertNote(Note note) async {\n  Database db = await initDatabase();\n  return await db.insert('notes', note.toMap());\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Écrivez la fonction `getAllNotes()` qui récupère toutes les notes triées par date de création décroissante.",
+        "niveau": "hard",
+        "reponse": "```dart\nFuture<List<Note>> getAllNotes() async {\n  Database db = await initDatabase();\n  final List<Map<String, dynamic>> maps = await db.query(\n    'notes',\n    orderBy: 'dateCreation DESC',\n  );\n  return List.generate(maps.length, (i) => Note.fromMap(maps[i]));\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Application personnelle de gestion de notes avec sqflite",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Votre client souhaite une application mobile de prise de notes rapide. Les exigences :</p><ul><li>L'utilisateur peut ajouter une note (titre, contenu, date automatique).</li><li>L'utilisateur peut modifier une note existante.</li><li>L'utilisateur peut supprimer une note après confirmation.</li><li>Toutes les notes s'affichent dans une liste (titre + date).</li><li>Les données persistent après fermeture de l'application.</li></ul><p>Proposez une solution en utilisant <code>sqflite</code>. Justifiez le choix des widgets d'état (StatefulWidget ou autre) et du pattern de gestion d'état adapté.</p>",
+      "images": [
+        "Maquette d'écran d'accueil avec liste de notes et bouton flottant d'ajout",
+        "Maquette d'écran d'ajout/modification de note avec champs Titre et Contenu"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Justifiez pourquoi vous choisissez un `StatefulWidget` pour l'écran principal d'affichage des notes.",
+        "niveau": "medium",
+        "reponse": "L'écran principal doit se rafraîchir dynamiquement après chaque ajout, modification ou suppression. Un StatefulWidget avec `setState()` est suffisant car les données sont locales et la hiérarchie reste simple. Toute modification de la base déclenche un appel à `_loadNotes()` puis `setState()` pour mettre à jour la liste.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Décrivez la fonction `deleteNote(int id)` qui supprime une note après avoir demandé confirmation à l'utilisateur (utilisation de `showDialog`).",
+        "niveau": "hard",
+        "reponse": "```dart\nFuture<void> deleteNote(BuildContext context, int id) async {\n  bool? confirm = await showDialog<bool>(\n    context: context,\n    builder: (ctx) => AlertDialog(\n      title: Text('Supprimer'),\n      content: Text('Voulez-vous vraiment supprimer cette note ?'),\n      actions: [\n        TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Non')),\n        TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text('Oui')),\n      ],\n    ),\n  );\n  if (confirm == true) {\n    Database db = await initDatabase();\n    await db.delete('notes', where: 'id = ?', whereArgs: [id]);\n    _loadNotes(); // Recharge la liste\n  }\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquez comment gérer la migration de schéma si on ajoute un champ `estArchive` (booléen) dans la version 2 de la base.",
+        "niveau": "very hard",
+        "reponse": "Dans la méthode `onUpgrade` de `openDatabase`, on vérifie l'ancienne version. Si `oldVersion < 2`, on exécute `ALTER TABLE notes ADD COLUMN estArchive INTEGER DEFAULT 0`. SQLite ne supporte pas le type booléen, on utilise 0 (false) ou 1 (true).\n\n```dart\nonUpgrade: (db, oldVersion, newVersion) async {\n  if (oldVersion < 2) {\n    await db.execute('ALTER TABLE notes ADD COLUMN estArchive INTEGER DEFAULT 0');\n  }\n}\n```\nOn incrémente `version: 2` dans `openDatabase`.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation des requêtes SQLite",
+    "type": "ressource",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Votre application contient plus de 10 000 notes. L'affichage de la liste commence à devenir lent. Vous devez optimiser les accès à la base de données.</p><p>Répondez aux questions suivantes en justifiant précisément vos choix.</p>",
+      "images": [
+        "Graphique comparant le temps d'exécution des requêtes avec et sans index",
+        "Schéma d'un curseur (Cursor) parcourant les résultats d'une requête SQLite"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez pourquoi il est conseillé d'utiliser `ListView.builder` plutôt que `ListView` standard avec `sqflite`.",
+        "niveau": "medium",
+        "reponse": "`ListView.builder` construit les éléments de manière paresseuse (lazy loading), seulement quand ils deviennent visibles. Cela évite de charger toutes les notes en mémoire d'un coup et améliore les performances pour de grands ensembles de données. Avec `sqflite`, on charge la liste des notes une fois, mais l'affichage reste fluide.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrivez la requête SQL pour ajouter un index sur la colonne `dateCreation` afin d'accélérer le tri.",
+        "niveau": "easy",
+        "reponse": "```sql\nCREATE INDEX idx_notes_dateCreation ON notes(dateCreation DESC);\n```\nL'index accélère les requêtes avec `ORDER BY dateCreation DESC` et aussi les recherches par intervalle de dates.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposez une optimisation pour charger uniquement les champs nécessaires à l'affichage (titre et date) au lieu de toute la note.",
+        "niveau": "hard",
+        "reponse": "Au lieu de `SELECT * FROM notes`, on spécifie les colonnes :\n```dart\nfinal List<Map<String, dynamic>> maps = await db.query(\n  'notes',\n  columns: ['id', 'titre', 'dateCreation'],\n  orderBy: 'dateCreation DESC',\n);\n```\nCela réduit la quantité de données transférées et la mémoire utilisée. Le contenu de la note ne sera chargé que lorsque l'utilisateur ouvrira le détail, avec une seconde requête (`SELECT contenu FROM notes WHERE id = ?`).",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

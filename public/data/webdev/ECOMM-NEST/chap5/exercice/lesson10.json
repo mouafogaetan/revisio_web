@@ -1,0 +1,164 @@
+[
+  {
+    "intitule": "Comprendre le Flux de Dépôt Mobile Money",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Dans le contexte de l'API e-commerce Sawamart, un utilisateur souhaite déposer 5 000 FCFA sur son wallet via Mobile Money. Le dépôt doit passer par les étapes suivantes : <strong>Initiation → Validation par le comptable → Crédit du wallet</strong>.</p><p>En vous basant sur le schéma fonctionnel ci-dessous, répondez aux questions suivantes :</p><div class='math-block'><div class='math'>$$\\text{Initiation} \\xrightarrow{\\text{POST /deposits/initiate}} \\text{En attente} \\xrightarrow{\\text{Validation}} \\text{Wallet crédité}$$</div></div>",
+      "images": [
+        "Diagramme de séquence montrant le flux d'un dépôt Mobile Money : l'utilisateur initie la demande, le système crée un enregistrement en base, le comptable valide, et le solde du wallet est mis à jour."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Quelles sont les 3 entités principales concernées par le processus de dépôt ?",
+        "niveau": "easy",
+        "reponse": "Les entités principales sont : Deposit, Wallet et User.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "À quel moment le solde du wallet est-il réellement augmenté ?",
+        "niveau": "easy",
+        "reponse": "Le solde du wallet est augmenté lors de la validation du dépôt par le comptable, après vérification des fonds.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Pourquoi utilise-t-on un statut 'PENDING' pour le dépôt avant validation ?",
+        "niveau": "medium",
+        "reponse": "Le statut 'PENDING' permet de tracer la demande et d'assurer qu'aucun crédit n'est effectué sans validation préalable. Cela évite les erreurs de comptabilité et permet un contrôle interne.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Créer le Service de Dépôt",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>En tant que développeur backend, vous devez implémenter le <code>DepositService</code> pour gérer les demandes de dépôt. Le service doit permettre de créer une demande de dépôt, de la valider et de la rejeter.</p><p>Rappel des règles métier :</p><ul><li>Une demande de dépôt ne peut être validée que si son montant est supérieur à 0.</li><li>Un dépôt ne peut pas être validé deux fois.</li><li>Le wallet de l'utilisateur est crédité uniquement après validation.</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez la méthode `initiateDeposit` du `DepositService`. Quels paramètres prend-elle et que doit-elle retourner ?",
+        "niveau": "medium",
+        "reponse": "La méthode `initiateDeposit` prend en paramètres `userId` (l'identifiant de l'utilisateur) et `amount` (le montant à déposer). Elle crée une nouvelle entité `Deposit` avec le statut 'PENDING', l'associe à l'utilisateur, et retourne l'objet `Deposit` créé avec son ID.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez comment vous implémenteriez la méthode `validateDeposit` pour qu'elle respecte les règles métier.",
+        "niveau": "hard",
+        "reponse": "La méthode `validateDeposit` reçoit l'ID du dépôt et le comptable qui valide. Elle doit d'abord récupérer le dépôt et vérifier qu'il est bien en statut 'PENDING'. Si c'est le cas, elle vérifie que le montant est valide. Ensuite, elle utilise une transaction SQL (via `QueryRunner`) pour : 1) Mettre à jour le statut du dépôt à 'VALIDATED', 2) Créditer le wallet de l'utilisateur en utilisant `WalletService.credit()`, 3) Créer une transaction interne associée. Si une étape échoue, tout est annulé.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposez une solution pour empêcher la double validation d'un même dépôt.",
+        "niveau": "medium",
+        "reponse": "Avant toute mise à jour, on vérifie que le statut actuel du dépôt est 'PENDING'. Si ce n'est pas le cas, on lance une exception. Cette vérification, combinée à une transaction SQL, garantit l'intégrité des données même en cas d'appels simultanés.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyser les Enjeux de Sécurité des Dépôts",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Les opérations de dépôt et de retrait impliquent de l'argent réel. Il est donc crucial de sécuriser ces endpoints.</p><p>Voici un extrait du code du contrôleur de dépôt :</p><pre><code>@Post('initiate')\n@UseGuards(JwtAuthGuard)\n@UsePipes(ValidationPipe)\ninitiateDeposit(@Body() dto: InitiateDepositDto, @Req() req) {\n  return this.depositService.initiate(req.user.id, dto.amount);\n}\n\n@Post(':id/validate')\n@UseGuards(JwtAuthGuard, RolesGuard)\n@Roles('comptable')\nvalidateDeposit(@Param('id') id: string, @Req() req) {\n  return this.depositService.validate(id, req.user.id);\n}</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analysez les mesures de sécurité mises en place dans le code ci-dessus.",
+        "niveau": "hard",
+        "reponse": "Les mesures de sécurité incluent : 1) JwtAuthGuard pour s'assurer que l'utilisateur est authentifié, 2) ValidationPipe pour valider les données entrantes (DTO), 3) RolesGuard pour restreindre l'accès à la validation uniquement aux comptables, 4) L'utilisation de l'ID de l'utilisateur connecté (issu du JWT) pour lier la demande, ce qui empêche un utilisateur d'initier un dépôt au nom d'un autre.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Identifiez un risque de sécurité potentiel non couvert par ce code.",
+        "niveau": "hard",
+        "reponse": "Le code ne vérifie pas si l'utilisateur qui initie le dépôt est le même que celui qui le valide (ce qui est normal car c'est le comptable). Cependant, il manque un mécanisme pour limiter le nombre de tentatives de dépôt par un utilisateur donné (rate limiting). Un attaquant pourrait initier un grand nombre de dépôts pour saturer le système.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposez des améliorations pour renforcer la sécurité de ces endpoints.",
+        "niveau": "very hard",
+        "reponse": "1) Ajouter un ThrottlerGuard pour limiter le nombre de requêtes par utilisateur (ex : 5 dépôts par heure). 2) Journaliser toutes les actions (logging) pour faciliter les audits. 3) Implémenter un mécanisme de vérification de l'OTP avant l'initiation d'un dépôt pour confirmer l'identité de l'utilisateur. 4) Ajouter une validation sur le montant (limites min/max) pour éviter les abus.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Gérer l'Expiration des Dépôts avec une Tâche Cron",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Les demandes de dépôt non validées doivent expirer automatiquement après 24 heures. Vous devez mettre en place une tâche planifiée avec le décorateur <code>@Cron</code> de NestJS.</p><p>La tâche doit :</p><ul><li>S'exécuter toutes les heures.</li><li>Récupérer tous les dépôts en statut 'PENDING' créés il y a plus de 24 heures.</li><li>Mettre à jour leur statut à 'EXPIRED'.</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le code de la méthode `handleExpiredDeposits` dans le `DepositService`.",
+        "niveau": "hard",
+        "reponse": "```typescript\n@Cron('0 * * * *') // Toutes les heures\nasync handleExpiredDeposits() {\n  const expirationTime = new Date();\n  expirationTime.setHours(expirationTime.getHours() - 24);\n\n  const expiredDeposits = await this.depositRepository\n    .createQueryBuilder('deposit')\n    .where('deposit.status = :status', { status: 'PENDING' })\n    .andWhere('deposit.createdAt < :expirationTime', { expirationTime })\n    .getMany();\n\n  for (const deposit of expiredDeposits) {\n    deposit.status = 'EXPIRED';\n    await this.depositRepository.save(deposit);\n    // Optionnel : notifier l'utilisateur\n  }\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Pourquoi est-il important d'utiliser une requête SQL avec `createQueryBuilder` plutôt que de charger tous les dépôts via `find()` ?",
+        "niveau": "hard",
+        "reponse": "Utiliser `createQueryBuilder` permet d'ajouter des conditions de filtrage directement dans la requête SQL, ce qui est plus efficace car on ne charge en mémoire que les dépôts concernés. Avec `find()`, on chargerait tous les dépôts puis on les filtrerait en mémoire, ce qui consommerait plus de ressources, surtout si la table contient un grand nombre d'enregistrements.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposez une amélioration pour éviter de verrouiller la base de données pendant l'exécution de cette tâche.",
+        "niveau": "very hard",
+        "reponse": "On peut traiter les dépôts par lots (batch) en utilisant `take` et `skip` pour limiter le nombre d'enregistrements traités à chaque exécution. On peut également utiliser un verrouillage pessimiste (`SELECT ... FOR UPDATE`) pour éviter que deux instances de la tâche n'interfèrent. Enfin, on peut exécuter la mise à jour en une seule requête avec `update` pour améliorer les performances.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Concevoir un Endpoint de Retrait Sécurisé",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous devez implémenter l'endpoint <code>POST /withdrawals/initiate</code> pour permettre à un utilisateur de retirer de l'argent de son wallet.</p><p>Règles métier :</p><ul><li>Un utilisateur ne peut retirer que si son solde est suffisant.</li><li>Le retrait doit être validé par un comptable avant d'être effectif.</li><li>En attendant la validation, le montant est bloqué (escrow).</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créez le DTO `InitiateWithdrawalDto` avec les validations appropriées.",
+        "niveau": "medium",
+        "reponse": "```typescript\nimport { IsNumber, IsPositive, IsString, IsNotEmpty } from 'class-validator';\n\nexport class InitiateWithdrawalDto {\n  @IsNumber()\n  @IsPositive({ message: 'Le montant doit être positif.' })\n  amount: number;\n\n  @IsString()\n  @IsNotEmpty({ message: 'Le numéro de téléphone est requis.' })\n  phoneNumber: string;\n\n  @IsString()\n  @IsNotEmpty({ message: 'L\'opérateur est requis (Orange, MTN, etc.)' })\n  operator: string;\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Rédigez la méthode `initiateWithdrawal` dans le `WithdrawalService`. Utilisez une transaction pour bloquer les fonds.",
+        "niveau": "very hard",
+        "reponse": "```typescript\nasync initiateWithdrawal(userId: string, dto: InitiateWithdrawalDto) {\n  const queryRunner = this.dataSource.createQueryRunner();\n  await queryRunner.connect();\n  await queryRunner.startTransaction();\n\n  try {\n    // 1. Récupérer le wallet de l'utilisateur avec verrouillage\n    const wallet = await queryRunner.manager.findOne(Wallet, {\n      where: { userId },\n      lock: { mode: 'pessimistic_write' }\n    });\n\n    if (!wallet || wallet.balance < dto.amount) {\n      throw new BadRequestException('Solde insuffisant.');\n    }\n\n    // 2. Bloquer les fonds (les déduire du solde disponible)\n    wallet.balance -= dto.amount;\n    wallet.blockedBalance += dto.amount;\n    await queryRunner.manager.save(wallet);\n\n    // 3. Créer la demande de retrait\n    const withdrawal = queryRunner.manager.create(Withdrawal, {\n      userId,\n      amount: dto.amount,\n      phoneNumber: dto.phoneNumber,\n      operator: dto.operator,\n      status: 'PENDING'\n    });\n    await queryRunner.manager.save(withdrawal);\n\n    await queryRunner.commitTransaction();\n    return withdrawal;\n  } catch (error) {\n    await queryRunner.rollbackTransaction();\n    throw error;\n  } finally {\n    await queryRunner.release();\n  }\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquez l'importance du verrouillage pessimiste (`pessimistic_write`) dans cette méthode.",
+        "niveau": "hard",
+        "reponse": "Le verrouillage pessimiste (`SELECT ... FOR UPDATE`) empêche deux requêtes simultanées de lire et de modifier le même wallet en même temps. Sans ce verrouillage, si deux retraits sont initiés en même temps, les deux pourraient vérifier que le solde est suffisant avant que l'un des deux n'ait effectivement déduit le montant, ce qui pourrait entraîner un solde négatif.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

@@ -1,0 +1,190 @@
+[
+  {
+    "intitule": "Installation et configuration de TanStack Query dans un projet React",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous devez intégrer <strong>@tanstack/react-query</strong> dans une application React e-commerce pour gérer les appels API (catalogue produits, panier, commandes).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rappelez la commande d'installation de react-query dans un projet utilisant npm.",
+        "niveau": "easy",
+        "reponse": "npm install @tanstack/react-query",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Décrivez les étapes nécessaires pour configurer le QueryClientProvider à la racine de l'application (fichier main.jsx ou App.jsx).",
+        "niveau": "medium",
+        "reponse": "1. Importer QueryClient et QueryClientProvider depuis '@tanstack/react-query'. 2. Créer une instance de QueryClient : `const queryClient = new QueryClient();`. 3. Envelopper l'application (ou le composant racine) avec `<QueryClientProvider client={queryClient}>...</QueryClientProvider>`.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquez à quoi sert le paramètre `staleTime` lors de la configuration d'une requête avec `useQuery`.",
+        "niveau": "medium",
+        "reponse": "`staleTime` définit la durée (en millisecondes) pendant laquelle les données sont considérées comme 'fraîches'. Pendant cette période, react-query ne refera pas de requête automatique lors du refetch. C'est utile pour éviter des appels réseau inutiles sur des données qui changent rarement (ex: catalogue de produits).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Implémentation de la recherche de produits avec debounce et React Query",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Dans votre interface e-commerce, vous devez implémenter une barre de recherche dynamique. L'utilisateur tape un terme de recherche, et après un court délai (debounce), une requête est envoyée au backend pour filtrer les produits. Vous utilisez <strong>TanStack Query</strong> pour gérer cette requête.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créez un hook personnalisé `useSearchProducts` qui utilise `useQuery` avec un paramètre de recherche `searchTerm`. Expliquez pourquoi il est important d'utiliser `enabled: !!searchTerm`.",
+        "niveau": "hard",
+        "reponse": "```js\nconst useSearchProducts = (searchTerm) => {\n  return useQuery({\n    queryKey: ['products', 'search', searchTerm],\n    queryFn: () => fetch(`/api/products?search=${searchTerm}`).then(res => res.json()),\n    enabled: !!searchTerm, // La requête n'est exécutée que si searchTerm n'est pas vide\n    staleTime: 1000 * 30 // 30 secondes\n  });\n};\n```\nL'option `enabled` empêche l'exécution de la requête lorsque le terme de recherche est vide, évitant ainsi des appels inutiles au backend.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposez une implémentation du debounce (300ms) dans un composant React utilisant ce hook.",
+            "niveau": "medium",
+            "reponse": "```js\nconst [searchTerm, setSearchTerm] = useState('');\nconst debouncedSearchTerm = useDebounce(searchTerm, 300);\nconst { data, isLoading } = useSearchProducts(debouncedSearchTerm);\n\n// Avec un hook useDebounce personnalisé :\nfunction useDebounce(value, delay) {\n  const [debouncedValue, setDebouncedValue] = useState(value);\n  useEffect(() => {\n    const handler = setTimeout(() => setDebouncedValue(value), delay);\n    return () => clearTimeout(handler);\n  }, [value, delay]);\n  return debouncedValue;\n}\n```",
+            "sousQuestions": []
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Justifiez l'utilisation de `queryKey` incluant `searchTerm`. Que se passe-t-il si le `queryKey` ne change pas alors que le terme de recherche est différent ?",
+        "niveau": "medium",
+        "reponse": "Le `queryKey` est l'identifiant unique de la requête. Si le `searchTerm` change, le `queryKey` change également, ce qui force react-query à exécuter une nouvelle requête. Si le `queryKey` restait identique, react-query servirait les données mises en cache de l'ancienne recherche, ce qui est incorrect.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Mutation d'ajout au panier avec invalidation de cache",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un utilisateur peut ajouter un produit à son panier. Après un ajout réussi, le compteur du panier dans l'en-tête doit se mettre à jour. Vous utilisez <strong>useMutation</strong> de TanStack Query.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le code d'une mutation `useAddToCart` qui envoie une requête POST à `/api/cart` et, en cas de succès, invalide la requête du panier (queryKey `['cart']`) pour forcer un rafraîchissement.",
+        "niveau": "hard",
+        "reponse": "```js\nimport { useMutation, useQueryClient } from '@tanstack/react-query';\n\nconst useAddToCart = () => {\n  const queryClient = useQueryClient();\n  \n  return useMutation({\n    mutationFn: (productData) => \n      fetch('/api/cart', {\n        method: 'POST',\n        headers: { 'Content-Type': 'application/json' },\n        body: JSON.stringify(productData)\n      }).then(res => res.json()),\n    onSuccess: () => {\n      // Invalider la requête du panier pour qu'elle se rafraîchisse\n      queryClient.invalidateQueries({ queryKey: ['cart'] });\n    }\n  });\n};\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Que se passerait-il si on n'invalidait pas la requête du panier après la mutation ?",
+            "niveau": "easy",
+            "reponse": "Le compteur du panier afficherait l'ancienne valeur (avant ajout) car les données en cache ne seraient pas mises à jour. L'utilisateur devrait recharger la page pour voir le changement.",
+            "sousQuestions": []
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Ajoutez la gestion des erreurs et un indicateur de chargement dans le composant qui utilise cette mutation.",
+        "niveau": "medium",
+        "reponse": "```js\nconst { mutate, isLoading, error, isError } = useAddToCart();\n\nconst handleAddToCart = () => {\n  mutate({ productId: 123, quantity: 1 });\n};\n\nreturn (\n  <div>\n    {isLoading && <Spinner />}\n    {isError && <p className=\"text-red-500\">Erreur: {error.message}</p>}\n    <button onClick={handleAddToCart} disabled={isLoading}>\n      Ajouter au panier\n    </button>\n  </div>\n);\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation du cache avec staleTime et refetchOnWindowFocus",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Pour une page catalogue affichant 50 produits, vous voulez éviter des appels réseau trop fréquents tout en garantissant que l'utilisateur voit des données à jour.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez une configuration de `useQuery` pour le catalogue avec les paramètres suivants : `staleTime` de 5 minutes, `refetchOnWindowFocus` désactivé, et cache conservé pendant 10 minutes.",
+        "niveau": "medium",
+        "reponse": "```js\nuseQuery({\n  queryKey: ['products'],\n  queryFn: fetchProducts,\n  staleTime: 1000 * 60 * 5,      // 5 minutes : données considérées fraîches\n  gcTime: 1000 * 60 * 10,        // 10 minutes (anciennement cacheTime)\n  refetchOnWindowFocus: false\n});\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez la différence entre `staleTime` et `gcTime` (anciennement `cacheTime`).",
+        "niveau": "hard",
+        "reponse": "`staleTime` détermine combien de temps les données sont considérées comme 'fraîches'. Pendant cette période, react-query ne refera pas de requête automatique. `gcTime` (Garbage Collection Time) détermine combien de temps les données inutilisées (sans observateur actif) restent en cache avant d'être supprimées. Passé ce délai, le cache est vidé pour libérer de la mémoire.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Dans quel cas activeriez-vous `refetchOnWindowFocus` et pourquoi ?",
+        "niveau": "easy",
+        "reponse": "On active `refetchOnWindowFocus` pour des données critiques qui doivent être absolument à jour, comme les stocks de produits ou les informations de paiement. Cela permet de rafraîchir automatiquement les données lorsque l'utilisateur revient sur l'onglet après être passé sur une autre application. Pour un catalogue statique, on le désactive généralement.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Préchargement des données au survol d'un lien produit",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Pour améliorer l'expérience utilisateur, vous décidez de précharger les détails d'un produit lorsque l'utilisateur survole le lien vers la page produit. Utilisez la fonction <strong>prefetchQuery</strong> de TanStack Query.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez un composant `ProductLink` qui précharge les données du produit au survol de la souris, en utilisant `useQueryClient` et `prefetchQuery`.",
+        "niveau": "very hard",
+        "reponse": "```jsx\nimport { useQueryClient } from '@tanstack/react-query';\nimport { Link } from 'react-router-dom';\n\nfunction ProductLink({ productId, children }) {\n  const queryClient = useQueryClient();\n  \n  const prefetchProduct = () => {\n    queryClient.prefetchQuery({\n      queryKey: ['product', productId],\n      queryFn: () => fetch(`/api/products/${productId}`).then(res => res.json()),\n      staleTime: 1000 * 60 * 5\n    });\n  };\n  \n  return (\n    <Link \n      to={`/product/${productId}`} \n      onMouseEnter={prefetchProduct}\n      onFocus={prefetchProduct} // Accessibilité clavier\n    >\n      {children}\n    </Link>\n  );\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quel est l'avantage de cette technique en termes de performance perçue ?",
+            "niveau": "medium",
+            "reponse": "Lorsque l'utilisateur clique sur le lien, les données sont déjà en cache (ou en cours de chargement), ce qui rend l'affichage de la page produit quasi instantané. Cela réduit le temps d'attente perçu et améliore la fluidité de navigation.",
+            "sousQuestions": []
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Quel risque potentiel existe-t-il avec le préchargement massif (tous les liens d'une grille de 50 produits) ? Comment le mitiger ?",
+        "niveau": "hard",
+        "reponse": "Le risque est de surcharger le réseau et le backend avec de nombreuses requêtes inutiles si l'utilisateur survole rapidement tous les produits. Pour mitiger : utiliser un délai (debounce) avant de déclencher le préchargement (ex: 200ms), ou limiter le préchargement aux produits visibles dans le viewport (grâce à Intersection Observer), ou encore ne précharger que les premiers résultats.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Configuration globale du QueryClient pour toute l'application",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous souhaitez définir des valeurs par défaut pour toutes les requêtes de l'application (staleTime, refetchOnWindowFocus, retry).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Montrez comment configurer le QueryClient avec des options par défaut applicables à toutes les requêtes.",
+        "niveau": "medium",
+        "reponse": "```js\nimport { QueryClient } from '@tanstack/react-query';\n\nconst queryClient = new QueryClient({\n  defaultOptions: {\n    queries: {\n      staleTime: 1000 * 60,      // 1 minute\n      refetchOnWindowFocus: false,\n      retry: 1,                  // Une seule tentative en cas d'échec\n      gcTime: 1000 * 60 * 5,     // 5 minutes\n    },\n    mutations: {\n      retry: 1\n    }\n  }\n});\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Comment peut-on surcharger ces valeurs par défaut pour une requête spécifique ?",
+        "niveau": "easy",
+        "reponse": "En passant des options supplémentaires dans `useQuery`. Exemple : `useQuery({ queryKey: ['special'], queryFn: fetchSpecial, staleTime: 0 })` pour que ces données soient toujours considérées comme périmées immédiatement.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

@@ -1,0 +1,165 @@
+[
+  {
+    "intitule": "Comprendre l'Architecture Actor-Critic",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>L'architecture Actor-Critic est un pilier des méthodes avancées d'apprentissage par renforcement. Elle combine les forces des méthodes basées sur la valeur et des méthodes basées sur la politique.</p>",
+      "images": [
+        "Un schéma de l'architecture Actor-Critic montrant l'interaction entre l'acteur (politique) et le critique (fonction de valeur)."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez l'architecture Actor-Critic. Quel est le rôle de l'acteur ? Quel est le rôle du critique ?",
+        "niveau": "easy",
+        "reponse": "L'architecture Actor-Critic est composée de deux réseaux :\n1. **L'acteur (Actor)** : Représente la politique \\(\\pi_\\theta(s)\\). Il prend un état en entrée et produit une distribution de probabilité sur les actions (ou une action continue). Son rôle est de choisir les actions.\n2. **Le critique (Critic)** : Représente la fonction de valeur \\(V_{\\phi}(s)\\) ou \\(Q_{\\phi}(s,a)\\). Il évalue la qualité de l'état ou de l'action choisie par l'acteur.\n\nLes deux réseaux sont entraînés simultanément : l'acteur utilise les critiques du critique pour améliorer la politique, et le critique apprend à mieux évaluer les états.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quel est l'avantage de cette architecture par rapport à REINFORCE avec Baseline ?",
+            "niveau": "easy",
+            "reponse": "L'architecture Actor-Critic permet de réduire la variance des gradients en utilisant des méthodes TD (n-steps ou bootstrap) au lieu de Monte Carlo (épisodes complets). Cela permet des mises à jour plus fréquentes et une convergence plus rapide. De plus, l'apprentissage est plus stable car le critique fournit une estimation de la valeur qui est actualisée en continu."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Calcul de l'Avantage (Advantage Function)",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans A2C (Advantage Actor-Critic), l'avantage \\(A(s_t, a_t)\\) est défini comme :</p><div class='math-block'><div class='math'>$$A(s_t, a_t) = Q(s_t, a_t) - V(s_t)$$</div></div><p>Ou plus généralement, en utilisant la forme TD :</p><div class='math-block'><div class='math'>$$A(s_t, a_t) = r_t + \\gamma V(s_{t+1}) - V(s_t)$$</div></div>",
+      "images": [
+        "Un graphique montrant la fonction d'avantage pour différentes actions dans un état donné."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez l'importance de la fonction d'avantage dans A2C. Pourquoi utilise-t-on l'avantage plutôt que la Q-valeur ?",
+        "niveau": "medium",
+        "reponse": "L'avantage mesure à quel point une action est meilleure que la moyenne pour un état donné. En soustrayant \\(V(s)\\) de \\(Q(s,a)\\), on obtient une valeur centrée qui réduit la variance du gradient. L'avantage est plus interprétable : il indique si une action est meilleure ou pire que ce qu'on attendait. Cela permet à l'acteur de se concentrer sur les actions qui apportent une amélioration significative par rapport à la politique moyenne.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Dans un jeu où l'action 'gauche' donne une récompense de +10, l'action 'droite' donne une récompense de 0, et \\(V(s) = 5\\), calculez les avantages. Que concluez-vous ?",
+            "niveau": "medium",
+            "reponse": "Calculs :\n- \\(A(gauche) = Q(gauche) - V(s) = 10 - 5 = 5\\)\n- \\(A(droite) = Q(droite) - V(s) = 0 - 5 = -5\\)\n\nConclusion : L'action 'gauche' a un avantage positif, ce qui signifie qu'elle est meilleure que la moyenne. L'acteur renforcera donc cette action. L'action 'droite' a un avantage négatif, l'acteur l'affaiblira."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Implémentation de l'Algorithme A2C",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>On souhaite implémenter A2C (Advantage Actor-Critic) pour un environnement avec un espace d'états continu et un espace d'actions discret (4 actions). L'architecture du réseau est :</p><ul><li>Un réseau partagé avec 2 couches cachées de 128 neurones (activation ReLU).</li><li>Une sortie pour l'acteur (softmax sur 4 actions).</li><li>Une sortie pour le critique (1 neurone, linéaire).</li></ul>",
+      "images": [
+        "Un diagramme de l'architecture du réseau avec les couches partagées et les têtes séparées."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez l'algorithme A2C en détaillant les étapes d'entraînement, la fonction de perte pour l'acteur, la fonction de perte pour le critique, et la mise à jour des poids.",
+        "niveau": "hard",
+        "reponse": "<p><strong>Algorithme A2C :</strong></p><ol><li><strong>Initialisation</strong> : Réseau avec poids \\(\\theta\\) pour l'acteur et \\(\\phi\\) pour le critique.</li><li><strong>Pour chaque épisode :</strong><ul><li>Observer l'état \\(s_t\\).</li><li>Choisir une action \\(a_t \\sim \\pi_\\theta(s_t)\\).</li><li>Exécuter l'action, observer la récompense \\(r_t\\) et le prochain état \\(s_{t+1}\\).</li></ul></li><li><strong>Collecte de trajectoires</strong> : Accumuler \\(T\\) pas de temps (ex: 5 ou 10 pas).</li><li><strong>Calcul de l'avantage</strong> : Pour chaque pas, calculer \\(A_t = r_t + \\gamma V_{\\phi}(s_{t+1}) - V_{\\phi}(s_t)\\).</li><li><strong>Fonction de perte de l'acteur</strong> : \\(L_{\\text{actor}} = -\\frac{1}{T} \\sum_t \\log \\pi_\\theta(a_t|s_t) A_t + \\beta H(\\pi_\\theta)\\).</li><li><strong>Fonction de perte du critique</strong> : \\(L_{\\text{critic}} = \\frac{1}{T} \\sum_t (r_t + \\gamma V_{\\phi}(s_{t+1}) - V_{\\phi}(s_t))^2\\).</li><li><strong>Mise à jour</strong> : Réseau partagé (mise à jour des deux têtes).</li></ol>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi utilise-t-on un réseau partagé pour l'acteur et le critique ?",
+            "niveau": "hard",
+            "reponse": "Un réseau partagé permet de réduire le nombre de paramètres à apprendre et de bénéficier d'une représentation commune des caractéristiques de l'état. Les couches inférieures apprennent des représentations générales utiles à la fois pour la politique et pour la valeur. Cela accélère l'apprentissage et améliore la stabilité, car les deux têtes partagent les mêmes informations.",
+            "reponse": "On utilise le terme 'entropie' \\(H(\\pi_\\theta)\\) comme terme de régularisation pour encourager l'exploration. L'entropie d'une distribution de probabilité mesure son incertitude. En ajoutant ce terme avec un coefficient \\(\\beta\\), on pénalise les politiques trop déterministes. Cela encourage l'agent à explorer différentes actions, ce qui est bénéfique pour l'apprentissage et évite la convergence prématurée vers des optima locaux."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Comparaison entre A2C et REINFORCE avec Baseline",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>On compare les performances de REINFORCE avec Baseline et A2C sur l'environnement CartPole-v1.</p>",
+      "images": [
+        "Un graphique comparant les courbes d'apprentissage des deux algorithmes (récompense moyenne en fonction du nombre d'épisodes)."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analysez les différences entre A2C et REINFORCE avec Baseline. Quels sont les avantages de A2C en termes de stabilité, de rapidité de convergence, et d'efficacité d'échantillonnage ?",
+        "niveau": "hard",
+        "reponse": "<p><strong>Différences clés :</strong></p><ul><li><strong>Méthode d'actualisation</strong> : REINFORCE utilise Monte Carlo (épisodes complets), A2C utilise TD (n-steps).</li><li><strong>Fréquence des mises à jour</strong> : REINFORCE met à jour à la fin de chaque épisode, A2C met à jour toutes les \\(T\\) étapes.</li><li><strong>Variance</strong> : A2C a une variance plus faible grâce à l'utilisation de l'avantage TD.</li></ul><p><strong>Avantages de A2C :</strong></p><ul><li><strong>Stabilité</strong> : Les mises à jour plus fréquentes et la réduction de variance rendent l'apprentissage plus stable.</li><li><strong>Rapidité de convergence</strong> : A2C converge généralement plus rapidement, surtout dans les environnements avec des épisodes longs.</li><li><strong>Efficacité d'échantillonnage</strong> : A2C utilise mieux les données car il peut apprendre à partir de transitions individuelles, pas seulement d'épisodes complets.</li></ul>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Dans quels cas REINFORCE avec Baseline pourrait-il être préférable à A2C ?",
+            "niveau": "very hard",
+            "reponse": "REINFORCE avec Baseline pourrait être préférable dans les cas suivants :\n1. **Environnements avec épisodes courts** : La variance est naturellement plus faible.\n2. **Simplicité d'implémentation** : Moins de paramètres à gérer.\n3. **Environnements où l'approximation TD est biaisée** : Par exemple, si la fonction de valeur est mal approximée, le bootstrap peut introduire un biais.\n4. **Ressources limitées** : REINFORCE nécessite un seul réseau, tandis que A2C nécessite un réseau partagé ou deux réseaux."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation des Hyperparamètres de A2C",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous entraînez A2C sur un environnement complexe (ex: MuJoCo). Les hyperparamètres actuels sont :</p><ul><li>Learning rate : 0.001</li><li>n-steps : 5</li><li>Facteur de discount \\(\\gamma\\) : 0.99</li><li>Coefficient d'entropie \\(\\beta\\) : 0.01</li><li>Batch size : 64</li></ul>",
+      "images": [
+        "Un graphique montrant l'effet de différents hyperparamètres sur la performance de A2C."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez des améliorations pour optimiser ces hyperparamètres. Comment évaluer l'impact de chaque hyperparamètre ?",
+        "niveau": "very hard",
+        "reponse": "<p><strong>Améliorations proposées :</strong></p><ul><li><strong>Learning rate</strong> : Utiliser un scheduler (learning rate decay) ou un taux plus petit (0.0003).</li><li><strong>n-steps</strong> : Augmenter à 10 ou 20 pour un meilleur compromis biais-variance.</li><li><strong>\\(\\gamma\\)</strong> : 0.99 est standard, mais on peut essayer 0.995 pour les environnements à long terme.</li><li><strong>\\(\\beta\\)</strong> : Réduire à 0.005 ou 0.001 si la politique est trop exploratoire.</li><li><strong>Batch size</strong> : Augmenter à 128 ou 256 pour des mises à jour plus stables.</li></ul><p><strong>Évaluation de l'impact :</strong></p><ul><li>Utiliser une grille de recherche (grid search) ou la recherche bayésienne.</li><li>Comparer les courbes d'apprentissage (récompense moyenne, stabilité).</li><li>Mesurer la variance des gradients pour évaluer la stabilité.</li><li>Utiliser des métriques de performance (récompense finale, temps de convergence).</li></ul>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Si l'apprentissage est instable (oscillations), quel hyperparamètre modifiez-vous en premier ?",
+            "niveau": "hard",
+            "reponse": "En cas d'instabilité, je modifie en priorité :\n1. **Le learning rate** : Le réduire (ex: 0.0005) pour des mises à jour plus prudentes.\n2. **Le coefficient d'entropie \\(\\beta\\)** : L'augmenter légèrement pour encourager l'exploration.\n3. **La taille du batch** : L'augmenter pour réduire la variance des mises à jour.\n4. **Le nombre de n-steps** : Le réduire si l'estimation TD est trop bruitée."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse Théorique de A2C",
+    "type": "ressource",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>L'algorithme A2C utilise la mise à jour suivante pour l'acteur :</p><div class='math-block'><div class='math'>$$\\nabla_\\theta J(\\theta) = \\mathbb{E}_{\\pi_\\theta} \\left[ \\nabla_\\theta \\log \\pi_\\theta(a_t|s_t) A^{\\pi}(s_t, a_t) \\right]$$</div></div><p>où \\(A^{\\pi}(s_t, a_t) = Q^{\\pi}(s_t, a_t) - V^{\\pi}(s_t)\\).</p>",
+      "images": [
+        "Un schéma illustrant le théorème du gradient de la politique avec l'avantage."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Démontrez que l'utilisation de l'avantage comme baseline ne biaise pas le gradient de la politique.",
+        "niveau": "very hard",
+        "reponse": "<p>On souhaite montrer que :</p><div class='math-block'><div class='math'>$$\\mathbb{E}_{\\pi_\\theta} \\left[ \\nabla_\\theta \\log \\pi_\\theta(a|s) (Q^{\\pi}(s,a) - V^{\\pi}(s)) \\right] = \\mathbb{E}_{\\pi_\\theta} \\left[ \\nabla_\\theta \\log \\pi_\\theta(a|s) Q^{\\pi}(s,a) \\right]$$</div></div><p>Le terme supplémentaire est :</p><div class='math-block'><div class='math'>$$\\mathbb{E}_{\\pi_\\theta} \\left[ \\nabla_\\theta \\log \\pi_\\theta(a|s) V^{\\pi}(s) \\right] = \\mathbb{E}_{\\pi_\\theta} \\left[ V^{\\pi}(s) \\sum_a \\nabla_\\theta \\pi_\\theta(a|s) \\right] = 0$$</div></div><p>car \\(\\sum_a \\nabla_\\theta \\pi_\\theta(a|s) = 0\\) (la somme des probabilités est égale à 1).</p><p>Donc l'avantage est une baseline sans biais, qui réduit la variance car \\(A(s,a)\\) est centrée sur 0.</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi l'avantage est-il préférable à l'utilisation directe de \\(Q^{\\pi}(s,a)\\) ?",
+            "niveau": "very hard",
+            "reponse": "L'avantage réduit la variance car il est centré sur zéro. \\(Q^{\\pi}(s,a)\\) a une variance plus élevée car elle peut prendre de grandes valeurs positives ou négatives. En soustrayant \\(V^{\\pi}(s)\\), on obtient une valeur dont la moyenne est nulle, ce qui réduit la variance du gradient. Cela rend l'apprentissage plus stable et plus rapide."
+          }
+        ]
+      }
+    ]
+  }
+]

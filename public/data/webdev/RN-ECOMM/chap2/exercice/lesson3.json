@@ -1,0 +1,120 @@
+[
+  {
+    "intitule": "Installation et Configuration Initiale de Zustand",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous débutez le développement d'une application mobile e-commerce avec React Native et Expo. Vous souhaitez utiliser Zustand comme gestionnaire d'état global.</p><p><strong>Consigne :</strong> Rédigez les commandes d'installation et la configuration initiale pour intégrer Zustand dans votre projet, ainsi que les middlewares nécessaires pour la persistance et le débogage.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Donnez la commande d'installation de Zustand et décrivez brièvement les fonctionnalités qu'il apporte.",
+        "niveau": "easy",
+        "reponse": "<p><strong>Commande d'installation :</strong></p><pre style='background:#2d2d2d; color:#f8f8f2; padding:12px; border-radius:6px; font-size:0.85em;'>\nnpm install zustand\n# ou\nyarn add zustand\n</pre><p><strong>Fonctionnalités principales de Zustand :</strong></p><ul><li>Gestion d'état simple et minimaliste</li><li>Performance optimisée (re-renders sélectifs)</li><li>Pas de boilerplate complexe</li><li>Support TypeScript natif</li><li>Middleware pour la persistance et le débogage</li><li>Facile à tester</li></ul>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez pourquoi Zustand est souvent préféré à Redux pour les applications React Native.",
+            "niveau": "medium",
+            "reponse": "<p>Zustand est souvent préféré à Redux pour plusieurs raisons :</p><ul><li><strong>Simplicité :</strong> Moins de boilerplate, pas besoin d'actions, reducers ou providers complexes</li><li><strong>Performance :</strong> Zustand utilise des sélecteurs pour éviter les re-renders inutiles</li><li><strong>Taille réduite :</strong> Zustand est plus léger que Redux</li><li><strong>Facilité d'utilisation :</strong> La syntaxe est intuitive pour les développeurs JavaScript/TypeScript</li><li><strong>Persistance :</strong> Zustand intègre facilement la persistance avec AsyncStorage</li><li><strong>Débogage :</strong> Le middleware devtools permet d'utiliser Redux DevTools</li></ul>"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Écrivez le code d'importation des middlewares <code>persist</code> et <code>devtools</code> de Zustand et expliquez leur utilité.",
+        "niveau": "medium",
+        "reponse": "<pre style='background:#2d2d2d; color:#f8f8f2; padding:12px; border-radius:6px; font-size:0.85em;'>\nimport { create } from 'zustand';\nimport { persist, devtools } from 'zustand/middleware';\n</pre><p><strong>Utilité des middlewares :</strong></p><ul><li><strong><code>persist</code> :</strong> Permet de sauvegarder l'état du store dans AsyncStorage (ou autre storage) pour conserver les données entre les sessions utilisateur. Idéal pour le token d'authentification ou les préférences utilisateur.</li><li><strong><code>devtools</code> :</strong> Intègre le store avec Redux DevTools pour faciliter le débogage. Permet de visualiser les mutations d'état, de naviguer dans l'historique et de chronométrer les actions.</li></ul>"
+      }
+    ]
+  },
+  {
+    "intitule": "Création du Store d'Authentification (AuthStore)",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous devez implémenter le système d'authentification de votre application e-commerce. Utilisez Zustand pour créer un store d'authentification avec persistance des données.</p><p><strong>Spécifications :</strong></p><ul><li>Le store doit gérer l'utilisateur, le token, et l'état d'authentification</li><li>Les données doivent être persistées avec AsyncStorage</li><li>Le store doit exposer des actions pour le login, le logout et la mise à jour du profil</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créez le store <code>authStore</code> complet avec persistance, en utilisant TypeScript et les middlewares appropriés.",
+        "niveau": "hard",
+        "reponse": "<pre style='background:#2d2d2d; color:#f8f8f2; padding:12px; border-radius:6px; font-size:0.8em;'>\nimport { create } from 'zustand';\nimport { persist, devtools, createJSONStorage } from 'zustand/middleware';\nimport AsyncStorage from '@react-native-async-storage/async-storage';\nimport { User, AuthState } from '../types';\n\ninterface AuthStore extends AuthState {\n  user: User | null;\n  token: string | null;\n  isAuthenticated: boolean;\n  isLoading: boolean;\n  error: string | null;\n  \n  // Actions\n  login: (email: string, password: string) => Promise<void>;\n  logout: () => void;\n  updateProfile: (userData: Partial<User>) => void;\n  setToken: (token: string) => void;\n  clearError: () => void;\n}\n\nexport const useAuthStore = create<AuthStore>()(\n  devtools(\n    persist(\n      (set, get) => ({\n        user: null,\n        token: null,\n        isAuthenticated: false,\n        isLoading: false,\n        error: null,\n\n        login: async (email: string, password: string) => {\n          set({ isLoading: true, error: null });\n          try {\n            // Simuler un appel API\n            const response = await authService.login({ email, password });\n            set({\n              user: response.user,\n              token: response.token,\n              isAuthenticated: true,\n              isLoading: false,\n            });\n          } catch (error) {\n            set({ \n              error: error.message || 'Erreur de connexion',\n              isLoading: false \n            });\n          }\n        },\n\n        logout: () => {\n          set({\n            user: null,\n            token: null,\n            isAuthenticated: false,\n            error: null,\n          });\n        },\n\n        updateProfile: (userData: Partial<User>) => {\n          set((state) => ({\n            user: state.user ? { ...state.user, ...userData } : null,\n          }));\n        },\n\n        setToken: (token: string) => {\n          set({ token });\n        },\n\n        clearError: () => {\n          set({ error: null });\n        },\n      }),\n      {\n        name: 'auth-storage', // Nom unique pour le stockage\n        storage: createJSONStorage(() => AsyncStorage),\n        partialize: (state) => ({\n          // Sélectionner uniquement les champs à persister\n          user: state.user,\n          token: state.token,\n          isAuthenticated: state.isAuthenticated,\n        }),\n      }\n    ),\n    { name: 'AuthStore' } // Nom pour Redux DevTools\n  )\n);\n</pre><p><strong>Explication :</strong> Le store utilise le middleware <code>persist</code> pour sauvegarder les données critiques (user, token, isAuthenticated) dans AsyncStorage. Le middleware <code>devtools</code> permet le débogage avec Redux DevTools. Les actions asynchrones (<code>login</code>) gèrent les états de chargement et d'erreur.</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez l'utilisation de <code>partialize</code> dans le middleware <code>persist</code>. Pourquoi ne pas persister tous les champs du store ?",
+            "niveau": "medium",
+            "reponse": "<p><code>partialize</code> permet de sélectionner les champs à persister. On ne persiste pas tous les champs pour plusieurs raisons :</p><ul><li><strong>Performance :</strong> Réduire la quantité de données stockées dans AsyncStorage</li><li><strong>Sécurité :</strong> Éviter de persister des données sensibles ou temporaires comme les erreurs</li><li><strong>Cohérence :</strong> Les états comme <code>isLoading</code> doivent être réinitialisés au redémarrage</li><li><strong>Espace de stockage :</strong> AsyncStorage a des limitations, mieux vaut stocker l'essentiel</li></ul><p>Dans notre cas, nous persistons uniquement <code>user</code>, <code>token</code> et <code>isAuthenticated</code> car ce sont les données nécessaires pour maintenir la session utilisateur.</p>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Comparez l'utilisation d'AsyncStorage avec SecureStore pour le stockage du token JWT. Quelle approche recommandez-vous et pourquoi ?",
+            "niveau": "hard",
+            "reponse": "<p><strong>AsyncStorage :</strong></p><ul><li>Données stockées en clair (non chiffrées)</li><li>Accessible plus facilement pour le débogage</li><li>Plus rapide pour des données non sensibles</li></ul><p><strong>SecureStore (expo-secure-store) :</strong></p><ul><li>Données chiffrées au niveau système</li><li>Protection contre l'accès non autorisé</li><li>Recommandé pour les données sensibles (tokens, mots de passe)</li></ul><p><strong>Recommandation :</strong> Utiliser SecureStore pour le token JWT car c'est une donnée sensible. Pour les préférences utilisateur ou les données non sensibles, AsyncStorage est suffisant.</p><pre style='background:#2d2d2d; color:#f8f8f2; padding:12px; border-radius:6px; font-size:0.85em;'>\nimport * as SecureStore from 'expo-secure-store';\n\n// Configuration avec SecureStore\nstorage: createJSONStorage(() => ({\n  getItem: async (name) => await SecureStore.getItemAsync(name),\n  setItem: async (name, value) => await SecureStore.setItemAsync(name, value),\n  removeItem: async (name) => await SecureStore.deleteItemAsync(name),\n})),\n</pre>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Store de Produits et Gestion du Feed",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous développez l'écran d'accueil de l'application qui affiche le feed des produits. Le store <code>productStore</code> doit gérer :</p><ul><li>La liste des produits du feed</li><li>La recherche de produits</li><li>Les articles personnels (produits du vendeur connecté)</li><li>Les états de chargement et d'erreur</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créez le store <code>productStore</code> complet avec toutes les actions nécessaires pour gérer le feed, la recherche et les articles personnels.",
+        "niveau": "hard",
+        "reponse": "<pre style='background:#2d2d2d; color:#f8f8f2; padding:12px; border-radius:6px; font-size:0.8em;'>\nimport { create } from 'zustand';\nimport { devtools } from 'zustand/middleware';\nimport { Product, ProductFilters, PaginatedResponse } from '../types';\n\ninterface ProductStore {\n  // États\n  products: Product[];\n  personalProducts: Product[];\n  searchResults: Product[];\n  isLoading: boolean;\n  error: string | null;\n  page: number;\n  hasMore: boolean;\n  filters: ProductFilters;\n  searchQuery: string;\n\n  // Actions\n  fetchFeed: (page?: number, filters?: ProductFilters) => Promise<void>;\n  searchProducts: (query: string, page?: number) => Promise<void>;\n  fetchPersonalProducts: (page?: number) => Promise<void>;\n  createProduct: (productData: FormData) => Promise<Product>;\n  updateProduct: (id: string, productData: FormData) => Promise<Product>;\n  deleteProduct: (id: string) => Promise<void>;\n  setFilters: (filters: ProductFilters) => void;\n  clearSearch: () => void;\n  resetStore: () => void;\n}\n\nexport const useProductStore = create<ProductStore>()(\n  devtools(\n    (set, get) => ({\n      products: [],\n      personalProducts: [],\n      searchResults: [],\n      isLoading: false,\n      error: null,\n      page: 0,\n      hasMore: true,\n      filters: {},\n      searchQuery: '',\n\n      fetchFeed: async (page = 1, filters = {}) => {\n        const { products, isLoading } = get();\n        if (isLoading) return;\n\n        set({ isLoading: true, error: null });\n        try {\n          const response = await productService.getFeed(page, filters);\n          set((state) => ({\n            products: page === 1 ? response.data : [...state.products, ...response.data],\n            hasMore: response.meta.hasNextPage,\n            page: response.meta.currentPage,\n            isLoading: false,\n          }));\n        } catch (error) {\n          set({ error: error.message, isLoading: false });\n        }\n      },\n\n      searchProducts: async (query: string, page = 1) => {\n        set({ isLoading: true, error: null, searchQuery: query });\n        try {\n          const response = await productService.search(query, page);\n          set((state) => ({\n            searchResults: page === 1 ? response.data : [...state.searchResults, ...response.data],\n            hasMore: response.meta.hasNextPage,\n            page: response.meta.currentPage,\n            isLoading: false,\n          }));\n        } catch (error) {\n          set({ error: error.message, isLoading: false });\n        }\n      },\n\n      fetchPersonalProducts: async (page = 1) => {\n        set({ isLoading: true, error: null });\n        try {\n          const response = await productService.getPersonal(page);\n          set((state) => ({\n            personalProducts: page === 1 ? response.data : [...state.personalProducts, ...response.data],\n            hasMore: response.meta.hasNextPage,\n            page: response.meta.currentPage,\n            isLoading: false,\n          }));\n        } catch (error) {\n          set({ error: error.message, isLoading: false });\n        }\n      },\n\n      createProduct: async (productData: FormData) => {\n        set({ isLoading: true, error: null });\n        try {\n          const newProduct = await productService.create(productData);\n          set((state) => ({\n            personalProducts: [newProduct, ...state.personalProducts],\n            isLoading: false,\n          }));\n          return newProduct;\n        } catch (error) {\n          set({ error: error.message, isLoading: false });\n          throw error;\n        }\n      },\n\n      updateProduct: async (id: string, productData: FormData) => {\n        set({ isLoading: true, error: null });\n        try {\n          const updatedProduct = await productService.update(id, productData);\n          set((state) => ({\n            personalProducts: state.personalProducts.map(p => \n              p.id === id ? updatedProduct : p\n            ),\n            products: state.products.map(p => \n              p.id === id ? updatedProduct : p\n            ),\n            isLoading: false,\n          }));\n          return updatedProduct;\n        } catch (error) {\n          set({ error: error.message, isLoading: false });\n          throw error;\n        }\n      },\n\n      deleteProduct: async (id: string) => {\n        set({ isLoading: true, error: null });\n        try {\n          await productService.delete(id);\n          set((state) => ({\n            personalProducts: state.personalProducts.filter(p => p.id !== id),\n            products: state.products.filter(p => p.id !== id),\n            isLoading: false,\n          }));\n        } catch (error) {\n          set({ error: error.message, isLoading: false });\n          throw error;\n        }\n      },\n\n      setFilters: (filters: ProductFilters) => {\n        set({ filters });\n        // Recharger le feed avec les nouveaux filtres\n        get().fetchFeed(1, filters);\n      },\n\n      clearSearch: () => {\n        set({ searchResults: [], searchQuery: '' });\n      },\n\n      resetStore: () => {\n        set({\n          products: [],\n          personalProducts: [],\n          searchResults: [],\n          isLoading: false,\n          error: null,\n          page: 0,\n          hasMore: true,\n          filters: {},\n          searchQuery: '',\n        });\n      },\n    }),\n    { name: 'ProductStore' }\n  )\n);\n</pre>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez la logique de pagination utilisée dans ce store. Comment l'état <code>hasMore</code> est-il géré ?",
+            "niveau": "medium",
+            "reponse": "<p><strong>Logique de pagination :</strong></p><ul><li>Le store utilise <code>page</code> pour suivre la page actuelle et <code>hasMore</code> pour indiquer s'il y a d'autres pages.</li><li>Lors d'un appel API, on reçoit une réponse paginée avec les métadonnées (<code>meta.hasNextPage</code>).</li><li>Pour la page 1, on remplace la liste entière. Pour les pages suivantes, on concatène les nouveaux résultats.</li><li>La fonction <code>fetchFeed</code> est appelée avec <code>page=1</code> pour rafraîchir, ou avec la page suivante pour charger plus.</li><li><code>hasMore</code> est mis à jour à chaque appel API en fonction de la réponse du backend.</li></ul>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Dites quel est le rôle de <code>createProduct</code>, <code>updateProduct</code> et <code>deleteProduct</code> dans le store. Comment ces actions interagissent-elles avec les listes existantes ?",
+            "niveau": "medium",
+            "reponse": "<p><strong>Rôle des actions CRUD :</strong></p><ul><li><strong><code>createProduct</code> :</strong> Ajoute un nouveau produit en tête de la liste des produits personnels (<code>personalProducts</code>). Cela permet à l'utilisateur de voir immédiatement son produit fraîchement créé.</li><li><strong><code>updateProduct</code> :</strong> Met à jour le produit dans les listes <code>products</code> et <code>personalProducts</code> en remplaçant l'objet existant.</li><li><strong><code>deleteProduct</code> :</strong> Supprime le produit des deux listes (<code>products</code> et <code>personalProducts</code>) en filtrant par ID.</li></ul><p><strong>Interaction avec les listes :</strong></p><ul><li>La mise à jour est optimiste : l'UI reflète les changements immédiatement.</li><li>Les modifications sont synchronisées automatiquement dans toutes les parties de l'application.</li><li>La cohérence est maintenue entre le feed public et les produits personnels.</li></ul>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Store de Catégories avec Cache",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Votre application e-commerce nécessite un store de catégories. Les catégories sont affichées sur l'écran d'accueil et sont des données relativement statiques.</p><p><strong>Spécifications :</strong></p><ul><li>Le store doit gérer la liste des catégories</li><li>Les catégories doivent être chargées à l'ouverture de l'application</li><li>Un système de cache doit éviter les appels API inutiles</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créez le store <code>categoryStore</code> avec un mécanisme de cache pour éviter de recharger les catégories à chaque affichage.",
+        "niveau": "medium",
+        "reponse": "<pre style='background:#2d2d2d; color:#f8f8f2; padding:12px; border-radius:6px; font-size:0.85em;'>\nimport { create } from 'zustand';\nimport { devtools } from 'zustand/middleware';\nimport { Category } from '../types';\n\ninterface CategoryStore {\n  categories: Category[];\n  isLoading: boolean;\n  error: string | null;\n  lastFetch: number | null;\n  cacheTTL: number; // Temps de vie du cache en millisecondes (5 minutes)\n\n  fetchCategories: (forceRefresh?: boolean) => Promise<void>;\n  getCategoryById: (id: string) => Category | undefined;\n  clearCache: () => void;\n}\n\nexport const useCategoryStore = create<CategoryStore>()(\n  devtools(\n    (set, get) => ({\n      categories: [],\n      isLoading: false,\n      error: null,\n      lastFetch: null,\n      cacheTTL: 5 * 60 * 1000, // 5 minutes\n\n      fetchCategories: async (forceRefresh = false) => {\n        const { categories, lastFetch, cacheTTL, isLoading } = get();\n\n        // Si le cache est valide et qu'on ne force pas le rafraîchissement\n        if (!forceRefresh && lastFetch && (Date.now() - lastFetch) < cacheTTL && categories.length > 0) {\n          console.log('📦 Utilisation du cache des catégories');\n          return;\n        }\n\n        if (isLoading) return;\n\n        set({ isLoading: true, error: null });\n        try {\n          const response = await categoryService.getAll();\n          set({\n            categories: response,\n            isLoading: false,\n            lastFetch: Date.now(),\n          });\n        } catch (error) {\n          set({ error: error.message, isLoading: false });\n        }\n      },\n\n      getCategoryById: (id: string) => {\n        const { categories } = get();\n        return categories.find(cat => cat.id === id);\n      },\n\n      clearCache: () => {\n        set({ lastFetch: null, categories: [] });\n      },\n    }),\n    { name: 'CategoryStore' }\n  )\n);\n</pre>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez le mécanisme de cache mis en place. Pourquoi utiliser un TTL (Time To Live) plutôt qu'une persistance permanente ?",
+            "niveau": "medium",
+            "reponse": "<p><strong>Mécanisme de cache :</strong></p><ul><li>Le store stocke la date du dernier chargement dans <code>lastFetch</code>.</li><li>Avant un nouvel appel API, on vérifie si le cache est encore valide : <code>(Date.now() - lastFetch) < cacheTTL</code>.</li><li>Si le cache est valide et que des catégories existent, on évite un appel réseau.</li><li>Le paramètre <code>forceRefresh</code> permet d'ignorer le cache quand c'est nécessaire.</li></ul><p><strong>Pourquoi un TTL ?</strong></p><ul><li>Les catégories peuvent changer (ajout, modification, suppression) et les utilisateurs doivent voir les changements.</li><li>Un TTL de 5 minutes est un bon compromis entre performance et fraîcheur des données.</li><li>Évite de stocker des données obsolètes indéfiniment.</li><li>Permet de réduire les appels API inutiles tout en restant à jour.</li></ul>"
+          }
+        ]
+      }
+    ]
+  }
+]

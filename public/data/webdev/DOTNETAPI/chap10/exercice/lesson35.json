@@ -1,0 +1,107 @@
+[
+  {
+    "intitule": "Dockerfile et conteneurisation d'une API .NET",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous êtes développeur backend et devez containeriser une API .NET 8 existante. L’API utilise une base de données SQL Server. Vous choisissez Docker pour garantir la portabilité sur différents environnements (dev, staging, prod).</p>",
+      "images": [
+        "Schéma simplifié de conteneurisation d'une API .NET avec Docker : un conteneur API communique avec un conteneur SQL Server via un réseau Docker personnalisé.",
+        "Capture d'écran d'un Dockerfile typique pour ASP.NET Core avec les étapes build et runtime."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer en vos termes le rôle d’un Dockerfile dans le contexte d’une API .NET.",
+        "niveau": "easy",
+        "reponse": "Un Dockerfile est un script texte contenant des instructions pour assembler une image Docker. Pour une API .NET, il définit l’environnement (ex: SDK pour compiler, runtime pour exécuter), copie les fichiers du projet, restaure les dépendances, compile le code et configure le point d’entrée pour lancer l’API.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Distinguer l’image `mcr.microsoft.com/dotnet/sdk` de `mcr.microsoft.com/dotnet/aspnet` dans un Dockerfile multi-stage. Expliquer pourquoi utiliser deux stages est une bonne pratique.",
+        "niveau": "medium",
+        "reponse": "L’image SDK (software development kit) contient tous les outils pour compiler et publier l’application (plus lourde). L’image ASP.NET runtime contient uniquement l’environnement d’exécution (plus légère). Le multi-stage permet de construire dans l’image SDK, puis de copier le résultat publié dans l’image runtime finale, réduisant ainsi la taille de l’image de production et améliorant la sécurité.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Rédiger un Dockerfile complet pour une API .NET 8 nommée “MaSuperAPI” en utilisant une construction multi-stage. Inclure l’exposition du port 8080 et la définition de la variable d’environnement `ASPNETCORE_ENVIRONMENT=Production`.",
+        "niveau": "hard",
+        "reponse": "```dockerfile\n# Stage 1: Build\nFROM mcr.microsoft.com/dotnet/sdk:8.0 AS build\nWORKDIR /src\nCOPY [\"MaSuperAPI.csproj\", \".\"]\nRUN dotnet restore\nCOPY . .\nRUN dotnet publish -c Release -o /app/publish\n\n# Stage 2: Runtime\nFROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime\nWORKDIR /app\nENV ASPNETCORE_ENVIRONMENT=Production\nEXPOSE 8080\nCOPY --from=build /app/publish .\nENTRYPOINT [\"dotnet\", \"MaSuperAPI.dll\"]\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "docker-compose et communication API + SQL Server",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Votre équipe doit orchestrer deux conteneurs : l’API .NET conteneurisée (créée à l’exercice 1) et SQL Server 2022. Les deux doivent communiquer via un réseau Docker. Les variables de connexion à la base (mot de passe `Pass@word`, base `MaBase`, utilisateur `sa`) doivent être sécurisées.</p>",
+      "images": [
+        "Architecture docker-compose typique : un fichier YAML définissant deux services (api et db) et un réseau partagé.",
+        "Exemple de chaîne de connexion dans appsettings.json avec placeholders pour variables d’environnement."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire un fichier `docker-compose.yml` qui définit deux services :\n- `sqlserver` : utilisant l’image `mcr.microsoft.com/mssql/server:2022-latest`, avec le mot de passe SA sécurisé via variable d’environnement.\n- `monapi` : construite à partir du Dockerfile précédent, dépendante de sqlserver, et recevant la chaîne de connexion sous forme de variable d’environnement `ConnectionStrings__DefaultConnection`.",
+        "niveau": "hard",
+        "reponse": "```yaml\nversion: '3.8'\nservices:\n  sqlserver:\n    image: mcr.microsoft.com/mssql/server:2022-latest\n    environment:\n      - ACCEPT_EULA=Y\n      - SA_PASSWORD=${SA_PASSWORD}\n    ports:\n      - \"1433:1433\"\n    networks:\n      - app-network\n\n  monapi:\n    build: .\n    depends_on:\n      - sqlserver\n    environment:\n      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=MaBase;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True\n    ports:\n      - \"8080:8080\"\n    networks:\n      - app-network\n\nnetworks:\n  app-network:\n    driver: bridge\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer pourquoi utiliser `depends_on` ne garantit pas que SQL Server soit prêt à accepter les connexions. Proposer une solution pour pallier ce problème.",
+            "niveau": "medium",
+            "reponse": "`depends_on` attend seulement que le conteneur sqlserver ait démarré (state `running`), mais pas que le moteur SQL accepte des requêtes. La solution est d’ajouter un script d’attente (wait-for-it.sh) dans l’API ou d’utiliser un outil comme `Healthcheck` dans docker-compose sur le service sqlserver, avec une condition `service_healthy`."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Décrire le processus de déploiement de cette stack complète sur Azure Container Instances (ACI). Mentionner les étapes de build de l’image, de push vers un registre (ACR) et de création du groupe de conteneurs.",
+        "niveau": "very hard",
+        "reponse": "1. Build de l’image Docker localement : `docker build -t monapi .`\n2. Tag de l’image pour Azure Container Registry (ACR) : `docker tag monapi monregistry.azurecr.io/monapi:v1`\n3. Connexion à ACR : `az acr login --name monregistry`\n4. Push de l’image : `docker push monregistry.azurecr.io/monapi:v1`\n5. Création d’un fichier YAML pour ACI (ou utilisation de la CLI) incluant deux conteneurs : monapi (image depuis ACR) et sqlserver (image publique). Définition des variables d’environnement (notamment SA_PASSWORD via secrets ACI).\n6. Déploiement : `az container create --resource-group monRG --file deploy.yaml`",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Problématique du volume persistant pour SQL Server en production",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Lors d’un déploiement sur un serveur Linux avec Docker, votre chef remarque que si le conteneur SQL Server est supprimé, toutes les données sont perdues. Il demande une solution pour que les données de la base persistent, même après la suppression du conteneur.</p>",
+      "images": [
+        "Représentation d’un volume Docker : répertoire sur l’hôte monté dans /var/opt/mssql du conteneur.",
+        "Commande Docker volume create et inspection d’un volume."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposer et expliquer deux mécanismes Docker permettant de persister les données d’une base SQL Server. Comparer leurs avantages et inconvénients.",
+        "niveau": "medium",
+        "reponse": "1. **Bind mount** : monter un répertoire de l’hôte (ex: /data/mssql) dans `/var/opt/mssql` du conteneur. Avantage : simple, accès direct fichiers. Inconvénient : dépend du système de fichiers hôte, moins portable.\n2. **Volume Docker** : géré par Docker (`docker volume create sqlvolume`). Avantages : portable, géré par Docker, possiblement chiffré, compatible avec gestionnaires de stockage cloud. Inconvénient : un peu moins direct pour l’accès hors Docker.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Modifier le service `sqlserver` dans le docker-compose.yml précédent pour utiliser un volume nommé `sql_data`.",
+            "niveau": "hard",
+            "reponse": "```yaml\nservices:\n  sqlserver:\n    ...\n    volumes:\n      - sql_data:/var/opt/mssql\nvolumes:\n  sql_data:\n```"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer pourquoi le déploiement sur Azure Container Instances nécessite une approche différente pour les volumes persistants, et citer une solution adaptée.",
+        "niveau": "very hard",
+        "reponse": "ACI est sans état par nature. Si le conteneur SQL Server est redémarré ou déplacé, les données sur le filesystem local disparaissent. La solution est d’utiliser **Azure Files** : monter un partage de fichiers SMB comme volume. Ainsi, le fichier de base de données (.mdf) est stocké en dehors du conteneur, sur un partage persistant, accessible par d’autres instances si nécessaire.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

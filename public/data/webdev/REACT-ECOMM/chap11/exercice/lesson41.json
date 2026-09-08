@@ -1,0 +1,119 @@
+[
+  {
+    "intitule": "Analyse des re-renders inutiles et stratégies d'optimisation",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans une application React e-commerce, le catalogue affiche 200 produits. Chaque produit est un composant <code>ProductCard</code> qui reçoit en props : <code>product</code> (objet), <code>onAddToCart</code> (fonction), et <code>isFavorite</code> (booléen).</p><p>Lorsque l'utilisateur ajoute un produit au panier, l'état global du panier change et tous les composants <code>ProductCard</code> se re-rendent, causant des ralentissements.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez pourquoi tous les ProductCard se re-rendent lorsque le panier change, même si leurs props individuelles n'ont pas changé.",
+        "niveau": "easy",
+        "reponse": "Dans React, par défaut, lorsqu'un composant parent se re-rend (ici le catalogue à cause du changement d'état du panier), tous ses enfants se re-rendent également, sauf si une optimisation explicite est mise en place (React.memo, shouldComponentUpdate). Même si les props des ProductCard n'ont pas changé, React ne fait pas de comparaison approfondie automatiquement. Ce comportement est intentionnel pour garantir que l'interface reflète toujours les dernières données, mais il peut causer des problèmes de performance sur de grandes listes.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposez deux solutions pour empêcher ces re-renders inutiles et justifiez leur choix.",
+            "niveau": "medium",
+            "reponse": "**Solution 1 : React.memo**\nEnvelopper ProductCard avec `React.memo`. Cela fait une comparaison superficielle des props : si `product`, `onAddToCart` et `isFavorite` sont identiques (par référence), le re-render est évité.\n\n**Solution 2 : Mémorisation des callbacks avec useCallback**\nMême avec React.memo, si `onAddToCart` est recréée à chaque render du parent, la référence change et le memo est invalidé. Il faut donc envelopper `onAddToCart` dans `useCallback` avec les dépendances appropriées.\n\n**Solution 3 : useMemo pour les props objets**\nSi l'objet `product` est recréé à chaque render (ex: `{ ...product }`), la référence change. Utiliser `useMemo` pour stabiliser l'objet ou passer des props primitives individuelles (id, name, price)."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Implémentation de React.memo, useCallback et useMemo",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous avez un composant <code>ProductList</code> qui affiche une liste de produits. Chaque produit a un bouton 'Ajouter au panier'. Le panier est géré par un store Zustand.</p><p>Actuellement, chaque clic sur 'Ajouter' provoque un re-render de TOUTE la liste des produits.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Optimisez le code ci-dessous en utilisant React.memo, useCallback et useMemo pour éviter les re-renders inutiles.",
+        "niveau": "hard",
+        "reponse": "```tsx\n// === AVANT OPTIMISATION ===\nconst ProductList = ({ products }) => {\n  const addToCart = useCartStore((state) => state.addToCart);\n  \n  return (\n    <div className=\"grid\">\n      {products.map(product => (\n        <ProductCard \n          key={product.id} \n          product={product} \n          onAddToCart={() => addToCart(product.id)}\n        />\n      ))}\n    </div>\n  );\n};\n\nconst ProductCard = ({ product, onAddToCart }) => {\n  return (\n    <div className=\"border p-4\">\n      <h3>{product.name}</h3>\n      <p>{product.price} €</p>\n      <button onClick={onAddToCart}>Ajouter</button>\n    </div>\n  );\n};\n\n// === APRÈS OPTIMISATION ===\nconst ProductList = ({ products }) => {\n  const addToCart = useCartStore((state) => state.addToCart);\n  \n  // useCallback stabilise la fonction entre les renders\n  const handleAddToCart = useCallback((productId: string) => {\n    addToCart(productId);\n  }, [addToCart]); // addToCart est stable si le store est bien configuré\n  \n  return (\n    <div className=\"grid\">\n      {products.map(product => (\n        <MemoizedProductCard \n          key={product.id} \n          product={product} \n          onAddToCart={handleAddToCart}\n        />\n      ))}\n    </div>\n  );\n};\n\n// React.memo avec fonction de comparaison personnalisée (optionnelle)\nconst ProductCard = React.memo(({ product, onAddToCart }) => {\n  return (\n    <div className=\"border p-4\">\n      <h3>{product.name}</h3>\n      <p>{product.price} €</p>\n      <button onClick={() => onAddToCart(product.id)}>Ajouter</button>\n    </div>\n  );\n}, (prevProps, nextProps) => {\n  // Comparaison personnalisée pour éviter le re-render si seules des props non pertinentes changent\n  return prevProps.product.id === nextProps.product.id &&\n         prevProps.product.price === nextProps.product.price &&\n         prevProps.product.name === nextProps.product.name;\n});\n\nconst MemoizedProductCard = React.memo(ProductCard);\n```\n\n**Explication des optimisations :**\n1. `React.memo` empêche le re-render du composant enfant si ses props n'ont pas changé\n2. `useCallback` garantit que `handleAddToCart` a la même référence entre les renders (sauf si `addToCart` change)\n3. La fonction de comparaison personnalisée permet un contrôle fin : on ignore par exemple les propriétés de `product` qui ne sont pas utilisées dans le rendu",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Dans quel cas l'utilisation de React.memo peut-elle être contre-productive (pire qu'une absence d'optimisation) ?",
+            "niveau": "hard",
+            "reponse": "React.memo ajoute une surcharge de mémoire et de calcul : il doit stocker les props précédentes et les comparer aux nouvelles. Pour des composants simples qui se re-rendent rarement ou pour des listes très courtes (moins de 20 éléments), l'overhead de la comparaison peut dépasser le coût du re-render lui-même. De plus, si les props changent à chaque render (ex: objet recréé), React.memo est inutile car la comparaison échouera toujours et le re-render aura lieu quand même, avec en prime le coût de la comparaison. Il faut donc utiliser memo de manière sélective, en priorité sur les composants \"lourds\" ou ceux situés profondément dans l'arborescence."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Virtualisation des longues listes avec react-window",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Votre catalogue e-commerce doit afficher 10 000 produits. Actuellement, l'application ralentit considérablement et consomme trop de mémoire car tous les DOM nodes sont créés dès le chargement.</p><p>Vous décidez d'implémenter la virtualisation (windowing) pour n'afficher que les produits visibles à l'écran.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Installez et configurez `react-window` pour afficher une liste verticale de produits. Chaque ligne doit avoir une hauteur fixe de 120px et afficher le nom et le prix. Expliquez comment gérer le clic sur le bouton 'Ajouter au panier' pour le produit correspondant.",
+        "niveau": "hard",
+        "reponse": "```tsx\nimport { FixedSizeList as List } from 'react-window';\nimport { useCallback } from 'react';\nimport { useCartStore } from '@/stores/cartStore';\n\n// Composant pour chaque ligne virtuelle\nconst ProductRow = ({ index, style, data }) => {\n  const { products, onAddToCart } = data;\n  const product = products[index];\n  \n  return (\n    <div style={style} className=\"flex items-center justify-between border-b p-3\">\n      <div>\n        <h3 className=\"font-semibold\">{product.name}</h3>\n        <p className=\"text-sm text-gray-600\">{product.price} €</p>\n      </div>\n      <button \n        onClick={() => onAddToCart(product.id)}\n        className=\"bg-blue-500 text-white px-3 py-1 rounded\"\n      >\n        Ajouter\n      </button>\n    </div>\n  );\n};\n\n// Composant principal avec virtualisation\nconst VirtualizedProductList = ({ products }) => {\n  const addToCart = useCartStore((state) => state.addToCart);\n  \n  // useCallback stabilise la fonction passée à chaque ligne\n  const handleAddToCart = useCallback((productId: string) => {\n    addToCart(productId);\n  }, [addToCart]);\n  \n  // Données partagées entre toutes les lignes (évite les props individuelles)\n  const itemData = {\n    products,\n    onAddToCart: handleAddToCart,\n  };\n  \n  return (\n    <List\n      height={600}           // Hauteur visible du conteneur\n      itemCount={products.length}\n      itemSize={120}         // Hauteur fixe de chaque ligne\n      width=\"100%\"\n      itemData={itemData}    // Props partagées\n    >\n      {ProductRow}\n    </List>\n  );\n};\n\nexport default VirtualizedProductList;\n```\n\n**Explication :**\n- `FixedSizeList` ne rend que les lignes visibles (environ 5-10 au lieu de 10 000)\n- `itemData` permet de passer des données partagées à toutes les lignes sans les inclure dans chaque `item` individuel\n- `onAddToCart` est mémorisé avec `useCallback` pour éviter de recréer la fonction à chaque render du parent\n- Le composant `ProductRow` reçoit `style` (position absolue relative) que react-window fournit automatiquement",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quelle est la différence entre `FixedSizeList` et `VariableSizeList` de react-window ? Dans quel cas utiliser l'un plutôt que l'autre dans un catalogue e-commerce ?",
+            "niveau": "medium",
+            "reponse": "`FixedSizeList` suppose que tous les éléments ont la même hauteur (ou largeur pour une liste horizontale). Il est plus simple et plus performant car les calculs de position sont triviaux.\n\n`VariableSizeList` permet à chaque élément d'avoir une hauteur différente (ex: si les descriptions de produits ont des longueurs variables). Il nécessite de fournir une fonction `itemSize` qui retourne la hauteur de chaque élément.\n\n**Choix pour un e-commerce :**\n- Si tous les produits ont la même présentation (image fixe, titre sur 1 ligne, prix), utiliser `FixedSizeList` pour de meilleures performances.\n- Si les cartes produits ont des descriptions de longueur variable ou s'il y a un affichage en grille (plus complexe), il faut `VariableSizeList` ou envisager `react-virtualized` (plus complet) ou `@tanstack/react-virtual` (plus moderne et flexible)."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Quel problème spécifique à react-window se pose lorsqu'on a des hauteurs d'éléments qui dépendent d'images chargées dynamiquement ? Proposez une solution.",
+            "niveau": "hard",
+            "reponse": "**Problème :** Avec `FixedSizeList` ou même `VariableSizeList` avec hauteurs connues à l'avance, les images chargées en asynchrone peuvent modifier la hauteur réelle de l'élément après son rendu, causant un décalage de la liste et un mauvais positionnement.\n\n**Solutions :**\n1. **Réserver la hauteur de l'image** : Définir une hauteur fixe pour les images en CSS (`height: 150px`) et utiliser `object-fit: cover`. Ainsi la hauteur totale de la carte est prédictible.\n2. **Utiliser un skeleton loader** : Afficher un placeholder de la même hauteur que l'image avant son chargement.\n3. **Forcer un recalcul** : Avec `VariableSizeList`, utiliser `resetAfterIndex(index)` après le chargement des images pour recalculer les hauteurs. Mais cela peut être coûteux.\n4. **Alternative moderne** : Utiliser `@tanstack/react-virtual` qui gère mieux les hauteurs dynamiques et propose `measureElement`."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation d'un filtre de produits avec useMemo",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un composant <code>ProductCatalog</code> affiche une liste de produits (5000 éléments) avec un champ de recherche et un filtre par prix. À chaque frappe dans le champ de recherche, tout le composant se re-rend et le filtrage est recalculé, causant des ralentissements.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Optimisez ce composant en utilisant `useMemo` pour le filtrage et `useCallback` pour les gestionnaires d'événements.",
+        "niveau": "medium",
+        "reponse": "```tsx\nimport { useState, useMemo, useCallback } from 'react';\n\nconst ProductCatalog = ({ products }) => {\n  const [searchTerm, setSearchTerm] = useState('');\n  const [minPrice, setMinPrice] = useState(0);\n  const [maxPrice, setMaxPrice] = useState(1000);\n  \n  // useMemo : le filtrage n'est recalculé que lorsque products, searchTerm, minPrice ou maxPrice changent\n  const filteredProducts = useMemo(() => {\n    console.log('Filtrage recalculé');\n    return products.filter(product => {\n      const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());\n      const matchesPrice = product.price >= minPrice && product.price <= maxPrice;\n      return matchesSearch && matchesPrice;\n    });\n  }, [products, searchTerm, minPrice, maxPrice]);\n  \n  // useCallback : les fonctions sont stables entre les renders\n  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {\n    setSearchTerm(e.target.value);\n  }, []);\n  \n  const handlePriceChange = useCallback((min: number, max: number) => {\n    setMinPrice(min);\n    setMaxPrice(max);\n  }, []);\n  \n  return (\n    <div>\n      <input \n        type=\"text\" \n        value={searchTerm} \n        onChange={handleSearchChange}\n        placeholder=\"Rechercher...\"\n      />\n      <PriceRangeSlider onPriceChange={handlePriceChange} />\n      <ProductList products={filteredProducts} />\n    </div>\n  );\n};\n```\n\n**Gain de performance :** Sans `useMemo`, le filtrage serait exécuté à chaque render (y compris lorsque le parent se re-rend). Avec `useMemo`, le filtrage ne s'exécute que lorsqu'une des dépendances change, ce qui est essentiel pour des listes de plusieurs milliers d'éléments.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Diagnostic des re-renders avec React DevTools",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous suspectez des re-renders inutiles dans votre application e-commerce. Vous installez React DevTools et activez l'option 'Highlight updates when components render'.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez les étapes pour identifier les composants qui se re-rendent trop souvent et comment diagnostiquer la cause (props qui changent, contexte, état parent).",
+        "niveau": "easy",
+        "reponse": "**Étapes de diagnostic avec React DevTools :**\n\n1. **Activer le surlignage** : Dans l'onglet Components de React DevTools, cocher 'Highlight updates when components render'. Les composants qui se re-rendent clignotent en vert, jaune ou rouge.\n\n2. **Identifier les composants problématiques** : Observer quels composants clignotent lors d'une action utilisateur (ex: ajout au panier).\n\n3. **Examiner les props** : Sélectionner un composant problématique dans l'arborescence. Dans le panneau de droite, regarder la section 'props' avant et après le re-render. Les props qui changent de valeur (ou de référence) sont la cause probable.\n\n4. **Utiliser le profiler** : L'onglet Profiler permet d'enregistrer une session et de voir le temps de render de chaque composant. Les composants en rouge sont ceux qui ont pris le plus de temps.\n\n5. **Vérifier les hooks** : Le Profiler montre aussi la fréquence d'exécution des hooks. Vérifier si des `useState` ou `useContext` sont à l'origine du re-render.\n\n6. **Outils complémentaires** : `useWhyDidYouRender` est une bibliothèque utile qui loggue dans la console pourquoi un composant s'est re-rendu.\n\n**Actions correctives :**\n- Props objets qui changent à chaque render : utiliser `useMemo`\n- Callbacks recréés : utiliser `useCallback`\n- Composants enfants trop larges : découper en sous-composants avec `React.memo`\n- Contexte qui change trop souvent : découper les contextes par domaine",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

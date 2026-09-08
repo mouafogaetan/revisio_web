@@ -1,0 +1,115 @@
+[
+  {
+    "intitule": "Analyse des stratégies de calcul des frais de livraison",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans un e-commerce, les frais de livraison peuvent être calculés selon différentes méthodes :</p><ul><li>Frais fixes (ex: 5€ par commande)</li><li>Frais basés sur le poids total ($0,50$€ par kg)</li><li>Frais basés sur le montant de la commande (livraison gratuite au-delà d'un seuil)</li><li>Frais basés sur la zone géographique (locale, nationale, internationale)</li></ul><p>Un client a commandé 3 produits : <strong>Article A</strong> (2 kg, 25€), <strong>Article B</strong> (1.5 kg, 45€), <strong>Article C</strong> (0.8 kg, 12€).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Comparez les quatre méthodes de calcul des frais de livraison en expliquant leurs avantages et inconvénients pour un e-commerce vendant des produits de différentes tailles et poids.",
+        "niveau": "medium",
+        "reponse": "**1. Frais fixes (ex: 5€)**\n- Avantages : Simple à implémenter, prévisible pour le client.\n- Inconvénients : Pénalise les petites commandes, avantage les grosses commandes. Peu adapté aux produits lourds.\n\n**2. Frais basés sur le poids (0,50€/kg)**\n- Avantages : Équitable, reflète le coût réel du transporteur.\n- Inconvénients : Peut surprendre le client si le poids total est élevé. Nécessite une base de données des poids des produits.\n\n**3. Frais basés sur le montant (gratuit > seuil)**\n- Avantages : Incite à l'achat groupé (augmente le panier moyen).\n- Inconvénients : Peut réduire la marge si le seuil est trop bas. Inadapté pour les produits volumineux.\n\n**4. Frais basés sur la zone géographique**\n- Avantages : Reflète les tarifs réels des transporteurs par région.\n- Inconvénients : Complexité technique (détection de la zone, API de géolocalisation).\n\n**Recommandation hybride** : Combiner poids + zone + seuil d'exonération (ex: gratuit > 50€, sinon 0,30€/kg avec un minimum de 3€).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Calculez le poids total de la commande du client (en kg) et le coût de livraison selon la méthode '0,50€ par kg'. Exprimez le résultat avec une formule mathématique en LaTeX.",
+            "niveau": "easy",
+            "reponse": "Poids total $= 2 + 1,5 + 0,8 = 4,3$ kg\n\nCoût de livraison $= 4,3 \\times 0,50 = 2,15$ €\n\nArrondi à 2,15 € (ou 2,20 € selon la politique d'arrondi)."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Si le seuil de livraison gratuite est fixé à 80€, ce client bénéficie-t-il de la gratuité ? Justifiez par le calcul du total de la commande.",
+            "niveau": "easy",
+            "reponse": "Montant total de la commande $= 25 + 45 + 12 = 82$ €\n\nPuisque $82 \\geq 80$, le client bénéficie de la livraison gratuite. La règle de gratuité s'applique avant l'application des frais basés sur le poids. Dans une implémentation réelle, on applique la règle la plus avantageuse pour le client."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Implémentation du composant ShippingOptions",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous développez la page de checkout d'un e-commerce. Un composant <code>ShippingOptions</code> doit afficher les options de livraison disponibles, calculer les frais dynamiquement selon le poids total du panier et l'adresse de livraison, puis estimer la date de livraison.</p><p><strong>Données fournies :</strong></p><ul><li>Poids total du panier : $5.2$ kg</li><li>Adresse : Douala, Cameroun (zone 'nationale')</li><li>Options : Standard (3-5 jours, 0,30€/kg), Express (1-2 jours, 0,80€/kg), International (7-10 jours, 1,50€/kg)</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Définissez l'interface TypeScript pour une option de livraison (ShippingOption). Incluez les propriétés : id, nom, délai (minJours, maxJours), fonction de calcul des frais, et disponibilité selon la zone.",
+        "niveau": "medium",
+        "reponse": "```typescript\ninterface ShippingOption {\n  id: string;\n  name: string;\n  description: string;\n  minDays: number;\n  maxDays: number;\n  calculateCost: (totalWeight: number, zone: ShippingZone) => number;\n  availableZones: ShippingZone[]; // ['local', 'national', 'international']\n  isEligible: (cartTotal: number, totalWeight: number) => boolean;\n}\n\ntype ShippingZone = 'local' | 'national' | 'international';\n\n// Exemple d'implémentation pour l'option Standard\nconst standardOption: ShippingOption = {\n  id: 'standard',\n  name: 'Livraison Standard',\n  description: 'Colis remis sous 3 à 5 jours ouvrés',\n  minDays: 3,\n  maxDays: 5,\n  calculateCost: (weight, zone) => {\n    const baseRate = zone === 'local' ? 0.20 : zone === 'national' ? 0.30 : 0.80;\n    return Math.max(weight * baseRate, 3.0); // Minimum 3€\n  },\n  availableZones: ['local', 'national'],\n  isEligible: (total, weight) => weight <= 30 // Poids max 30kg\n};\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Écrivez le code JSX du composant ShippingOptions qui reçoit les options en props, permet à l'utilisateur de sélectionner une option, et affiche dynamiquement le prix et la date estimée (en utilisant useState).",
+            "niveau": "hard",
+            "reponse": "```tsx\nimport { useState } from 'react';\nimport { RadioGroup, RadioGroupItem } from \"@/components/ui/radio-group\";\nimport { Label } from \"@/components/ui/label\";\nimport { Card, CardContent } from \"@/components/ui/card\";\n\ninterface ShippingOptionsProps {\n  options: ShippingOption[];\n  totalWeight: number;\n  zone: ShippingZone;\n  onSelect: (option: ShippingOption) => void;\n}\n\nconst ShippingOptions = ({ options, totalWeight, zone, onSelect }: ShippingOptionsProps) => {\n  const [selectedId, setSelectedId] = useState<string>(options[0]?.id || '');\n  const [estimatedDate, setEstimatedDate] = useState<string>('');\n\n  const handleSelect = (option: ShippingOption) => {\n    setSelectedId(option.id);\n    const cost = option.calculateCost(totalWeight, zone);\n    const today = new Date();\n    const minDelivery = new Date(today);\n    minDelivery.setDate(today.getDate() + option.minDays);\n    const maxDelivery = new Date(today);\n    maxDelivery.setDate(today.getDate() + option.maxDays);\n    const formatDate = (d: Date) => d.toLocaleDateString('fr-FR');\n    setEstimatedDate(`${formatDate(minDelivery)} - ${formatDate(maxDelivery)}`);\n    onSelect({ ...option, calculatedCost: cost });\n  };\n\n  return (\n    <Card>\n      <CardContent className=\"p-4\">\n        <h3 className=\"font-bold text-lg mb-3\">Options de livraison</h3>\n        <RadioGroup value={selectedId} onValueChange={(id) => {\n          const opt = options.find(o => o.id === id);\n          if (opt) handleSelect(opt);\n        }}>\n          {options.map(option => {\n            const cost = option.calculateCost(totalWeight, zone);\n            const isAvailable = option.availableZones.includes(zone);\n            if (!isAvailable) return null;\n            return (\n              <div key={option.id} className=\"flex items-center justify-between border-b py-3\">\n                <div className=\"flex items-center gap-3\">\n                  <RadioGroupItem value={option.id} id={option.id} />\n                  <Label htmlFor={option.id} className=\"font-medium\">\n                    {option.name}\n                    <p className=\"text-xs text-gray-500\">{option.description}</p>\n                  </Label>\n                </div>\n                <div className=\"text-right\">\n                  <p className=\"font-bold text-green-600\">{cost.toFixed(2)} €</p>\n                  <p className=\"text-xs text-gray-400\">J+{option.minDays} à J+{option.maxDays}</p>\n                </div>\n              </div>\n            );\n          })}\n        </RadioGroup>\n        {estimatedDate && (\n          <div className=\"mt-4 p-3 bg-blue-50 rounded-lg text-sm\">\n            <i className=\"fas fa-calendar-alt mr-2\"></i>\n            Livraison estimée entre le <strong>{estimatedDate}</strong>\n          </div>\n        )}\n      </CardContent>\n    </Card>\n  );\n};\n\nexport default ShippingOptions;\n```"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Calculez le coût des trois options pour le client (poids 5.2 kg, zone nationale) selon les tarifs donnés : Standard (0,30€/kg), Express (0,80€/kg), International (1,50€/kg). Ajoutez un minimum de 4€ pour l'Express et 2€ pour le Standard.",
+        "niveau": "medium",
+        "reponse": "**Calculs :**\n\nPoids total : $5.2$ kg\n\n- **Standard** : $5.2 \\times 0.30 = 1.56$ € → inférieur au minimum (2€), donc **2,00 €**\n- **Express** : $5.2 \\times 0.80 = 4.16$ € → supérieur au minimum (4€), donc **4,16 €**\n- **International** : $5.2 \\times 1.50 = 7.80$ € → **7,80 €** (pas de minimum spécifié)\n\n**Résultat** : Standard = 2,00 €, Express = 4,16 €, International = 7,80 €.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Estimation de la date de livraison avec prise en compte des jours ouvrés",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Pour améliorer l'expérience client, vous devez estimer une date de livraison précise en excluant les week-ends et les jours fériés.</p><p><strong>Règles :</strong></p><ul><li>La commande est passée un lundi à 14h00 (jour ouvré).</li><li>Délai de traitement : 1 jour ouvré (commande traitée le lendemain).</li><li>Délai de transport : 3 jours ouvrés.</li><li>Les jours fériés à exclure : 1er mai (férié) et 25 décembre.</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créez une fonction JavaScript `addBusinessDays(startDate: Date, days: number, holidays: Date[]): Date` qui ajoute un nombre de jours ouvrés (lundi-vendredi) à une date donnée, en excluant les jours fériés fournis en paramètre.",
+        "niveau": "hard",
+        "reponse": "```typescript\nfunction addBusinessDays(startDate: Date, days: number, holidays: Date[]): Date {\n  let result = new Date(startDate);\n  let addedDays = 0;\n  \n  // Normaliser les jours fériés pour comparaison (ignorer l'heure)\n  const holidayDates = holidays.map(h => new Date(h.getFullYear(), h.getMonth(), h.getDate()));\n  \n  while (addedDays < days) {\n    result.setDate(result.getDate() + 1);\n    const dayOfWeek = result.getDay();\n    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; // Dimanche ou Samedi\n    const isHoliday = holidayDates.some(h => \n      h.getDate() === result.getDate() && \n      h.getMonth() === result.getMonth() && \n      h.getFullYear() === result.getFullYear()\n    );\n    \n    if (!isWeekend && !isHoliday) {\n      addedDays++;\n    }\n  }\n  return result;\n}\n\n// Exemple d'utilisation pour estimer la date de livraison\nconst orderDate = new Date('2026-05-11'); // Lundi\nconst processingDays = 1;\nconst shippingDays = 3;\nconst holidays = [new Date('2026-05-01'), new Date('2026-12-25')];\n\nlet estimatedDate = addBusinessDays(orderDate, processingDays, holidays);\n// Après traitement (1 jour) : Mardi 12 mai (non férié)\nestimatedDate = addBusinessDays(estimatedDate, shippingDays, holidays);\n// Transport (3 jours) : Mercredi 13, Jeudi 14, Vendredi 15 mai\n// Livraison estimée : Vendredi 15 mai 2026\n\nconsole.log(`Livraison estimée : ${estimatedDate.toLocaleDateString('fr-FR')}`);\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Appliquez cette fonction au scénario suivant : commande passée le mercredi 29 avril 2026 à 23h00. Délai de traitement 2 jours ouvrés, transport 2 jours ouvrés. Le 1er mai est férié. Quelle est la date de livraison estimée ?",
+            "niveau": "medium",
+            "reponse": "**Déroulement étape par étape :**\n\nDate de commande : **Mercredi 29 avril 2026**\n\n**Traitement (2 jours ouvrés) :**\n- Jour 1 (jeudi 30 avril) → compte\n- Jour 2 (vendredi 1er mai) → FÉRIÉ, ne compte pas\n- Jour 2 (reporté au lundi 4 mai) → compte\n\nFin du traitement : **Lundi 4 mai**\n\n**Transport (2 jours ouvrés) :**\n- Jour 1 (mardi 5 mai) → compte\n- Jour 2 (mercredi 6 mai) → compte\n\n**Date de livraison estimée : Mercredi 6 mai 2026**\n\n**Vérification** : Aucun autre férié entre le 4 et 6 mai, donc date correcte."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation des frais de livraison selon le panier",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un client a dans son panier :</p><ul><li>Article X : 35€, poids 1.2 kg</li><li>Article Y : 22€, poids 2.3 kg</li><li>Article Z : 48€, poids 0.9 kg</li></ul><p>Les règles de livraison du site sont :</p><ul><li>Frais fixes de base : 3,50€</li><li>Supplément poids : 0,25€ par kg au-delà de 3 kg</li><li>Réduction : livraison gratuite si total > 100€</li><li>Réduction : -1€ si le client a un code promo 'LIVRAISON10'</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décomposez le calcul des frais de livraison pour ce client, en appliquant les règles dans le bon ordre. Le client ne possède pas de code promo.",
+        "niveau": "easy",
+        "reponse": "**Étape 1 : Calcul du total de la commande**\n$35 + 22 + 48 = 105$ €\n\n**Étape 2 : Vérification de la condition de gratuité**\n$105 > 100$ → la livraison est gratuite.\n\n**Étape 3 : Frais finaux**\nFrais de livraison = 0 €\n\n**Note** : Le supplément poids et les frais fixes ne s'appliquent pas car la condition de gratuité est prioritaire.\n\n**Si le total était inférieur à 100€** (ex: 95€), le calcul serait :\n- Frais fixes : 3,50 €\n- Poids total : $1.2 + 2.3 + 0.9 = 4.4$ kg\n- Dépassement : $4.4 - 3 = 1.4$ kg\n- Supplément : $1.4 \\times 0.25 = 0.35$ €\n- Total : $3.50 + 0.35 = 3.85$ €",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Réécrivez ces règles sous forme d'une fonction JavaScript `calculateShipping(cartTotal, totalWeight, promoCode)` qui retourne les frais finaux.",
+            "niveau": "medium",
+            "reponse": "```typescript\nfunction calculateShipping(cartTotal: number, totalWeight: number, promoCode?: string): number {\n  // 1. Gratuité si panier > 100€\n  if (cartTotal > 100) {\n    return 0;\n  }\n  \n  // 2. Calcul standard\n  let shippingCost = 3.50; // Frais fixes de base\n  \n  // 3. Supplément poids si > 3kg\n  if (totalWeight > 3) {\n    const excessWeight = totalWeight - 3;\n    shippingCost += excessWeight * 0.25;\n  }\n  \n  // 4. Application du code promo (arrondi à 2 décimales)\n  if (promoCode === 'LIVRAISON10') {\n    shippingCost = Math.max(0, shippingCost - 1); // Ne pas descendre en dessous de 0\n  }\n  \n  // Arrondi à 2 décimales\n  return Math.round(shippingCost * 100) / 100;\n}\n\n// Tests\nconsole.log(calculateShipping(105, 4.4, undefined)); // 0 (gratuit)\nconsole.log(calculateShipping(95, 4.4, undefined));  // 3.85\nconsole.log(calculateShipping(95, 4.4, 'LIVRAISON10')); // 2.85\nconsole.log(calculateShipping(50, 2.5, undefined)); // 3.50 (pas de dépassement poids)\n```"
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+  "matiere": "Mathématiques",
+  "classe": "Première D",
+  "sequence": "Séquence 4",
+  "anneeScolaire": "2025-2026",
+  "exercices": [
+    {
+      "titre": "Exercice 1 : Équations, inéquations et polynômes",
+      "points": "6 pts",
+      "enonce": "<div style='font-size: 1.1em; line-height: 1.6; background-color: #f8f9fa; padding: 15px; border-radius: 8px; color: #212529;'><p>On considère le polynôme <span class='math inline'>\\(P(x) = 2x^3 - 3x^2 - 5x + 6\\)</span>.</p></div>",
+      "questions": [
+        {
+          "question": "<div style='font-size: 1.05em; line-height: 1.8; padding: 12px;'><p><strong>1. a)</strong> Vérifier que <span class='math inline'>\\(x = 1\\)</span> est une racine du polynôme <span class='math inline'>\\(P\\)</span>.</p></div>",
+          "reponse": "<div style='font-size: 1.05em; line-height: 1.8; padding: 12px;'><p><span class='math inline'>\\(P(1) = 2(1)^3 - 3(1)^2 - 5(1) + 6 = 2 - 3 - 5 + 6 = 0\\)</span>. Donc <span class='math inline'>\\(x = 1\\)</span> est bien une racine de <span class='math inline'>\\(P\\)</span>.</p></div>"
+        },
+        {
+          "question": "<div style='font-size: 1.05em; line-height: 1.8; padding: 12px;'><p><strong>1. b)</strong> Déterminer les réels <span class='math inline'>\\(a\\)</span>, <span class='math inline'>\\(b\\)</span> et <span class='math inline'>\\(c\\)</span> tels que <span class='math inline'>\\(P(x) = (x-1)(ax^2 + bx + c)\\)</span>.</p></div>",
+          "reponse": "<div style='font-size: 1.05em; line-height: 1.8; padding: 12px;'><p>En développant : <span class='math inline'>\\((x-1)(ax^2 + bx + c) = ax^3 + bx^2 + cx - ax^2 - bx - c = ax^3 + (b-a)x^2 + (c-b)x - c\\)</span>.</p><p>Par identification avec <span class='math inline'>\\(2x^3 - 3x^2 - 5x + 6\\)</span>, on obtient :</p><p><span class='math inline'>\\(a = 2\\)</span>, <span class='math inline'>\\(b - a = -3 \\Rightarrow b = -1\\)</span>, <span class='math inline'>\\(-c = 6 \\Rightarrow c = -6\\)</span>.</p><p>Donc <span class='math inline'>\\(P(x) = (x-1)(2x^2 - x - 6)\\)</span>.</p></div>"
+        },
+        {
+          "question": "<div style='font-size: 1.05em; line-height: 1.8; padding: 12px;'><p><strong>1. c)</strong> Résoudre dans <span class='math inline'>\\(\\mathbb{R}\\)</span> l'équation <span class='math inline'>\\(P(x) = 0\\)</span>.</p></div>",
+          "reponse": "<div style='font-size: 1.05em; line-height: 1.8; padding: 12px;'><p><span class='math inline'>\\(P(x) = 0 \\iff (x-1)(2x^2 - x - 6) = 0\\)</span>.</p><p>Soit <span class='math inline'>\\(x - 1 = 0 \\Rightarrow x = 1\\)</span>.</p><p>Soit <span class='math inline'>\\(2x^2 - x - 6 = 0\\)</span>. Le discriminant est <span class='math inline'>\\(\\Delta = (-1)^2 - 4(2)(-6) = 1 + 48 = 49\\)</span>.</p><p>Les racines sont <span class='math inline'>\\(x = \\frac{1 \\pm 7}{4}\\)</span>, soit <span class='math inline'>\\(x = 2\\)</span> ou <span class='math inline'>\\(x = -\\frac{3}{2}\\)</span>.</p><p>L'ensemble solution est <span class='math inline'>\\(S = \\{-\\frac{3}{2}, 1, 2\\}\\)</span>.</p></div>"
+        },
+        {
+          "question": "<div style='font-size: 1.05em; line-height: 1.8; padding: 12px;'><p> Résoudre dans <span class='math inline'>\\(\\mathbb{R}\\)</span> l'inéquation <span class='math inline'>\\(2x^2 - x - 6 \\le 0\\)</span>.</p></div>",
+          "reponse": "<div style='font-size: 1.05em; line-height: 1.8; padding: 12px;'><p>Le trinôme <span class='math inline'>\\(2x^2 - x - 6\\)</span> a pour racines <span class='math inline'>\\(-\\frac{3}{2}\\)</span> et <span class='math inline'>\\(2\\)</span>. Comme <span class='math inline'>\\(a = 2 > 0\\)</span>, il est négatif entre les racines.</p><p>Donc <span class='math inline'>\\(2x^2 - x - 6 \\le 0 \\iff x \\in [-\\frac{3}{2}, 2]\\)</span>.</p></div>"
+        },
+        {
+          "question": "<div style='font-size: 1.05em; line-height: 1.8; padding: 12px;'><p> Résoudre dans <span class='math inline'>\\(\\mathbb{R}\\)</span> l'équation trigonométrique suivante : <span class='math inline'>\\(2\\cos^2 x - \\cos x - 6 = 0\\)</span>.</p></div>",
+          "reponse": "<div style='font-size: 1.05em; line-height: 1.8; padding: 12px;'><p>Posons <span class='math inline'>\\(X = \\cos x\\)</span>. L'équation devient <span class='math inline'>\\(2X^2 - X - 6 = 0\\)</span>.</p><p>Les solutions sont <span class='math inline'>\\(X = 2\\)</span> ou <span class='math inline'>\\(X = -\\frac{3}{2}\\)</span>. Aucune de ces valeurs n'appartient à <span class='math inline'>\\([-1, 1]\\)</span>.</p><p>Donc l'équation n'a pas de solution dans <span class='math inline'>\\(\\mathbb{R}\\)</span> : <span class='math inline'>\\(S = \\emptyset\\)</span>.</p></div>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 2 : Systèmes d'équations",
+      "points": "5 pts",
+      "enonce": "<div style='font-size: 1.1em; line-height: 1.6; background-color: #f8f9fa; padding: 15px; border-radius: 8px; color: #212529;'><p>Dans un magasin, un client achète 2 cahiers et 3 stylos pour un montant total de 2 100 FCFA. Un autre client achète 3 cahiers et 2 stylos pour 2 400 FCFA.</p></div>",
+      "questions": [
+        {
+          "question": "<div style='font-size: 1.05em; line-height: 1.8; padding: 12px;'><p> Déterminer le prix d'un cahier et d'un stylo.</p></div>",
+          "reponse": "<div style='font-size: 1.05em; line-height: 1.8; padding: 12px;'><p>Soit <span class='math inline'>\\(x\\)</span> le prix d'un cahier et <span class='math inline'>\\(y\\)</span> le prix d'un stylo.</p><p>Le système est : <span class='math inline'>\\(\\begin{cases} 2x + 3y = 2100 \\\\ 3x + 2y = 2400 \\end{cases}\\)</span>.</p><p>En multipliant la première par 3 et la seconde par 2 : <span class='math inline'>\\(\\begin{cases} 6x + 9y = 6300 \\\\ 6x + 4y = 4800 \\end{cases}\\)</span>.</p><p>Soustrayons : <span class='math inline'>\\(5y = 1500 \\Rightarrow y = 300\\)</span>.</p><p>On a alors <span class='math inline'>\\(2x + 900 = 2100 \\Rightarrow 2x = 1200 \\Rightarrow x = 600\\)</span>.</p><p>Un cahier coûte 600 FCFA et un stylo 300 FCFA.</p></div>"
+        },
+        {
+          "question": "<div style='font-size: 1.05em; line-height: 1.8; padding: 12px;'><p> Résoudre dans <span class='math inline'>\\(\\mathbb{R}^2\\)</span> le système d'équations non linéaire suivant : <span class='math inline'>\\(\\begin{cases} x + y = 5 \\\\ x^2 + y^2 = 13 \\end{cases}\\)</span>.</p></div>",
+          "reponse": "<div style='font-size: 1.05em; line-height: 1.8; padding: 12px;'><p>De la première équation, <span class='math inline'>\\(y = 5 - x\\)</span>. En substituant dans la seconde :</p><p><span class='math inline'>\\(x^2 + (5 - x)^2 = 13 \\iff x^2 + 25 - 10x + x^2 = 13 \\iff 2x^2 - 10x + 12 = 0\\)</span>.</p><p>Divisons par 2 : <span class='math inline'>\\(x^2 - 5x + 6 = 0\\)</span>. Le discriminant est <span class='math inline'>\\(\\Delta = 25 - 24 = 1\\)</span>.</p><p>Les racines sont <span class='math inline'>\\(x = 2\\)</span> ou <span class='math inline'>\\(x = 3\\)</span>. On obtient alors <span class='math inline'>\\(y = 3\\)</span> ou <span class='math inline'>\\(y = 2\\)</span>.</p><p>Les solutions sont <span class='math inline'>\\(S = \\{(2, 3), (3, 2)\\}\\)</span>.</p></div>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 3 : Trigonométrie",
+      "points": "4 pts",
+      "enonce": "<div style='font-size: 1.1em; line-height: 1.6; background-color: #f8f9fa; padding: 15px; border-radius: 8px; color: #212529;'><p>On considère l'expression <span class='math inline'>\\(E(x) = \\cos(2x) + \\sin(2x)\\)</span>.</p></div>",
+      "questions": [
+        {
+          "question": "<div style='font-size: 1.05em; line-height: 1.8; padding: 12px;'><p> Transformer l'expression <span class='math inline'>\\(E(x)\\)</span> sous la forme <span class='math inline'>\\(\\sqrt{2} \\cos(2x - \\varphi)\\)</span>.</p></div>",
+          "reponse": "<div style='font-size: 1.05em; line-height: 1.8; padding: 12px;'><p>Posons <span class='math inline'>\\(R = \\sqrt{1^2 + 1^2} = \\sqrt{2}\\)</span>. On cherche <span class='math inline'>\\(\\varphi\\)</span> tel que <span class='math inline'>\\(\\cos \\varphi = \\frac{1}{\\sqrt{2}}\\)</span> et <span class='math inline'>\\(\\sin \\varphi = \\frac{1}{\\sqrt{2}}\\)</span>, donc <span class='math inline'>\\(\\varphi = \\frac{\\pi}{4}\\)</span>.</p><p>Alors <span class='math inline'>\\(E(x) = \\sqrt{2} \\cos(2x - \\frac{\\pi}{4})\\)</span>.</p></div>"
+        },
+        {
+          "question": "<div style='font-size: 1.05em; line-height: 1.8; padding: 12px;'><p> Résoudre dans <span class='math inline'>\\(\\mathbb{R}\\)</span> l'équation <span class='math inline'>\\(E(x) = 1\\)</span>.</p></div>",
+          "reponse": "<div style='font-size: 1.05em; line-height: 1.8; padding: 12px;'><p><span class='math inline'>\\(E(x) = 1 \\iff \\sqrt{2} \\cos(2x - \\frac{\\pi}{4}) = 1 \\iff \\cos(2x - \\frac{\\pi}{4}) = \\frac{\\sqrt{2}}{2} = \\cos(\\frac{\\pi}{4})\\)</span>.</p><p>Donc <span class='math inline'>\\(2x - \\frac{\\pi}{4} = \\frac{\\pi}{4} + 2k\\pi\\)</span> ou <span class='math inline'>\\(2x - \\frac{\\pi}{4} = -\\frac{\\pi}{4} + 2k\\pi\\)</span>, <span class='math inline'>\\(k \\in \\mathbb{Z}\\)</span>.</p><p>Soit <span class='math inline'>\\(2x = \\frac{\\pi}{2} + 2k\\pi \\Rightarrow x = \\frac{\\pi}{4} + k\\pi\\)</span>.</p><p>Soit <span class='math inline'>\\(2x = 0 + 2k\\pi \\Rightarrow x = k\\pi\\)</span>.</p><p>L'ensemble solution est <span class='math inline'>\\(S = \\{k\\pi, \\frac{\\pi}{4} + k\\pi \\mid k \\in \\mathbb{Z}\\}\\)</span>.</p></div>"
+        },
+        {
+          "question": "<div style='font-size: 1.05em; line-height: 1.8; padding: 12px;'><p> Résoudre dans <span class='math inline'>\\([0, 2\\pi]\\)</span> l'inéquation <span class='math inline'>\\(E(x) > 1\\)</span>.</p></div>",
+          "reponse": "<div style='font-size: 1.05em; line-height: 1.8; padding: 12px;'><p><span class='math inline'>\\(E(x) > 1 \\iff \\cos(2x - \\frac{\\pi}{4}) > \\frac{\\sqrt{2}}{2}\\)</span>.</p><p>On a <span class='math inline'>\\(\\cos \\theta > \\frac{\\sqrt{2}}{2} \\iff \\theta \\in ]-\\frac{\\pi}{4}, \\frac{\\pi}{4}[ + 2k\\pi\\)</span>.</p><p>Donc <span class='math inline'>\\(-\\frac{\\pi}{4} + 2k\\pi < 2x - \\frac{\\pi}{4} < \\frac{\\pi}{4} + 2k\\pi\\)</span>.</p><p>Soit <span class='math inline'>\\(0 + 2k\\pi < 2x < \\frac{\\pi}{2} + 2k\\pi \\Rightarrow k\\pi < x < \\frac{\\pi}{4} + k\\pi\\)</span>.</p><p>Dans <span class='math inline'>\\([0, 2\\pi]\\)</span>, on obtient <span class='math inline'>\\(x \\in ]0, \\frac{\\pi}{4}[ \\cup ]\\pi, \\frac{5\\pi}{4}[\\)</span>.</p></div>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 4 : Barycentre et lignes de niveau",
+      "points": "5 pts",
+      "enonce": "<div style='font-size: 1.1em; line-height: 1.6; background-color: #f8f9fa; padding: 15px; border-radius: 8px; color: #212529;'><p>Dans le plan muni d'un repère orthonormé <span class='math inline'>\\((O, \\vec{i}, \\vec{j})\\)</span>, on donne les points <span class='math inline'>\\(A(1, 2)\\)</span>, <span class='math inline'>\\(B(3, 4)\\)</span> et <span class='math inline'>\\(C(5, -1)\\)</span>.</p></div>",
+      "questions": [
+        {
+          "question": "<div style='font-size: 1.05em; line-height: 1.8; padding: 12px;'><p> Déterminer les coordonnées du barycentre <span class='math inline'>\\(G\\)</span> des points pondérés <span class='math inline'>\\((A, 2)\\)</span>, <span class='math inline'>\\((B, -1)\\)</span> et <span class='math inline'>\\((C, 1)\\)</span>.</p></div>",
+          "reponse": "<div style='font-size: 1.05em; line-height: 1.8; padding: 12px;'><p>Les coordonnées de <span class='math inline'>\\(G\\)</span> sont données par :</p><p><span class='math inline'>\\(x_G = \\frac{2x_A - 1x_B + 1x_C}{2 - 1 + 1} = \\frac{2(1) - 1(3) + 1(5)}{2} = \\frac{2 - 3 + 5}{2} = \\frac{4}{2} = 2\\)</span>.</p><p><span class='math inline'>\\(y_G = \\frac{2y_A - 1y_B + 1y_C}{2} = \\frac{2(2) - 1(4) + 1(-1)}{2} = \\frac{4 - 4 - 1}{2} = -\\frac{1}{2}\\)</span>.</p><p>Donc <span class='math inline'>\\(G(2, -\\frac{1}{2})\\)</span>.</p></div>"
+        },
+        {
+          "question": "<div style='font-size: 1.05em; line-height: 1.8; padding: 12px;'><p> Soit <span class='math inline'>\\(\\mathcal{E}\\)</span> l'ensemble des points <span class='math inline'>\\(M\\)</span> du plan tels que <span class='math inline'>\\(||2\\vec{MA} - \\vec{MB} + \\vec{MC}|| = 2\\)</span>. Déterminer et construire <span class='math inline'>\\(\\mathcal{E}\\)</span>.</p></div>",
+          "reponse": "<div style='font-size: 1.05em; line-height: 1.8; padding: 12px;'><p>En utilisant la propriété de réduction : <span class='math inline'>\\(2\\vec{MA} - \\vec{MB} + \\vec{MC} = (2 - 1 + 1)\\vec{MG} = 2\\vec{MG}\\)</span>.</p><p>L'équation devient <span class='math inline'>\\(||2\\vec{MG}|| = 2 \\iff 2MG = 2 \\iff MG = 1\\)</span>.</p><p><span class='math inline'>\\(\\mathcal{E}\\)</span> est le cercle de centre <span class='math inline'>\\(G(2, -\\frac{1}{2})\\)</span> et de rayon 1.</p></div>"
+        }
+      ]
+    }
+  ]
+};
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

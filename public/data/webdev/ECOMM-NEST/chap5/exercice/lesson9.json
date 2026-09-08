@@ -1,0 +1,190 @@
+[
+  {
+    "intitule": "Exercice 1 : Conception du Wallet et des Transactions",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous êtes développeur backend sur la plateforme e-commerce Sawamart. Vous devez concevoir un système de portefeuille (wallet) pour les utilisateurs.</p><p>À l'aide de TypeORM, définissez les entités <code>Wallet</code> et <code>Transaction</code> en respectant les contraintes suivantes :</p><ul><li>Un utilisateur peut avoir un seul portefeuille.</li><li>Chaque transaction doit être liée à un portefeuille.</li><li>Les transactions doivent inclure le type (CREDIT, DEBIT, ESCROW), le montant, le statut (PENDING, COMPLETED, FAILED) et une référence unique.</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le code de l'entité <code>Wallet</code> avec les décors TypeORM appropriés.",
+        "niveau": "easy",
+        "reponse": "```typescript\nimport { Entity, PrimaryGeneratedColumn, Column, OneToOne, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';\nimport { User } from '../../users/entities/user.entity';\nimport { Transaction } from './transaction.entity';\n\n@Entity()\nexport class Wallet {\n  @PrimaryGeneratedColumn('uuid')\n  id: string;\n\n  @OneToOne(() => User, user => user.wallet)\n  user: User;\n\n  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })\n  balance: number;\n\n  @Column({ default: true })\n  isActive: boolean;\n\n  @OneToMany(() => Transaction, transaction => transaction.wallet)\n  transactions: Transaction[];\n\n  @CreateDateColumn()\n  createdAt: Date;\n\n  @UpdateDateColumn()\n  updatedAt: Date;\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quelle est la relation entre <code>Wallet</code> et <code>User</code> ? Justifiez votre choix.",
+            "niveau": "medium",
+            "reponse": "C'est une relation OneToOne. Chaque utilisateur ne peut avoir qu'un seul portefeuille, ce qui correspond bien à une relation un-à-un."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Pourquoi utiliser le type <code>decimal</code> pour la colonne <code>balance</code> plutôt qu'un type <code>float</code> ?",
+            "niveau": "hard",
+            "reponse": "Le type <code>decimal</code> est plus précis pour les calculs financiers car il évite les problèmes d'arrondi liés à la représentation binaire des nombres flottants."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Écrivez le code de l'entité <code>Transaction</code> avec les décors TypeORM appropriés.",
+        "niveau": "easy",
+        "reponse": "```typescript\nimport { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, UpdateDateColumn } from 'typeorm';\nimport { Wallet } from './wallet.entity';\n\nexport enum TransactionType {\n  CREDIT = 'credit',\n  DEBIT = 'debit',\n  ESCROW = 'escrow'\n}\n\nexport enum TransactionStatus {\n  PENDING = 'pending',\n  COMPLETED = 'completed',\n  FAILED = 'failed'\n}\n\n@Entity()\nexport class Transaction {\n  @PrimaryGeneratedColumn('uuid')\n  id: string;\n\n  @Column({ unique: true })\n  reference: string;\n\n  @Column({ type: 'decimal', precision: 10, scale: 2 })\n  amount: number;\n\n  @Column({ type: 'enum', enum: TransactionType })\n  type: TransactionType;\n\n  @Column({ type: 'enum', enum: TransactionStatus, default: TransactionStatus.PENDING })\n  status: TransactionStatus;\n\n  @ManyToOne(() => Wallet, wallet => wallet.transactions)\n  wallet: Wallet;\n\n  @Column({ nullable: true })\n  description?: string;\n\n  @CreateDateColumn()\n  createdAt: Date;\n\n  @UpdateDateColumn()\n  updatedAt: Date;\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Quelle est l'utilité du champ <code>reference</code> dans l'entité <code>Transaction</code> ?",
+            "niveau": "medium",
+            "reponse": "Le champ <code>reference</code> permet de garantir l'unicité et de suivre chaque transaction de manière unique, facilitant ainsi l'audit et le suivi des opérations."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 2 : Implémentation des Opérations du Wallet",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous devez implémenter les opérations de base du portefeuille pour la plateforme e-commerce.</p><p>Créez un service <code>WalletService</code> avec les méthodes suivantes :</p><ul><li><code>credit(userId: string, amount: number, description: string)</code> : Créditer le portefeuille d'un utilisateur.</li><li><code>debit(userId: string, amount: number, description: string)</code> : Débiter le portefeuille d'un utilisateur après vérification du solde.</li><li><code>getBalance(userId: string)</code> : Récupérer le solde actuel du portefeuille.</li><li><code>getTransactions(userId: string, page: number, limit: number)</code> : Récupérer l'historique des transactions avec pagination.</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémentez la méthode <code>credit</code> en utilisant les transactions SQL avec <code>QueryRunner</code> pour garantir l'intégrité des données.",
+        "niveau": "hard",
+        "reponse": "```typescript\nasync credit(userId: string, amount: number, description: string): Promise<Transaction> {\n  if (amount <= 0) {\n    throw new BadRequestException('Le montant doit être supérieur à 0');\n  }\n\n  const queryRunner = this.dataSource.createQueryRunner();\n  await queryRunner.connect();\n  await queryRunner.startTransaction();\n\n  try {\n    const wallet = await queryRunner.manager.findOne(Wallet, {\n      where: { user: { id: userId } },\n      relations: ['user']\n    });\n\n    if (!wallet) {\n      throw new NotFoundException('Portefeuille non trouvé');\n    }\n\n    // Mettre à jour le solde\n    wallet.balance = Number(wallet.balance) + amount;\n    await queryRunner.manager.save(wallet);\n\n    // Créer la transaction\n    const transaction = queryRunner.manager.create(Transaction, {\n      reference: `CREDIT-${Date.now()}`,\n      amount,\n      type: TransactionType.CREDIT,\n      status: TransactionStatus.COMPLETED,\n      wallet,\n      description\n    });\n    await queryRunner.manager.save(transaction);\n\n    await queryRunner.commitTransaction();\n    return transaction;\n  } catch (error) {\n    await queryRunner.rollbackTransaction();\n    throw error;\n  } finally {\n    await queryRunner.release();\n  }\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi est-il important d'utiliser une transaction pour cette opération ?",
+            "niveau": "medium",
+            "reponse": "L'utilisation d'une transaction garantit l'atomicité : soit toutes les opérations réussissent (mise à jour du solde + création de la transaction), soit aucune n'est effectuée, ce qui préserve l'intégrité des données financières."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Que se passe-t-il si la mise à jour du solde réussit mais que la création de la transaction échoue ?",
+            "niveau": "hard",
+            "reponse": "Grâce au mécanisme de transaction, le rollback est effectué automatiquement dans le bloc catch, ce qui annule la mise à jour du solde. Le portefeuille reste dans un état cohérent."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Implémentez la méthode <code>debit</code> avec vérification du solde avant le débit.",
+        "niveau": "hard",
+        "reponse": "```typescript\nasync debit(userId: string, amount: number, description: string): Promise<Transaction> {\n  if (amount <= 0) {\n    throw new BadRequestException('Le montant doit être supérieur à 0');\n  }\n\n  const queryRunner = this.dataSource.createQueryRunner();\n  await queryRunner.connect();\n  await queryRunner.startTransaction();\n\n  try {\n    const wallet = await queryRunner.manager.findOne(Wallet, {\n      where: { user: { id: userId } },\n      relations: ['user']\n    });\n\n    if (!wallet) {\n      throw new NotFoundException('Portefeuille non trouvé');\n    }\n\n    // Vérification du solde\n    if (Number(wallet.balance) < amount) {\n      throw new BadRequestException('Solde insuffisant');\n    }\n\n    // Mettre à jour le solde\n    wallet.balance = Number(wallet.balance) - amount;\n    await queryRunner.manager.save(wallet);\n\n    // Créer la transaction\n    const transaction = queryRunner.manager.create(Transaction, {\n      reference: `DEBIT-${Date.now()}`,\n      amount,\n      type: TransactionType.DEBIT,\n      status: TransactionStatus.COMPLETED,\n      wallet,\n      description\n    });\n    await queryRunner.manager.save(transaction);\n\n    await queryRunner.commitTransaction();\n    return transaction;\n  } catch (error) {\n    await queryRunner.rollbackTransaction();\n    throw error;\n  } finally {\n    await queryRunner.release();\n  }\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Quelle exception devez-vous lever si le solde est insuffisant ?",
+            "niveau": "easy",
+            "reponse": "Une `BadRequestException` avec un message indiquant 'Solde insuffisant' ou une exception personnalisée comme `InsufficientBalanceException`."
+          }
+        ]
+      },
+      {
+        "numero": 3,
+        "texte": "Implémentez la méthode <code>getTransactions</code> avec pagination et filtrage par type de transaction.",
+        "niveau": "medium",
+        "reponse": "```typescript\nasync getTransactions(\n  userId: string,\n  page: number = 1,\n  limit: number = 10,\n  type?: TransactionType\n): Promise<{ data: Transaction[]; total: number; page: number; totalPages: number }> {\n  const wallet = await this.walletRepository.findOne({\n    where: { user: { id: userId } }\n  });\n\n  if (!wallet) {\n    throw new NotFoundException('Portefeuille non trouvé');\n  }\n\n  const queryBuilder = this.transactionRepository.createQueryBuilder('transaction')\n    .where('transaction.walletId = :walletId', { walletId: wallet.id })\n    .orderBy('transaction.createdAt', 'DESC')\n    .skip((page - 1) * limit)\n    .take(limit);\n\n  if (type) {\n    queryBuilder.andWhere('transaction.type = :type', { type });\n  }\n\n  const [data, total] = await queryBuilder.getManyAndCount();\n\n  return {\n    data,\n    total,\n    page,\n    totalPages: Math.ceil(total / limit)\n  };\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "3.a",
+            "texte": "Comment gérer le cas où un utilisateur n'a pas de portefeuille ?",
+            "niveau": "medium",
+            "reponse": "On peut lever une exception appropriée ou créer automatiquement un portefeuille avec un solde initial de 0."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 3 : Contrôleur et API du Wallet",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous devez exposer les opérations du portefeuille via une API REST.</p><p>Implémentez un <code>WalletController</code> avec les endpoints suivants :</p><ul><li><code>GET /wallet/me</code> : Récupérer le solde du wallet de l'utilisateur authentifié.</li><li><code>GET /wallet/me/transactions</code> : Récupérer l'historique des transactions avec pagination.</li><li><code>POST /wallet/me/credit</code> : Créditer le wallet (pour les dépôts).</li><li><code>POST /wallet/me/debit</code> : Débiter le wallet (pour les achats).</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le contrôleur avec les endpoints appropriés en utilisant les décorateurs NestJS.",
+        "niveau": "medium",
+        "reponse": "```typescript\nimport { Controller, Get, Post, Body, Query, UseGuards, Request } from '@nestjs/common';\nimport { WalletService } from './wallet.service';\nimport { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';\n\n@Controller('wallet')\n@UseGuards(JwtAuthGuard)\nexport class WalletController {\n  constructor(private readonly walletService: WalletService) {}\n\n  @Get('me')\n  async getMyWallet(@Request() req) {\n    const userId = req.user.id;\n    const balance = await this.walletService.getBalance(userId);\n    return { balance };\n  }\n\n  @Get('me/transactions')\n  async getMyTransactions(\n    @Request() req,\n    @Query('page') page: number = 1,\n    @Query('limit') limit: number = 10,\n    @Query('type') type?: string\n  ) {\n    const userId = req.user.id;\n    return this.walletService.getTransactions(userId, page, limit, type);\n  }\n\n  @Post('me/credit')\n  async creditWallet(\n    @Request() req,\n    @Body() creditDto: { amount: number; description: string }\n  ) {\n    const userId = req.user.id;\n    return this.walletService.credit(userId, creditDto.amount, creditDto.description);\n  }\n\n  @Post('me/debit')\n  async debitWallet(\n    @Request() req,\n    @Body() debitDto: { amount: number; description: string }\n  ) {\n    const userId = req.user.id;\n    return this.walletService.debit(userId, debitDto.amount, debitDto.description);\n  }\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi utiliser <code>@UseGuards(JwtAuthGuard)</code> sur toutes les méthodes ?",
+            "niveau": "easy",
+            "reponse": "Pour s'assurer que seuls les utilisateurs authentifiés peuvent accéder aux fonctionnalités de leur portefeuille, ces données étant personnelles et sensibles."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Comment récupérer l'ID de l'utilisateur authentifié dans le contrôleur ?",
+            "niveau": "easy",
+            "reponse": "En utilisant le décorateur <code>@Request() req</code> et en accédant à <code>req.user.id</code> après que le guard JWT a validé le token et chargé l'utilisateur."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 4 : Gestion des Litiges avec Escrow",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>La plateforme Sawamart souhaite sécuriser les transactions entre acheteurs et vendeurs. Le montant de la vente est placé en séquestre (escrow) jusqu'à ce que l'acheteur confirme la réception des produits.</p><p>En cas de litige, le montant reste bloqué jusqu'à résolution par l'équipe de support.</p><p>Créez les méthodes suivantes dans le <code>WalletService</code> :</p><ul><li><code>escrowFunds(orderId: string, amount: number)</code> : Bloquer le montant sur le wallet de l'acheteur.</li><li><code>releaseEscrow(orderId: string)</code> : Libérer le montant au vendeur.</li><li><code>refundEscrow(orderId: string)</code> : Rembourser le montant à l'acheteur.</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez le mécanisme de séquestre (escrow) que vous mettrez en place. Comment garantir que l'argent ne soit ni perdu ni doublement dépensé ?",
+        "niveau": "hard",
+        "reponse": "Le mécanisme de séquestre fonctionne en bloquant le montant sur le wallet de l'acheteur dans un état 'escrow' :\n1. À la création de la commande, on débite le wallet de l'acheteur et on crée une transaction de type ESCROW.\n2. Le montant est conservé sur un compte séquestre.\n3. À la confirmation de l'acheteur, on crédite le wallet du vendeur.\n4. En cas de litige, le montant reste bloqué jusqu'à décision.\n5. En cas d'annulation, on crédite le wallet de l'acheteur.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quelle est la différence entre une transaction ESCROW et une transaction DEBIT simple ?",
+            "niveau": "medium",
+            "reponse": "Une transaction ESCROW bloque l'argent sans le transférer définitivement. L'argent est retiré du wallet de l'acheteur mais ne va pas immédiatement au vendeur. Il est conservé sur un compte intermédiaire jusqu'à ce que les conditions soient remplies."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Implémentez la méthode <code>releaseEscrow</code> avec les transactions SQL.",
+        "niveau": "very hard",
+        "reponse": "```typescript\nasync releaseEscrow(orderId: string): Promise<void> {\n  const order = await this.orderRepository.findOne({\n    where: { id: orderId },\n    relations: ['buyer', 'seller']\n  });\n\n  if (!order) {\n    throw new NotFoundException('Commande non trouvée');\n  }\n\n  if (order.escrowStatus !== 'pending') {\n    throw new BadRequestException('Le séquestre n\\'est pas en attente');\n  }\n\n  const queryRunner = this.dataSource.createQueryRunner();\n  await queryRunner.connect();\n  await queryRunner.startTransaction();\n\n  try {\n    // Créditer le vendeur\n    await this.credit(\n      order.seller.id,\n      order.amount,\n      `Libération séquestre - Commande ${orderId}`\n    );\n\n    // Mettre à jour le statut de la commande\n    order.escrowStatus = 'released';\n    await queryRunner.manager.save(order);\n\n    await queryRunner.commitTransaction();\n  } catch (error) {\n    await queryRunner.rollbackTransaction();\n    throw error;\n  } finally {\n    await queryRunner.release();\n  }\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Comment gérez-vous les cas où le vendeur n'a pas de wallet ?",
+            "niveau": "medium",
+            "reponse": "On doit s'assurer que tous les utilisateurs ont un wallet. On peut créer automatiquement un wallet lors de l'inscription ou vérifier l'existence avant de procéder à la transaction."
+          }
+        ]
+      },
+      {
+        "numero": 3,
+        "texte": "Proposez un modèle de données pour suivre les litiges et l'état du séquestre.",
+        "niveau": "hard",
+        "reponse": "```typescript\n@Entity()\nexport class Dispute {\n  @PrimaryGeneratedColumn('uuid')\n  id: string;\n\n  @ManyToOne(() => Order)\n  order: Order;\n\n  @Column({ type: 'enum', enum: DisputeStatus })\n  status: DisputeStatus;\n\n  @Column({ type: 'enum', enum: DisputeReason })\n  reason: DisputeReason;\n\n  @Column({ type: 'text', nullable: true })\n  description?: string;\n\n  @Column({ type: 'timestamp' })\n  createdAt: Date;\n\n  @Column({ type: 'timestamp', nullable: true })\n  resolvedAt?: Date;\n\n  @Column({ type: 'text', nullable: true })\n  resolutionNotes?: string;\n\n  @ManyToOne(() => User)\n  createdBy: User;\n\n  @ManyToOne(() => User, { nullable: true })\n  resolvedBy?: User;\n}\n```\n\nAvec des enums :\n```typescript\nexport enum DisputeStatus {\n  OPEN = 'open',\n  UNDER_REVIEW = 'under_review',\n  RESOLVED = 'resolved',\n  CLOSED = 'closed'\n}\n\nexport enum DisputeReason {\n  ITEM_NOT_RECEIVED = 'item_not_received',\n  ITEM_DAMAGED = 'item_damaged',\n  ITEM_NOT_AS_DESCRIBED = 'item_not_as_described',\n  OTHER = 'other'\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "3.a",
+            "texte": "Quelle serait la procédure pour résoudre un litige et libérer ou rembourser les fonds ?",
+            "niveau": "hard",
+            "reponse": "La procédure serait :\n1. L'acheteur ouvre un litige avec un motif.\n2. L'équipe de support examine les preuves.\n3. Si l'acheteur a raison, on rembourse (refundEscrow).\n4. Si le vendeur a raison, on libère les fonds (releaseEscrow).\n5. Le litige est marqué comme résolu avec des notes sur la décision."
+          }
+        ]
+      }
+    ]
+  }
+]

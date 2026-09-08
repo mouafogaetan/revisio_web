@@ -1,0 +1,182 @@
+[
+  {
+    "intitule": "Exercice 1 : Fondements des Autoencodeurs Variationnels",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Cet exercice porte sur les concepts fondamentaux des autoencodeurs variationnels (VAE), une variante des autoencodeurs qui permet la génération de nouvelles données.</p>",
+      "images": [
+        "Schéma comparant un autoencodeur standard à un autoencodeur variationnel (VAE)",
+        "Illustration de l'espace latent continu dans un VAE avec des exemples de données générées"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Définissez un autoencodeur variationnel (VAE) et expliquez en quoi il se distingue d'un autoencodeur standard.",
+        "niveau": "easy",
+        "reponse": "Un autoencodeur variationnel (VAE) est un modèle génératif qui apprend une représentation latente probabiliste des données. Contrairement à un autoencodeur standard qui apprend une représentation déterministe (un point dans l'espace latent), le VAE apprend une distribution de probabilité sur l'espace latent (généralement une gaussienne) pour chaque donnée. Cette approche probabiliste permet de générer de nouvelles données en échantillonnant dans l'espace latent. La distinction majeure est que le VAE est un modèle génératif, capable de produire de nouvelles données, tandis que l'autoencodeur standard est principalement utilisé pour la compression et la reconstruction.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Distinguez les rôles de l'encodeur et du décodeur dans un VAE, en précisant leurs sorties respectives.",
+        "niveau": "medium",
+        "reponse": "L'encodeur d'un VAE prend une donnée d'entrée et produit les paramètres d'une distribution de probabilité dans l'espace latent (généralement la moyenne μ et la variance σ² d'une gaussienne). Le décodeur prend un échantillon de cette distribution latente et le transforme en une reconstruction de la donnée d'origine. L'objectif est d'apprendre une représentation latente qui capture les facteurs de variation des données, tout en permettant la génération de nouvelles données. L'encodeur produit donc une distribution, tandis que le décodeur produit la reconstruction.",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Pourquoi utilise-t-on une approche probabiliste dans l'espace latent plutôt qu'une représentation déterministe ?",
+            "niveau": "medium",
+            "reponse": "L'approche probabiliste permet de capturer l'incertitude dans la représentation des données. Chaque donnée n'est plus représentée par un point unique dans l'espace latent, mais par une distribution. Cela permet de : 1) Gérer les données bruitées en modélisant l'incertitude. 2) Encourager la régularisation de l'espace latent, ce qui le rend continu et permet la génération de nouvelles données par interpolation. 3) Éviter le surapprentissage en empêchant le modèle de simplement mémoriser les données d'entraînement.",
+            "reponse": ""
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 2 : Objectif du VAE et Équation ELBO",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Le VAE est entraîné en maximisant une borne inférieure de la vraisemblance des données, appelée ELBO (Evidence Lower Bound).</p>",
+      "images": [
+        "Formule de l'ELBO décomposée en terme de reconstruction et divergence KL",
+        "Schéma du reparametrization trick pour la rétropropagation dans un VAE"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Énoncez et décomposez l'équation de l'ELBO en ses deux composantes principales. Expliquez le rôle de chaque terme.",
+        "niveau": "hard",
+        "reponse": "L'ELBO (Evidence Lower Bound) s'écrit : $L = \\mathbb{E}_{q_\\phi(z|x)}[\\log p_\\theta(x|z)] - KL(q_\\phi(z|x) || p(z))$.\n\nCette équation se décompose en deux termes :\n1) Le terme de reconstruction : $\\mathbb{E}_{q_\\phi(z|x)}[\\log p_\\theta(x|z)]$. C'est l'espérance de la log-vraisemblance de la reconstruction, qui mesure la capacité du décodeur à reconstruire la donnée originale à partir de l'échantillon latent. Plus ce terme est élevé, meilleure est la reconstruction.\n2) La divergence de Kullback-Leibler (KL) : $KL(q_\\phi(z|x) || p(z))$. C'est une mesure de distance entre la distribution latente apprise par l'encodeur et la distribution a priori (généralement une gaussienne centrée réduite $\\mathcal{N}(0, I)$). Ce terme agit comme un régularisateur qui encourage l'espace latent à être continu et bien structuré.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez le compromis entre le terme de reconstruction et la divergence KL lors de l'entraînement d'un VAE.",
+            "niveau": "hard",
+            "reponse": "Il existe un compromis fondamental entre les deux termes : un faible terme de reconstruction signifie une mauvaise reconstruction des données, tandis qu'un faible KL signifie que l'espace latent est bien régularisé mais peut perdre des informations sur les données. Un VAE doit trouver un équilibre : si la divergence KL est trop faible, l'encodeur ignore les données et l'espace latent devient aléatoire. Si la reconstruction est trop privilégiée, l'espace latent n'est pas assez régularisé, ce qui peut conduire à une mauvaise génération de nouvelles données. En pratique, ce compromis est contrôlé par la force du régularisateur (parfois en pondérant le KL).",
+            "reponse": ""
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Décrivez le principe du 'reparametrization trick' et expliquez pourquoi il est essentiel pour l'entraînement d'un VAE.",
+        "niveau": "very hard",
+        "reponse": "Le 'reparametrization trick' est une technique qui permet de rétropropager le gradient à travers l'échantillonnage aléatoire dans un VAE. L'idée est de reformuler l'échantillonnage de la distribution latente en une opération déterministe plus un bruit aléatoire indépendant : $z = \\mu + \\sigma \\odot \\epsilon$, où $\\epsilon \\sim \\mathcal{N}(0, I)$. Ainsi, on peut rétropropager le gradient de la perte par rapport à μ et σ, car l'échantillonnage aléatoire est déplacé vers ε qui est indépendant des paramètres du réseau. Sans cette technique, la rétropropagation ne serait pas possible à travers l'étape d'échantillonnage aléatoire, ce qui rendrait l'entraînement du VAE impossible.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 3 : Implémentation d'un VAE sur MNIST",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous souhaitez implémenter un autoencodeur variationnel (VAE) pour générer des chiffres manuscrits à partir du jeu de données MNIST (images 28x28 pixels en niveaux de gris).</p>",
+      "images": [
+        "Exemples d'images du jeu de données MNIST",
+        "Exemples de chiffres générés par un VAE entraîné sur MNIST"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Détaillez l'architecture d'un VAE adapté à MNIST (encodeur, espace latent, décodeur) en précisant les dimensions et les fonctions d'activation pour chaque couche.",
+        "niveau": "hard",
+        "reponse": "Une architecture possible pour MNIST :\n\n<strong>Encodeur :</strong>\n- Couche d'entrée : 784 neurones (28x28 aplati)\n- Couche cachée 1 : 512 neurones, activation ReLU\n- Couche cachée 2 : 256 neurones, activation ReLU\n- Couche de moyenne : 20 neurones (dimension latente), activation linéaire\n- Couche de variance (log-variance) : 20 neurones, activation linéaire\n\n<strong>Espace latent :</strong> dimension 20, avec l'échantillonnage via le reparametrization trick.\n\n<strong>Décodeur :</strong>\n- Couche d'entrée : 20 neurones\n- Couche cachée 1 : 256 neurones, activation ReLU\n- Couche cachée 2 : 512 neurones, activation ReLU\n- Couche de sortie : 784 neurones, activation Sigmoid (pour des pixels dans [0,1])\n\n<strong>Fonction de coût :</strong> ELBO avec perte de reconstruction (entropie croisée binaire pour MNIST) et divergence KL.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez comment vous évalueriez la qualité des générations de votre VAE, en utilisant des métriques appropriées.",
+        "niveau": "very hard",
+        "reponse": "Pour évaluer la qualité des générations d'un VAE, plusieurs approches sont possibles : 1) Évaluation visuelle : inspection visuelle des images générées, des interpolations entre points latents. 2) Métrique de vraisemblance : évaluer la log-vraisemblance des données de test sous le modèle. 3) FID (Fréchet Inception Distance) : mesure la similarité entre les distributions des images réelles et générées (très utilisé pour les images). 4) Précision et rappel : mesurent la qualité et la diversité des générations. 5) Test de reconstruction : comparer les reconstructions sur les données de test (MSE, SSIM). 6) Interpolation : vérifier que l'interpolation entre deux points latents donne des images plausibles, ce qui indique un espace latent continu.",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Pourquoi la divergence KL est-elle une métrique importante pour évaluer la régularisation du VAE ?",
+            "niveau": "medium",
+            "reponse": "La divergence KL mesure à quel point la distribution latente apprise s'écarte de la distribution a priori (généralement une gaussienne centrée réduite). Une divergence KL trop élevée indique que l'encodeur ne régularise pas suffisamment, ce qui peut conduire à un espace latent non continu et à une mauvaise génération. Une divergence KL trop faible signifie que l'encodeur ignore les données. L'évaluation de la divergence KL permet donc de vérifier si le VAE trouve le bon compromis entre reconstruction et régularisation. En pratique, une valeur de KL proche de 0 avec une bonne reconstruction est un indicateur d'un VAE bien entraîné.",
+            "reponse": ""
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 4 : VAE pour la Génération d'Images Médicales",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous travaillez dans un laboratoire de recherche médicale qui souhaite générer des images de radiographies pulmonaires synthétiques pour augmenter un jeu de données d'entraînement pour un système de détection de pathologies.</p>",
+      "images": [
+        "Exemple d'images de radiographies pulmonaires",
+        "Illustration de l'augmentation de données par génération d'images synthétiques"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Discutez des avantages et des défis de l'utilisation d'un VAE pour générer des images médicales réalistes.",
+        "niveau": "very hard",
+        "reponse": "Avantages : 1) Génération de données synthétiques pour augmenter le jeu de données d'entraînement, particulièrement utile pour les pathologies rares. 2) Possibilité de générer des variations contrôlées (ex: différentes positions, orientations). 3) Apprentissage d'une représentation latente interprétable qui peut être utilisée pour la détection d'anomalies.\n\nDéfis : 1) Les images médicales sont complexes et de haute résolution, ce qui nécessite des modèles plus profonds. 2) La qualité des générations doit être très élevée pour ne pas introduire de biais dans l'entraînement. 3) Le contrôle de la génération (ex: générer une pathologie spécifique) est difficile. 4) Les données médicales sont souvent limitées et annotées, ce qui peut rendre l'entraînement du VAE difficile. 5) Des enjeux éthiques et réglementaires existent pour l'utilisation de données synthétiques en santé.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposez des modifications ou des améliorations de l'architecture VAE pour mieux répondre à ce cas d'usage médical.",
+        "niveau": "very hard",
+        "reponse": "Plusieurs améliorations peuvent être proposées : 1) Utiliser un VAE avec des convolutions (VAE convolutif) pour mieux capturer les structures spatiales des images médicales. 2) Augmenter la dimension de l'espace latent pour capturer plus de variations (ex: dimension 256 ou 512). 3) Utiliser un VAE avec un prior hiérarchique (NVAE) ou un VAE avec un prior conditionné (ex: VAE avec labels pour contrôler la génération). 4) Ajouter un mécanisme d'attention pour se concentrer sur les régions pertinentes de l'image. 5) Utiliser un VAE avec un décodeur plus puissant (ex: réseau résiduel) pour améliorer la qualité des reconstructions. 6) Combiner avec un GAN (VAE-GAN) pour améliorer la qualité visuelle des générations.",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Comment contrôler la génération d'images avec un VAE pour produire des radiographies présentant une pathologie spécifique ?",
+            "niveau": "hard",
+            "reponse": "Pour contrôler la génération, on peut utiliser un VAE conditionnel (CVAE) où la condition (la pathologie) est fournie en entrée à l'encodeur et au décodeur. On peut aussi utiliser la méthode d'optimisation dans l'espace latent : trouver un point latent qui maximise la probabilité d'une pathologie spécifique en utilisant un classifieur auxiliaire. Une autre approche consiste à apprendre un espace latent séparé pour chaque pathologie, ou à utiliser des techniques comme la traversée de l'espace latent (latent traversal) pour découvrir les directions correspondant à des variations sémantiques (ex: présence d'une tumeur).",
+            "reponse": ""
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 5 : Analyse des Limites des VAE",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Bien que les VAE soient des modèles génératifs puissants, ils présentent certaines limites qui ont motivé le développement d'autres approches comme les GANs ou les modèles de diffusion.</p>",
+      "images": [
+        "Comparaison visuelle des générations d'un VAE et d'un GAN",
+        "Illustration du problème de flou dans les générations des VAE"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifiez et expliquez les principales limites des autoencodeurs variationnels dans le contexte de la génération d'images.",
+        "niveau": "hard",
+        "reponse": "Les principales limites des VAE sont : 1) Générations floues : les VAE ont tendance à produire des images lissées, manquant de détails fins, car ils optimisent une log-vraisemblance moyenne qui pénalise les déviations. 2) Collapsus de l'espace latent (posterior collapse) : dans certains cas, l'encodeur ignore le bruit et l'information de la donnée, rendant l'espace latent inefficace. 3) Difficulté à capturer les distributions multimodales complexes : les VAE peuvent avoir du mal à modéliser des données avec plusieurs modes distincts. 4) Sensibilité au choix de la distribution a priori : le choix de la gaussienne centrée réduite peut être restrictif. 5) Nécessité de faire des compromis entre reconstruction et génération.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Comparez les VAE avec les GANs en termes de qualité de génération, de stabilité d'entraînement et de diversité des échantillons.",
+        "niveau": "very hard",
+        "reponse": "Comparaison VAE vs GAN :\n1) Qualité de génération : Les GANs produisent généralement des générations de meilleure qualité visuelle (plus nettes, plus réalistes), car ils optimisent directement la discrimination entre données réelles et générées. Les VAE produisent souvent des générations plus floues.\n2) Stabilité d'entraînement : Les VAE sont plus stables à l'entraînement car ils optimisent une fonction de coût bien définie (ELBO). Les GANs sont réputés pour leur instabilité d'entraînement (mode collapse, oscillations).\n3) Diversité des échantillons : Les VAE ont tendance à mieux couvrir la distribution des données (meilleure diversité), tandis que les GANs peuvent souffrir du mode collapse (génèrent un nombre limité de modes).\n4) Contrôle de la génération : Les VAE offrent un espace latent structuré qui permet un meilleur contrôle et une meilleure interpolation. Les GANs ont un espace latent moins interprétable.",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Quelles améliorations ont été proposées pour atténuer les limites des VAE (ex: VAE-GAN, β-VAE) ?",
+            "niveau": "hard",
+            "reponse": "Plusieurs améliorations ont été proposées : 1) VAE-GAN : combine un VAE avec un GAN pour améliorer la qualité des générations. Le décodeur du VAE est utilisé comme générateur du GAN, et le discriminateur du GAN est utilisé comme perte de reconstruction. 2) β-VAE : introduit un paramètre β qui contrôle le compromis entre reconstruction et régularisation. Un β > 1 encourage une représentation plus factorisée (disentangled). 3) VQ-VAE : utilise un espace latent discret pour améliorer la qualité des générations. 4) NVAE (Nouveau VAE) : utilise un prior hiérarchique et des convolutions pour obtenir de meilleures performances. 5) VampPrior : utilise un prior appris pour mieux capturer la distribution des données.",
+            "reponse": ""
+          }
+        ]
+      }
+    ]
+  }
+]

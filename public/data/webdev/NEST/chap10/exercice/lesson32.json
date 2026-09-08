@@ -1,0 +1,154 @@
+[
+  {
+    "intitule": "Documentation Swagger d'un contrôleur NestJS - Analyse",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous devez documenter un contrôleur NestJS avec Swagger/OpenAPI. Répondez aux questions suivantes concernant les décorateurs de documentation.</p>",
+      "images": [
+        "Interface Swagger UI montrant une API documentée avec tags, opérations et modèles"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Citez trois décorateurs Swagger utilisés pour documenter un endpoint et expliquez brièvement leur rôle.",
+        "niveau": "easy",
+        "reponse": "1. `@ApiTags('nom')` : Regroupe plusieurs endpoints dans une catégorie (section) dans Swagger UI.\n2. `@ApiOperation({ summary, description })` : Décrit ce que fait l'endpoint.\n3. `@ApiResponse({ status, description })` : Documente la réponse HTTP (code, description, type attendu).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Quel décorateur utilise-t-on pour indiquer qu'une route nécessite une authentification par JWT (Bearer Token) ?",
+        "niveau": "easy",
+        "reponse": "`@ApiBearerAuth()` (ou `@ApiBearerAuth('JWT-auth')`). Ce décorateur ajoute un cadenas à côté de l'endpoint dans Swagger UI et permet de tester l'API avec un token JWT.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Documentation des paramètres d'URL et de requête",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Voici un contrôleur NestJS non documenté. Ajoutez les décorateurs Swagger nécessaires pour documenter les paramètres.</p>\n<pre><code>\n@Controller('products')\nexport class ProductsController {\n  @Get(':id')\n  findOne(@Param('id') id: string) {\n    return this.productService.findOne(id);\n  }\n\n  @Get()\n  findAll(@Query('page') page: number, @Query('limit') limit: number) {\n    return this.productService.findAll(page, limit);\n  }\n}\n</code></pre>",
+      "images": [
+        "Capture Swagger UI montrant un paramètre path et des paramètres query documentés"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédigez la version documentée du contrôleur en utilisant @ApiParam, @ApiQuery, @ApiOperation et @ApiResponse.",
+        "niveau": "medium",
+        "reponse": "```typescript\nimport { Controller, Get, Param, Query } from '@nestjs/common';\nimport { ApiTags, ApiOperation, ApiParam, ApiQuery, ApiResponse } from '@nestjs/swagger';\n\n@ApiTags('Produits')\n@Controller('products')\nexport class ProductsController {\n  @Get(':id')\n  @ApiOperation({ summary: 'Récupérer un produit par son ID' })\n  @ApiParam({ name: 'id', description: 'Identifiant unique du produit', example: '123' })\n  @ApiResponse({ status: 200, description: 'Produit trouvé' })\n  @ApiResponse({ status: 404, description: 'Produit non trouvé' })\n  findOne(@Param('id') id: string) {\n    return this.productService.findOne(id);\n  }\n\n  @Get()\n  @ApiOperation({ summary: 'Lister tous les produits (paginé)' })\n  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })\n  @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })\n  @ApiResponse({ status: 200, description: 'Liste des produits' })\n  findAll(@Query('page') page: number, @Query('limit') limit: number) {\n    return this.productService.findAll(page, limit);\n  }\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Que signifie l'option `required: false` dans @ApiQuery ?",
+            "niveau": "easy",
+            "reponse": "`required: false` indique que le paramètre est optionnel. Swagger UI ne l'affichera pas comme obligatoire. C'est utile pour la pagination où `page` et `limit` peuvent avoir des valeurs par défaut."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Documentation des réponses avec schémas",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous devez documenter l'endpoint `POST /products` qui retourne un objet `ProductResponse` avec les champs suivants : `id` (string), `name` (string), `price` (number), `createdAt` (Date).</p>\n<pre><code>\nexport class ProductResponse {\n  id: string;\n  name: string;\n  price: number;\n  createdAt: Date;\n}\n</code></pre>",
+      "images": [
+        "Swagger UI montrant un schéma de réponse avec les propriétés documentées"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Ajoutez les décorateurs Swagger nécessaires à la classe `ProductResponse` et à l'endpoint pour documenter la réponse 201.",
+        "niveau": "medium",
+        "reponse": "```typescript\nimport { ApiProperty } from '@nestjs/swagger';\n\nexport class ProductResponse {\n  @ApiProperty({ example: 'prod_123456', description: 'Identifiant unique' })\n  id: string;\n\n  @ApiProperty({ example: 'Smartphone Pro', description: 'Nom du produit' })\n  name: string;\n\n  @ApiProperty({ example: 599.99, description: 'Prix en euros' })\n  price: number;\n\n  @ApiProperty({ example: '2024-01-15T10:30:00Z', description: 'Date de création' })\n  createdAt: Date;\n}\n\n// Dans le contrôleur\n@Post()\n@ApiOperation({ summary: 'Créer un nouveau produit' })\n@ApiResponse({ status: 201, description: 'Produit créé avec succès', type: ProductResponse })\n@ApiResponse({ status: 400, description: 'Données invalides' })\n@ApiBearerAuth()\ncreate(@Body() createProductDto: CreateProductDto): Promise&lt;ProductResponse&gt; {\n  return this.productService.create(createProductDto);\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment documenter une réponse avec un tableau d'objets (ex: GET /products retourne `ProductResponse[]`) ?",
+            "niveau": "easy",
+            "reponse": "On utilise `type: [ProductResponse]` (crochets autour du type) ou `isArray: true`. Exemple :\n```typescript\n@ApiResponse({ status: 200, description: 'Liste des produits', type: [ProductResponse] })\n```\nSwagger générera automatiquement un schéma de tableau avec le modèle ProductResponse."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Documentation complète d'un endpoint d'authentification",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Documentez complètement l'endpoint `POST /auth/login` qui reçoit un email et un mot de passe et retourne un token JWT. Utilisez les décorateurs appropriés pour les paramètres et les réponses.</p>",
+      "images": [
+        "Swagger UI avec endpoint d'authentification montrant le body, la réponse 200 avec token et la réponse 401"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédigez le DTO `LoginDto` et le contrôleur `AuthController` avec toute la documentation Swagger (tags, opération, body, réponses).",
+        "niveau": "hard",
+        "reponse": "```typescript\n// login.dto.ts\nimport { ApiProperty } from '@nestjs/swagger';\n\nexport class LoginDto {\n  @ApiProperty({ example: 'user@example.com', description: 'Email de l'utilisateur' })\n  email: string;\n\n  @ApiProperty({ example: 'password123', description: 'Mot de passe', format: 'password' })\n  password: string;\n}\n\n// login-response.dto.ts\nexport class LoginResponseDto {\n  @ApiProperty({ example: 'eyJhbGciOiJIUzI1NiIs...', description: 'Token JWT' })\n  access_token: string;\n\n  @ApiProperty({ example: 3600, description: 'Durée de validité en secondes' })\n  expires_in: number;\n}\n\n// auth.controller.ts\nimport { Controller, Post, Body } from '@nestjs/common';\nimport { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';\n\n@ApiTags('Authentification')\n@Controller('auth')\nexport class AuthController {\n  @Post('login')\n  @ApiOperation({ summary: 'Authentifier un utilisateur', description: 'Reçoit email et mot de passe, retourne un token JWT' })\n  @ApiBody({ type: LoginDto, description: 'Identifiants de connexion' })\n  @ApiResponse({ status: 200, description: 'Authentification réussie', type: LoginResponseDto })\n  @ApiResponse({ status: 401, description: 'Email ou mot de passe invalide' })\n  @ApiResponse({ status: 400, description: 'Données invalides (email mal formaté, mot de passe manquant)' })\n  async login(@Body() loginDto: LoginDto): Promise&lt;LoginResponseDto&gt; {\n    return this.authService.login(loginDto);\n  }\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Migration d'une API non documentée vers Swagger",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Voici une API e-commerce existante sans documentation. Vous devez ajouter les décorateurs Swagger pour la rendre auto-documentée.</p>\n<pre><code>\n// orders.controller.ts\n@Controller('orders')\nexport class OrdersController {\n  @Get()\n  getOrders(@Query('status') status: string) {}\n\n  @Get(':id')\n  getOrder(@Param('id') id: string) {}\n\n  @Patch(':id/status')\n  updateStatus(@Param('id') id: string, @Body() body: { status: string }) {}\n}\n</code></pre>",
+      "images": [
+        "Comparaison avant/après de documentation Swagger"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Documentez intégralement ce contrôleur avec les décorateurs Swagger appropriés (tags, opérations, paramètres, réponses). Ajoutez également un DTO pour le body de l'update.",
+        "niveau": "very hard",
+        "reponse": "```typescript\n// update-order-status.dto.ts\nimport { ApiProperty } from '@nestjs/swagger';\n\nexport class UpdateOrderStatusDto {\n  @ApiProperty({ enum: ['pending', 'paid', 'shipped', 'delivered', 'cancelled'], example: 'shipped' })\n  status: string;\n}\n\n// orders.controller.ts\nimport { Controller, Get, Patch, Param, Query, Body } from '@nestjs/common';\nimport { ApiTags, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';\nimport { UpdateOrderStatusDto } from './dto/update-order-status.dto';\n\n@ApiTags('Commandes')\n@ApiBearerAuth('JWT-auth')\n@Controller('orders')\nexport class OrdersController {\n  @Get()\n  @ApiOperation({ summary: 'Lister les commandes', description: 'Retourne la liste des commandes filtrée par statut optionnel' })\n  @ApiQuery({ name: 'status', required: false, enum: ['pending', 'paid', 'shipped', 'delivered', 'cancelled'], description: 'Filtrer par statut' })\n  @ApiResponse({ status: 200, description: 'Liste des commandes', type: [OrderResponseDto] })\n  @ApiResponse({ status: 401, description: 'Non authentifié' })\n  getOrders(@Query('status') status: string) {\n    return this.ordersService.findAll(status);\n  }\n\n  @Get(':id')\n  @ApiOperation({ summary: 'Récupérer une commande spécifique' })\n  @ApiParam({ name: 'id', description: 'Identifiant de la commande', example: 'ORD-12345' })\n  @ApiResponse({ status: 200, description: 'Commande trouvée', type: OrderResponseDto })\n  @ApiResponse({ status: 404, description: 'Commande non trouvée' })\n  getOrder(@Param('id') id: string) {\n    return this.ordersService.findOne(id);\n  }\n\n  @Patch(':id/status')\n  @ApiOperation({ summary: 'Mettre à jour le statut d'une commande' })\n  @ApiParam({ name: 'id', description: 'Identifiant de la commande' })\n  @ApiBody({ type: UpdateOrderStatusDto, description: 'Nouveau statut' })\n  @ApiResponse({ status: 200, description: 'Statut mis à jour', type: OrderResponseDto })\n  @ApiResponse({ status: 400, description: 'Statut invalide' })\n  @ApiResponse({ status: 404, description: 'Commande non trouvée' })\n  updateStatus(@Param('id') id: string, @Body() updateOrderStatusDto: UpdateOrderStatusDto) {\n    return this.ordersService.updateStatus(id, updateOrderStatusDto.status);\n  }\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment documenter un paramètre enum dans @ApiQuery ?",
+            "niveau": "medium",
+            "reponse": "On utilise la propriété `enum` : `@ApiQuery({ name: 'status', enum: ['pending', 'paid', 'shipped'], description: 'Statut de la commande' })`. Swagger UI affichera un menu déroulant avec les valeurs possibles."
+          },
+          {
+            "numero": "1.b",
+            "texte": "À quoi sert `@ApiBearerAuth('JWT-auth')` et comment l'activer globalement ?",
+            "niveau": "medium",
+            "reponse": "`@ApiBearerAuth('JWT-auth')` ajoute un cadenas à côté de l'endpoint et permet à l'utilisateur Swagger de saisir un token JWT. Pour l'activer globalement dans Swagger UI, on configure `addBearerAuth()` dans la configuration Swagger :\n```typescript\nconst config = new DocumentBuilder()\n  .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'JWT-auth')\n  .build();\n```"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Configuration avancée - Documenter les erreurs personnalisées",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Votre API utilise un format d'erreur personnalisé. Documentez-le avec Swagger.</p>\n<pre><code>\n// format d'erreur retourné\n{\n  \"success\": false,\n  \"error\": \"VALIDATION_FAILED\",\n  \"message\": \"Le champ email est requis\",\n  \"timestamp\": \"2024-01-15T10:30:00Z\",\n  \"path\": \"/api/users\"\n}\n</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créez une classe DTO `ErrorResponseDto` avec les décorateurs @ApiProperty, puis documentez un endpoint POST /users qui peut retourner cette erreur avec le code 400.",
+        "niveau": "hard",
+        "reponse": "```typescript\n// error-response.dto.ts\nimport { ApiProperty } from '@nestjs/swagger';\n\nexport class ErrorResponseDto {\n  @ApiProperty({ example: false, description: 'Indique que la requête a échoué' })\n  success: boolean;\n\n  @ApiProperty({ example: 'VALIDATION_FAILED', description: 'Code d'erreur interne' })\n  error: string;\n\n  @ApiProperty({ example: 'Le champ email est requis', description: 'Message d'erreur lisible' })\n  message: string;\n\n  @ApiProperty({ example: '2024-01-15T10:30:00Z', description: 'Horodatage de l'erreur' })\n  timestamp: string;\n\n  @ApiProperty({ example: '/api/users', description: 'Chemin de la requête' })\n  path: string;\n}\n\n// Dans le contrôleur\n@Post('users')\n@ApiOperation({ summary: 'Créer un utilisateur' })\n@ApiResponse({ status: 201, description: 'Utilisateur créé', type: UserResponseDto })\n@ApiResponse({ status: 400, description: 'Erreur de validation', type: ErrorResponseDto })\n@ApiResponse({ status: 409, description: 'Conflit (email déjà utilisé)', type: ErrorResponseDto })\ncreateUser(@Body() createUserDto: CreateUserDto) {\n  return this.userService.create(createUserDto);\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

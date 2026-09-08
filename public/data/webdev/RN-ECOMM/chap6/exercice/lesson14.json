@@ -1,0 +1,118 @@
+[
+  {
+    "intitule": "Exercice 1 : Rôles et flux de gestion des litiges",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>La gestion des litiges est un aspect crucial de toute plateforme e-commerce. Elle permet de résoudre les conflits entre acheteurs et vendeurs de manière équitable et efficace.</p><p>Analysez le flux de gestion des litiges présenté dans la leçon 14 et répondez aux questions suivantes.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez les différents rôles impliqués dans la gestion des litiges et leurs responsabilités respectives.",
+        "niveau": "medium",
+        "reponse": "Les rôles impliqués dans la gestion des litiges sont :\n- **Acheteur** : Ouvre un litige lorsqu'il n'est pas satisfait de la transaction (produit non reçu, endommagé, ou non conforme).\n- **Vendeur** : Peut répondre au litige et fournir des preuves.\n- **Assistant (Support)** : Examine les preuves des deux parties et tranche le litige (règlement à l'acheteur ou au vendeur).\n- **Système** : Gère le séquestre des fonds et notifie les parties."
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez le flux complet d'un litige, depuis son ouverture jusqu'à sa résolution.",
+        "niveau": "hard",
+        "reponse": "Le flux de gestion d'un litige se déroule en plusieurs étapes :\n1. **Ouverture du litige** : L'acheteur initie un litige depuis l'écran de chat en sélectionnant un motif (produit non reçu, endommagé, etc.).\n2. **Blocage des fonds** : Les fonds en séquestre sont bloqués pendant la durée du litige.\n3. **Examen par l'assistant** : L'assistant (support) examine les preuves fournies par les deux parties.\n4. **Décision** : L'assistant prend une décision (règlement à l'acheteur ou au vendeur).\n5. **Exécution** : Le système libère les fonds selon la décision prise.\n6. **Clôture** : Le litige est marqué comme résolu avec un commentaire sur la décision."
+      },
+      {
+        "numero": 3,
+        "texte": "Quelle est l'importance du système de quota de litiges gratuits et comment est-il implémenté ?",
+        "niveau": "medium",
+        "reponse": "Le système de quota de litiges gratuits permet de limiter les abus et de garantir que les litiges sont ouverts de bonne foi. Chaque utilisateur dispose d'un nombre limité de litiges gratuits par période. Au-delà, des frais peuvent être appliqués. L'implémentation peut se faire via un compteur dans le profil de l'utilisateur, qui est décrémenté à chaque ouverture de litige et réinitialisé périodiquement."
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 2 : Implémentation de l'écran de liste des litiges pour l'assistant",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>En tant que développeur sur la plateforme Sawamart, vous devez implémenter l'écran <code>ChatListScreen</code> qui permet à l'assistant de visualiser les litiges disponibles et assignés.</p><p>Cet écran doit afficher deux onglets : 'Disponibles' (litiges non assignés) et 'Assignés' (litiges en cours de traitement par l'assistant).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le code du store <code>disputeStore</code> qui gère l'état des litiges pour l'assistant.",
+        "niveau": "hard",
+        "reponse": "```typescript\nimport { create } from 'zustand';\n\ninterface Dispute {\n  id: string;\n  orderId: string;\n  buyerId: string;\n  sellerId: string;\n  reason: string;\n  description: string;\n  status: 'open' | 'assigned' | 'resolved' | 'closed';\n  createdAt: string;\n  assignedTo?: string;\n}\n\ninterface DisputeStore {\n  availableDisputes: Dispute[];\n  assignedDisputes: Dispute[];\n  isLoading: boolean;\n  fetchAvailableDisputes: () => Promise<void>;\n  fetchAssignedDisputes: () => Promise<void>;\n  assignDispute: (disputeId: string) => Promise<void>;\n  resolveDispute: (disputeId: string, decision: 'buyer' | 'seller') => Promise<void>;\n}\n\nexport const useDisputeStore = create<DisputeStore>((set, get) => ({\n  availableDisputes: [],\n  assignedDisputes: [],\n  isLoading: false,\n  \n  fetchAvailableDisputes: async () => {\n    set({ isLoading: true });\n    try {\n      const response = await api.get('/disputes/available');\n      set({ availableDisputes: response.data, isLoading: false });\n    } catch (error) {\n      set({ isLoading: false });\n      console.error('Failed to fetch available disputes:', error);\n    }\n  },\n  \n  fetchAssignedDisputes: async () => {\n    set({ isLoading: true });\n    try {\n      const response = await api.get('/disputes/assigned');\n      set({ assignedDisputes: response.data, isLoading: false });\n    } catch (error) {\n      set({ isLoading: false });\n      console.error('Failed to fetch assigned disputes:', error);\n    }\n  },\n  \n  assignDispute: async (disputeId: string) => {\n    try {\n      await api.post(`/disputes/${disputeId}/assign`);\n      // Actualiser les listes\n      await get().fetchAvailableDisputes();\n      await get().fetchAssignedDisputes();\n    } catch (error) {\n      console.error('Failed to assign dispute:', error);\n    }\n  },\n  \n  resolveDispute: async (disputeId: string, decision: 'buyer' | 'seller') => {\n    try {\n      await api.post(`/disputes/${disputeId}/resolve`, { decision });\n      // Actualiser les listes\n      await get().fetchAvailableDisputes();\n      await get().fetchAssignedDisputes();\n    } catch (error) {\n      console.error('Failed to resolve dispute:', error);\n    }\n  },\n}));\n```"
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez comment gérer les notifications en temps réel pour les litiges (ouverture, assignation, résolution) via WebSocket.",
+        "niveau": "hard",
+        "reponse": "Les notifications en temps réel peuvent être gérées via l'événement WebSocket. L'application écoute un événement comme `dispute_update` avec le payload contenant l'ID du litige et le nouveau statut. Lors de la réception :\n1. On vérifie si l'utilisateur est un assistant et si le litige doit être affiché dans ses listes.\n2. On met à jour le store en ajoutant, supprimant ou modifiant le litige concerné.\n3. On peut également déclencher une notification push pour informer l'assistant qu'un litige nécessite son attention."
+      },
+      {
+        "numero": 3,
+        "texte": "Comment implémenter la navigation vers l'écran de résolution du litige avec les bons paramètres ?",
+        "niveau": "easy",
+        "reponse": "La navigation peut être implémentée avec :\n```typescript\nnavigation.navigate('DisputeResolution', { \n  disputeId: dispute.id,\n  orderId: dispute.orderId,\n  buyerId: dispute.buyerId,\n  sellerId: dispute.sellerId\n});\n```\nCes paramètres permettront à l'écran de résolution de charger toutes les informations nécessaires sur le litige, la commande et les parties impliquées."
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 3 : Écran de résolution des litiges",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>L'écran de résolution des litiges (<code>DisputeResolutionScreen</code>) est utilisé par l'assistant pour examiner les preuves et prendre une décision.</p><p>Il doit afficher : les informations du litige, les messages échangés entre l'acheteur et le vendeur, les preuves fournies, et permettre de prendre une décision (règlement à l'acheteur ou au vendeur).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez la structure de l'écran de résolution des litiges et les composants qui le composent.",
+        "niveau": "medium",
+        "reponse": "L'écran de résolution des litiges se compose de :\n1. **En-tête** : Titre du litige, ID de la commande, statut.\n2. **Section récapitulative** : Motif du litige, description, date d'ouverture.\n3. **Messages échangés** : Historique des messages entre l'acheteur et le vendeur.\n4. **Preuves** : Images ou documents soumis par les parties.\n5. **Section de décision** : Boutons pour régler en faveur de l'acheteur ou du vendeur.\n6. **Zone de commentaires** : Permet à l'assistant d'ajouter des notes sur sa décision."
+      },
+      {
+        "numero": 2,
+        "texte": "Écrivez le code du composant <code>DisputeResolutionScreen</code> qui gère l'affichage des informations et la prise de décision.",
+        "niveau": "very hard",
+        "reponse": "```typescript\nimport React, { useEffect, useState } from 'react';\nimport { View, Text, ScrollView, Image, TouchableOpacity, TextInput, StyleSheet } from 'react-native';\nimport { useDisputeStore } from '../stores/disputeStore';\nimport { useChatStore } from '../stores/chatStore';\n\ninterface DisputeResolutionScreenProps {\n  route: {\n    params: {\n      disputeId: string;\n      orderId: string;\n    };\n  };\n  navigation: any;\n}\n\nexport const DisputeResolutionScreen: React.FC<DisputeResolutionScreenProps> = ({ route, navigation }) => {\n  const { disputeId, orderId } = route.params;\n  const [decisionComment, setDecisionComment] = useState('');\n  const [isSubmitting, setIsSubmitting] = useState(false);\n  \n  const dispute = useDisputeStore(state => state.availableDisputes.find(d => d.id === disputeId));\n  const messages = useChatStore(state => state.messages[orderId] || []);\n  const resolveDispute = useDisputeStore(state => state.resolveDispute);\n  \n  const handleResolve = async (decision: 'buyer' | 'seller') => {\n    if (!decisionComment.trim()) {\n      alert('Veuillez ajouter un commentaire sur votre décision');\n      return;\n    }\n    \n    setIsSubmitting(true);\n    try {\n      await resolveDispute(disputeId, decision);\n      navigation.goBack();\n    } catch (error) {\n      alert('Erreur lors de la résolution du litige');\n    } finally {\n      setIsSubmitting(false);\n    }\n  };\n  \n  return (\n    <ScrollView style={styles.container}>\n      <View style={styles.header}>\n        <Text style={styles.title}>Résolution du litige #{disputeId.slice(0, 8)}</Text>\n        <Text style={styles.status}>Statut: {dispute?.status}</Text>\n      </View>\n      \n      <View style={styles.section}>\n        <Text style={styles.sectionTitle}>Motif du litige</Text>\n        <Text style={styles.reason}>{dispute?.reason}</Text>\n        <Text style={styles.description}>{dispute?.description}</Text>\n      </View>\n      \n      <View style={styles.section}>\n        <Text style={styles.sectionTitle}>Messages échangés</Text>\n        {messages.map((message) => (\n          <View key={message.id} style={styles.messageContainer}>\n            <Text style={styles.messageSender}>{message.sender}</Text>\n            <Text style={styles.messageContent}>{message.content}</Text>\n          </View>\n        ))}\n      </View>\n      \n      <View style={styles.section}>\n        <Text style={styles.sectionTitle}>Preuves</Text>\n        <ScrollView horizontal>\n          {dispute?.evidence?.map((evidence: string, index: number) => (\n            <Image key={index} source={{ uri: evidence }} style={styles.evidenceImage} />\n          ))}\n        </ScrollView>\n      </View>\n      \n      <View style={styles.section}>\n        <Text style={styles.sectionTitle}>Décision</Text>\n        <TextInput\n          style={styles.commentInput}\n          placeholder=\"Commentaire sur la décision\"\n          value={decisionComment}\n          onChangeText={setDecisionComment}\n          multiline\n        />\n        <View style={styles.decisionButtons}>\n          <TouchableOpacity\n            style={[styles.decisionButton, styles.buyerButton]}\n            onPress={() => handleResolve('buyer')}\n            disabled={isSubmitting}\n          >\n            <Text style={styles.buttonText}>Régler à l'acheteur</Text>\n          </TouchableOpacity>\n          <TouchableOpacity\n            style={[styles.decisionButton, styles.sellerButton]}\n            onPress={() => handleResolve('seller')}\n            disabled={isSubmitting}\n          >\n            <Text style={styles.buttonText}>Régler au vendeur</Text>\n          </TouchableOpacity>\n        </View>\n      </View>\n    </ScrollView>\n  );\n};\n\nconst styles = StyleSheet.create({\n  container: { flex: 1, backgroundColor: '#F5F5F5', padding: 16 },\n  header: { marginBottom: 16 },\n  title: { fontSize: 20, fontWeight: 'bold' },\n  status: { fontSize: 14, color: '#666', marginTop: 4 },\n  section: { backgroundColor: '#FFF', borderRadius: 8, padding: 16, marginBottom: 12 },\n  sectionTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 8 },\n  reason: { fontSize: 14, fontWeight: '600', color: '#333' },\n  description: { fontSize: 14, color: '#666', marginTop: 4 },\n  messageContainer: { marginBottom: 8, padding: 8, backgroundColor: '#F0F0F0', borderRadius: 4 },\n  messageSender: { fontSize: 12, fontWeight: 'bold', color: '#3B82F6' },\n  messageContent: { fontSize: 14 },\n  evidenceImage: { width: 100, height: 100, borderRadius: 8, marginRight: 8 },\n  commentInput: { borderWidth: 1, borderColor: '#DDD', borderRadius: 8, padding: 12, minHeight: 80, textAlignVertical: 'top' },\n  decisionButtons: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 },\n  decisionButton: { flex: 1, padding: 12, borderRadius: 8, alignItems: 'center', marginHorizontal: 4 },\n  buyerButton: { backgroundColor: '#3B82F6' },\n  sellerButton: { backgroundColor: '#10B981' },\n  buttonText: { color: '#FFF', fontWeight: 'bold' },\n});\n```"
+      },
+      {
+        "numero": 3,
+        "texte": "Quelles mesures de sécurité doivent être prises pour s'assurer que seul un assistant authentifié peut accéder et utiliser l'écran de résolution ?",
+        "niveau": "hard",
+        "reponse": "Les mesures de sécurité incluent :\n1. **Authentification** : Vérifier que l'utilisateur est connecté via un JWT valide.\n2. **Autorisation** : Utiliser un mécanisme de rôles (Role-Based Access Control) pour s'assurer que l'utilisateur a le rôle 'assistant' ou 'admin'.\n3. **Vérification côté serveur** : Le backend doit vérifier que l'assistant est bien autorisé à traiter le litige spécifique.\n4. **Audit** : Enregistrer toutes les actions de l'assistant (assignation, résolution) avec l'identifiant de l'utilisateur."
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 4 : Gestion des notifications de litiges",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Les litiges nécessitent une gestion rapide. Il est donc essentiel d'implémenter un système de notifications en temps réel pour informer les assistants des nouveaux litiges et les parties de l'avancement de leur litige.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Quels types de notifications doivent être générés pour un litige et à qui doivent-elles être envoyées ?",
+        "niveau": "easy",
+        "reponse": "Les types de notifications et leurs destinataires sont :\n- **Nouveau litige** : Envoyé aux assistants disponibles (notification push, in-app).\n- **Assignation du litige** : Envoyé à l'assistant assigné.\n- **Résolution du litige** : Envoyé à l'acheteur et au vendeur.\n- **Demande de preuves** : Envoyé aux parties concernées."
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez comment implémenter les notifications en temps réel pour les litiges avec WebSocket.",
+        "niveau": "hard",
+        "reponse": "L'implémentation peut se faire comme suit :\n1. Le backend envoie un événement WebSocket lorsqu'un litige est créé, assigné ou résolu.\n2. L'application écoute l'événement (par exemple `dispute_event`).\n3. En fonction du type d'événement et du rôle de l'utilisateur :\n   - L'assistant reçoit une notification in-app dans la barre de notifications.\n   - Les parties reçoivent une notification push avec un deep linking vers l'écran approprié.\n4. Le store de litiges est mis à jour pour refléter les changements."
+      },
+      {
+        "numero": 3,
+        "texte": "Comment gérer le deep linking pour rediriger l'utilisateur vers le bon écran lorsqu'il clique sur une notification de litige ?",
+        "niveau": "hard",
+        "reponse": "Le deep linking peut être géré en utilisant `Linking` de React Native :\n1. Dans la configuration de la notification, inclure des données personnalisées (`data`) avec l'ID du litige et le type d'action.\n2. Configurer un handler pour les deep links dans `App.tsx`.\n3. Analyser l'URL entrante et naviguer vers l'écran approprié :\n   - Pour l'assistant : `DisputeResolutionScreen` avec l'ID du litige.\n   - Pour les parties : `ChatScreen` avec l'ID du chat associé au litige."
+      }
+    ]
+  }
+]

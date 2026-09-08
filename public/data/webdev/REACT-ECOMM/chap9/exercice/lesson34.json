@@ -1,0 +1,162 @@
+[
+  {
+    "intitule": "Affichage des produits favoris depuis le store Zustand",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Dans une application e-commerce, un utilisateur connecté peut ajouter des produits à sa liste de favoris (wishlist). Vous devez implémenter la partie frontend pour afficher ces favoris.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rappelez la structure d'un store Zustand pour gérer les favoris avec les actions `addFavorite`, `removeFavorite` et `toggleFavorite`.",
+        "niveau": "medium",
+        "reponse": "```js\nconst useWishlistStore = create((set, get) => ({\n  items: [],\n  addFavorite: (product) => set((state) => ({\n    items: [...state.items, product]\n  })),\n  removeFavorite: (id) => set((state) => ({\n    items: state.items.filter(item => item.id !== id)\n  })),\n  toggleFavorite: (product) => {\n    const exists = get().items.some(item => item.id === product.id);\n    if (exists) get().removeFavorite(product.id);\n    else get().addFavorite(product);\n  }\n}));\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Créez un composant `FavoriteButton` qui affiche une icône de cœur pleine ou vide selon que le produit est dans les favoris, et appelle `toggleFavorite` au clic.",
+        "niveau": "medium",
+        "reponse": "```jsx\nfunction FavoriteButton({ product }) {\n  const isFavorite = useWishlistStore(state => \n    state.items.some(item => item.id === product.id)\n  );\n  const toggleFavorite = useWishlistStore(state => state.toggleFavorite);\n  return (\n    <button onClick={() => toggleFavorite(product)}>\n      {isFavorite ? '❤️' : '🤍'}\n    </button>\n  );\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquez comment synchroniser la liste des favoris avec le backend après la connexion de l'utilisateur.",
+        "niveau": "hard",
+        "reponse": "Dans la fonction `login` du store auth, après récupération du token, on peut appeler une action du wishlist store `syncWithBackend` qui : 1) envoie les favoris locaux (non persistés) au backend, 2) récupère la liste des favoris du backend pour remplacer la liste locale. Cela évite les conflits et assure la cohérence des données.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Synchronisation des favoris entre localStorage et backend",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Les favoris doivent être accessibles même lorsque l'utilisateur n'est pas connecté (stockage localStorage). Après connexion, ils doivent être fusionnés avec les favoris du compte backend. Vous devez implémenter cette logique.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez une implémentation du middleware `persist` pour sauvegarder les favoris dans localStorage, avec un nom de storage unique.",
+        "niveau": "easy",
+        "reponse": "```js\nimport { create } from 'zustand';\nimport { persist } from 'zustand/middleware';\n\nconst useWishlistStore = create(\n  persist(\n    (set, get) => ({\n      items: [],\n      addFavorite: (product) => set((state) => ({ items: [...state.items, product] })),\n      removeFavorite: (id) => set((state) => ({ items: state.items.filter(i => i.id !== id) }))\n    }),\n    { name: 'wishlist-storage' }\n  )\n);\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez comment fusionner les favoris locaux (non connecté) avec les favoris du backend après connexion, en évitant les doublons.",
+        "niveau": "very hard",
+        "reponse": "```js\n// Dans le store auth, après login :\nconst mergeWishlistAfterLogin = async (localItems) => {\n  const backendItems = await fetch('/api/wishlist').then(res => res.json());\n  const mergedItems = [...backendItems];\n  localItems.forEach(localItem => {\n    if (!mergedItems.some(item => item.id === localItem.id)) {\n      mergedItems.push(localItem);\n    }\n  });\n  // Envoyer la liste fusionnée au backend\n  await fetch('/api/wishlist/sync', { method: 'POST', body: JSON.stringify(mergedItems) });\n  // Mettre à jour le store local\n  useWishlistStore.setState({ items: mergedItems });\n};\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Discutez des problèmes de concurrence possibles (ex: ajout d'un favori pendant la synchronisation) et proposez une solution.",
+        "niveau": "very hard",
+        "reponse": "Pendant la synchronisation asynchrone, l'utilisateur pourrait ajouter/supprimer des favoris. On peut verrouiller les actions (désactiver les boutons) ou mettre en file d'attente les modifications pendant la sync. Une meilleure approche : après login, on vide d'abord le localStorage, on charge les favoris backend, puis on applique les changements locaux différés.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion des avis clients - Formulaire et affichage des notes",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Sur la page produit, l'utilisateur (connecté et ayant acheté le produit) peut laisser un avis avec une note (1 à 5 étoiles) et un commentaire. Vous devez implémenter le formulaire et l'affichage des avis existants.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créez un composant `StarRating` interactif permettant à l'utilisateur de sélectionner une note de 1 à 5. Utilisez un state local pour gérer la note temporaire au survol et la note sélectionnée.",
+        "niveau": "medium",
+        "reponse": "```jsx\nfunction StarRating({ rating, onRatingChange }) {\n  const [hover, setHover] = useState(0);\n  return (\n    <div className=\"flex gap-1\">\n      {[1,2,3,4,5].map(star => (\n        <button\n          key={star}\n          onClick={() => onRatingChange(star)}\n          onMouseEnter={() => setHover(star)}\n          onMouseLeave={() => setHover(0)}\n        >\n          {star <= (hover || rating) ? '★' : '☆'}\n        </button>\n      ))}\n    </div>\n  );\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposez un hook `useCreateReview` utilisant TanStack Query pour envoyer un nouvel avis au backend. Invalidez la requête des avis après succès.",
+        "niveau": "hard",
+        "reponse": "```js\nconst useCreateReview = (productId) => {\n  const queryClient = useQueryClient();\n  return useMutation({\n    mutationFn: (reviewData) => \n      fetch(`/api/products/${productId}/reviews`, {\n        method: 'POST',\n        headers: { 'Content-Type': 'application/json' },\n        body: JSON.stringify(reviewData)\n      }).then(res => res.json()),\n    onSuccess: () => {\n      queryClient.invalidateQueries({ queryKey: ['reviews', productId] });\n    }\n  });\n};\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquez comment vérifier côté frontend que l'utilisateur a bien acheté le produit avant de lui permettre de laisser un avis. Quelles informations le backend doit-il fournir ?",
+        "niveau": "medium",
+        "reponse": "Le backend doit exposer un endpoint `/api/check-purchase?productId=...` qui vérifie si l'utilisateur connecté a une commande livrée contenant ce produit. Le frontend appelle cet endpoint avant d'afficher le formulaire d'avis. On peut aussi inclure un flag `canReview` dans la réponse de la page produit.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Notifications des promotions sur les produits favoris",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Lorsqu'un produit favori est en promotion (prix réduit), l'utilisateur doit recevoir une notification (toast) lors de sa prochaine visite sur le site ou en temps réel via WebSocket.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez comment stocker la date de dernière vérification des promotions pour éviter de notifier l'utilisateur à chaque chargement de page.",
+        "niveau": "medium",
+        "reponse": "On peut stocker dans localStorage un timestamp `lastPromoCheck`. À chaque chargement de page ou intervalle régulier, on appelle l'API `/api/wishlist/promos?since=timestamp`. L'API retourne les produits favoris dont le prix a changé depuis cette date. On met à jour le timestamp après traitement.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Implémentez un hook `useWishlistPromoNotifications` qui vérifie les promotions périodiquement (toutes les heures) et affiche un toast pour chaque produit concerné.",
+        "niveau": "hard",
+        "reponse": "```js\nfunction useWishlistPromoNotifications() {\n  const wishlistItems = useWishlistStore(state => state.items);\n  useEffect(() => {\n    const checkPromos = async () => {\n      const lastCheck = localStorage.getItem('lastPromoCheck') || 0;\n      const res = await fetch(`/api/wishlist/promos?since=${lastCheck}`);\n      const promos = await res.json();\n      promos.forEach(promo => {\n        toast.success(`${promo.name} est en promotion : ${promo.oldPrice}€ → ${promo.newPrice}€`);\n      });\n      localStorage.setItem('lastPromoCheck', Date.now());\n    };\n    const interval = setInterval(checkPromos, 3600000);\n    return () => clearInterval(interval);\n  }, [wishlistItems]);\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposez une alternative en temps réel utilisant les WebSockets pour notifier instantanément l'utilisateur lorsqu'un produit favori passe en promo.",
+        "niveau": "very hard",
+        "reponse": "Le backend envoie un événement WebSocket (ex: via Socket.io) au frontend lorsque le prix d'un produit est modifié. Le frontend souscrit à un channel `promo:user:${userId}`. À réception, on vérifie si le produit est dans la wishlist, et on affiche un toast. Cette approche est plus réactive que le polling.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Comparaison de produits - Limitation à 4 produits maximum",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Le site permet de comparer jusqu'à 4 produits côte à côte. L'utilisateur peut ajouter/supprimer des produits de la comparaison. Une notification doit prévenir lorsqu'on atteint la limite.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créez un store Zustand pour gérer les produits à comparer, avec des actions `addToCompare`, `removeFromCompare`, `clearCompare` et une limite maximale de 4.",
+        "niveau": "medium",
+        "reponse": "```js\nconst useCompareStore = create((set, get) => ({\n  items: [],\n  addToCompare: (product) => {\n    const items = get().items;\n    if (items.length >= 4) {\n      toast.error('Vous ne pouvez comparer que 4 produits maximum');\n      return;\n    }\n    if (!items.some(i => i.id === product.id)) {\n      set({ items: [...items, product] });\n      toast.success(`${product.name} ajouté à la comparaison`);\n    }\n  },\n  removeFromCompare: (id) => set((state) => ({\n    items: state.items.filter(i => i.id !== id)\n  })),\n  clearCompare: () => set({ items: [] })\n}));\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Concevez un composant `CompareTable` qui affiche les produits sélectionnés dans un tableau comparatif (nom, prix, note, description). Si aucun produit, affichez un message.",
+        "niveau": "medium",
+        "reponse": "```jsx\nfunction CompareTable() {\n  const items = useCompareStore(state => state.items);\n  if (items.length === 0) return <p>Aucun produit à comparer</p>;\n  return (\n    <table className=\"border-collapse w-full\">\n      <thead><tr>{items.map(p => <th key={p.id}>{p.name}</th>)}</tr></thead>\n      <tbody>\n        <tr>{items.map(p => <td key={p.id}>{p.price}€</td>)}</tr>\n        <tr>{items.map(p => <td key={p.id}>{p.rating}★</td>)}</tr>\n      </tbody>\n    </table>\n  );\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquez comment sauvegarder la liste de comparaison dans sessionStorage pour qu'elle persiste lors des rechargements de page (mais pas entre les sessions).",
+        "niveau": "easy",
+        "reponse": "Ajouter le middleware `persist` avec `storage: sessionStorage` (au lieu de localStorage). Exemple : `persist(store, { name: 'compare-storage', storage: createJSONStorage(() => sessionStorage) })`. Ainsi, la comparaison survit au rechargement mais disparaît à la fermeture de l'onglet.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

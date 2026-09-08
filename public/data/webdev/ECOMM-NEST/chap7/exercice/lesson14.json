@@ -1,0 +1,151 @@
+[
+  {
+    "intitule": "Analyse des Entités du Moteur de Recommandations",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans le cadre du développement du moteur de recommandations pour votre plateforme e-commerce camerounaise, vous devez concevoir l'entité <code>UserInteraction</code>.</p><p>Cette entité doit permettre de tracer les actions des utilisateurs pour alimenter le système de recommandations.</p><p><strong>Consigne :</strong> Rédigez le code TypeORM complet de l'entité <code>UserInteraction</code> en respectant les spécifications suivantes :</p><ul><li>Identifiant UUID</li><li>Référence à l'utilisateur (ManyToOne)</li><li>Référence au produit (ManyToOne) - optionnelle</li><li>Type d'interaction (enum : 'view', 'favorite', 'search', 'add_to_cart', 'purchase')</li><li>Métadonnées supplémentaires (JSON)</li><li>Date de création automatique</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez l'entité <code>UserInteraction</code> complète avec tous les décorateurs TypeORM nécessaires.",
+        "niveau": "medium",
+        "reponse": "<pre style='background:#2d2d2d; color:#f8f8f2; padding:12px; border-radius:6px; font-size:0.85em;'>\nimport { Entity, Column, PrimaryGeneratedColumn, ManyToOne, JoinColumn, CreateDateColumn, Index } from 'typeorm';\nimport { User } from '../../users/entities/user.entity';\nimport { Product } from '../../products/entities/product.entity';\n\nexport enum InteractionType {\n    VIEW = 'view',\n    FAVORITE = 'favorite',\n    SEARCH = 'search',\n    ADD_TO_CART = 'add_to_cart',\n    PURCHASE = 'purchase',\n}\n\n@Entity('user_interactions')\n@Index(['user', 'product', 'type'])\nexport class UserInteraction {\n    @PrimaryGeneratedColumn('uuid')\n    id: string;\n\n    @ManyToOne(() => User, { onDelete: 'CASCADE' })\n    @JoinColumn({ name: 'userId' })\n    user: User;\n\n    @Column()\n    userId: string;\n\n    @ManyToOne(() => Product, { onDelete: 'CASCADE', nullable: true })\n    @JoinColumn({ name: 'productId' })\n    product: Product;\n\n    @Column({ nullable: true })\n    productId: string;\n\n    @Column({ type: 'enum', enum: InteractionType })\n    type: InteractionType;\n\n    @Column({ type: 'jsonb', nullable: true })\n    metadata: any;\n\n    @CreateDateColumn()\n    createdAt: Date;\n}\n</pre><p><strong>Explication :</strong> L'entité utilise <code>@PrimaryGeneratedColumn('uuid')</code> pour l'identifiant. Les relations ManyToOne sont définies avec <code>@ManyToOne</code> et <code>@JoinColumn</code>. Le type d'interaction est un enum TypeScript. <code>@CreateDateColumn()</code> gère automatiquement la date de création. L'index composite <code>@Index(['user', 'product', 'type'])</code> optimise les requêtes de recommandations.</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez pourquoi l'index composite est important pour cette entité.",
+            "niveau": "medium",
+            "reponse": "L'index composite sur ['user', 'product', 'type'] est crucial pour les performances car les requêtes de recommandations filtrent souvent par utilisateur, par type d'interaction et parfois par produit. Sans index, les requêtes effectueraient un scan complet de la table, ce qui serait très lent avec un grand nombre d'interactions. Cet index permet des recherches rapides et améliore significativement le temps de réponse du moteur de recommandations."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Proposez deux métadonnées supplémentaires qui pourraient être stockées dans le champ <code>metadata</code> pour une interaction de type 'search'.",
+            "niveau": "easy",
+            "reponse": "Pour une interaction de type 'search', les métadonnées pourraient contenir :<br>- <code>query</code> : la chaîne de caractères recherchée par l'utilisateur.<br>- <code>categoryId</code> : l'identifiant de la catégorie dans laquelle la recherche a été effectuée.<br><br>Ces métadonnées permettent d'enrichir le profil utilisateur et d'affiner les recommandations futures."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Implémentation du Service de Logging d'Interactions",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous devez développer un service permettant de logger les interactions des utilisateurs avec les produits sur la plateforme e-commerce.</p><p><strong>Contexte :</strong> L'équipe marketing souhaite collecter des données sur le comportement des utilisateurs pour améliorer les recommandations et personnaliser l'expérience d'achat.</p><p><strong>Consigne :</strong> Implémentez le service <code>InteractionsService</code> avec les méthodes suivantes :</p><ul><li><code>logView(userId: string, productId: string)</code> - Enregistre une vue de produit</li><li><code>logFavorite(userId: string, productId: string)</code> - Enregistre un ajout aux favoris</li><li><code>logSearch(userId: string, query: string, categoryId?: string)</code> - Enregistre une recherche</li><li><code>getUserInteractions(userId: string, limit?: number)</code> - Récupère les dernières interactions d'un utilisateur</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le code du <code>InteractionsService</code> en utilisant l'injection de dépendances et le repository TypeORM.",
+        "niveau": "hard",
+        "reponse": "<pre style='background:#2d2d2d; color:#f8f8f2; padding:12px; border-radius:6px; font-size:0.8em;'>\nimport { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { UserInteraction, InteractionType } from './entities/user-interaction.entity';\n\n@Injectable()\nexport class InteractionsService {\n    constructor(\n        @InjectRepository(UserInteraction)\n        private interactionRepository: Repository&lt;UserInteraction&gt;,\n    ) {}\n\n    async logView(userId: string, productId: string): Promise&lt;UserInteraction&gt; {\n        return this.logInteraction(userId, productId, InteractionType.VIEW);\n    }\n\n    async logFavorite(userId: string, productId: string): Promise&lt;UserInteraction&gt; {\n        return this.logInteraction(userId, productId, InteractionType.FAVORITE);\n    }\n\n    async logSearch(userId: string, query: string, categoryId?: string): Promise&lt;UserInteraction&gt; {\n        const interaction = this.interactionRepository.create({\n            userId,\n            type: InteractionType.SEARCH,\n            metadata: { query, categoryId },\n        });\n        return this.interactionRepository.save(interaction);\n    }\n\n    private async logInteraction(userId: string, productId: string, type: InteractionType): Promise&lt;UserInteraction&gt; {\n        const interaction = this.interactionRepository.create({\n            userId,\n            productId,\n            type,\n        });\n        return this.interactionRepository.save(interaction);\n    }\n\n    async getUserInteractions(userId: string, limit: number = 50): Promise&lt;UserInteraction[]&gt; {\n        return this.interactionRepository.find({\n            where: { userId },\n            order: { createdAt: 'DESC' },\n            take: limit,\n            relations: ['product'],\n        });\n    }\n}\n</pre><p><strong>Explication :</strong> Le service utilise <code>@InjectRepository</code> pour injecter le repository TypeORM. Les méthodes <code>logView</code> et <code>logFavorite</code> appellent une méthode privée pour éviter la duplication de code. <code>logSearch</code> stocke la requête et la catégorie dans les métadonnées. <code>getUserInteractions</code> récupère les interactions avec les relations de produit pour un affichage enrichi.</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Justifiez l'utilisation de l'asynchronicité (<code>async/await</code>) dans toutes les méthodes du service.",
+            "niveau": "medium",
+            "reponse": "L'asynchronicité est nécessaire car les opérations de base de données sont des opérations I/O qui prennent du temps. En utilisant <code>async/await</code>, on libère le thread principal pendant l'exécution de la requête SQL, ce qui permet au serveur de traiter d'autres requêtes simultanément. Cela améliore les performances et la scalabilité de l'application."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Quelle serait la conséquence d'une erreur lors de l'enregistrement d'une interaction ? Proposez une solution pour gérer ce cas.",
+            "niveau": "hard",
+            "reponse": "Une erreur lors de l'enregistrement d'une interaction pourrait entraîner la perte de données de comportement utilisateur, ce qui affecterait la qualité des recommandations. De plus, si l'appel est fait dans le contexte d'une requête HTTP, cela pourrait ralentir ou faire échouer la réponse au client.<br><br><strong>Solution :</strong> Implémenter un mécanisme de file d'attente (queue) avec un système comme Bull ou RabbitMQ. Les interactions sont ajoutées à une file et traitées en arrière-plan. En cas d'échec, le job peut être réessayé automatiquement. Alternativement, on peut utiliser le pattern <code>fire-and-forget</code> avec un try/catch qui log l'erreur sans bloquer la réponse."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Conception d'un Moteur de Recommandations pour une Plateforme Camerounaise",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Votre startup e-commerce camerounaise souhaite implémenter un moteur de recommandations personnalisées pour augmenter les ventes et fidéliser les clients.</p><p><strong>Objectif :</strong> Créer un service de recommandations capable de suggérer des produits basés sur les favoris, les catégories et les recherches de l'utilisateur.</p><p><strong>Contraintes spécifiques au Cameroun :</strong></p><ul><li>Les connexions Internet peuvent être lentes, les recommandations doivent être rapides.</li><li>Beaucoup d'utilisateurs utilisent des appareils mobiles avec des données limitées.</li><li>La diversité culturelle (régions, langues) doit être prise en compte.</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Développez le service <code>RecommendationsService</code> avec une méthode <code>getPersonalizedRecommendations(userId: string, limit: number = 10)</code> qui génère des recommandations en utilisant les interactions de l'utilisateur.",
+        "niveau": "very hard",
+        "reponse": "<pre style='background:#2d2d2d; color:#f8f8f2; padding:12px; border-radius:6px; font-size:0.8em;'>\nimport { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository, In } from 'typeorm';\nimport { InteractionsService } from '../interactions/interactions.service';\nimport { Product } from '../../products/entities/product.entity';\n\n@Injectable()\nexport class RecommendationsService {\n    constructor(\n        @InjectRepository(Product)\n        private productRepository: Repository&lt;Product&gt;,\n        private interactionsService: InteractionsService,\n    ) {}\n\n    async getPersonalizedRecommendations(userId: string, limit: number = 10): Promise&lt;Product[]&gt; {\n        // 1. Récupérer les interactions récentes\n        const interactions = await this.interactionsService.getUserInteractions(userId, 100);\n\n        if (interactions.length === 0) {\n            // Fallback : Recommandations populaires\n            return this.getPopularProducts(limit);\n        }\n\n        // 2. Extraire les IDs des produits favoris et vus\n        const favoriteIds = interactions\n            .filter(i => i.type === 'favorite')\n            .map(i => i.productId);\n        const viewedIds = interactions\n            .filter(i => i.type === 'view')\n            .map(i => i.productId);\n\n        // 3. Récupérer les catégories préférées\n        const productsFromInteractions = await this.productRepository.findByIds(\n            [...favoriteIds, ...viewedIds],\n            { relations: ['category'] }\n        );\n        const favoriteCategories = productsFromInteractions\n            .map(p => p.categoryId)\n            .filter(id => id);\n\n        // 4. Construire les critères de recommandation\n        const criteria: any = {};\n        \n        // Prioriser les produits similaires aux favoris\n        if (favoriteIds.length > 0) {\n            const favoriteProducts = await this.productRepository.findByIds(favoriteIds);\n            const similarProducts = await this.productRepository.createQueryBuilder('product')\n                .where('product.categoryId IN (:...categories)', { categories: favoriteCategories })\n                .andWhere('product.id NOT IN (:...exclude)', { exclude: [...favoriteIds, ...viewedIds] })\n                .orderBy('RANDOM()')\n                .limit(limit)\n                .getMany();\n            \n            if (similarProducts.length >= limit) {\n                return similarProducts;\n            }\n            // Sinon, compléter avec d'autres critères\n        }\n\n        // 5. Recommandations basées sur les catégories\n        const categoryRecommendations = await this.productRepository.createQueryBuilder('product')\n            .where('product.categoryId IN (:...categories)', { categories: favoriteCategories })\n            .andWhere('product.id NOT IN (:...exclude)', { exclude: [...favoriteIds, ...viewedIds] })\n            .orderBy('RANDOM()')\n            .limit(limit)\n            .getMany();\n\n        if (categoryRecommendations.length >= limit) {\n            return categoryRecommendations;\n        }\n\n        // 6. Fallback : Recommandations populaires ou aléatoires\n        return this.getPopularProducts(limit);\n    }\n\n    private async getPopularProducts(limit: number): Promise&lt;Product[]&gt; {\n        return this.productRepository.find({\n            where: { isPublished: true },\n            order: { views: 'DESC' },\n            take: limit,\n        });\n    }\n}\n</pre><p><strong>Explication :</strong> Le service utilise une approche multicritères. Il priorise les produits similaires aux favoris de l'utilisateur, puis les produits dans les catégories préférées, et enfin les produits populaires comme fallback. La méthode utilise <code>RANDOM()</code> pour la diversité et évite de recommander des produits déjà vus ou favoris.</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Analysez les performances de cette implémentation sur une base de données de 100 000 produits et proposez deux optimisations.",
+            "niveau": "hard",
+            "reponse": "Cette implémentation peut être lourde car elle effectue plusieurs requêtes SQL et utilise <code>RANDOM()</code> qui est coûteux sur de grandes tables.<br><br><strong>Optimisation 1 :</strong> Mettre en cache les recommandations populaires et les résultats des utilisateurs fréquents dans Redis avec un TTL de 5-10 minutes.<br><br><strong>Optimisation 2 :</strong> Utiliser des <em>materialized views</em> ou des tables de pré-agrégation pour les catégories et les favoris, actualisées par des tâches planifiées (<code>@Cron</code>).<br><br><strong>Optimisation 3 :</strong> Limiter les interactions analysées aux 30 derniers jours pour réduire le volume de données."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Proposez une stratégie pour prendre en compte la diversité des régions camerounaises dans les recommandations (ex: Yaoundé, Douala, Bamenda).",
+            "niveau": "hard",
+            "reponse": "Pour prendre en compte la diversité régionale du Cameroun :<br><br><strong>1. Géolocalisation :</strong> Ajouter un champ <code>region</code> ou <code>city</code> dans le profil utilisateur et les produits. Les recommandations peuvent prioriser les produits disponibles dans la région de l'utilisateur.<br><br><strong>2. Produits populaires par région :</strong> Stocker les statistiques de popularité par région. Par exemple, les produits alimentaires populaires à Douala peuvent différer de ceux de Bamenda.<br><br><strong>3. Tendances saisonnières :</strong> Les régions ont des saisons différentes (ex: saison des pluies vs saison sèche). Intégrer des données météo ou saisonnières pour recommander des produits appropriés.<br><br><strong>4. Langues locales :</strong> Si l'application supporte plusieurs langues, adapter les descriptions et les recommandations en fonction de la langue préférée de l'utilisateur."
+          },
+          {
+            "numero": "1.c",
+            "texte": "Évaluez l'impact de l'ajout d'un système de feedback (évaluations des recommandations par les utilisateurs) sur la qualité du moteur.",
+            "niveau": "medium",
+            "reponse": "L'ajout d'un feedback utilisateur a un impact très positif :<br><br><strong>1. Amélioration continue :</strong> En enregistrant si l'utilisateur a aimé ou non une recommandation (click, achat, ou feedback explicite), le système peut s'améliorer progressivement.<br><br><strong>2. Apprentissage supervisé :</strong> Les données de feedback peuvent être utilisées pour entraîner un modèle d'apprentissage automatique qui prédit les préférences.<br><br><strong>3. Personnalisation accrue :</strong> Le feedback permet de pondérer l'importance des différents critères (catégories, popularité, similarité) pour chaque utilisateur.<br><br><strong>4. Détection des biais :</strong> Les feedbacks permettent de détecter si le système sur-recommande certains produits ou catégories et d'ajuster.<br><br>En résumé, le feedback transforme un système de recommandations statique en un système adaptatif, ce qui est essentiel pour la rétention des utilisateurs sur une plateforme e-commerce."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Protection des Données et Conformité RGPD",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Votre plateforme e-commerce collecte des données d'interaction utilisateur pour les recommandations. La conformité au RGPD est une priorité.</p><p><strong>Consigne :</strong> Rédigez une tâche planifiée (<code>@Cron</code>) qui nettoie automatiquement les données de navigation conformément au RGPD.</p><p><strong>Spécifications :</strong></p><ul><li>Supprimer les interactions de plus de 13 mois</li><li>Anonymiser les interactions de plus de 6 mois pour les utilisateurs inactifs</li><li>Exécuter la tâche quotidiennement à minuit</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le code de la tâche planifiée dans un service dédié <code>DataRetentionService</code>.",
+        "niveau": "medium",
+        "reponse": "<pre style='background:#2d2d2d; color:#f8f8f2; padding:12px; border-radius:6px; font-size:0.8em;'>\nimport { Injectable } from '@nestjs/common';\nimport { Cron, CronExpression } from '@nestjs/schedule';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository, MoreThan, LessThan, In } from 'typeorm';\nimport { UserInteraction } from './entities/user-interaction.entity';\nimport { User } from '../../users/entities/user.entity';\n\n@Injectable()\nexport class DataRetentionService {\n    constructor(\n        @InjectRepository(UserInteraction)\n        private interactionRepository: Repository&lt;UserInteraction&gt;,\n        @InjectRepository(User)\n        private userRepository: Repository&lt;User&gt;,\n    ) {}\n\n    @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)\n    async cleanupOldInteractions() {\n        const thirteenMonthsAgo = new Date();\n        thirteenMonthsAgo.setMonth(thirteenMonthsAgo.getMonth() - 13);\n\n        const sixMonthsAgo = new Date();\n        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);\n\n        try {\n            // 1. Supprimer les interactions de plus de 13 mois\n            const deleteResult = await this.interactionRepository.delete({\n                createdAt: LessThan(thirteenMonthsAgo),\n            });\n\n            // 2. Anonymiser les interactions de 6 à 13 mois pour les utilisateurs inactifs\n            const inactiveUsers = await this.userRepository.find({\n                where: {\n                    lastLoginAt: LessThan(sixMonthsAgo),\n                },\n                select: ['id'],\n            });\n            \n            const inactiveUserIds = inactiveUsers.map(u => u.id);\n\n            if (inactiveUserIds.length > 0) {\n                await this.interactionRepository\n                    .createQueryBuilder()\n                    .update(UserInteraction)\n                    .set({\n                        userId: null,\n                        metadata: () => \"jsonb_build_object('anonymized', true, 'original_created_at', createdAt)\",\n                    })\n                    .where('userId IN (:...ids)', { ids: inactiveUserIds })\n                    .andWhere('createdAt BETWEEN :start AND :end', {\n                        start: sixMonthsAgo,\n                        end: thirteenMonthsAgo,\n                    })\n                    .execute();\n            }\n\n            return {\n                deleted: deleteResult.affected,\n                anonymized: inactiveUserIds.length,\n            };\n        } catch (error) {\n            throw new Error(`Erreur lors du nettoyage des données: ${error.message}`);\n        }\n    }\n}\n</pre><p><strong>Explication :</strong> La tâche utilise <code>@Cron</code> pour s'exécuter quotidiennement. Elle supprime les interactions très anciennes et anonymise celles des utilisateurs inactifs en supprimant le lien avec l'utilisateur et en ajoutant des métadonnées. Cela permet de se conformer au RGPD tout en conservant des données statistiques utiles.</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Justifiez le choix des délais de 6 et 13 mois pour l'anonymisation et la suppression.",
+            "niveau": "easy",
+            "reponse": "Le délai de 13 mois correspond à l'exigence RGPD de conservation minimale des données personnelles. Les 13 mois permettent de couvrir un cycle complet de données commerciales tout en respectant la réglementation. Le délai de 6 mois pour l'anonymisation permet de transformer les données en données statistiques non personnelles avant la suppression définitive. Ces données anonymisées peuvent encore être utilisées pour des analyses globales et des tendances sans violer la vie privée des utilisateurs."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation des Performances du Moteur de Recommandations",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Votre moteur de recommandations commence à rencontrer des problèmes de performance avec 50 000 utilisateurs actifs et 10 000 produits.</p><p><strong>Problème :</strong> Les temps de réponse dépassent les 2 secondes, ce qui est inacceptable pour une bonne expérience utilisateur, surtout sur les réseaux mobiles au Cameroun.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analysez les goulots d'étranglement potentiels du service de recommandations actuel et proposez des solutions d'optimisation.",
+        "niveau": "hard",
+        "reponse": "<p><strong>Analyse des goulots d'étranglement :</strong></p><ul><li><strong>Requêtes SQL complexes :</strong> Les requêtes avec <code>RANDOM()</code> et plusieurs jointures deviennent lentes.</li><li><strong>Manque de cache :</strong> Chaque requête recompute les recommandations à partir de zéro.</li><li><strong>Volume de données :</strong> L'analyse de 100+ interactions par utilisateur devient coûteuse.</li></ul><p><strong>Solutions d'optimisation :</strong></p><ol><li><strong>Mise en cache avec Redis :</strong> Stocker les recommandations des utilisateurs fréquents avec un TTL de 10-15 minutes.</li><li><strong>Pré-calcul hors ligne :</strong> Utiliser des tâches planifiées pour pré-calculer les recommandations la nuit.</li><li><strong>Indexation :</strong> Créer des indexes composites sur <code>(userId, createdAt)</code> et <code>(productId, type)</code>.</li><li><strong>Limiter les interactions :</strong> N'analyser que les 30 dernières interactions pour les utilisateurs actifs.</li><li><strong>Paginer les résultats :</strong> Ne retourner que les 10 premiers résultats et utiliser le cache pour les suivants.</li></ol><p><strong>Exemple d'implémentation avec cache :</strong></p><pre style='background:#2d2d2d; color:#f8f8f2; padding:12px; border-radius:6px; font-size:0.8em;'>\nimport { CACHE_MANAGER } from '@nestjs/cache-manager';\nimport { Cache } from 'cache-manager';\n\n@Injectable()\nexport class RecommendationsService {\n    constructor(\n        private cacheManager: Cache,\n        // ... autres injections\n    ) {}\n\n    async getPersonalizedRecommendations(userId: string, limit: number = 10) {\n        const cacheKey = `rec:${userId}:${limit}`;\n        const cached = await this.cacheManager.get(cacheKey);\n        if (cached) return cached;\n\n        const recommendations = await this.computeRecommendations(userId, limit);\n        await this.cacheManager.set(cacheKey, recommendations, 600000); // 10 min\n        return recommendations;\n    }\n}\n</pre>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comparez les approches de recommandations en temps réel vs pré-calculées pour un contexte camerounais avec des connexions variables.",
+            "niveau": "hard",
+            "reponse": "<p><strong>Recommandations en temps réel :</strong></p><ul><li><strong>Avantages :</strong> Hyper-personnalisées, prennent en compte l'action immédiate de l'utilisateur.</li><li><strong>Inconvénients :</strong> Nécessitent une connexion stable, sollicitent la base de données à chaque requête, plus coûteuses en ressources.</li></ul><p><strong>Recommandations pré-calculées :</strong></p><ul><li><strong>Avantages :</strong> Très rapides (lecture cache), moins de charge serveur, fonctionnent hors ligne.</li><li><strong>Inconvénients :</strong> Moins réactives aux changements de comportement, nécessitent une stratégie de mise à jour.</li></ul><p><strong>Recommandation pour le Cameroun :</strong> Une approche hybride est idéale. Utiliser des recommandations pré-calculées mises à jour quotidiennement comme base, et les rafraîchir en temps réel lorsque l'utilisateur est actif et que la connexion est bonne. Cela offre le meilleur des deux mondes : rapidité pour les utilisateurs avec connexion lente et personnalisation pour les utilisateurs connectés.</p>"
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -1,0 +1,140 @@
+[
+  {
+    "intitule": "Tests d'intégration avec WebApplicationFactory",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous devez tester un contrôleur <code>ProductsController</code> qui dépend d’un service <code>IProductService</code>. Expliquez comment <code>WebApplicationFactory&lt;TStartup&gt;</code> permet de créer un environnement de test sans avoir à lancer manuellement l’API.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez le principe de WebApplicationFactory et son avantage par rapport à des tests unitaires classiques.",
+        "niveau": "easy",
+        "reponse": "WebApplicationFactory crée un serveur de test in-memory qui héberge l'API complète, permettant de tester les endpoints HTTP réels, la pipeline des middlewares, la liaison de modèles, la validation, l'authentification, etc., sans avoir à lancer un serveur physique. Contrairement aux tests unitaires qui isolent une classe, les tests d'intégration avec WebApplicationFactory valident le comportement global de l'API.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Configurer une base de données InMemory pour les tests",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Pour tester votre contrôleur <code>ProductsController</code> qui utilise Entity Framework Core, vous souhaitez remplacer la vraie base de données SQL Server par une base de données InMemory.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le code nécessaire pour remplacer le DbContext réel par un DbContext InMemory dans WebApplicationFactory.",
+        "niveau": "medium",
+        "reponse": "Il faut surcharger la méthode ConfigureWebHost, remplacer le service DbContext par un service utilisant UseInMemoryDatabase, et donner un nom unique à la base de données pour éviter les collisions entre tests.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi faut-il utiliser un nom de base de données unique pour chaque test ?",
+            "niveau": "easy",
+            "reponse": "Pour éviter que les données d’un test ne polluent un autre test. InMemory persiste les données tant que le DbContext existe, donc un nom unique isole les tests."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Quel package NuGet est nécessaire pour utiliser UseInMemoryDatabase ?",
+            "niveau": "easy",
+            "reponse": "Microsoft.EntityFrameworkCore.InMemory"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Rédigez un test qui envoie une requête POST à /api/products et vérifie le code de statut 201 (Created).",
+        "niveau": "medium",
+        "reponse": "Utiliser HttpClient de la factory, envoyer un JSON avec StringContent, appeler PostAsync, puis vérifier StatusCode == HttpStatusCode.Created.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Tester un endpoint protégé par authentification JWT",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Votre API utilise l’authentification JWT. Vous devez tester un endpoint <code>GET /api/orders</code> qui est décoré avec <code>[Authorize]</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez comment vous pouvez simuler un utilisateur authentifié dans WebApplicationFactory sans avoir à créer un vrai token JWT.",
+        "niveau": "hard",
+        "reponse": "On peut ajouter un service AuthenticationBuilder factice en remplaçant le schéma d'authentification par défaut, ou utiliser AddAuthentication et ajouter un handler qui authentifie toujours l'utilisateur avec des claims prédéfinis. On peut aussi créer un vrai token JWT avec une clé symétrique dédiée aux tests.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposez une méthode avec une AuthenticationHandler personnalisée.",
+            "niveau": "hard",
+            "reponse": "Créer une classe FakeAuthenticationHandler héritant de AuthenticationHandler, surcharger HandleAuthenticateAsync pour retourner un ticket d'authentification avec un ClaimsPrincipal contenant par exemple un rôle Admin. L'enregistrer dans ConfigureTestServices avec AddAuthentication et AddScheme."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Écrivez le code d’un test qui vérifie qu’un utilisateur non authentifié reçoit une réponse 401 Unauthorized.",
+        "niveau": "medium",
+        "reponse": "Sans ajouter de token dans l'en-tête Authorization, on envoie une requête GET au endpoint protégé et on vérifie que le statut est 401.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Créer un test complet de bout en bout",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous développez un mini système de gestion de livres. Implémentez un test d’intégration complet qui :</p>\n<ul>\n<li>Crée un livre via POST /api/books</li>\n<li>Récupère la liste des livres via GET /api/books</li>\n<li>Vérifie que le livre créé est bien présent</li>\n<li>Supprime le livre via DELETE /api/books/{id}</li>\n<li>Vérifie qu’il n’est plus présent</li>\n</ul>\n<p>Utilisez WebApplicationFactory, une base InMemory, et des assertions appropriées.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédigez le code complet du test (structure, configuration, requêtes, assertions).",
+        "niveau": "very hard",
+        "reponse": "Le test doit :\n1. Créer la factory avec un DbContext InMemory nommé 'TestBooksDb'.\n2. Créer un client HTTP.\n3. POST un objet Book en JSON → récupérer l'ID.\n4. GET /api/books → vérifier que la liste contient le livre.\n5. DELETE → vérifier 204 NoContent.\n6. GET → vérifier que le livre n'est plus dans la liste.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment garantir que chaque test repart avec une base propre ?",
+            "niveau": "medium",
+            "reponse": "En utilisant un nom de base différent (par exemple Guid.NewGuid().ToString()) ou en supprimant les données entre les tests via EnsureDeleted()/EnsureCreated(), ou en recréant la factory pour chaque test."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Diagnostiquer un échec de test d'intégration",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Votre test échoue avec l’erreur : <code>System.InvalidOperationException : Unable to resolve service for type 'MyApp.Data.IBookRepository'</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifiez la cause probable de cette erreur et expliquez les étapes pour la corriger.",
+        "niveau": "medium",
+        "reponse": "La cause probable : l'interface IBookRepository n'a pas été enregistrée dans le conteneur DI. Il faut soit l'enregistrer dans Program.cs (builder.Services.AddScoped<IBookRepository, BookRepository>()), soit remplacer le service dans les tests par un mock (AddScoped avec un mock).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "En vous basant sur la taxonomie de Bloom, reformulez l’étape de correction comme un objectif pédagogique pour vos élèves.",
+        "niveau": "easy",
+        "reponse": "Les élèves seront capables de diagnostiquer une erreur de résolution de dépendance dans les tests d’intégration et de modifier la configuration du conteneur DI pour la corriger.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

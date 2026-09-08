@@ -1,0 +1,114 @@
+[
+  {
+    "intitule": "Exercice 1 : Architecture et composants de l'écran de détail du produit",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>L'écran de détail du produit (<code>ProductDetailScreen</code>) est l'un des écrans les plus importants d'une application e-commerce. Il doit présenter de manière claire et interactive toutes les informations nécessaires à l'utilisateur pour prendre une décision d'achat.</p><p>Analysez la structure de cet écran présentée dans la leçon 11 et répondez aux questions suivantes.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez les différentes sections qui composent l'écran de détail du produit et expliquez le rôle de chacune.",
+        "niveau": "medium",
+        "reponse": "L'écran de détail du produit se compose de plusieurs sections :\n- **Carrousel d'images** : Permet à l'utilisateur de visualiser le produit sous différents angles avec possibilité de zoom et de swipe.\n- **Informations du produit** : Titre, prix, description, évaluations, disponibilité.\n- **Informations du vendeur** : Nom, note, statistiques, localisation.\n- **Boutons d'action** : Contacter le vendeur, ajouter aux favoris, partager.\n- **Produits similaires** : Section horizontale pour encourager la découverte et les achats complémentaires."
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez l'importance du carrousel d'images dans l'expérience utilisateur et les fonctionnalités qui doivent être implémentées.",
+        "niveau": "easy",
+        "reponse": "Le carrousel d'images est crucial car il permet à l'utilisateur de visualiser le produit sous plusieurs angles. Les fonctionnalités clés incluent : le swipe pour naviguer entre les images, le zoom pour voir les détails, l'indicateur de position (dots), et le chargement progressif des images pour optimiser les performances."
+      },
+      {
+        "numero": 3,
+        "texte": "Quelle est l'utilité de la section 'Produits similaires' et comment améliore-t-elle l'expérience utilisateur ?",
+        "niveau": "easy",
+        "reponse": "La section 'Produits similaires' permet de :\n- Proposer des alternatives à l'utilisateur si le produit ne lui convient pas\n- Encourager les achats complémentaires (upsell/cross-sell)\n- Augmenter le temps passé sur l'application\n- Améliorer la découverte de produits via le système de recommandations"
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 2 : Implémentation du carrousel d'images avec zoom et swipe",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous devez implémenter le composant <code>ImageCarousel</code> pour l'écran de détail du produit sur la plateforme Sawamart.</p><p>Le composant doit afficher un carrousel d'images avec les fonctionnalités suivantes :</p><ul><li>Navigation par swipe horizontal</li><li>Indicateur de position (points en bas)</li><li>Zoom sur l'image (double tap ou pincement)</li><li>Chargement progressif avec placeholder</li><li>Gestion des erreurs de chargement</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez comment implémenter la navigation par swipe horizontal dans React Native. Quels composants utiliseriez-vous ?",
+        "niveau": "medium",
+        "reponse": "On peut utiliser le composant <code>FlatList</code> avec <code>horizontal={true}</code> et <code>pagingEnabled={true}</code> pour créer un carrousel. Chaque image est rendue dans un <code>Image</code> avec une largeur égale à la largeur de l'écran. On peut également utiliser <code>ScrollView</code> avec <code>horizontal</code> pour un contrôle plus fin."
+      },
+      {
+        "numero": 2,
+        "texte": "Écrivez le code du composant <code>ImageCarousel</code> qui gère le swipe, les indicateurs et le zoom.",
+        "niveau": "very hard",
+        "reponse": "```typescript\nimport React, { useRef, useState } from 'react';\nimport { View, FlatList, Image, TouchableOpacity, Dimensions, StyleSheet } from 'react-native';\nimport { GestureHandlerRootView, PinchGestureHandler, State } from 'react-native-gesture-handler';\nimport { Animated } from 'react-native';\n\nconst { width } = Dimensions.get('window');\n\ninterface ImageCarouselProps {\n  images: string[];\n}\n\nexport const ImageCarousel: React.FC<ImageCarouselProps> = ({ images }) => {\n  const [activeIndex, setActiveIndex] = useState(0);\n  const flatListRef = useRef<FlatList>(null);\n  const scale = useRef(new Animated.Value(1)).current;\n\n  const onScroll = (event: any) => {\n    const index = Math.round(event.nativeEvent.contentOffset.x / width);\n    setActiveIndex(index);\n  };\n\n  const renderItem = ({ item }: { item: string }) => (\n    <PinchGestureHandler\n      onGestureEvent={(event) => {\n        scale.setValue(event.nativeEvent.scale);\n      }}\n      onHandlerStateChange={(event) => {\n        if (event.nativeEvent.oldState === State.ACTIVE) {\n          Animated.spring(scale, {\n            toValue: 1,\n            useNativeDriver: true,\n          }).start();\n        }\n      }}\n    >\n      <Animated.View style={[styles.imageContainer, { transform: [{ scale }] }]}>\n        <Image\n          source={{ uri: item }}\n          style={styles.image}\n          resizeMode=\"cover\"\n          loadingIndicatorSource={require('../assets/placeholder.png')}\n        />\n      </Animated.View>\n    </PinchGestureHandler>\n  );\n\n  const renderDotIndicator = () => (\n    <View style={styles.dotsContainer}>\n      {images.map((_, index) => (\n        <View\n          key={index}\n          style={[\n            styles.dot,\n            { backgroundColor: index === activeIndex ? '#3B82F6' : '#CBD5E1' },\n          ]}\n        />\n      ))}\n    </View>\n  );\n\n  return (\n    <GestureHandlerRootView>\n      <View style={styles.container}>\n        <FlatList\n          ref={flatListRef}\n          data={images}\n          renderItem={renderItem}\n          horizontal\n          pagingEnabled\n          showsHorizontalScrollIndicator={false}\n          onScroll={onScroll}\n          keyExtractor={(item, index) => `${item}-${index}`}\n        />\n        {renderDotIndicator()}\n      </View>\n    </GestureHandlerRootView>\n  );\n};\n\nconst styles = StyleSheet.create({\n  container: {\n    height: 300,\n    position: 'relative',\n  },\n  imageContainer: {\n    width,\n    height: 300,\n  },\n  image: {\n    width: '100%',\n    height: '100%',\n  },\n  dotsContainer: {\n    position: 'absolute',\n    bottom: 10,\n    flexDirection: 'row',\n    justifyContent: 'center',\n    width: '100%',\n  },\n  dot: {\n    width: 8,\n    height: 8,\n    borderRadius: 4,\n    marginHorizontal: 4,\n  },\n});\n```"
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 3 : Gestion des interactions et des actions sur l'écran de détail",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>L'écran de détail du produit intègre plusieurs actions interactives : ajout aux favoris, contact du vendeur, partage, et logging des vues.</p><p>Vous devez implémenter ces fonctionnalités en utilisant les services et stores appropriés de l'application.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémentez la fonction de bascule des favoris (toggle favorite) qui utilise le store de favoris et le service API.",
+        "niveau": "hard",
+        "reponse": "```typescript\nconst toggleFavorite = async (productId: string) => {\n  const isFavorite = favoriteStore.isFavorite(productId);\n  \n  try {\n    if (isFavorite) {\n      await favoriteService.remove(productId);\n      favoriteStore.removeFavorite(productId);\n    } else {\n      await favoriteService.add(productId);\n      favoriteStore.addFavorite(productId);\n    }\n    \n    // Mettre à jour le compteur de favoris dans le store\n    favoriteStore.updateCount(productId, !isFavorite);\n  } catch (error) {\n    // Afficher un message d'erreur\n    Toast.show({\n      type: 'error',\n      text1: 'Erreur',\n      text2: 'Impossible de modifier les favoris',\n    });\n  }\n};\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment gérez-vous l'état de chargement pendant l'appel API pour éviter les doubles clics ?",
+            "niveau": "medium",
+            "reponse": "On peut utiliser un état local `isLoading` qui désactive le bouton pendant l'appel API, ou utiliser un mécanisme de debounce pour éviter les clics multiples."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez comment implémenter le logging de la vue du produit avec le <code>interactionService.logView</code>.",
+        "niveau": "medium",
+        "reponse": "On appelle `interactionService.logView(productId)` lorsque l'écran est chargé, idéalement dans un `useEffect` qui dépend de l'ID du produit. Il est important d'éviter les appels multiples en utilisant un flag pour ne logger qu'une seule fois par session de visualisation."
+      },
+      {
+        "numero": 3,
+        "texte": "Décrivez le flux de navigation pour contacter le vendeur. Quelles données doivent être transmises à l'écran de chat ?",
+        "niveau": "hard",
+        "reponse": "Le flux de navigation doit transmettre :\n- L'ID du vendeur\n- L'ID du produit\n- Les détails du produit (titre, image, prix) pour les afficher dans l'en-tête du chat\n- Le type de chat (standard ou litige)\n\nLa navigation peut être effectuée avec `navigation.navigate('Chat', { sellerId, productId, productData })`."
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 4 : Optimisation des performances et des données",
+    "type": "ressource",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>L'écran de détail du produit peut rencontrer des problèmes de performance si les images sont volumineuses ou si les données sont chargées lentement.</p><p>Analysez les stratégies d'optimisation possibles pour améliorer l'expérience utilisateur sur cet écran.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Quelles techniques utilisez-vous pour optimiser le chargement des images dans le carrousel ?",
+        "niveau": "medium",
+        "reponse": "On peut utiliser :\n- Le chargement progressif avec un placeholder (loadingIndicatorSource)\n- La mise en cache des images avec `cachePolicy`\n- L'optimisation des images via un service externe (Cloudinary, Imgix) pour redimensionner et compresser les images\n- Le chargement différé (lazy loading) pour ne charger que les images visibles"
+      },
+      {
+        "numero": 2,
+        "texte": "Comment gérez-vous le chargement des données du produit et des produits similaires ?",
+        "niveau": "hard",
+        "reponse": "On peut :\n- Utiliser des requêtes parallèles pour charger les données du produit et les produits similaires\n- Afficher un skeleton loader pour améliorer l'expérience utilisateur\n- Mettre en cache les données avec un TTL (Time To Live) pour réduire les appels API\n- Utiliser le store de produits pour vérifier si les données sont déjà disponibles"
+      }
+    ]
+  }
+]

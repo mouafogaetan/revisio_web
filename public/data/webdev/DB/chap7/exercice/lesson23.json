@@ -1,0 +1,98 @@
+[
+  {
+    "intitule": "Identifier les anomalies de concurrence",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Une base de donn\u00E9es g\u00E8re des r\u00E9servations de vols. Deux transactions s\u2019ex\u00E9cutent simultan\u00E9ment :<br><strong>T1</strong> : lit le nombre de places disponibles (vol AF123).<br><strong>T2</strong> : r\u00E9serve une place sur le m\u00EAme vol (met \u00E0 jour le nombre de places).<br><br>Selon le niveau d\u2019isolation, certaines anomalies peuvent se produire. R\u00E9pondez aux questions ci-dessous.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "D\u00E9finissez les trois anomalies de concurrence suivantes : dirty read, non-repeatable read, phantom read.",
+        "niveau": "easy",
+        "reponse": "- Dirty read : lecture d\u2019une donn\u00E9e \u00E9crite par une transaction non encore valid\u00E9e (COMMIT).\n- Non-repeatable read : au sein d\u2019une m\u00EAme transaction, deux lectures de la m\u00EAme ligne donnent des r\u00E9sultats diff\u00E9rents \u00E0 cause d\u2019une modification par une autre transaction.\n- Phantom read : au sein d\u2019une m\u00EAme transaction, une requ\u00EAte de s\u00E9lection retourne un nombre de lignes diff\u00E9rent lors de deux ex\u00E9cutions \u00E0 cause d\u2019insertions/suppressions par une autre transaction.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Dans l\u2019exemple des r\u00E9servations, quel type d\u2019anomalie se produit si T2 modifie le nombre de places apr\u00E8s que T1 l\u2019a lu, et que T1 relit le nombre de places avant la validation de T2 ? Justifiez.",
+        "niveau": "medium",
+        "reponse": "Il s\u2019agit d\u2019un non-repeatable read. Car T1 relit la m\u00EAme donn\u00E9e (nombre de places) et obtient une valeur diff\u00E9rente, alors que T2 n\u2019est pas forc\u00E9ment valid\u00E9e. Si T2 n\u2019est pas encore valid\u00E9e et que T1 voit sa modification, on parlerait aussi de dirty read si isolation READ UNCOMMITTED.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Classez les quatre niveaux d\u2019isolation SQL du moins isolant au plus isolant. Pour chacun, dites quelles anomalies sont possibles.",
+        "niveau": "medium",
+        "reponse": "1. READ UNCOMMITTED : dirty read, non-repeatable read, phantom read.\n2. READ COMMITTED : non-repeatable read, phantom read (pas dirty read).\n3. REPEATABLE READ : phantom read (selon SGBD, parfois \u00E9vit\u00E9 sous MySQL).\n4. SERIALIZABLE : aucune anomalie (isolation totale).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Choisir le bon niveau d'isolation selon un cas pratique",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous concevez une application bancaire en ligne. Deux op\u00E9rations concurrentes peuvent se produire :<br>- Virement entre comptes (lecture soldes, d\u00E9bit, cr\u00E9dit, validation).<br>- Consultation des relev\u00E9s par un client (lecture seule de plusieurs lignes).<br><br>La banque exige qu\u2019aucune transaction ne lise des donn\u00E9es non valid\u00E9es, mais accepte des lectures non r\u00E9p\u00E9tables si elles am\u00E9liorent les performances. Les insertions de nouvelles lignes (\u00E9critures comptables) ne doivent pas cr\u00E9er de phantom reads g\u00EAnants.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez un niveau d\u2019isolation adapt\u00E9 pour la transaction de virement. Justifiez en citant les anomalies pr\u00E9venues ou tol\u00E9r\u00E9es.",
+        "niveau": "hard",
+        "reponse": "Niveau REPEATABLE READ. Il \u00E9vite dirty reads (pas de donn\u00E9es non valid\u00E9es) et non-repeatable reads, ce qui est utile car le virement lit plusieurs fois les soldes. Les phantom reads sont possibles mais acceptables car l\u2019essentiel est la coh\u00E9rence des soldes lus deux fois.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Pour la consultation des relev\u00E9s (lecture seule), choisissez un niveau moins contraignant. Expliquez pourquoi.",
+        "niveau": "medium",
+        "reponse": "READ COMMITTED. Cela \u00E9vite les dirty reads, ce qui est essentiel (ne pas voir des op\u00E9rations annul\u00E9es). Les non-repeatable reads sont permis, mais pour un relev\u00E9 ponctuel, cela n\u2019a pas d\u2019impact majeur. Meilleures performances que REPEATABLE READ.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Imaginez que le SGBD par d\u00E9faut utilise READ COMMITTED. La banque d\u00E9cide de passer \u00E0 SERIALIZABLE pour les virements. Quels inconv\u00E9nients de performance pourriez-vous observer ? R\u00E9pondez en termes de verrouillage et de concurrence.",
+        "niveau": "hard",
+        "reponse": "Avec SERIALIZABLE, le SGBD utilise davantage de verrous (range locks, verrous de pr\u00E9dikat) pour \u00E9viter les phantom reads. Cela augmente les risques de deadlocks et r\u00E9duit le nombre de transactions simultan\u00E9es possibles. Les temps d\u2019attente peuvent devenir \u00E9lev\u00E9s en p\u00E9riode de forte activit\u00E9.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyser un sc\u00E9nario de dirty read et proposer une correction",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Deux transactions s\u2019ex\u00E9cutent sous le niveau READ UNCOMMITTED :<br><strong>T1</strong> : met \u00E0 jour le stock d\u2019un produit (UPDATE stock SET quantite = quantite - 1 WHERE id = 101).<br><strong>T2</strong> : lit le stock (SELECT quantite FROM stock WHERE id = 101) puis v\u00E9rifie s\u2019il peut commander.<br><br>T1 fait ROLLBACK apr\u00E8s que T2 a lu la nouvelle quantit\u00E9.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "D\u00E9crivez pr\u00E9cis\u00E9ment l\u2019anomalie qui se produit. Nommez-la.",
+        "niveau": "easy",
+        "reponse": "Il s\u2019agit d\u2019une dirty read (lecture sale) : T2 lit une donn\u00E9e (quantit\u00E9 modifi\u00E9e par T1) qui n\u2019a pas encore \u00E9t\u00E9 valid\u00E9e, puis T1 annule sa modification (ROLLBACK). T2 a donc utilis\u00E9 une valeur qui n\u2019a jamais exist\u00E9 officiellement.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposez deux fa\u00E7ons d\u2019\00E9viter cette anomalie sans changer le code applicatif, seulement la configuration de la base de donn\u00E9es.",
+        "niveau": "medium",
+        "reponse": "1. Augmenter le niveau d\u2019isolation \u00E0 READ COMMITTED ou plus.\n2. Utiliser des verrous explicites (ex : SELECT ... FOR UPDATE) mais cela reste applicatif. La meilleure solution reste READ COMMITTED.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquez pourquoi certains SGBD autorisent encore READ UNCOMMITTED malgr\u00E9 ce risque.",
+        "niveau": "medium",
+        "reponse": "Pour des cas de lectures massives de donn\u00E9es non critiques (rapports approximatifs, surveillance en temps r\u00E9el) o\u00F9 la performance prime sur l\u2019exactitude absolue, et o\u00F9 aucune transaction n\u2019annule jamais ses modifications (dans certains environnements sp\u00E9cifiques).",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

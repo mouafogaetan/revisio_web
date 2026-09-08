@@ -1,0 +1,182 @@
+[
+  {
+    "intitule": "Création d'un DTO de base avec validation",
+    "type": "competence",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous devez créer une API d'inscription d'utilisateur. Le corps de la requête doit contenir : email, password, age (optionnel) et firstName.</p>\n<p>Créez un DTO <code>CreateUserDto</code> avec les validations suivantes :</p>\n<ul>\n<li>email : obligatoire, doit être un email valide</li>\n<li>password : obligatoire, minimum 6 caractères</li>\n<li>age : optionnel, doit être un nombre entier entre 18 et 120</li>\n<li>firstName : obligatoire, ne doit pas être vide</li>\n</ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire le code complet du DTO CreateUserDto avec les décorateurs de validation appropriés.",
+        "niveau": "easy",
+        "reponse": "```typescript\nimport { IsEmail, IsString, IsInt, Min, Max, IsOptional, MinLength, IsNotEmpty } from 'class-validator';\n\nexport class CreateUserDto {\n  @IsEmail()\n  @IsNotEmpty()\n  email: string;\n\n  @IsString()\n  @MinLength(6)\n  @IsNotEmpty()\n  password: string;\n\n  @IsInt()\n  @Min(18)\n  @Max(120)\n  @IsOptional()\n  age?: number;\n\n  @IsString()\n  @IsNotEmpty()\n  firstName: string;\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Personnalisation des messages d'erreur",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Reprenez le DTO <code>CreateUserDto</code> de l'exercice précédent et personnalisez les messages d'erreur en français :</p>\n<ul>\n<li>email : \"L'email fourni n'est pas valide\"</li>\n<li>password : \"Le mot de passe doit contenir au moins 6 caractères\"</li>\n<li>age : \"L'âge doit être compris entre 18 et 120 ans\"</li>\n<li>firstName : \"Le prénom est requis\"</li>\n</ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Modifier le DTO pour inclure des messages d'erreur personnalisés en français.",
+        "niveau": "medium",
+        "reponse": "```typescript\nimport { IsEmail, IsString, IsInt, Min, Max, IsOptional, MinLength, IsNotEmpty } from 'class-validator';\n\nexport class CreateUserDto {\n  @IsEmail({}, { message: \"L'email fourni n'est pas valide\" })\n  @IsNotEmpty({ message: \"L'email est requis\" })\n  email: string;\n\n  @IsString()\n  @MinLength(6, { message: 'Le mot de passe doit contenir au moins 6 caractères' })\n  @IsNotEmpty({ message: 'Le mot de passe est requis' })\n  password: string;\n\n  @IsInt({ message: \"L'âge doit être un nombre entier\" })\n  @Min(18, { message: \"L'âge doit être compris entre 18 et 120 ans\" })\n  @Max(120, { message: \"L'âge doit être compris entre 18 et 120 ans\" })\n  @IsOptional()\n  age?: number;\n\n  @IsString({ message: 'Le prénom doit être une chaîne de caractères' })\n  @IsNotEmpty({ message: 'Le prénom est requis' })\n  firstName: string;\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Validation d'un DTO de mise à jour partielle",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous devez créer un DTO pour la mise à jour partielle d'un utilisateur. Tous les champs sont optionnels mais s'ils sont fournis, ils doivent respecter les mêmes règles que la création. Utilisez <code>PartialType</code> de NestJS.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créer un DTO UpdateUserDto en étendant CreateUserDto avec PartialType et expliquer son fonctionnement.",
+        "niveau": "hard",
+        "reponse": "```typescript\nimport { PartialType } from '@nestjs/mapped-types';\nimport { CreateUserDto } from './create-user.dto';\nimport { IsOptional, IsString, MinLength } from 'class-validator';\n\n// Première méthode : utiliser PartialType directement\nexport class UpdateUserDto extends PartialType(CreateUserDto) {}\n\n// Deuxième méthode : avec validation supplémentaire spécifique à la mise à jour\nexport class UpdateUserDto extends PartialType(CreateUserDto) {\n  @IsOptional()\n  @IsString()\n  @MinLength(8, { message: 'Le nouveau mot de passe doit faire au moins 8 caractères' })\n  password?: string;\n}\n```\n\nExplication : PartialType rend toutes les propriétés du DTO parent optionnelles. Cela est parfait pour PATCH (mise à jour partielle). Il conserve également tous les décorateurs de validation du parent, qui ne seront appliqués que si la propriété est présente dans la requête.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Validation avancée avec décorateur personnalisé",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Créez un décorateur de validation personnalisé <code>@IsPhoneNumber</code> pour valider les numéros de téléphone camerounais. Les règles :</p>\n<ul>\n<li>Format : 6 chiffres (numéros locaux) ou +237 XXXXXXXX (9 chiffres après l'indicatif)</li>\n<li>Les préfixes valides sont : 6, 2, 7</li>\n</ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémenter un validateur personnalisé IsPhoneNumber et l'utiliser dans un DTO UserContactDto.",
+        "niveau": "very hard",
+        "reponse": "```typescript\n// is-phone-number.validator.ts\nimport {\n  registerDecorator,\n  ValidationOptions,\n  ValidatorConstraint,\n  ValidatorConstraintInterface,\n} from 'class-validator';\n\n@ValidatorConstraint({ async: false })\nexport class IsPhoneNumberConstraint implements ValidatorConstraintInterface {\n  validate(phoneNumber: string): boolean {\n    if (!phoneNumber) return false;\n    \n    // Format local : 6 chiffres\n    const localRegex = /^[267]\\d{5}$/;\n    // Format international : +237 + 9 chiffres\n    const internationalRegex = /^\\+237[267]\\d{8}$/;\n    \n    return localRegex.test(phoneNumber) || internationalRegex.test(phoneNumber);\n  }\n\n  defaultMessage(): string {\n    return 'Le numéro de téléphone doit être valide (ex: 612345678 ou +237612345678)';\n  }\n}\n\nexport function IsPhoneNumber(validationOptions?: ValidationOptions) {\n  return function (object: object, propertyName: string) {\n    registerDecorator({\n      target: object.constructor,\n      propertyName: propertyName,\n      options: validationOptions,\n      constraints: [],\n      validator: IsPhoneNumberConstraint,\n    });\n  };\n}\n\n// user-contact.dto.ts\nimport { IsString, IsOptional } from 'class-validator';\nimport { IsPhoneNumber } from './is-phone-number.validator';\n\nexport class UserContactDto {\n  @IsPhoneNumber()\n  @IsString()\n  phoneNumber: string;\n\n  @IsOptional()\n  @IsPhoneNumber({ message: 'Le numéro d\\'urgence est invalide' })\n  emergencyPhone?: string;\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Validation croisée entre champs",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Dans un formulaire d'inscription, le champ <code>confirmPassword</code> doit correspondre exactement à <code>password</code>. Créez une validation personnalisée pour vérifier cette égalité.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémenter un décorateur @Match(property) qui valide que la valeur décorée correspond à celle de la propriété spécifiée.",
+        "niveau": "very hard",
+        "reponse": "```typescript\n// match.decorator.ts\nimport {\n  registerDecorator,\n  ValidationOptions,\n  ValidatorConstraint,\n  ValidatorConstraintInterface,\n  ValidationArguments,\n} from 'class-validator';\n\n@ValidatorConstraint({ async: false })\nexport class MatchConstraint implements ValidatorConstraintInterface {\n  validate(value: any, args: ValidationArguments): boolean {\n    const [relatedPropertyName] = args.constraints;\n    const relatedValue = (args.object as any)[relatedPropertyName];\n    return value === relatedValue;\n  }\n\n  defaultMessage(args: ValidationArguments): string {\n    const [relatedPropertyName] = args.constraints;\n    return `${args.property} doit correspondre à ${relatedPropertyName}`;\n  }\n}\n\nexport function Match(property: string, validationOptions?: ValidationOptions) {\n  return (object: object, propertyName: string) => {\n    registerDecorator({\n      target: object.constructor,\n      propertyName,\n      options: validationOptions,\n      constraints: [property],\n      validator: MatchConstraint,\n    });\n  };\n}\n\n// register.dto.ts\nimport { IsString, MinLength } from 'class-validator';\nimport { Match } from './match.decorator';\n\nexport class RegisterDto {\n  @IsString()\n  @MinLength(6)\n  password: string;\n\n  @IsString()\n  @MinLength(6)\n  @Match('password', { message: 'Les mots de passe ne correspondent pas' })\n  confirmPassword: string;\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Configuration de ValidationPipe",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans le fichier <code>main.ts</code>, configurez un <code>ValidationPipe</code> global avec les options suivantes :</p>\n<ul>\n<li>whitelist : true</li>\n<li>forbidNonWhitelisted : true</li>\n<li>transform : true</li>\n<li>disableErrorMessages : false (en développement)</li>\n</ul>\n<p>Expliquez l'effet de chaque option.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire la configuration du ValidationPipe dans main.ts et expliquer chaque option.",
+        "niveau": "medium",
+        "reponse": "```typescript\n// main.ts\nimport { NestFactory } from '@nestjs/core';\nimport { ValidationPipe } from '@nestjs/common';\nimport { AppModule } from './app.module';\n\nasync function bootstrap() {\n  const app = await NestFactory.create(AppModule);\n  \n  app.useGlobalPipes(\n    new ValidationPipe({\n      whitelist: true,               // Supprime les propriétés non déclarées dans le DTO\n      forbidNonWhitelisted: true,    // Lance une erreur si des propriétés non déclarées sont présentes\n      transform: true,               // Transforme automatiquement les payloads en instances de DTO\n      disableErrorMessages: false,   // Affiche les messages d'erreur détaillés (à désactiver en prod)\n    }),\n  );\n  \n  await app.listen(3000);\n}\nbootstrap();\n```\n\nExplication des options :\n- **whitelist** : Nettoie automatiquement l'objet reçu en supprimant toutes les propriétés qui n'ont pas de décorateur dans le DTO. Sécurité et propreté.\n- **forbidNonWhitelisted** : Si une propriété non déclarée est présente, NestJS lève une erreur BadRequest. Complémentaire à whitelist.\n- **transform** : Convertit automatiquement les valeurs vers les types définis dans le DTO (ex: string '18' → number 18 pour @IsInt()).\n- **disableErrorMessages** : En production, mettez à true pour éviter d'exposer des détails d'implémentation.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Validation des paramètres de route et de query",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Créez un DTO <code>GetProductsQueryDto</code> pour valider les paramètres de requête d'un endpoint <code>GET /products</code>.</p>\n<p>Paramètres attendus :</p>\n<ul>\n<li>page : nombre entier positif, minimum 1, optionnel (défaut 1)</li>\n<li>limit : nombre entier entre 5 et 50, optionnel (défaut 10)</li>\n<li>category : chaîne de caractères, optionnelle</li>\n<li>sortBy : doit être 'price' ou 'name' ou 'createdAt', optionnel (défaut 'createdAt')</li>\n<li>order : doit être 'asc' ou 'desc', optionnel (défaut 'asc')</li>\n</ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémenter le DTO GetProductsQueryDto avec les validations appropriées.",
+        "niveau": "medium",
+        "reponse": "```typescript\nimport { Type } from 'class-transformer';\nimport { IsOptional, IsInt, Min, Max, IsString, IsIn, MinLength } from 'class-validator';\n\nexport class GetProductsQueryDto {\n  @IsOptional()\n  @Type(() => Number)\n  @IsInt()\n  @Min(1)\n  page?: number = 1;\n\n  @IsOptional()\n  @Type(() => Number)\n  @IsInt()\n  @Min(5)\n  @Max(50)\n  limit?: number = 10;\n\n  @IsOptional()\n  @IsString()\n  @MinLength(1)\n  category?: string;\n\n  @IsOptional()\n  @IsIn(['price', 'name', 'createdAt'])\n  sortBy?: 'price' | 'name' | 'createdAt' = 'createdAt';\n\n  @IsOptional()\n  @IsIn(['asc', 'desc'])\n  order?: 'asc' | 'desc' = 'asc';\n}\n\n// Dans le contrôleur :\n// @Get('products')\n// async getProducts(@Query() query: GetProductsQueryDto) {...}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "DTO imbriqués et tableaux",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Créez un DTO pour la création d'une commande contenant :</p>\n<ul>\n<li>Un tableau d'articles (chacun avec productId (nombre) et quantity (nombre entre 1 et 99))</li>\n<li>Une adresse de livraison (objet avec street, city, zipCode, country)</li>\n<li>Un mode de paiement (carte ou PayPal)</li>\n</ul>\n<p>Utilisez @ValidateNested et @Type de class-transformer.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémenter les DTO nécessaires pour créer une commande avec validation imbriquée.",
+        "niveau": "hard",
+        "reponse": "```typescript\nimport { Type } from 'class-transformer';\nimport { \n  IsArray, \n  ValidateNested, \n  IsNumber, \n  Min, \n  Max, \n  IsString, \n  IsNotEmpty,\n  IsIn,\n  ArrayMinSize,\n  IsInt,\n  IsOptional\n} from 'class-validator';\n\nclass OrderItemDto {\n  @IsInt()\n  @Min(1)\n  productId: number;\n\n  @IsInt()\n  @Min(1)\n  @Max(99)\n  quantity: number;\n\n  @IsOptional()\n  @IsString()\n  notes?: string;\n}\n\nclass AddressDto {\n  @IsString()\n  @IsNotEmpty()\n  street: string;\n\n  @IsString()\n  @IsNotEmpty()\n  city: string;\n\n  @IsString()\n  @IsNotEmpty()\n  zipCode: string;\n\n  @IsString()\n  @IsNotEmpty()\n  country: string;\n}\n\nexport class CreateOrderDto {\n  @IsArray()\n  @ArrayMinSize(1)\n  @ValidateNested({ each: true })\n  @Type(() => OrderItemDto)\n  items: OrderItemDto[];\n\n  @ValidateNested()\n  @Type(() => AddressDto)\n  shippingAddress: AddressDto;\n\n  @IsIn(['card', 'paypal'])\n  paymentMethod: 'card' | 'paypal';\n\n  @IsOptional()\n  @IsString()\n  notes?: string;\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Compréhension des décorateurs class-validator",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Associez chaque décorateur class-validator à son rôle et donnez un exemple d'utilisation.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer à quoi servent les décorateurs suivants : @IsString, @IsEmail, @IsInt, @IsOptional, @Min, @Max, @MinLength, @IsIn, @ValidateNested.",
+        "niveau": "easy",
+        "reponse": "- @IsString : vérifie que la valeur est une chaîne de caractères\n- @IsEmail : vérifie le format d'un email (regex valide)\n- @IsInt : vérifie que la valeur est un nombre entier\n- @IsOptional : indique que le champ est optionnel (ne valide que si présent)\n- @Min(n) : valeur numérique minimale (inclus)\n- @Max(n) : valeur numérique maximale (inclus)\n- @MinLength(n) : longueur minimale d'une chaîne\n- @IsIn([...]) : valeur doit appartenir à un ensemble prédéfini\n- @ValidateNested : valide les objets imbriqués (nécessite @Type)",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Validation d'un DTO pour une API de notation",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Créez un DTO <code>CreateReviewDto</code> pour qu'un utilisateur puisse noter un produit. Contraintes :</p>\n<ul>\n<li>rating : nombre entier entre 1 et 5, obligatoire</li>\n<li>title : optionnel, maximum 100 caractères</li>\n<li>comment : optionnel, maximum 1000 caractères</li>\n<li>productId : nombre entier positif, obligatoire</li>\n<li>images : tableau optionnel d'URLs valides (maximum 5 images)</li>\n</ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémenter le DTO CreateReviewDto avec toutes les validations.",
+        "niveau": "medium",
+        "reponse": "```typescript\nimport { \n  IsInt, \n  Min, \n  Max, \n  IsString, \n  IsOptional, \n  IsArray, \n  IsUrl,\n  MaxLength,\n  ArrayMaxSize,\n  MinLength,\n  IsNotEmpty\n} from 'class-validator';\n\nexport class CreateReviewDto {\n  @IsInt()\n  @Min(1)\n  @Max(5)\n  rating: number;\n\n  @IsOptional()\n  @IsString()\n  @MaxLength(100)\n  title?: string;\n\n  @IsOptional()\n  @IsString()\n  @MaxLength(1000)\n  comment?: string;\n\n  @IsInt()\n  @Min(1)\n  @IsNotEmpty()\n  productId: number;\n\n  @IsOptional()\n  @IsArray()\n  @ArrayMaxSize(5)\n  @IsUrl({}, { each: true })\n  images?: string[];\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

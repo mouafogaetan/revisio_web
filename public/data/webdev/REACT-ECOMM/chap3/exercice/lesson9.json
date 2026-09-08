@@ -1,0 +1,87 @@
+[
+  {
+    "intitule": "Implémentation d'une route protégée avec React Router",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous développez une application e-commerce avec React et React Router v6. L'application doit comporter les pages suivantes :</p><ul><li><code>/</code> : Page d'accueil (publique)</li><li><code>/products</code> : Catalogue des produits (public)</li><li><code>/product/:id</code> : Détail d'un produit (public)</li><li><code>/cart</code> : Panier d'achat (nécessite authentification)</li><li><code>/checkout</code> : Validation de commande (nécessite authentification)</li><li><code>/account</code> : Compte utilisateur (nécessite authentification)</li><li><code>/login</code> : Connexion (accessible uniquement si déconnecté)</li><li><code>/register</code> : Inscription (accessible uniquement si déconnecté)</li></ul><p>Vous disposez d'un store Zustand (<code>useAuthStore</code>) avec les propriétés : <code>isAuthenticated</code> (boolean) et <code>user</code> (objet ou null).</p>",
+      "images": [
+        "schéma d'architecture des routes React Router avec routes publiques et protégées",
+        "diagramme de séquence du flux de redirection vers login"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevez et écrivez le code d'un composant <code>ProtectedRoute</code> qui redirige l'utilisateur vers la page de connexion s'il n'est pas authentifié, et affiche les routes enfants sinon.",
+        "niveau": "medium",
+        "reponse": "```jsx\n// components/ProtectedRoute.jsx\nimport { Navigate, Outlet } from 'react-router-dom';\nimport { useAuthStore } from '../stores/authStore';\n\nconst ProtectedRoute = () => {\n  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);\n  \n  if (!isAuthenticated) {\n    // Rediriger vers login avec l'URL de retour pour une redirection post-connexion\n    return <Navigate to=\"/login\" replace />;\n  }\n  \n  // Si authentifié, afficher les routes enfants\n  return <Outlet />;\n};\n\nexport default ProtectedRoute;\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Améliorez le composant <code>ProtectedRoute</code> pour gérer le rôle de l'utilisateur. Seuls les utilisateurs avec le rôle <code>admin</code> peuvent accéder à <code>/admin/dashboard</code>. Proposez une solution avec une propriété <code>requiredRole</code>.",
+            "niveau": "hard",
+            "reponse": "```jsx\n// components/RoleBasedRoute.jsx\nimport { Navigate, Outlet } from 'react-router-dom';\nimport { useAuthStore } from '../stores/authStore';\n\nconst RoleBasedRoute = ({ requiredRole }) => {\n  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);\n  const user = useAuthStore((state) => state.user);\n  \n  if (!isAuthenticated) {\n    return <Navigate to=\"/login\" replace />;\n  }\n  \n  if (requiredRole && user?.role !== requiredRole) {\n    // Rediriger vers la page d'accueil ou une page 403\n    return <Navigate to=\"/unauthorized\" replace />;\n  }\n  \n  return <Outlet />;\n};\n\nexport default RoleBasedRoute;\n\n// Utilisation dans la configuration des routes :\n// {\n//   element: <RoleBasedRoute requiredRole=\"admin\" />,\n//   children: [\n//     { path: \"/admin/dashboard\", element: <Dashboard /> },\n//   ]\n// }\n```"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Expliquez l'utilité de l'attribut <code>replace</code> dans <code>&lt;Navigate to=\"/login\" replace /&gt;</code>. Quelle serait la conséquence de ne pas l'utiliser ?",
+            "niveau": "medium",
+            "reponse": "L'attribut `replace` remplace l'entrée courante dans l'historique du navigateur au lieu d'en ajouter une nouvelle. Sans `replace`, si l'utilisateur est redirigé de `/cart` vers `/login` puis se connecte et est redirigé vers `/cart`, le bouton 'Précédent' du navigateur ramènerait à `/login` au lieu de la page précédente réelle. Avec `replace`, l'historique conserve la structure normale : la page `/cart` est remplacée par `/login` dans l'historique, donc après connexion, le bouton 'Précédent' ramène à la page d'avant (ex: `/products`)."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Écrivez la configuration complète des routes avec <code>createBrowserRouter</code> pour l'application décrite dans l'énoncé, en utilisant vos composants <code>ProtectedRoute</code> et <code>AuthRoute</code> (pour les pages login/register accessibles uniquement aux utilisateurs non connectés).",
+        "niveau": "hard",
+        "reponse": "```jsx\n// router.jsx\nimport { createBrowserRouter } from 'react-router-dom';\nimport ProtectedRoute from '../components/ProtectedRoute';\nimport AuthRoute from '../components/AuthRoute';\nimport MainLayout from '../layouts/MainLayout';\n\n// Pages\nimport HomePage from '../pages/HomePage';\nimport ProductsPage from '../pages/ProductsPage';\nimport ProductDetailPage from '../pages/ProductDetailPage';\nimport CartPage from '../pages/CartPage';\nimport CheckoutPage from '../pages/CheckoutPage';\nimport AccountPage from '../pages/AccountPage';\nimport LoginPage from '../pages/LoginPage';\nimport RegisterPage from '../pages/RegisterPage';\n\nexport const router = createBrowserRouter([\n  {\n    element: <MainLayout />,\n    children: [\n      // Routes publiques\n      { path: \"/\", element: <HomePage /> },\n      { path: \"/products\", element: <ProductsPage /> },\n      { path: \"/product/:id\", element: <ProductDetailPage /> },\n      \n      // Routes privées (authentification requise)\n      {\n        element: <ProtectedRoute />,\n        children: [\n          { path: \"/cart\", element: <CartPage /> },\n          { path: \"/checkout\", element: <CheckoutPage /> },\n          { path: \"/account\", element: <AccountPage /> },\n        ]\n      },\n      \n      // Routes d'auth (uniquement si déconnecté)\n      {\n        element: <AuthRoute />,\n        children: [\n          { path: \"/login\", element: <LoginPage /> },\n          { path: \"/register\", element: <RegisterPage /> },\n        ]\n      },\n      \n      // Route 404 (capture toutes les routes non définies)\n      { path: \"*\", element: <NotFoundPage /> }\n    ]\n  }\n]);\n\n// Composant AuthRoute (inverse de ProtectedRoute)\nconst AuthRoute = () => {\n  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);\n  \n  if (isAuthenticated) {\n    // Si déjà connecté, rediriger vers la page d'accueil\n    return <Navigate to=\"/\" replace />;\n  }\n  \n  return <Outlet />;\n};\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Définissez la différence entre une route publique, une route privée et une route d'authentification dans une application React. Justifiez pourquoi <code>/cart</code> doit être une route privée dans un e-commerce.",
+        "niveau": "easy",
+        "reponse": "- **Route publique** : accessible à tous les utilisateurs, qu'ils soient connectés ou non. Exemples : page d'accueil, catalogue produits, page produit. Ces routes ne contiennent pas de données sensibles.\n- **Route privée** : accessible uniquement aux utilisateurs authentifiés. Exemples : panier, checkout, compte utilisateur. Ces routes contiennent des données personnelles (adresse, commandes) ou nécessitent une session active.\n- **Route d'authentification** : accessible uniquement aux utilisateurs NON authentifiés. Exemples : login, register, forgot-password. Si un utilisateur déjà connecté tente d'y accéder, il est redirigé vers l'accueil ou son compte.\n\n**Justification pour /cart** : Le panier doit être associé à un utilisateur authentifié pour : (1) persister entre les appareils, (2) permettre la fusion avec un panier existant, (3) sécuriser les informations de livraison et de paiement, (4) éviter les pertes de données lors de la fermeture du navigateur."
+      },
+      {
+        "numero": 4,
+        "texte": "Analysez la situation suivante : un utilisateur non authentifié essaie d'accéder à <code>/checkout</code>. Décrivez étape par étape ce qui se passe dans l'application avec l'architecture de routes proposée.",
+        "niveau": "medium",
+        "reponse": "1. L'utilisateur saisit l'URL <code>/checkout</code> dans son navigateur ou clique sur un lien.\n2. React Router analyse la configuration des routes.\n3. Il trouve que <code>/checkout</code> est une route enfant d'un élément qui utilise le composant <code>ProtectedRoute</code>.\n4. React Router exécute d'abord le composant <code>ProtectedRoute</code>.\n5. <code>ProtectedRoute</code> accède au store Zustand (<code>useAuthStore</code>) pour lire <code>isAuthenticated</code>.\n6. Comme <code>isAuthenticated</code> est <code>false</code> (utilisateur non connecté), <code>ProtectedRoute</code> retourne <code>&lt;Navigate to=\"/login\" replace /&gt;</code>.\n7. React Router effectue une redirection programmatique vers <code>/login</code>.\n8. L'URL change, la page de connexion s'affiche.\n9. L'utilisateur se connecte avec succès.\n10. La redirection post-connexion peut ramener l'utilisateur vers <code>/checkout</code> en utilisant <code>navigate('/checkout', { replace: true })</code> ou en stockant l'URL de retour dans <code>location.state</code>.\n11. Après connexion, <code>isAuthenticated</code> devient <code>true</code>. Si l'utilisateur retente d'accéder à <code>/checkout</code>, <code>ProtectedRoute</code> retourne <code>&lt;Outlet /&gt;</code> et le composant <code>CheckoutPage</code> s'affiche."
+      }
+    ]
+  },
+  {
+    "intitule": "Documentation technique : Routes et authentification",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous êtes responsable de la documentation technique d'une application React e-commerce. Rédigez une note à l'intention des développeurs de l'équipe expliquant comment implémenter la protection des routes et la gestion des rôles (utilisateur standard et administrateur) avec React Router v6 et Zustand.</p>",
+      "images": [
+        "exemple de code avec ProtectedRoute et RoleBasedRoute annoté",
+        "arbre des routes d'une application e-commerce avec codes couleurs (vert = public, orange = auth, rouge = privé)"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez la structure du store Zustand pour l'authentification. Quelles sont les propriétés et méthodes minimales nécessaires pour gérer l'état de connexion, l'utilisateur courant et son rôle ?",
+        "niveau": "easy",
+        "reponse": "```jsx\n// stores/authStore.js\nimport { create } from 'zustand';\nimport { persist } from 'zustand/middleware';\n\nexport const useAuthStore = create(\n  persist(\n    (set, get) => ({\n      // État\n      user: null,           // Objet utilisateur { id, email, name, role }\n      token: null,          // JWT access token\n      isAuthenticated: false,\n      \n      // Actions\n      login: (userData, token) => set({ \n        user: userData, \n        token, \n        isAuthenticated: true \n      }),\n      \n      logout: () => set({ \n        user: null, \n        token: null, \n        isAuthenticated: false \n      }),\n      \n      // Sélecteur pour vérifier si l'utilisateur est admin\n      isAdmin: () => get().user?.role === 'admin',\n    }),\n    {\n      name: 'auth-storage', // clé dans localStorage\n      partialize: (state) => ({ token: state.token, user: state.user }),\n    }\n  )\n);\n```"
+      },
+      {
+        "numero": 2,
+        "texte": "Distinguez les différentes approches pour rediriger l'utilisateur après une connexion réussie. Comparez l'utilisation de <code>navigate()</code> avec l'état <code>location.state</code> par rapport à une redirection fixe vers <code>/account</code>.",
+        "niveau": "hard",
+        "reponse": "**Approche 1 : Redirection fixe**\n```jsx\n// Après connexion\nnavigate('/account');\n```\nAvantages : simple à implémenter.\nInconvénients : l'utilisateur perd le contexte de sa navigation. S'il essayait d'accéder à `/checkout` et a été redirigé vers `/login`, après connexion il arrive sur `/account` au lieu de `/checkout`.\n\n**Approche 2 : Redirection dynamique avec location.state**\n```jsx\n// Dans ProtectedRoute\n<Navigate to=\"/login\" state={{ from: location.pathname }} replace />\n\n// Dans LoginPage après connexion\nconst location = useLocation();\nconst from = location.state?.from || '/account';\nnavigate(from, { replace: true });\n```\nAvantages : expérience utilisateur améliorée, retour au contexte initial.\nInconvénients : nécessite de passer et récupérer l'état, plus de code.\n\n**Approche 3 : Stockage dans sessionStorage**\nAlternative où l'URL de retour est stockée dans sessionStorage avant redirection vers login, puis récupérée après connexion. Utile pour les redirections complexes.\n\n**Recommandation** : Utiliser l'approche 2 avec `location.state` car elle est native à React Router, respecte le flux de navigation, et offre la meilleure UX."
+      },
+      {
+        "numero": 3,
+        "texte": "Évaluez les implications de sécurité du stockage du token JWT dans localStorage vs httpOnly cookie. Expliquez pourquoi le programme recommande de réfléchir au choix et quels sont les compromis à considérer pour un site e-commerce.",
+        "niveau": "very hard",
+        "reponse": "**LocalStorage** :\n- Avantages : accessible via JavaScript, facile à implémenter avec Zustand persist\n- Inconvénients : vulnérable aux attaques XSS (Cross-Site Scripting). Un script malveillant injecté peut voler le token\n- Risque élevé pour un e-commerce (données de paiement)\n\n**HttpOnly Cookie** :\n- Avantages : inaccessible via JavaScript, protégé contre les attaques XSS\n- Inconvénients : nécessite une configuration CORS appropriée, vulnérable aux attaques CSRF (Cross-Site Request Forgery) si mal configuré\n- Nécessite l'utilisation de `withCredentials: true` dans Axios\n\n**Compromis pour un e-commerce** :\n- Solutions hybrides : access token court (15 min) en mémoire/ls, refresh token en httpOnly cookie\n- Utiliser Content Security Policy (CSP) pour mitiger les risques XSS\n- Implémenter des mesures anti-CSRF (tokens CSRF, SameSite=Lax)\n- Pour une application critique, privilégier les httpOnly cookies avec CSRF protection\n- Le choix dépend du niveau de sécurité requis et de la complexité d'implémentation\n\n**Recommandation du programme** : réfléchir au choix car chaque méthode a ses cas d'usage. Pour un e-commerce, une approche hybride ou httpOnly cookies est préférable pour les transactions sensibles, tandis que localStorage peut suffire pour une application interne ou à faible risque."
+      }
+    ]
+  }
+]

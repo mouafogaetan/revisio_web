@@ -1,0 +1,161 @@
+[
+  {
+    "intitule": "Identification des éléments d'un Trigger",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Un trigger est un objet de base de données qui s'exécute automatiquement lorsqu'un événement survient sur une table. Observez le code ci-dessous et répondez aux questions.</p><pre style='background-color:#f4f4f4;padding:10px;border-radius:5px;font-family:monospace;font-size:13px;'>CREATE TRIGGER maj_stock_commande<br>BEFORE INSERT ON commandes<br>FOR EACH ROW<br>BEGIN<br>    UPDATE produits SET stock = stock - NEW.quantite<br>    WHERE produit_id = NEW.produit_id;<br>END;</pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier le nom du trigger, l'événement qui le déclenche, le moment d'exécution et la table cible.",
+        "niveau": "easy",
+        "reponse": "<p>Le nom du trigger est <strong>maj_stock_commande</strong>. Il est déclenché par l'événement <strong>INSERT</strong> sur la table <strong>commandes</strong>. Il s'exécute <strong>BEFORE</strong> (avant) l'insertion et pour <strong>CHAQUE LIGNE</strong> (FOR EACH ROW) insérée.</p>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Distinguer BEFORE, AFTER et INSTEAD OF",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>On souhaite créer trois triggers différents sur une table <strong>employes</strong>. Pour chaque situation, indiquez le moment d'exécution approprié (BEFORE, AFTER ou INSTEAD OF) et justifiez votre choix.</p><ul><li><strong>Situation 1 :</strong> Vérifier que le salaire d'un nouvel employé est supérieur au SMIC (salaire minimum) avant l'insertion.</li><li><strong>Situation 2 :</strong> Après la mise à jour d'un employé, enregistrer la modification dans une table <strong>historique_employes</strong>.</li><li><strong>Situation 3 :</strong> Remplacer une tentative d'insertion dans une vue par une insertion dans la table sous-jacente.</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Pour chaque situation, identifier le moment d'exécution approprié en justifiant votre réponse.",
+        "niveau": "medium",
+        "reponse": "<ul><li><strong>Situation 1 : BEFORE INSERT</strong> car la vérification doit avoir lieu avant que la nouvelle ligne ne soit insérée, afin d'empêcher l'insertion si le salaire est inférieur au SMIC.</li><li><strong>Situation 2 : AFTER UPDATE</strong> car l'historique doit enregistrer la modification après qu'elle a été effectuée, pour conserver la valeur finale.</li><li><strong>Situation 3 : INSTEAD OF INSERT</strong> car on ne peut pas insérer directement dans une vue, il faut rediriger l'insertion vers la ou les tables sous-jacentes.</li></ul>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Comprendre le rôle des tables NEW et OLD",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un trigger utilise les tables virtuelles <strong>NEW</strong> et <strong>OLD</strong> pour accéder aux données modifiées. Répondez aux questions suivantes.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer ce que représentent les tables NEW et OLD dans un trigger.",
+        "niveau": "easy",
+        "reponse": "<p><strong>NEW</strong> représente les nouvelles valeurs des colonnes pour l'opération en cours (INSERT ou UPDATE). <strong>OLD</strong> représente les anciennes valeurs (pour UPDATE ou DELETE). Dans un trigger BEFORE INSERT, seule NEW est accessible. Dans un trigger AFTER DELETE, seule OLD est accessible.</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quelle table virtuelle est utilisée dans un trigger AFTER DELETE ?",
+            "niveau": "easy",
+            "reponse": "<p>Dans un trigger AFTER DELETE, on utilise la table virtuelle <strong>OLD</strong> car la ligne a été supprimée et n'existe plus. OLD contient les valeurs avant la suppression.</p>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Quelle table virtuelle est utilisée pour accéder aux nouvelles valeurs dans un trigger BEFORE UPDATE ?",
+            "niveau": "easy",
+            "reponse": "<p>Dans un trigger BEFORE UPDATE, on utilise <strong>NEW</strong> pour accéder aux nouvelles valeurs qui seront écrites dans la table. On peut également utiliser OLD pour accéder aux valeurs avant la mise à jour.</p>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Création d'un trigger pour la gestion des stocks (Contexte Cameroun)",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Une entreprise de vente de téléphones portables à Douala souhaite automatiser la gestion de ses stocks. La base de données contient deux tables :</p><ul><li><strong>produits(id, nom, prix, quantite_stock)</strong></li><li><strong>ventes(id, produit_id, quantite, date_vente, montant)</strong></li></ul><p>Créez un trigger qui répond aux exigences suivantes :</p><ul><li>Se déclenche lors d'une insertion dans la table <strong>ventes</strong>.</li><li>Diminue automatiquement la quantité en stock du produit vendu dans la table <strong>produits</strong>.</li><li>Si la quantité en stock devient inférieure à 5, le trigger doit insérer un message d'alerte dans une table <strong>alertes_stock(id, produit_id, date_alerte)</strong>.</li><li>Le trigger doit vérifier avant la vente que le stock est suffisant, sinon annuler l'opération avec un message d'erreur approprié.</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédiger le code SQL complet du trigger en respectant toutes les exigences ci-dessus.",
+        "niveau": "very hard",
+        "reponse": "<pre style='background-color:#f4f4f4;padding:10px;border-radius:5px;font-family:monospace;font-size:13px;'>CREATE TRIGGER gestion_stock_vente<br>BEFORE INSERT ON ventes<br>FOR EACH ROW<br>BEGIN<br>    DECLARE stock_actuel INT;<br>    -- Récupérer le stock actuel du produit<br>    SELECT quantite_stock INTO stock_actuel<br>    FROM produits WHERE produit_id = NEW.produit_id;<br>    -- Vérifier si le stock est suffisant<br>    IF stock_actuel < NEW.quantite THEN<br>        SIGNAL SQLSTATE '45000'<br>        SET MESSAGE_TEXT = 'Stock insuffisant pour ce produit';<br>    END IF;<br>    -- Mettre à jour le stock<br>    UPDATE produits<br>    SET quantite_stock = quantite_stock - NEW.quantite<br>    WHERE produit_id = NEW.produit_id;<br>    -- Vérifier si le stock est inférieur à 5 pour alerter<br>    IF (SELECT quantite_stock FROM produits WHERE produit_id = NEW.produit_id) < 5 THEN<br>        INSERT INTO alertes_stock(produit_id, date_alerte)<br>        VALUES(NEW.produit_id, NOW());<br>    END IF;<br>END;</pre><p><strong>Explication :</strong> Le trigger BEFORE INSERT vérifie d'abord le stock disponible. Si le stock est insuffisant, une erreur est levée via SIGNAL. Ensuite, il met à jour le stock. Enfin, si le nouveau stock est inférieur à 5, une alerte est enregistrée.</p>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Audit d'un trigger existant",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Voici un trigger créé par un stagiaire dans une entreprise camerounaise :</p><pre style='background-color:#f4f4f4;padding:10px;border-radius:5px;font-family:monospace;font-size:13px;'>CREATE TRIGGER log_salaire<br>BEFORE UPDATE ON employes<br>FOR EACH ROW<br>BEGIN<br>    IF NEW.salaire != OLD.salaire THEN<br>        INSERT INTO historique_salaires(employe_id, ancien_salaire, nouveau_salaire, date_modif)<br>        VALUES(OLD.id, OLD.salaire, NEW.salaire, NOW());<br>    END IF;<br>END;</pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analyser ce trigger. Que fait-il ? Décrivez son fonctionnement étape par étape.",
+        "niveau": "medium",
+        "reponse": "<p>Ce trigger s'appelle <strong>log_salaire</strong>. Il se déclenche <strong>AVANT</strong> une mise à jour sur la table <strong>employes</strong> (BEFORE UPDATE). Pour chaque ligne modifiée, il vérifie si la colonne <strong>salaire</strong> a changé (NEW.salaire != OLD.salaire). Si c'est le cas, il insère une ligne dans la table <strong>historique_salaires</strong> avec l'ID de l'employé, l'ancien salaire, le nouveau salaire et la date de modification.</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Identifier deux améliorations possibles pour ce trigger.",
+            "niveau": "hard",
+            "reponse": "<p><strong>Amélioration 1 :</strong> Ajouter une condition pour éviter les boucles infinies. Si la table historique_salaires a un trigger qui modifie employes, cela pourrait causer une récursion.</p><p><strong>Amélioration 2 :</strong> Utiliser un trigger AFTER UPDATE plutôt que BEFORE UPDATE pour s'assurer que la modification a bien été effectuée avant de journaliser. Cependant, BEFORE UPDATE est aussi valable car on accède aux valeurs.</p>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Que se passe-t-il si on modifie le salaire d'un employé sans que la valeur change (ex: UPDATE employes SET salaire = 1500 WHERE id=1 alors que le salaire était déjà 1500) ?",
+            "niveau": "medium",
+            "reponse": "<p>Le trigger ne fera rien car la condition NEW.salaire != OLD.salaire sera fausse. C'est un bon comportement car on ne journalise que les véritables changements.</p>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Création d'un trigger pour les étudiants (Contexte universitaire)",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>À l'Université de Yaoundé I, on souhaite automatiser la gestion des notes des étudiants. La base de données contient les tables suivantes :</p><ul><li><strong>etudiants(id, nom, prenom, moyenne_generale)</strong></li><li><strong>notes(id, etudiant_id, matiere_id, note, coefficient)</strong></li><li><strong>matieres(id, nom, coefficient)</strong></li></ul><p>Créez un trigger qui s'exécute après chaque insertion ou mise à jour dans la table <strong>notes</strong> pour recalculer automatiquement la moyenne générale de l'étudiant concerné.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire le trigger qui recalcule la moyenne générale après chaque modification de note.",
+        "niveau": "hard",
+        "reponse": "<pre style='background-color:#f4f4f4;padding:10px;border-radius:5px;font-family:monospace;font-size:13px;'>CREATE TRIGGER recalcul_moyenne<br>AFTER INSERT ON notes<br>FOR EACH ROW<br>BEGIN<br>    DECLARE somme_notes DECIMAL(10,2);<br>    DECLARE somme_coeff INT;<br>    DECLARE moyenne DECIMAL(10,2);<br>    -- Calculer la moyenne pondérée de l'étudiant<br>    SELECT SUM(note * coefficient), SUM(coefficient)<br>    INTO somme_notes, somme_coeff<br>    FROM notes n<br>    JOIN matieres m ON n.matiere_id = m.id<br>    WHERE n.etudiant_id = NEW.etudiant_id;<br>    -- Si l'étudiant a des notes<br>    IF somme_coeff > 0 THEN<br>        SET moyenne = somme_notes / somme_coeff;<br>    ELSE<br>        SET moyenne = 0;<br>    END IF;<br>    -- Mettre à jour la moyenne de l'étudiant<br>    UPDATE etudiants SET moyenne_generale = moyenne<br>    WHERE id = NEW.etudiant_id;<br>END;</pre><p><strong>Remarque :</strong> Il faudrait aussi un trigger pour les mises à jour (UPDATE) et les suppressions (DELETE) sur la table notes pour assurer la cohérence.</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Identifier la limitation de ce trigger et proposer une solution.",
+            "niveau": "hard",
+            "reponse": "<p><strong>Limitation :</strong> Ce trigger ne fonctionne que pour les INSERT. Si on modifie ou supprime une note, la moyenne n'est pas mise à jour.</p><p><strong>Solution :</strong> Créer deux autres triggers : un pour UPDATE et un pour DELETE sur la table notes, avec la même logique de recalcul. On pourrait aussi mutualiser la logique dans une procédure stockée appelée par les trois triggers.</p>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Cycle de vie d'une ligne dans un trigger",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>On considère les triggers suivants sur la table <strong>commandes</strong> :</p><ul><li><strong>Trigger A :</strong> BEFORE INSERT - vérifie que le montant est > 0.</li><li><strong>Trigger B :</strong> BEFORE INSERT - calcule une remise de 5% si le montant > 100000.</li><li><strong>Trigger C :</strong> AFTER INSERT - enregistre la commande dans une table archive.</li></ul><p>Une commande de 150000 FCFA est insérée.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire l'ordre d'exécution des triggers et les transformations subies par la commande.",
+        "niveau": "hard",
+        "reponse": "<p><strong>Ordre d'exécution :</strong></p><ol><li><strong>Trigger A (BEFORE INSERT) :</strong> Vérifie si le montant est > 0. 150000 > 0, la condition est validée.</li><li><strong>Trigger B (BEFORE INSERT) :</strong> Comme 150000 > 100000, une remise de 5% est appliquée. Le montant devient 150000 - (150000 * 0.05) = 142500 FCFA.</li><li><strong>Insertion :</strong> La ligne est insérée avec le montant de 142500 FCFA.</li><li><strong>Trigger C (AFTER INSERT) :</strong> La commande (avec le montant de 142500 FCFA) est archivée.</li></ol><p><strong>Remarque :</strong> Tous les triggers BEFORE s'exécutent avant l'insertion, dans l'ordre de création. Ensuite, l'insertion a lieu. Enfin, les triggers AFTER s'exécutent.</p>",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

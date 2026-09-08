@@ -1,0 +1,165 @@
+[
+  {
+    "intitule": "Architecture et Principe de YOLO",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>YOLO (You Only Look Once) est un algorithme de détection d'objets qui a révolutionné le domaine par son approche one-shot.</p><p><strong>Question 1</strong> : Expliquez le principe fondamental de YOLO et ce que signifie l'expression \"You Only Look Once\".</p><p><strong>Question 2</strong> : Décrivez l'architecture générale de YOLO en identifiant les principales composantes.</p>",
+      "images": [
+        "Schéma de l'architecture YOLO montrant : entrée image → réseau CNN → grille de division → prédictions (boîtes, classes, scores de confiance). Annoter chaque étape avec une brève description."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez le principe fondamental de YOLO et ce que signifie l'expression \"You Only Look Once\".",
+        "niveau": "easy",
+        "reponse": "YOLO signifie \"You Only Look Once\" (Vous ne regardez qu'une seule fois). Le principe fondamental est que l'image est traitée une seule fois par un réseau de neurones pour prédire simultanément :\n\n1. Les **boîtes englobantes** (bounding boxes) des objets\n2. Les **classes** des objets détectés\n3. Les **scores de confiance** pour chaque détection\n\nContrairement aux approches à deux étapes (comme R-CNN) qui proposent d'abord des régions puis les classifient, YOLO effectue la détection et la classification en une seule passe. Cela le rend extrêmement rapide et adapté aux applications en temps réel.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Décrivez l'architecture générale de YOLO en identifiant les principales composantes.",
+        "niveau": "medium",
+        "reponse": "L'architecture générale de YOLO se compose de :\n\n**1. Backbone (Réseau de base)** :\n- Un CNN (Darknet dans les versions originales, CSPDarknet dans YOLOv4/v5)\n- Extrait des caractéristiques de l'image d'entrée\n- Utilise des couches de convolution, batch normalization, et activations\n\n**2. Neck (Cou) - optionnel** :\n- Aggrège les caractéristiques à différentes échelles (Feature Pyramid Networks)\n- Améliore la détection des petits objets\n\n**3. Head (Tête de prédiction)** :\n- Produit les prédictions finales\n- Pour chaque cellule de la grille, prédit :\n  - Des boîtes englobantes (coordonnées x, y, largeur, hauteur)\n  - Un score de confiance pour chaque boîte\n  - Des probabilités de classe pour chaque boîte\n\n**Résultat** : Un tenseur de dimensions \\( S \\times S \\times (B \\times (5 + C)) \\) où :\n- S = nombre de cellules dans la grille\n- B = nombre de boîtes par cellule\n- C = nombre de classes\n- 5 = (x, y, w, h, confidence)",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Prédictions et Post-traitement dans YOLO",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>YOLO produit des prédictions sous forme de boîtes englobantes avec des scores de confiance. Un post-traitement est nécessaire pour obtenir les détections finales.</p><p><strong>Question 1</strong> : Expliquez le fonctionnement de la suppression non-maximale (Non-Maximum Suppression - NMS) dans YOLO et pourquoi elle est nécessaire.</p><p><strong>Question 2</strong> : Dans YOLO, qu'est-ce que le score de confiance et comment est-il calculé ?</p><p><strong>Question 3</strong> : Comparez l'approche de YOLO avec celle des approches à deux étapes (R-CNN, Faster R-CNN) en termes de précision et de rapidité.</p>",
+      "images": [
+        "Illustration de la NMS : montrer plusieurs boîtes candidates qui se chevauchent, puis le résultat après suppression non-maximale avec une seule boîte par objet. Annoter avec les scores de confiance."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez le fonctionnement de la suppression non-maximale (Non-Maximum Suppression - NMS) dans YOLO et pourquoi elle est nécessaire.",
+        "niveau": "medium",
+        "reponse": "**Non-Maximum Suppression (NMS)** :\n\nLa NMS est une technique de post-traitement qui élimine les détections redondantes pour ne garder que la meilleure boîte pour chaque objet.\n\n**Fonctionnement** :\n1. **Trier** : Les boîtes candidates sont triées par score de confiance décroissant\n2. **Sélectionner** : La boîte avec le score le plus élevé est sélectionnée\n3. **Supprimer** : Toutes les autres boîtes ayant un IoU (Intersection over Union) > seuil avec la boîte sélectionnée sont supprimées\n4. **Répéter** : Le processus est répété avec la prochaine boîte la plus confiante jusqu'à épuisement\n\n**Pourquoi elle est nécessaire** :\n- YOLO prédit plusieurs boîtes par cellule (généralement 3)\n- Plusieurs cellules peuvent détecter le même objet\n- La NMS élimine les doublons et ne garde qu'une seule détection par objet\n\n**Formule IoU** :\n\\( \\text{IoU} = \\frac{\\text{Aire de l'intersection}}{\\text{Aire de l'union}} \\)",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Dans YOLO, qu'est-ce que le score de confiance et comment est-il calculé ?",
+        "niveau": "medium",
+        "reponse": "**Score de confiance (Confidence score)** :\n\nC'est une mesure qui indique à quel point le modèle est certain qu'un objet est présent dans la boîte englobante.\n\n**Formule** :\n\\( \\text{Confiance} = P(\\text{Objet}) \\times \\text{IoU}_{\\text{vérité-terrain}}^{\\text{prédite}} \\)\n\nOù :\n- \\( P(\\text{Objet}) \\) = probabilité qu'un objet soit présent dans la cellule\n- \\( \\text{IoU}_{\\text{vérité-terrain}}^{\\text{prédite}} \\) = IoU entre la boîte prédite et la vérité-terrain\n\n**Interprétation** :\n- Pendant l'entraînement : Le score de confiance doit être proche de 1 si un objet est présent, 0 sinon\n- Pendant l'inférence : Le score de confiance permet de filtrer les détections de faible qualité\n\n**Score final pour une détection** :\n\\( \\text{Score final} = \\text{Confiance} \\times P(\\text{classe}|\\text{Objet}) \\)",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Comparez l'approche de YOLO avec celle des approches à deux étapes (R-CNN, Faster R-CNN) en termes de précision et de rapidité.",
+        "niveau": "hard",
+        "reponse": "| Caractéristique | YOLO (One-Shot) | Faster R-CNN (Two-Stage) |\n|----------------|-----------------|--------------------------|\n| **Principe** | Détection en une seule passe | Régions proposées puis classification |\n| **Rapidité** | Très rapide (30-155 FPS selon version) | Plus lent (5-15 FPS) |\n| **Précision** | Bonne, mais inférieure pour les petits objets | Très élevée, meilleure pour les petits objets |\n| **Complexité** | Architecture plus simple | Architecture plus complexe |\n\n**Analyse YOLO** :\n- **Avantages** :\n  - Vitesse exceptionnelle adaptée au temps réel\n  - Vision globale de l'image (contexte)\n  - Facile à entraîner end-to-end\n\n- **Inconvénients** :\n  - Difficulté avec les petits objets\n  - Moins précis que les approches à deux étapes\n  - Peut manquer des objets dans les scènes denses\n\n**Analyse Faster R-CNN** :\n- **Avantages** :\n  - Précision plus élevée\n  - Meilleure détection des petits objets\n  - Plus robuste dans les scènes complexes\n\n- **Inconvénients** :\n  - Plus lent\n  - Plus complexe à entraîner\n  - Architecture en plusieurs étapes",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Application de YOLO à la Sécurité Routière au Cameroun",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Au Cameroun, le ministère des Transports souhaite mettre en place un système de surveillance routière pour détecter automatiquement : le nombre de véhicules, les plaques d'immatriculation, et les infractions au code de la route. YOLO est envisagé pour cette application.</p><p><strong>Question 1</strong> : Justifiez le choix de YOLO pour cette application par rapport aux approches à deux étapes.</p><p><strong>Question 2</strong> : Décrivez le pipeline complet de traitement d'images avec YOLO, de l'acquisition vidéo à la visualisation des détections.</p><p><strong>Question 3</strong> : Identifiez trois défis spécifiques au contexte camerounais pour ce système et proposez des solutions adaptées.</p>",
+      "images": [
+        "Image d'une route camerounaise avec plusieurs véhicules, piétons, et une signalisation variable. Montrer des boîtes de détection YOLO autour des objets. Inclure des conditions d'éclairage variables (jour, nuit)."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Justifiez le choix de YOLO pour cette application par rapport aux approches à deux étapes.",
+        "niveau": "medium",
+        "reponse": "YOLO est particulièrement adapté pour cette application pour les raisons suivantes :\n\n1. **Temps réel** : La surveillance routière nécessite un traitement en temps réel (25-30 FPS). YOLO est capable de traiter des vidéos à haute vitesse.\n\n2. **Contraintes de ressources** : Au Cameroun, les infrastructures peuvent être limitées. YOLO (surtout les versions légères comme YOLOv5n, YOLOv8n) peut fonctionner sur du matériel modeste.\n\n3. **Multiple détections** : YOLO peut détecter simultanément plusieurs classes (véhicules, piétons, motos, signalisation).\n\n4. **Coût** : YOLO est open-source et ne nécessite pas de licences coûteuses.\n\n5. **Facilité de déploiement** : YOLO peut être déployé sur des dispositifs embarqués (NVIDIA Jetson, Raspberry Pi) pour une surveillance décentralisée.\n\n6. **Contexte global** : YOLO voit l'image entière et comprend le contexte, ce qui est utile pour détecter des interactions entre objets.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Décrivez le pipeline complet de traitement d'images avec YOLO, de l'acquisition vidéo à la visualisation des détections.",
+        "niveau": "hard",
+        "reponse": "Pipeline complet avec YOLO :\n\n1. **Acquisition vidéo** :\n   - Caméras de surveillance (IP, CCTV) installées aux intersections ou sur les routes\n   - Flux vidéo capturé à 30 FPS\n\n2. **Prétraitement** :\n   - Redimensionnement de l'image à la taille attendue par YOLO (ex: 640×640)\n   - Normalisation des pixels ([0, 1])\n   - Conversion en RGB si nécessaire\n\n3. **Inférence YOLO** :\n   - Passage de l'image dans le réseau CNN\n   - Prédiction des boîtes, classes et scores de confiance\n\n4. **Post-traitement** :\n   - Filtrage des détections par seuil de confiance (ex: 0.5)\n   - Application de la NMS pour éliminer les doublons\n   - Mise à l'échelle des coordonnées vers l'image originale\n\n5. **Analyse spécifique** :\n   - Comptage des véhicules par classe\n   - Détection de plaques (avec un module OCR supplémentaire)\n   - Détection d'infractions (vitesse, franchissement de ligne)\n\n6. **Visualisation et reporting** :\n   - Dessin des boîtes sur l'image avec les étiquettes\n   - Affichage des métriques (nombre de véhicules)\n   - Enregistrement des données dans une base\n   - Envoi d'alertes en cas d'infraction",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Identifiez trois défis spécifiques au contexte camerounais pour ce système et proposez des solutions adaptées.",
+        "niveau": "hard",
+        "reponse": "**Défi 1 : Conditions d'éclairage variables**\n- **Problème** : Variations entre jour/nuit, saison sèche/pluvieuse, zones ombragées.\n- **Solution** :\n  - Utiliser des caméras avec WDR (Wide Dynamic Range)\n  - Augmenter les données d'entraînement avec différentes conditions d'éclairage\n  - Utiliser la normalisation des couleurs en pré-traitement\n  - Envisager YOLO avec des caméras infrarouges pour la nuit\n\n**Défi 2 : Diversité des véhicules et des conditions**\n- **Problème** : Types de véhicules variés (voitures, motos, camions, bus), parfois surchargés ou modifiés.\n- **Solution** :\n  - Collecter un dataset local représentatif des véhicules camerounais\n  - Fine-tuner YOLO sur ce dataset\n  - Ajouter des classes spécifiques (motos avec passagers multiples, camions de transport)\n  - Utiliser l'augmentation de données pour simuler différentes conditions\n\n**Défi 3 : Infrastructure et connectivité limitées**\n- **Problème** : Connexion internet instable, alimentation électrique intermittente.\n- **Solution** :\n  - Déployer YOLO en local (edge computing) sur des dispositifs comme NVIDIA Jetson\n  - Stocker les données localement et les synchroniser périodiquement\n  - Utiliser des modèles YOLO légers (YOLOv8n, YOLOv5n) pour réduire la consommation\n  - Mettre en place des systèmes de sauvegarde en cas de panne",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse des Performances de YOLO sur Différents Datasets",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>L'évaluation des performances d'un modèle YOLO est cruciale avant le déploiement. Vous devez analyser et comparer les performances de différentes versions de YOLO sur les datasets COCO et Pascal VOC.</p><p><strong>Question 1</strong> : Définissez et expliquez les métriques mAP (mean Average Precision) et IoU (Intersection over Union) utilisées pour évaluer YOLO.</p><p><strong>Question 2</strong> : Comparez les performances de YOLOv3, YOLOv4, YOLOv5 et YOLOv8 en termes de précision (mAP) et de rapidité (FPS).</p><p><strong>Question 3</strong> : Si vous deviez choisir une version de YOLO pour une application de détection de feux de brousse au Cameroun (sur des images satellite ou drones), laquelle choisiriez-vous et pourquoi ?</p>",
+      "images": [
+        "Graphique comparant les performances de différentes versions de YOLO sur COCO. Axe X : FPS (rapidité), Axe Y : mAP (précision). Montrer les points pour YOLOv3, YOLOv4, YOLOv5, YOLOv8."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Définissez et expliquez les métriques mAP (mean Average Precision) et IoU (Intersection over Union) utilisées pour évaluer YOLO.",
+        "niveau": "medium",
+        "reponse": "**IoU (Intersection over Union)** :\n\nMesure le chevauchement entre la boîte prédite et la vérité-terrain.\n\n\\( \\text{IoU} = \\frac{\\text{Aire de l'intersection}}{\\text{Aire de l'union}} \\)\n\n- IoU > 0.5 est généralement considéré comme une bonne détection\n- Utilisé pour déterminer si une détection est vraie (True Positive) ou fausse (False Positive)\n\n**mAP (mean Average Precision)** :\n\nMétrique principale pour évaluer les détecteurs d'objets.\n\n1. **Précision (Precision)** : \\( \\text{Précision} = \\frac{TP}{TP + FP} \\)\n2. **Rappel (Recall)** : \\( \\text{Rappel} = \\frac{TP}{TP + FN} \\)\n\n**AP (Average Precision)** :\n- Aire sous la courbe Précision-Rappel\n- Calculée séparément pour chaque classe\n\n**mAP (mean Average Precision)** :\n- Moyenne des AP sur toutes les classes\n- mAP@0.5 : IoU seuil à 0.5\n- mAP@0.5:0.95 : moyenne des mAP pour les seuils IoU de 0.5 à 0.95 (pas de 0.05)",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Comparez les performances de YOLOv3, YOLOv4, YOLOv5 et YOLOv8 en termes de précision (mAP) et de rapidité (FPS).",
+        "niveau": "hard",
+        "reponse": "| Version | mAP @ COCO | FPS (GPU) | Taille modèle | Caractéristiques |\n|---------|------------|-----------|---------------|------------------|\n| **YOLOv3** | ~33.0% | 20-30 FPS | 240 MB | Baseline, backbone Darknet53 |\n| **YOLOv4** | ~43.5% | 30-50 FPS | 245 MB | CSPDarknet53, MISH, Bag of Freebies |\n| **YOLOv5** | ~37.4% (n) - 50.2% (x) | 30-155 FPS | 14-300 MB | Pytorch, lightweight, versions n/s/m/l/x |\n| **YOLOv8** | ~37.3% (n) - 53.9% (x) | 30-280 FPS | 3-120 MB | Anchor-free, meilleure précision, versions n/s/m/l/x |\n\n**Analyse** :\n- **Précision** : YOLOv8x a la meilleure précision (53.9% mAP), suivie de YOLOv5x et YOLOv4.\n- **Rapidité** : Les versions nano sont les plus rapides (YOLOv8n ~280 FPS, YOLOv5n ~155 FPS).\n- **Taille** : Les versions plus récentes sont plus compactes (YOLOv8n 3MB vs YOLOv3 240MB).\n- **Évolution** : Chaque version améliore la précision et/ou la rapidité par rapport à la précédente.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Si vous deviez choisir une version de YOLO pour une application de détection de feux de brousse au Cameroun (sur des images satellite ou drones), laquelle choisiriez-vous et pourquoi ?",
+        "niveau": "very hard",
+        "reponse": "**Choix recommandé : YOLOv8m ou YOLOv8l**\n\n**Justification** :\n\n1. **Équilibre précision/rapidité** :\n   - YOLOv8m offre un bon compromis (49% mAP) avec des FPS acceptables\n   - YOLOv8l donne une meilleure précision (51% mAP) pour détecter les petits feux\n\n2. **Adaptation à la détection des feux** :\n   - Les feux peuvent être petits dans les premiers stades\n   - YOLOv8 avec ses améliorations détecte mieux les petits objets\n   - Architecture anchor-free plus robuste pour les objets de formes irrégulières\n\n3. **Contraintes de déploiement** :\n   - Les drones ont des ressources limitées (batterie, puissance de calcul)\n   - YOLOv8m est suffisamment léger pour tourner sur un NVIDIA Jetson ou un ordinateur portable\n\n4. **Formation sur données limitées** :\n   - Fine-tuning possible avec un dataset camerounais\n   - YOLOv8 a de meilleures performances de transfert learning\n\n**Alternatives envisagées** :\n- **YOLOv8n** : Si le drone a des ressources très limitées\n- **YOLOv5l** : Si on préfère la maturité de la bibliothèque\n- **YOLOv8x** : Si on peut utiliser un serveur puissant pour l'analyse hors ligne",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Évolution de YOLO : De v1 à v8",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>YOLO a connu une évolution rapide depuis sa première version en 2016. Chaque nouvelle version a apporté des améliorations significatives en termes de précision, de rapidité et d'architecture.</p><p><strong>Question 1</strong> : Décrivez les principales innovations apportées par chaque version majeure de YOLO (v1 à v8).</p><p><strong>Question 2</strong> : Comment l'architecture anchor-free de YOLOv8 diffère-t-elle de l'approche anchor-based des versions précédentes ?</p><p><strong>Question 3</strong> : Quelles sont les améliorations apportées par YOLOv8 en termes de fonctionnalités et de performance par rapport à YOLOv5 ?</p>",
+      "images": [
+        "Ligne du temps des versions YOLO montrant l'année de sortie et les principales innovations pour chaque version (YOLOv1 2016, v2 2017, v3 2018, v4 2020, v5 2020, v6 2022, v7 2022, v8 2023)."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez les principales innovations apportées par chaque version majeure de YOLO (v1 à v8).",
+        "niveau": "medium",
+        "reponse": "**YOLOv1 (2016)** :\n- Architecture originale : une seule CNN\n- Grille de 7×7 avec 2 boîtes par cellule\n- Prédiction directe des boîtes et classes\n\n**YOLOv2 (2017)** :\n- Anchor boxes (boîtes ancres) inspirées de Faster R-CNN\n- Batch Normalization pour une meilleure convergence\n- Meilleure résolution (416×416)\n- Hiérarchie des classes WordTree\n\n**YOLOv3 (2018)** :\n- Backbone Darknet53 plus profond\n- Prédictions à 3 échelles (feature pyramids)\n- Utilisation de la loss BCE pour les classes\n- Meilleure détection des petits objets\n\n**YOLOv4 (2020)** :\n- Backbone CSPDarknet53\n- Bag of Freebies (augmentation de données, pertes)\n- Bag of Specials (modifications d'architecture)\n- Meilleure précision et rapidité\n\n**YOLOv5 (2020)** :\n- Implémentation en PyTorch\n- Focus sur l'utilisabilité\n- Différentes tailles de modèles (n/s/m/l/x)\n- Amélioration de la vitesse d'entraînement\n\n**YOLOv6 (2022)** :\n- Optimisation pour la détection en temps réel\n- Architecture reparamétrisée\n- Meilleure efficacité pour les applications industrielles\n\n**YOLOv7 (2022)** :\n- Nouvelles techniques d'entraînement\n- Architecture plus efficace\n- Meilleur rapport précision/rapidité\n\n**YOLOv8 (2023)** :\n- Architecture anchor-free\n- Meilleure précision pour les petits objets\n- Support de tâches multiples (segmentation, pose)\n- Entraînement plus rapide",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Comment l'architecture anchor-free de YOLOv8 diffère-t-elle de l'approche anchor-based des versions précédentes ?",
+        "niveau": "hard",
+        "reponse": "**Anchor-based (YOLOv3 à v5)** :\n- Des ancres prédéfinies (boîtes de référence) sont utilisées\n- Le modèle prédit des décalages par rapport à ces ancres\n- Les ancres sont choisies par clustering sur le dataset\n- Nombre d'ancres : 3 par échelle (9 au total)\n\n**Anchor-free (YOLOv8)** :\n- Pas d'ancres prédéfinies\n- Le modèle prédit directement les coordonnées des boîtes\n- Points clés : le centre des objets est prédit directement\n- Utilise une approche basée sur la distribution des points\n\n**Avantages de l'approche anchor-free** :\n1. **Simplicité** : Moins d'hyperparamètres à régler\n2. **Adaptabilité** : Mieux adapté aux objets de formes variées\n3. **Précision** : Meilleure détection des petits objets\n4. **Moins de post-traitement** : Réduction de la complexité\n\n**Inconvénients** :\n- Peut nécessiter plus de données pour apprendre les coordonnées\n- Légèrement plus lent pour l'inférence",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Quelles sont les améliorations apportées par YOLOv8 en termes de fonctionnalités et de performance par rapport à YOLOv5 ?",
+        "niveau": "medium",
+        "reponse": "**Améliorations de performance** :\n\n1. **Précision** :\n   - YOLOv8x : 53.9% mAP vs YOLOv5x : 50.2% mAP\n   - Amélioration de ~3.7% sur COCO\n   - Meilleure détection des petits objets\n\n2. **Rapidité** :\n   - YOLOv8n : ~280 FPS vs YOLOv5n : ~155 FPS\n   - Plus rapide pour les versions légères\n\n3. **Taille du modèle** :\n   - Modèles plus compacts (YOLOv8n: 3MB vs YOLOv5n: 14MB)\n\n**Améliorations fonctionnelles** :\n\n1. **Architecture anchor-free** :\n   - Prédiction directe des boîtes sans ancres\n   - Meilleure adaptation aux formes variées\n\n2. **Multi-tâches** :\n   - Support de la segmentation d'instances\n   - Support de l'estimation de pose (pose)\n\n3. **Entraînement amélioré** :\n   - Nouvelles techniques d'augmentation de données\n   - Optimisation de la loss\n   - Entraînement plus rapide\n\n4. **Utilisabilité** :\n   - Interface unifiée pour toutes les tâches\n   - Meilleure documentation\n   - Export simplifié vers différents formats (ONNX, CoreML, etc.)",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

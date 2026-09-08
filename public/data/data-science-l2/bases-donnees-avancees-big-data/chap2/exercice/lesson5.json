@@ -1,0 +1,191 @@
+[
+  {
+    "intitule": "Exercice 1 : Comprendre EXPLAIN",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Le mot-clé <code>EXPLAIN</code> est un outil essentiel pour comprendre comment le SGBD exécute une requête SQL. Il affiche le <strong>plan d'exécution</strong> choisi par l'optimiseur.</p><p>On considère la table <code>clients</code> avec les colonnes : <code>id</code> (clé primaire), <code>nom</code>, <code>email</code>, <code>ville</code>, <code>date_inscription</code>. Un index existe sur <code>ville</code>.</p><p>Le plan d'exécution suivant est affiché pour la requête : <code>SELECT * FROM clients WHERE ville = 'Douala' AND date_inscription > '2024-01-01';</code></p>",
+      "images": [
+        "Plan d'exécution PostgreSQL : Seq Scan sur clients (coût=0.00..2500.00, lignes=500, largeur=120). Filtre: ((ville = 'Douala'::text) AND (date_inscription > '2024-01-01'::date))."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Interpréter le plan d'exécution affiché. Expliquer ce que signifie 'Seq Scan' et ce qui est indiqué par les lignes et le coût.",
+        "niveau": "easy",
+        "reponse": "<strong>Interprétation :</strong><br/>- <strong>Seq Scan</strong> (Sequential Scan) signifie que le SGBD parcourt toute la table ligne par ligne (scan séquentiel), sans utiliser d'index.<br/>- <strong>Coût :</strong> estimation du coût de la requête. Ici, 0.00..2500.00 (coût de démarrage à coût total).<br/>- <strong>Lignes :</strong> estimation du nombre de lignes retournées (500 lignes).<br/>- <strong>Largeur :</strong> estimation de la taille moyenne d'une ligne en octets (120 octets).<br/><br/>Le SGBD fait un scan complet de la table car l'index sur <code>ville</code> n'est pas utilisé (peut-être car trop de clients à Douala, ou car l'index n'est pas sélectif).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposer une amélioration pour optimiser cette requête.",
+            "niveau": "medium",
+            "reponse": "Pour optimiser cette requête, on pourrait :<br/>1. Créer un <strong>index composite</strong> sur <code>(ville, date_inscription)</code> pour permettre une recherche plus rapide sur les deux colonnes.<br/>2. Vérifier que les statistiques de la table sont à jour avec <code>ANALYZE</code> ou <code>VACUUM ANALYZE</code> pour que l'optimiseur puisse faire de meilleures estimations.<br/>3. Si la requête est très fréquente, envisager une <strong>vue matérialisée</strong> pré-agrégée par ville et date."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer la différence entre <code>EXPLAIN</code> et <code>EXPLAIN ANALYZE</code>.",
+        "niveau": "easy",
+        "reponse": "<strong>EXPLAIN</strong> affiche le plan d'exécution <strong>estimé</strong> par l'optimiseur sans exécuter la requête. Il donne une estimation des coûts et des lignes retournées, basée sur les statistiques de la table.<br/><br/><strong>EXPLAIN ANALYZE</strong> exécute <strong>réellement</strong> la requête et affiche le plan d'exécution avec les <strong>véritables</strong> temps d'exécution et nombres de lignes. C'est plus précis mais plus coûteux car la requête est réellement exécutée."
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 2 : Interprétation des Plans d'Exécution",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un analyste de données exécute la requête suivante sur une table <code>ventes</code> qui contient 1 million d'enregistrements :</p><p><code>SELECT produit, SUM(montant) FROM ventes WHERE date_vente BETWEEN '2024-01-01' AND '2024-01-31' GROUP BY produit;</code></p><p>Le plan d'exécution obtenu avec <code>EXPLAIN ANALYZE</code> est le suivant :</p><pre style='background: #2c3e50; color: #ecf0f1; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.85em;'>HashAggregate (coût=4500.00..4510.00 lignes=1000 largeur=32)
+  Group Key: produit
+  -> Seq Scan on ventes (coût=0.00..4000.00 lignes=50000 largeur=16)
+      Filter: ((date_vente >= '2024-01-01') AND (date_vente &lt;= '2024-01-31'))</pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analyser ce plan d'exécution. Décrire chaque étape et identifier le goulot d'étranglement.",
+        "niveau": "medium",
+        "reponse": "<strong>Analyse du plan :</strong><br/><br/><strong>1. Seq Scan sur ventes :</strong> Le SGBD parcourt toute la table (1 million de lignes) et applique le filtre sur <code>date_vente</code>. Environ 50 000 lignes correspondent au filtre (5% de la table).<br/><br/><strong>2. HashAggregate :</strong> Le SGBD effectue un regroupement par <code>produit</code> et calcule la somme des montants pour chaque produit. Environ 1000 produits distincts sont retournés.<br/><br/><strong>Goulot d'étranglement :</strong> Le <strong>Seq Scan</strong> est le problème principal : il parcourt 1 million de lignes alors que seulement 50 000 sont utiles. C'est inefficace.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposer une solution d'indexation pour optimiser cette requête. Justifier votre choix.",
+            "niveau": "medium",
+            "reponse": "La solution la plus efficace est de créer un <strong>index sur (date_vente)</strong> :<br/><code>CREATE INDEX idx_ventes_date ON ventes(date_vente);</code><br/><br/>Avec cet index, le plan d'exécution deviendrait :<br/><pre style='background: #2c3e50; color: #ecf0f1; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.85em;'>HashAggregate (coût=1200.00..1210.00)
+  -> Index Scan on ventes (coût=100.00..1100.00)
+      Index Cond: (date_vente BETWEEN ...)</pre><br/>L'<strong>Index Scan</strong> est bien plus efficace car il ne parcourt que les lignes correspondant à la période demandée."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Si la requête est exécutée très fréquemment, quelle autre optimisation pourrait-on envisager ?",
+            "niveau": "hard",
+            "reponse": "Si la requête est très fréquente, on peut envisager :<br/>1. Une <strong>vue matérialisée</strong> avec des agrégats pré-calculés par produit et par mois :<br/><code>CREATE MATERIALIZED VIEW mv_ventes_mensuelles AS<br/>SELECT produit, DATE_TRUNC('month', date_vente) as mois, SUM(montant) as total<br/>FROM ventes<br/>GROUP BY produit, DATE_TRUNC('month', date_vente);</code><br/><br/>2. Un <strong>index couvrant</strong> (covering index) sur (date_vente) INCLUDE (produit, montant) pour éviter d'accéder à la table :<br/><code>CREATE INDEX idx_ventes_covering ON ventes(date_vente) INCLUDE (produit, montant);</code><br/><br/>L'approche avec vue matérialisée est la plus rapide car les calculs sont pré-faits, mais les données peuvent être obsolètes si la vue n'est pas rafraîchie régulièrement."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer ce qu'est un 'HashAggregate' dans un plan d'exécution et dans quels cas il est utilisé.",
+        "niveau": "medium",
+        "reponse": "<strong>HashAggregate</strong> est une méthode d'agrégation utilisée par le SGBD pour exécuter des requêtes avec <code>GROUP BY</code>. Elle fonctionne comme suit :<br/>1. Le SGBD parcourt les lignes et crée une table de hachage en mémoire avec la clé de groupement.<br/>2. Pour chaque ligne, il met à jour l'agrégat correspondant dans la table de hachage.<br/>3. À la fin, il retourne les résultats de la table de hachage.<br/><br/><strong>Cas d'utilisation :</strong> HashAggregate est efficace quand le nombre de groupes distincts est relativement petit et que les données peuvent tenir en mémoire. Si le nombre de groupes est très grand, le SGBD peut utiliser un <strong>GroupAggregate</strong> (qui nécessite des données triées) ou un <strong>Sort+Aggregate</strong>."
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 3 : Identifier les Goulots d'Étranglement",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Une application e-commerce a des performances très lentes sur une requête d'analyse des commandes. La requête est :</p><p><code>SELECT c.nom, c.email, SUM(co.montant) as total_achats<br/>FROM clients c<br/>JOIN commandes co ON c.id = co.id_client<br/>WHERE c.ville = 'Yaoundé'<br/>  AND co.date_commande > '2024-01-01'<br/>GROUP BY c.id, c.nom, c.email<br/>ORDER BY total_achats DESC<br/>LIMIT 10;</code></p><p>Les tables ont les tailles suivantes :</p><ul><li><code>clients</code> : 200 000 lignes</li><li><code>commandes</code> : 2 millions de lignes</li><li>Les index existants : clé primaire sur les deux tables, index sur <code>clients(ville)</code></li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Le plan d'exécution suivant est obtenu avec EXPLAIN ANALYZE. Identifier les goulots d'étranglement et expliquer pourquoi la requête est lente.",
+        "niveau": "hard",
+        "reponse": "<strong>Plan d'exécution observé :</strong><br/><pre style='background: #2c3e50; color: #ecf0f1; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.85em;'>Limit (coût=25000.00..25000.02 lignes=10)
+  -> Sort (coût=25000.00..25000.50 lignes=200)
+      Sort Key: SUM(co.montant) DESC
+      -> HashAggregate (coût=24000.00..24500.00 lignes=200)
+          Group Key: c.id, c.nom, c.email
+          -> Hash Join (coût=15000.00..23000.00 lignes=50000)
+              Hash Cond: (co.id_client = c.id)
+              -> Seq Scan on commandes co (coût=0.00..10000.00)
+                  Filter: (date_commande > '2024-01-01')
+              -> Hash (coût=1500.00..1500.00 lignes=5000)
+                  -> Seq Scan on clients c (coût=0.00..1500.00)
+                      Filter: (ville = 'Yaoundé')</pre><br/><strong>Goulots d'étranglement identifiés :</strong><br/>1. <strong>Seq Scan sur commandes</strong> : parcourt 2 millions de lignes pour trouver les commandes de 2024. L'index sur date_commande est manquant.<br/>2. <strong>Hash Join</strong> : doit joindre 50 000 commandes avec 5 000 clients, ce qui est coûteux.<br/>3. <strong>Sort</strong> : doit trier les résultats avant le LIMIT 10, ce qui est inutile si on peut utiliser un index.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposer des solutions d'optimisation pour chaque goulot d'étranglement identifié.",
+            "niveau": "hard",
+            "reponse": "<strong>Solutions :</strong><br/><br/>1. <strong>Pour le Seq Scan sur commandes :</strong><br/>Créer un index sur <code>(date_commande, id_client)</code> :<br/><code>CREATE INDEX idx_commandes_date_client ON commandes(date_commande, id_client);</code><br/><br/>2. <strong>Pour le Hash Join :</strong><br/>Créer un index sur <code>commandes(id_client)</code> ou utiliser un index couvrant pour éviter d'accéder à la table :<br/><code>CREATE INDEX idx_commandes_client_date ON commandes(id_client, date_commande);</code><br/><br/>3. <strong>Pour le Sort :</strong><br/>Créer un index qui permet de récupérer directement les données triées :<br/><code>CREATE INDEX idx_commandes_client_date ON commandes(id_client, date_commande);</code><br/>Le SGBD pourra parcourir l'index dans l'ordre et éviter le tri."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Rédiger la nouvelle requête optimisée avec les index appropriés.",
+            "niveau": "hard",
+            "reponse": "<strong>Index à créer :</strong><br/>```sql\n-- Index pour filtrer sur la date et joindre\nCREATE INDEX idx_commandes_date_client ON commandes(date_commande, id_client);\n\n-- Index pour le GROUP BY et ORDER BY (si besoin)\nCREATE INDEX idx_commandes_client_date ON commandes(id_client, date_commande);\n```<br/><br/><strong>Requête optimisée :</strong><br/>La requête reste la même, mais le SGBD utilisera les index. On peut aussi optimiser en écrivant :<br/>```sql\nSELECT c.nom, c.email, co.total_achats\nFROM (\n    SELECT id_client, SUM(montant) as total_achats\n    FROM commandes\n    WHERE date_commande > '2024-01-01'\n    GROUP BY id_client\n    ORDER BY total_achats DESC\n    LIMIT 10\n) co\nJOIN clients c ON c.id = co.id_client;\n```<br/>Cette version calcule d'abord le top 10 des clients par montant, puis joint avec la table clients, ce qui est plus efficace."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 4 : Optimisation de Requêtes avec EXPLAIN",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Une entreprise de logistique gère une table <code>livraisons</code> avec 5 millions d'enregistrements. La table a la structure suivante :</p><ul><li><code>id_livraison</code> (INT, clé primaire)</li><li><code>id_ville_depart</code> (INT)</li><li><code>id_ville_arrivee</code> (INT)</li><li><code>date_livraison</code> (DATE)</li><li><code>poids</code> (DECIMAL)</li><li><code>distance</code> (INT)</li><li><code>statut</code> (VARCHAR: 'EN_ATTENTE', 'EN_COURS', 'LIVREE', 'ANNULEE')</li></ul><p>Le responsable souhaite obtenir le poids total livré par ville de départ pour le mois de janvier 2024. La requête est :</p><p><code>SELECT id_ville_depart, SUM(poids) as poids_total<br/>FROM livraisons<br/>WHERE date_livraison >= '2024-01-01' AND date_livraison &lt; '2024-02-01'<br/>  AND statut = 'LIVREE'<br/>GROUP BY id_ville_depart;</code></p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Le plan d'exécution suivant est obtenu. Analyser le plan et identifier les problèmes de performance.",
+        "niveau": "hard",
+        "reponse": "<strong>Plan d'exécution :</strong><br/><pre style='background: #2c3e50; color: #ecf0f1; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.85em;'>HashAggregate (coût=65000.00..65200.00 lignes=2000)
+  -> Seq Scan on livraisons (coût=0.00..60000.00 lignes=500000)
+      Filter: ((date_livraison >= '2024-01-01') AND (date_livraison &lt; '2024-02-01') AND (statut = 'LIVREE'))</pre><br/><strong>Problèmes identifiés :</strong><br/>1. <strong>Seq Scan sur livraisons</strong> : parcourt 5 millions de lignes, ce qui est très coûteux.<br/>2. <strong>Filtre</strong> : seulement 500 000 lignes correspondent aux critères (10% de la table), mais toutes les lignes sont lues.<br/>3. <strong>Absence d'index</strong> : ni sur date_livraison ni sur statut, ce qui force le scan complet.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposer une stratégie d'indexation optimale pour cette requête. Justifier le choix des colonnes et de l'ordre.",
+            "niveau": "hard",
+            "reponse": "<strong>Stratégie d'indexation :</strong><br/><br/>1. <strong>Index sur (date_livraison, statut)</strong> :<br/><code>CREATE INDEX idx_livraisons_date_statut ON livraisons(date_livraison, statut);</code><br/><br/><strong>Justification :</strong><br/>- <code>date_livraison</code> est le premier champ car c'est le filtre le plus sélectif (période d'un mois sur plusieurs années).<br/>- <code>statut</code> est le second champ pour filtrer sur 'LIVREE'.<br/>- L'ordre est important : on met d'abord la colonne la plus sélective.<br/><br/>2. <strong>Index couvrant (covering index)</strong> pour éviter d'accéder à la table :<br/><code>CREATE INDEX idx_livraisons_covering ON livraisons(date_livraison, statut) INCLUDE (id_ville_depart, poids);</code><br/><br/>Cet index stocke toutes les colonnes nécessaires à la requête, ce qui permet un <strong>Index-Only Scan</strong> (pas d'accès à la table)."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Écrire la requête avec le nouveau plan d'exécution attendu et expliquer comment l'index est utilisé.",
+            "niveau": "hard",
+            "reponse": "<strong>Nouveau plan d'exécution attendu :</strong><br/><pre style='background: #2c3e50; color: #ecf0f1; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.85em;'>HashAggregate (coût=12000.00..12200.00 lignes=2000)
+  -> Index Only Scan on livraisons (coût=100.00..11000.00 lignes=500000)
+      Index Cond: ((date_livraison >= '2024-01-01') AND (date_livraison &lt; '2024-02-01') AND (statut = 'LIVREE'))</pre><br/><strong>Explication :</strong><br/>1. L'optimiseur utilise l'<strong>Index Only Scan</strong> car toutes les colonnes nécessaires sont dans l'index.<br/>2. L'<strong>Index Cond</strong> montre que l'index est utilisé pour filtrer sur date_livraison et statut.<br/>3. Le <strong>HashAggregate</strong> regroupe les résultats par id_ville_depart.<br/>4. La requête n'accède plus à la table elle-même (Index Only), ce qui réduit considérablement les I/O disque."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Comparer les coûts estimés avant et après l'optimisation et calculer le gain en pourcentage.",
+        "niveau": "medium",
+        "reponse": "<strong>Avant optimisation :</strong><br/>Coût total = 65 200 (Seq Scan + Aggregate)<br/><br/><strong>Après optimisation :</strong><br/>Coût total = 12 200 (Index Only Scan + Aggregate)<br/><br/><strong>Calcul du gain :</strong><br/>Gain = (65 200 - 12 200) / 65 200 × 100 = 53 000 / 65 200 × 100 ≈ 81,3%<br/><br/><strong>Résultat :</strong> La requête est environ <strong>5,3 fois plus rapide</strong> (65 200 / 12 200 ≈ 5,34)."
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 5 : Application Réelle - Dashboard de Ventes",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Un responsable commercial souhaite un dashboard affichant les ventes par région. La requête principale du dashboard est :</p><p><code>SELECT r.nom_region, p.nom_produit, EXTRACT(MONTH FROM v.date_vente) as mois, SUM(v.montant) as total_ventes<br/>FROM ventes v<br/>JOIN produits p ON v.id_produit = p.id<br/>JOIN regions r ON v.id_region = r.id<br/>WHERE v.date_vente BETWEEN '2024-01-01' AND '2024-12-31'<br/>GROUP BY r.nom_region, p.nom_produit, mois<br/>ORDER BY r.nom_region, p.nom_produit, mois;</code></p><p>La base de données contient :</p><ul><li><code>ventes</code> : 10 millions de lignes</li><li><code>produits</code> : 100 000 lignes</li><li><code>regions</code> : 50 lignes</li><li>Les index existants : clés primaires sur toutes les tables</li></ul><p>Le dashboard est actuellement très lent (temps d'exécution > 30 secondes).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier les problèmes potentiels de cette requête et proposer une solution complète d'optimisation.",
+        "niveau": "very hard",
+        "reponse": "<strong>Problèmes identifiés :</strong><br/><br/>1. <strong>Jointures sur 10 millions de lignes</strong> : <code>ventes</code> doit être jointe avec <code>produits</code> et <code>regions</code>.<br/>2. <strong>Filtre temporel</strong> : <code>date_vente BETWEEN ...</code> sans index approprié.<br/>3. <strong>GROUP BY et ORDER BY</strong> sur 3 colonnes, ce qui est lourd.<br/>4. <strong>Extraction du mois</strong> : <code>EXTRACT(MONTH FROM date_vente)</code> empêche l'utilisation d'un index simple.<br/><br/><strong>Solution d'optimisation :</strong><br/><br/>1. <strong>Créer un index couvrant</strong> sur <code>ventes</code> :<br/><code>CREATE INDEX idx_ventes_covering ON ventes(date_vente, id_produit, id_region) INCLUDE (montant);</code><br/><br/>2. <strong>Créer une colonne calculée</strong> pour le mois :<br/><code>ALTER TABLE ventes ADD COLUMN mois INT GENERATED ALWAYS AS (EXTRACT(MONTH FROM date_vente)) STORED;</code><br/><code>CREATE INDEX idx_ventes_mois ON ventes(mois, date_vente);</code><br/><br/>3. <strong>Créer une vue matérialisée</strong> pour pré-agréger les données :<br/><code>CREATE MATERIALIZED VIEW mv_ventes_mensuelles AS<br/>SELECT v.mois, v.id_produit, v.id_region, SUM(v.montant) as total_ventes<br/>FROM ventes v<br/>WHERE v.date_vente >= '2024-01-01'<br/>GROUP BY v.mois, v.id_produit, v.id_region;</code><br/><code>CREATE INDEX ON mv_ventes_mensuelles (mois, id_produit, id_region);</code><br/><br/>4. <strong>Réécrire la requête</strong> pour utiliser la vue matérialisée :<br/><code>SELECT r.nom_region, p.nom_produit, mv.mois, mv.total_ventes<br/>FROM mv_ventes_mensuelles mv<br/>JOIN produits p ON mv.id_produit = p.id<br/>JOIN regions r ON mv.id_region = r.id<br/>ORDER BY r.nom_region, p.nom_produit, mv.mois;</code>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Discuter des avantages et inconvénients de l'approche par vue matérialisée.",
+            "niveau": "very hard",
+            "reponse": "<strong>Avantages :</strong><br/>- Temps d'exécution drastiquement réduit (quelques secondes au lieu de 30+)<br/>- Les calculs sont pré-faits, ce qui libère des ressources pour d'autres opérations<br/>- Idéal pour les dashboards qui sont consultés fréquemment<br/><br/><strong>Inconvénients :</strong><br/>- La vue matérialisée doit être rafraîchie régulièrement (par exemple, chaque nuit)<br/>- Les données ne sont pas en temps réel (décalage possible)<br/>- Occupe de l'espace disque supplémentaire (environ 10% de la table source)<br/>- Complexité supplémentaire dans la maintenance<br/><br/><strong>Recommandation :</strong> Cette approche est parfaite si le dashboard n'a pas besoin de données en temps réel et si les données n'évoluent pas trop fréquemment."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Écrire une requête pour rafraîchir la vue matérialisée quotidiennement.",
+            "niveau": "medium",
+            "reponse": "```sql\n-- PostgreSQL\nREFRESH MATERIALIZED VIEW mv_ventes_mensuelles;\n\n-- Alternative avec rafraîchissement concurrent\nREFRESH MATERIALIZED VIEW CONCURRENTLY mv_ventes_mensuelles;\n```<br/><br/>Pour une automatisation quotidienne, on peut utiliser :<br/>- Un <strong>job cron</strong> (linux)<br/>- <strong>pg_cron</strong> (extension PostgreSQL)<br/>- Un <strong>DAG Apache Airflow</strong><br/><br/>Exemple avec Airflow :<br/>```python\nrefresh_task = PostgresOperator(\n    task_id='refresh_mv',\n    sql='REFRESH MATERIALIZED VIEW mv_ventes_mensuelles;'\n)\n```"
+          }
+        ]
+      }
+    ]
+  }
+]

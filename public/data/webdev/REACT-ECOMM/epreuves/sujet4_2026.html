@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+  "matiere": "Développement d'une interface utilisateur e-commerce avec React",
+  "classe": "Développement Web",
+  "sequence": "Séquence 4",
+  "anneeScolaire": "2025-2026",
+  "exercices": [
+    {
+      "titre": "Exercice 1 : Service de communication avec l'API (Chap 5)",
+      "points": "4 pts",
+      "enonce": "<div style='font-family: Arial, sans-serif; padding: 10px;'><p>Vous développez l'interface d'un e-commerce. La communication avec le backend se fait via une API REST.</p><ol><li><strong>Axios et interceptors :</strong> Écrivez un extrait de code qui crée une instance Axios avec une baseURL, et ajoute un intercepteur pour inclure automatiquement le token JWT dans les en-têtes de chaque requête.</li><li><strong>React Query et cache :</strong> Expliquez l'importance de la propriété <code>staleTime</code> dans la configuration de <code>@tanstack/react-query</code>. À quoi sert-elle et comment l'utiliser pour optimiser les performances ?</li></ol></div>",
+      "questions": [
+        {
+          "question": "1) Fournissez le code pour créer une instance Axios avec un intercepteur qui ajoute le token JWT.",
+          "reponse": "<pre style='background:#f1f5f9; padding:10px; border-radius:6px; color:#0f172a;'><code>// 1. Création de l'instance Axios<br>const apiClient = axios.create({<br>  baseURL: process.env.VITE_API_URL,<br>  headers: { 'Content-Type': 'application/json' }<br>});<br><br>// 2. Intercepteur pour ajouter le token<br>apiClient.interceptors.request.use(<br>  (config) => {<br>    const token = localStorage.getItem('access_token');<br>    if (token) {<br>      config.headers.Authorization = `Bearer ${token}`;<br>    }<br>    return config;<br>  },<br>  (error) => Promise.reject(error)<br>);</code></pre>"
+        },
+        {
+          "question": "2) Expliquez le rôle de 'staleTime' dans React Query et son impact sur les requêtes.",
+          "reponse": "La propriété <code>staleTime</code> dans React Query définit la durée pendant laquelle les données sont considérées comme 'fraîches' après leur récupération. Pendant cette période, une nouvelle requête pour les mêmes données ne sera pas déclenchée automatiquement, ce qui permet d'éviter des appels réseau inutiles et d'améliorer les performances. Par exemple, avec <code>staleTime: 60000</code>, les données seront considérées comme valides pendant 60 secondes."
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 2 : Gestion du panier avec Zustand (Chap 4 & 8)",
+      "points": "6 pts",
+      "enonce": "<div style='font-family: Arial, sans-serif; padding: 10px;'><p>Vous utilisez Zustand pour gérer l'état global du panier d'achat.</p><ol><li><strong>Définir le store :</strong> Créez le store du panier avec les méthodes <code>addItem</code>, <code>removeItem</code>, et une propriété <code>total</code> calculée.</li><li><strong>Synchronisation avec le backend :</strong> Expliquez comment synchroniser le panier local (dans Zustand) avec le panier du backend après la connexion d'un utilisateur.</li><li><strong>Calcul du total :</strong> Écrivez la fonction qui calcule le total du panier en prenant en compte le prix, la quantité des articles et les frais de livraison.</li></ol></div>",
+      "questions": [
+        {
+          "question": "1) Écrivez le code Zustand pour le store du panier.",
+          "reponse": "<pre style='background:#f1f5f9; padding:10px; border-radius:6px; color:#0f172a;'><code>import { create } from 'zustand';<br><br>export const useCartStore = create((set, get) => ({<br>  items: [],<br>  addItem: (product) => set((state) => {<br>    const existingItem = state.items.find(item => item.id === product.id);<br>    if (existingItem) {<br>      return { items: state.items.map(item =><br>          item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item<br>        ) };<br>    }<br>    return { items: [...state.items, { ...product, quantity: 1 }] };<br>  }),<br>  removeItem: (id) => set((state) => ({<br>    items: state.items.filter(item => item.id !== id)<br>  })),<br>  getTotal: () => {<br>    const items = get().items;<br>    return items.reduce((acc, item) => acc + (item.price * item.quantity), 0);<br>  }<br>}));</code></pre>"
+        },
+        {
+          "question": "2) Proposez une stratégie pour synchroniser le panier local avec le backend après la connexion.",
+          "reponse": "Après une connexion réussie, on peut récupérer le panier depuis le backend via un appel API (ex: GET /cart) et mettre à jour le store Zustand. Ensuite, à chaque modification du panier local (ajout, suppression), on enverra ces changements au backend via des requêtes PUT ou PATCH. Il est conseillé d'utiliser une mutation React Query pour ces opérations. Un drapeau (flag) dans le store peut indiquer si le panier est synchronisé avec le serveur."
+        },
+        {
+          "question": "3) Écrire le code permettant de calculer le total du panier incluant les frais de livraison standards (fixe ou variable selon un seuil).",
+          "reponse": "<pre style='background:#f1f5f9; padding:10px; border-radius:6px; color:#0f172a;'><code>getTotalWithShipping: () => {<br>    const state = get();<br>    const subtotal = state.items.reduce((acc, item) => acc + (item.price * item.quantity), 0);<br>    const shippingCost = subtotal > 50 ? 0 : 5; // Livraison gratuite pour les commandes de plus de 50$<br>    return subtotal + shippingCost;<br>  }</code></pre>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 3 : Tests d'intégration avec MSW (Chap 13)",
+      "points": "6 pts",
+      "enonce": "<div style='font-family: Arial, sans-serif; padding: 10px;'><p>Vous écrivez des tests d'intégration pour valider le flux d'authentification et d'ajout au panier. Pour cela, vous utilisez React Testing Library et <strong>Mock Service Worker (MSW)</strong>.</p><ol><li><strong>Configuration MSW :</strong> Décrivez brièvement comment configurer MSW dans un projet Vite avec Vitest pour mocker les appels API.</li><li><strong>Test d'interaction :</strong> Écrivez un test qui vérifie qu'un clic sur le bouton 'Ajouter au panier' incrémente le nombre d'articles affiché dans le badge du panier.</li><li><strong>Mock d'API :</strong> Pour le test ci-dessus, vous devez mocker l'API <code>POST /api/cart</code> pour simuler une réponse réussie. Montrez le code du mock avec MSW.</li></ol></div>",
+      "questions": [
+        {
+          "question": "1) Décrivez les étapes clés pour configurer MSW dans un environnement de test Vitest.",
+          "reponse": "1. Installer MSW: <code>npm install msw --save-dev</code>.<br>2. Créer un fichier `src/mocks/handlers.js` pour définir les endpoints à intercepter.<br>3. Créer un fichier `src/mocks/server.js` pour configurer le serveur de test : <code>setupServer(...handlers)</code>.<br>4. Dans le fichier de setup de tests (ex: `src/test/setup.js`), importer le serveur et utiliser <code>beforeAll(() => server.listen())</code>, <code>afterEach(() => server.resetHandlers())</code>, <code>afterAll(() => server.close())</code>."
+        },
+        {
+          "question": "2) Écrivez un test avec React Testing Library simulant l'ajout d'un produit au panier.",
+          "reponse": "<pre style='background:#f1f5f9; padding:10px; border-radius:6px; color:#0f172a;'><code>import { render, screen, waitFor } from '@testing-library/react';<br>import userEvent from '@testing-library/user-event';<br>import { ProductCard } from './ProductCard';<br><br>test('ajoute un produit au panier', async () => {<br>  const user = userEvent.setup();<br>  render(<ProductCard productId={1} />);<br><br>  // Vérifier que le badge du panier est initialement à 0<br>  const badge = screen.getByTestId('cart-badge');<br>  expect(badge).toHaveTextContent('0');<br><br>  // Simuler le clic sur le bouton d'ajout au panier<br>  await user.click(screen.getByRole('button', { name: /ajouter au panier/i }));<br><br>  // Attendre et vérifier que le badge affiche '1'<br>  await waitFor(() => expect(badge).toHaveTextContent('1'));<br>});</code></pre>"
+        },
+        {
+          "question": "3) Montrez le code MSW pour mocker l'API POST /api/cart.",
+          "reponse": "<pre style='background:#f1f5f9; padding:10px; border-radius:6px; color:#0f172a;'><code>// src/mocks/handlers.js<br>import { http, HttpResponse } from 'msw';<br><br>export const handlers = [<br>  http.post('/api/cart', async ({ request }) => {<br>    // On peut inspecter le body si besoin<br>    const body = await request.json();<br>    <br>    // Réponse simulée (ex: renvoyer le panier mis à jour)<br>    return HttpResponse.json({<br>      success: true,<br>      cart: { items: [{ productId: body.productId, quantity: 1 }], total: 100 }<br>    });<br>  }),<br>];</code></pre>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 4 : Processus d'achat (Checkout) (Chap 8)",
+      "points": "4 pts",
+      "enonce": "<div style='font-family: Arial, sans-serif; padding: 10px;'><p>Vous travaillez sur la page de paiement (checkout).</p><ol><li><strong>Formulaire d'adresse :</strong> Décrivez l'approche pour gérer un formulaire d'adresse de livraison avec React Hook Form et validation Zod.</li><li><strong>Gestion des erreurs :</strong> Comment afficher les erreurs de validation du formulaire (ex: champ 'téléphone' invalide) directement sous le champ concerné ?</li><li><strong>Confirmation de commande :</strong> Après une soumission réussie, comment gérez-vous l'affichage de la confirmation de commande et la réinitialisation du panier ?</li></ol></div>",
+      "questions": [
+        {
+          "question": "1) Décrivez les étapes pour intégrer React Hook Form et Zod pour la validation de l'adresse.",
+          "reponse": "1. Installer <code>react-hook-form</code> et <code>@hookform/resolvers</code> (pour Zod).<br>2. Définir un schéma Zod pour l'adresse (ex: <code>z.object({ city: z.string().min(2), zipCode: z.string().regex(/^[0-9]{5}$/) })</code>).<br>3. Dans le composant, utiliser <code>useForm({ resolver: zodResolver(schema) })</code>.<br>4. Lier les champs avec <code>{...register('city')}</code> et gérer la soumission avec <code>handleSubmit</code>."
+        },
+        {
+          "question": "2) Montrez comment afficher un message d'erreur sous un champ.",
+          "reponse": "<pre style='background:#f1f5f9; padding:10px; border-radius:6px; color:#0f172a;'><code>const { register, formState: { errors } } = useForm({ resolver: zodResolver(schema) });<br><br>return (<br>  <div><br>    <input {...register('city')} /><br>    {errors.city && <p style='color: red;'>{errors.city.message}</p>}<br>  </div><br>);</code></pre>"
+        },
+        {
+          "question": "3) Écrivez la fonction de soumission du formulaire qui, en cas de succès, vide le panier et affiche un message de confirmation.",
+          "reponse": "<pre style='background:#f1f5f9; padding:10px; border-radius:6px; color:#0f172a;'><code>const onSubmit = async (data) => {<br>  try {<br>    const order = await createOrder(data); // Appel API<br>    useCartStore.getState().clearCart(); // Vider le panier (via Zustand)<br>    toast.success(`Commande ${order.id} validée !`);<br>    navigate('/confirmation'); // Rediriger vers la page de confirmation<br>  } catch (error) {<br>    toast.error('Erreur lors de la validation');<br>  }<br>};</code></pre>"
+        }
+      ]
+    }
+  ]
+};
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

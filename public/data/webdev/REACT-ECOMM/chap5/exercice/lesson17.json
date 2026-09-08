@@ -1,0 +1,123 @@
+[
+  {
+    "intitule": "Configuration du cache et de la fraîcheur des données avec React Query",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous développez le catalogue produits d'un site e-commerce avec React et React Query. La liste des produits est affichée sur la page d'accueil et sur la page de catégorie. Les données changent rarement (quelques fois par jour).</p><p>L'API endpoint <code>GET /products</code> retourne un tableau d'objets produit. Vous souhaitez optimiser les performances en évitant les appels réseau redondants.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer le rôle du paramètre <code>staleTime</code> dans <code>useQuery</code> de React Query. À quelle valeur le configureriez-vous pour ce cas d'usage (produits qui changent rarement) ? Justifier votre réponse.",
+        "niveau": "medium",
+        "reponse": "Le paramètre <code>staleTime</code> définit la durée (en millisecondes) pendant laquelle les données sont considérées comme 'fraîches'. Pendant cette période, React Query ne refera pas d'appel API, même si le composant qui utilise <code>useQuery</code> est démonté et remonté.\n\nPour des produits qui changent rarement, on peut configurer <code>staleTime: 5 * 60 * 1000</code> (5 minutes) voire <code>10 * 60 * 1000</code> (10 minutes). Cela évite des requêtes inutiles tout en garantissant que l'utilisateur ne voit pas des données trop anciennes.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Rédiger le code du hook personnalisé <code>useProducts</code> utilisant <code>useQuery</code> avec une configuration appropriée incluant <code>staleTime</code>, <code>gcTime</code> (anciennement <code>cacheTime</code>) et une gestion de base des erreurs.",
+        "niveau": "medium",
+        "reponse": "```javascript\nimport { useQuery } from '@tanstack/react-query';\nimport { productService } from '../services/productService';\n\nexport const useProducts = () => {\n  return useQuery({\n    queryKey: ['products'],\n    queryFn: productService.getAllProducts,\n    staleTime: 5 * 60 * 1000,   // 5 minutes : données fraîches\n    gcTime: 10 * 60 * 1000,      // 10 minutes : données en cache après inactivité\n    retry: 2,\n    onError: (error) => {\n      console.error('Erreur chargement produits:', error.message);\n    }\n  });\n};\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Revalidation automatique et mutations",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Un administrateur du site e-commerce peut ajouter de nouveaux produits via un formulaire. Après l'ajout, la liste des produits affichée sur le site doit se mettre à jour automatiquement sans que l'utilisateur ait à rafraîchir la page.</p><p>Vous utilisez React Query pour la gestion des données côté client.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier la méthode de React Query qui permet de revalider automatiquement les données après une mutation. Expliquer son fonctionnement.",
+        "niveau": "medium",
+        "reponse": "La méthode <code>queryClient.invalidateQueries({ queryKey: ['products'] })</code> permet de marquer les données associées à la clé 'products' comme périmées (stale). Au prochain accès, React Query refera automatiquement un fetch des données fraîches depuis l'API.\n\nOn l'utilise généralement dans le <code>onSuccess</code> d'une mutation (useMutation) après la création ou la modification d'un produit.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrire le code complet du hook <code>useAddProduct</code> qui utilise <code>useMutation</code> pour ajouter un produit et invalide le cache des produits après succès.",
+        "niveau": "hard",
+        "reponse": "```javascript\nimport { useMutation, useQueryClient } from '@tanstack/react-query';\nimport { productService } from '../services/productService';\nimport { toast } from 'sonner';\n\nexport const useAddProduct = () => {\n  const queryClient = useQueryClient();\n\n  return useMutation({\n    mutationFn: (productData) => productService.createProduct(productData),\n    onSuccess: (data) => {\n      // Invalider le cache des produits pour forcer un rechargement\n      queryClient.invalidateQueries({ queryKey: ['products'] });\n      toast.success(`Produit \"${data.name}\" ajouté avec succès`);\n    },\n    onError: (error) => {\n      toast.error(error.message || 'Erreur lors de l\\'ajout du produit');\n    }\n  });\n};\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Analyser la situation suivante : après l'ajout d'un produit, le cache est invalidé mais l'utilisateur voit encore l'ancienne liste pendant quelques secondes. Proposer une solution et expliquer son principe.",
+        "niveau": "very hard",
+        "reponse": "Ce phénomène peut être dû à un délai de revalidation ou à une réponse lente du backend. Pour améliorer l'expérience utilisateur, on peut utiliser le <code>placeholderData</code> ou le <code>optimistic update</code>.\n\n**Solution : Mise à jour optimiste (optimistic update)**\n\nLe principe est de mettre à jour immédiatement le cache avec les nouvelles données (ajout du produit) avant même que l'API ne réponde, puis de corriger si la mutation échoue.\n\n```javascript\nconst queryClient = useQueryClient();\n\nreturn useMutation({\n  mutationFn: productService.createProduct,\n  onMutate: async (newProduct) => {\n    await queryClient.cancelQueries({ queryKey: ['products'] });\n    const previousProducts = queryClient.getQueryData(['products']);\n    queryClient.setQueryData(['products'], (old) => [...old, { ...newProduct, id: 'temp-id' }]);\n    return { previousProducts };\n  },\n  onError: (err, newProduct, context) => {\n    queryClient.setQueryData(['products'], context.previousProducts);\n    toast.error('Erreur, le produit n\\'a pas été ajouté');\n  },\n  onSettled: () => {\n    queryClient.invalidateQueries({ queryKey: ['products'] });\n  }\n});\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Préchargement des données (Prefetch) pour améliorer l'expérience utilisateur",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Sur la page d'accueil du e-commerce, chaque carte produit contient un lien vers la page de détail du produit (<code>/product/:id</code>). Vous souhaitez améliorer la perception de rapidité de l'application en préchargeant les données du produit lorsque l'utilisateur survole le lien (hover) ou le bouton 'Voir détails'.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer le concept de prefetch dans React Query et son intérêt pour un site e-commerce.",
+        "niveau": "easy",
+        "reponse": "Le prefetch est une technique qui consiste à charger les données d'une page à l'avance, avant que l'utilisateur n'y accède. Dans React Query, on utilise <code>queryClient.prefetchQuery()</code>.\n\nIntérêt pour un e-commerce :\n- Réduction du temps de chargement perçu lors de la navigation\n- Fluidité accrue entre les pages (les données sont déjà disponibles)\n- Amélioration du Core Web Vitals (LCP, INP)\n- Expérience plus réactive, surtout sur connexions mobiles",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Rédiger le code d'un composant <code>ProductCard</code> qui précharge les données du produit lorsque l'utilisateur survole le lien vers la page détail. Utiliser <code>useQueryClient</code> et <code>productService.getProductById</code>.",
+        "niveau": "hard",
+        "reponse": "```javascript\nimport { Link } from 'react-router-dom';\nimport { useQueryClient } from '@tanstack/react-query';\nimport { productService } from '../services/productService';\n\nexport const ProductCard = ({ product }) => {\n  const queryClient = useQueryClient();\n\n  const prefetchProduct = () => {\n    queryClient.prefetchQuery({\n      queryKey: ['product', product.id],\n      queryFn: () => productService.getProductById(product.id),\n      staleTime: 5 * 60 * 1000, // Optionnel : 5 minutes de fraîcheur\n    });\n  };\n\n  return (\n    <div className=\"product-card\">\n      <h3>{product.name}</h3>\n      <p>{product.price} €</p>\n      <Link \n        to={`/product/${product.id}`}\n        onMouseEnter={prefetchProduct}\n        onFocus={prefetchProduct}  // Accessibilité clavier\n      >\n        Voir détails\n      </Link>\n    </div>\n  );\n};\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Critiquer la limite de cette approche de prefetch uniquement au hover. Suggérer une amélioration pour les écrans tactiles (mobiles) où le hover n'existe pas.",
+        "niveau": "hard",
+        "reponse": "**Limite :** Sur les appareils tactiles, l'événement <code>onMouseEnter</code> ne se déclenche pas. Les utilisateurs mobiles ne bénéficient donc pas du préchargement.\n\n**Améliorations possibles :**\n1. **Prefetch au chargement de la page visible** : Utiliser <code>useInViewport</code> (react-intersection-observer) pour précharger les données des produits qui entrent dans le viewport.\n2. **Prefetch à l'approche du lien** : Sur mobile, on peut déclencher le prefetch au toucher (<code>onTouchStart</code>) avant même que le clic ne soit finalisé.\n3. **Prefetch des liens visibles à l'écran** : Lors du scroll, tous les produits visibles dans la zone d'affichage déclenchent leur prefetch.\n\nExemple avec Intersection Observer :\n```javascript\nimport { useInView } from 'react-intersection-observer';\nimport { useEffect } from 'react';\n\nconst ProductCard = ({ product }) => {\n  const { ref, inView } = useInView({ threshold: 0.1 });\n  \n  useEffect(() => {\n    if (inView) prefetchProduct();\n  }, [inView]);\n  \n  return <div ref={ref}>...</div>;\n};\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation globale du cache et des requêtes",
+    "type": "ressource",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Un e-commerce affiche de nombreuses listes de produits : produits vedettes, produits par catégorie, produits en promo, produits récents. Chaque liste utilise le même endpoint <code>GET /products</code> mais avec des paramètres de filtrage différents (catégorie, promo, limit).</p><p>Vous remarquez que l'application fait des appels API redondants. Vous devez optimiser la stratégie de cache pour mutualiser au maximum les données tout en garantissant leur fraîcheur.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer la différence entre <code>queryKey: ['products']</code> et <code>queryKey: ['products', { category: 'electronics' }]</code> en termes de cache React Query.",
+        "niveau": "medium",
+        "reponse": "React Query utilise la clé de requête (queryKey) pour identifier et mettre en cache chaque requête de manière unique.\n\n- <code>['products']</code> : Une seule entrée de cache pour tous les produits (non filtrés).\n- <code>['products', { category: 'electronics' }]</code> : Une entrée de cache distincte pour chaque ensemble de paramètres (filtres).\n\nAinsi, <code>['products']</code> et <code>['products', { category: 'electronics' }]</code> sont deux caches séparés. Cela permet d'avoir des données différentes selon les filtres, mais peut entraîner des duplications si les mêmes produits apparaissent dans plusieurs listes.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer une stratégie de normalisation des données pour éviter la duplication en cache. Utiliser les concepts de <code>queryKey</code> hiérarchiques et de mise à jour optimiste.",
+        "niveau": "very hard",
+        "reponse": "**Stratégie de normalisation :**\n\n1. **Cache plat pour les produits individuels** :\n   - Stocker chaque produit avec sa propre clé : <code>['product', productId]</code>\n   - Les listes (<code>['products', filters]</code>) contiennent uniquement les IDs.\n\n2. **Sélecteurs pour reconstruire les listes** :\n```javascript\n// Récupération de la liste des IDs\nconst { data: productIds } = useQuery({\n  queryKey: ['products', filters],\n  queryFn: () => productService.getProductIds(filters)\n});\n\n// Récupération de chaque produit individuellement\nconst products = useQueries({\n  queries: productIds?.map(id => ({\n    queryKey: ['product', id],\n    queryFn: () => productService.getProductById(id)\n  })) ?? []\n});\n```\n\n3. **Mise à jour automatique** :\n   - Quand un produit est modifié (mutation), on invalide à la fois <code>['product', id]</code> ET toutes les clés de liste qui contiennent ce produit (en utilisant un préfixe commun).\n   - Exemple : <code>queryClient.invalidateQueries({ queryKey: ['products'] })</code> invalide toutes les clés commençant par 'products'.\n\n**Avantages :**\n- Suppression des doublons\n- Mise à jour centralisée d'un produit (toutes les listes sont automatiquement mises à jour)\n- Réduction de la bande passante",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Décrire comment configurer le cache global de React Query (<code>QueryClient</code>) avec des valeurs par défaut adaptées à un e-commerce (staleTime, gcTime, retry, refetchOnWindowFocus, etc.).",
+        "niveau": "hard",
+        "reponse": "```javascript\nimport { QueryClient } from '@tanstack/react-query';\n\nexport const queryClient = new QueryClient({\n  defaultOptions: {\n    queries: {\n      staleTime: 5 * 60 * 1000,      // 5 minutes : données considérées fraîches\n      gcTime: 10 * 60 * 1000,         // 10 minutes : données gardées en cache après inactivité\n      retry: 2,                       // 2 tentatives en cas d'échec\n      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // délai exponentiel\n      refetchOnWindowFocus: false,    // Pas de refetch automatique au retour sur l'onglet (moins intrusif)\n      refetchOnReconnect: true,       // Refetch si la connexion est rétablie\n      refetchOnMount: true,           // Refetch au montage si les données sont périmées\n    },\n    mutations: {\n      retry: 1,                       // Une seule tentative pour les mutations\n    },\n  },\n});\n```\n\n**Justifications :**\n- <code>staleTime: 5min</code> : Les prix et stocks ne changent pas en temps réel.\n- <code>refetchOnWindowFocus: false</code> : Évite des requêtes inutiles quand l'utilisateur revient sur l'onglet (meilleure expérience mobile).\n- <code>retryDelay exponentiel</code> : Évite de surcharger le serveur en cas de panne passagère.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

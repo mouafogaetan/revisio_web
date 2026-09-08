@@ -1,0 +1,120 @@
+[
+  {
+    "intitule": "Analyse des stratégies de mise en cache pour une PWA e-commerce",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans le cadre de la transformation de votre site e-commerce en PWA (Progressive Web App), vous devez définir une stratégie de cache pour le service worker.</p><p>Le site contient :</p><ul><li>Des assets statiques (HTML, CSS, JS) qui changent à chaque déploiement</li><li>Des images de produits qui s'ajoutent fréquemment mais ne changent pas après ajout</li><li>L'API de catalogue (produits, prix) qui doit être fraîche</li><li>La page d'accueil qui doit être accessible hors-ligne</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Pour chaque type de ressource, proposez une stratégie de cache appropriée (Cache First, Network First, Stale While Revalidate, Network Only) et justifiez votre choix.",
+        "niveau": "hard",
+        "reponse": "**1. Assets statiques (JS/CSS/HTML)** : Stratégie **Cache First avec versionnement**\n- Justification : Ces fichiers changent uniquement lors des déploiements. En utilisant des noms de fichiers hashés (ex: `main.a3f2e.js`), on peut les mettre en cache indéfiniment. En cas de nouvelle version, le fichier change de nom, donc le cache n'est pas utilisé.\n\n**2. Images de produits** : Stratégie **Stale While Revalidate**\n- Justification : Les images sont rarement modifiées. On affiche immédiatement la version en cache (rapide) et on met à jour en arrière-plan si une nouvelle version existe. Idéal pour l'expérience utilisateur.\n\n**3. API catalogue** : Stratégie **Network First avec fallback cache**\n- Justification : Les prix et stocks doivent être à jour. On tente d'abord le réseau, et si échec (hors-ligne), on sert la dernière version en cache. On peut aussi ajouter un timestamp dans le cache pour indiquer l'âge des données.\n\n**4. Page d'accueil (HTML)** : Stratégie **Cache First**\n- Justification : La page d'accueil doit être accessible immédiatement, même hors-ligne. On la met en cache lors de la première visite (via `precacheAndRoute`).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Qu'est-ce que le 'versionnement des assets' et pourquoi est-il essentiel pour une PWA ?",
+            "niveau": "medium",
+            "reponse": "Le versionnement des assets consiste à ajouter un hash (empreinte) au nom des fichiers générés par le build (ex: `main.a3f2e8d.js`). À chaque nouveau build, le hash change si le contenu a changé. C'est essentiel pour une PWA car le service worker met en cache les fichiers par leur URL. Sans versionnement, une nouvelle version de l'application ne serait pas téléchargée tant que l'URL reste la même et que le cache n'est pas invalidé manuellement. Avec versionnement, l'ancienne page continue de fonctionner avec ses anciens assets, et la nouvelle page charge les nouveaux assets naturellement."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Configuration de Vite PWA plugin",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous utilisez Vite comme outil de build pour votre application React e-commerce. Vous souhaitez ajouter le plugin <code>vite-plugin-pwa</code> pour générer un service worker et le manifeste Web App.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez la configuration minimale de `vite-plugin-pwa` dans `vite.config.ts` pour : (a) générer un service worker avec stratégie de cache réseau d'abord pour les API, (b) inclure le manifeste avec le thème et l'icône, (c) permettre l'installation de l'application.",
+        "niveau": "hard",
+        "reponse": "```typescript\nimport { defineConfig } from 'vite';\nimport react from '@vitejs/plugin-react';\nimport { VitePWA } from 'vite-plugin-pwa';\n\nexport default defineConfig({\n  plugins: [\n    react(),\n    VitePWA({\n      registerType: 'autoUpdate',\n      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],\n      manifest: {\n        name: 'Mon E-commerce PWA',\n        short_name: 'Eshop',\n        description: 'Achetez en ligne même hors-ligne',\n        theme_color: '#ffffff',\n        background_color: '#ffffff',\n        display: 'standalone',\n        scope: '/',\n        start_url: '/',\n        icons: [\n          {\n            src: '/icons/icon-192x192.png',\n            sizes: '192x192',\n            type: 'image/png',\n            purpose: 'any maskable'\n          },\n          {\n            src: '/icons/icon-512x512.png',\n            sizes: '512x512',\n            type: 'image/png'\n          }\n        ]\n      },\n      workbox: {\n        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],\n        // Stratégie Network First pour les API\n        runtimeCaching: [\n          {\n            urlPattern: /^https:\\/\\/api\\.moncommerce\\.com\\/.*/i,\n            handler: 'NetworkFirst',\n            options: {\n              cacheName: 'api-cache',\n              expiration: {\n                maxEntries: 100,\n                maxAgeSeconds: 60 * 60 * 24 // 24h\n              },\n              networkTimeoutSeconds: 5\n            }\n          },\n          {\n            urlPattern: /^https:\\/\\/images\\.moncommerce\\.com\\/.*/i,\n            handler: 'StaleWhileRevalidate',\n            options: {\n              cacheName: 'images-cache',\n              expiration: {\n                maxEntries: 200,\n                maxAgeSeconds: 60 * 60 * 24 * 30 // 30 jours\n              }\n            }\n          }\n        ]\n      },\n      devOptions: {\n        enabled: true, // Activer en développement pour tester\n        type: 'module'\n      }\n    })\n  ]\n});\n```\n\n**Explication** :\n- `registerType: 'autoUpdate'` : met automatiquement à jour le service worker\n- `manifest` : définit les métadonnées de l'application (nom, icônes, thème)\n- `workbox.runtimeCaching` : définit les stratégies de cache pour les requêtes dynamiques (API, images)\n- `globPatterns` : fichiers statiques à précacher",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Mise en cache des données API pour le mode hors-ligne",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Votre PWA e-commerce doit permettre aux utilisateurs de consulter le catalogue des produits même lorsqu'ils sont hors-ligne (ex: en zone sans réseau).</p><p>Les données produits sont récupérées via l'API <code>GET /api/products</code>. Vous utilisez <code>@tanstack/react-query</code> pour la gestion des données.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez comment combiner le cache de React Query et le cache du service worker pour offrir une expérience hors-ligne transparente. Donnez un exemple de code.",
+        "niveau": "very hard",
+        "reponse": "**Approche** :\n\nLe service worker et React Query ont des caches distincts mais complémentaires :\n- **Service worker** : cache HTTP au niveau du navigateur (réponses réseau complètes)\n- **React Query** : cache applicatif (données JSON dénormalisées)\n\nPour une expérience hors-ligne optimale :\n1. Le service worker intercepte les requêtes API et sert une réponse en cache si le réseau est indisponible (stratégie Network First)\n2. React Query ne voit pas la différence : il reçoit des données (du cache ou du réseau) et les stocke dans son propre cache\n3. En mode hors-ligne, les requêtes échouent au niveau réseau, mais le service worker renvoie les données en cache\n\n**Exemple de code** :\n\n```typescript\n// Service worker (workbox) - stratégie Network First\nworkbox.routing.registerRoute(\n  ({url}) => url.pathname.startsWith('/api/products'),\n  new workbox.strategies.NetworkFirst({\n    cacheName: 'products-cache',\n    plugins: [\n      new workbox.expiration.ExpirationPlugin({\n        maxEntries: 50,\n        maxAgeSeconds: 24 * 60 * 60 // 24h\n      })\n    ]\n  })\n);\n\n// React Query - avec configuration pour persistance\nimport { QueryClient } from '@tanstack/react-query';\nimport { persistQueryClient } from '@tanstack/react-query-persist-client';\nimport { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';\n\nconst queryClient = new QueryClient({\n  defaultOptions: {\n    queries: {\n      staleTime: 5 * 60 * 1000, // 5 minutes\n      gcTime: 24 * 60 * 60 * 1000 // 24h pour garder le cache\n    }\n  }\n});\n\n// Persistance du cache React Query dans localStorage\nconst localStoragePersister = createSyncStoragePersister({\n  storage: window.localStorage\n});\n\npersistQueryClient({\n  queryClient,\n  persister: localStoragePersister,\n  maxAge: 24 * 60 * 60 * 1000 // 24h\n});\n\n// Utilisation dans un composant\nconst useProducts = () => {\n  return useQuery({\n    queryKey: ['products'],\n    queryFn: () => fetch('/api/products').then(res => res.json()),\n    // Le service worker gère le réseau, React Query gère le state\n    placeholderData: () => {\n      // Données de fallback si même le cache SW est vide\n      return getCachedProductsFromLocalStorage();\n    }\n  });\n};\n```\n\n**Double cache** :\n- Cache service worker : pour les réponses HTTP brutes (implicite)\n- Cache React Query : pour l'état applicatif (explicite, persistant)\n- En hors-ligne, le service worker sert le cache, React Query le récupère et le stocke à nouveau",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment informer l'utilisateur qu'il consulte une version en cache (données potentiellement obsolètes) et non les données en temps réel ?",
+            "niveau": "easy",
+            "reponse": "On peut afficher une bannière ou un indicateur discret :\n1. Écouter l'événement `online`/`offline` du navigateur\n2. Détecter si les données proviennent du cache via un flag ajouté par le service worker (ex: header `X-Cache: HIT`)\n3. Afficher un message : \"Vous consultez une version en cache des produits. Les informations peuvent ne pas être à jour.\" avec un bouton \"Actualiser\"\n\n```tsx\nconst [isOffline, setIsOffline] = useState(!navigator.onLine);\n\nuseEffect(() => {\n  const handleOnline = () => setIsOffline(false);\n  const handleOffline = () => setIsOffline(true);\n  window.addEventListener('online', handleOnline);\n  window.addEventListener('offline', handleOffline);\n  return () => {\n    window.removeEventListener('online', handleOnline);\n    window.removeEventListener('offline', handleOffline);\n  };\n}, []);\n\nif (isOffline) {\n  return <OfflineBanner message=\"Mode hors-ligne - Données en cache\" />;\n}\n```"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion des mises à jour du service worker",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous avez déployé une nouvelle version de votre PWA e-commerce. L'ancien service worker est actif. Comment les utilisateurs reçoivent-ils la nouvelle version ?</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez le cycle de vie d'un service worker et comment proposer une mise à jour (sans rechargement forcé) avec un toast de notification.",
+        "niveau": "hard",
+        "reponse": "**Cycle de vie d'un service worker :**\n1. **Installation** : Le nouveau service worker est téléchargé et installé (événement `install`)\n2. **En attente (waiting)** : Il reste en attente tant que l'ancien contrôle encore des pages\n3. **Activation** : L'ancien est remplacé (`skipWaiting` ou l'utilisateur ferme/rouvre)\n\n**Implémentation de notification de mise à jour :**\n\n```typescript\n// Dans le composant principal (App.tsx)\nimport { useRegisterSW } from 'virtual:pwa-register/react';\n\nfunction App() {\n  const {\n    needRefresh: [needRefresh, setNeedRefresh],\n    updateServiceWorker,\n  } = useRegisterSW({\n    onRegistered(r) {\n      console.log('SW registered:', r);\n    },\n    onRegisterError(error) {\n      console.log('SW registration error:', error);\n    },\n  });\n\n  useEffect(() => {\n    if (needRefresh) {\n      // Afficher un toast de notification\n      toast({\n        title: 'Nouvelle version disponible',\n        description: 'Une mise à jour est disponible. Voulez-vous l\\'appliquer ?',\n        action: (\n          <Button onClick={() => updateServiceWorker(true)}>\n            Mettre à jour\n          </Button>\n        ),\n      });\n    }\n  }, [needRefresh, updateServiceWorker]);\n\n  return <Router />;\n}\n\n// Alternative avec API native\nif ('serviceWorker' in navigator) {\n  navigator.serviceWorker.ready.then(registration => {\n    registration.addEventListener('updatefound', () => {\n      const newWorker = registration.installing;\n      if (newWorker) {\n        newWorker.addEventListener('statechange', () => {\n          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {\n            // Nouveau SW installé mais en attente\n            toast({\n              title: 'Mise à jour disponible',\n              description: 'Actualisez la page pour appliquer la nouvelle version'\n            });\n          }\n        });\n      }\n    });\n  });\n}\n```\n\n**Bonnes pratiques** :\n- Ne pas forcer le rechargement immédiat (perturbe l'utilisateur)\n- Proposer un bouton discret \"Mettre à jour\"\n- Pour des mises à jour critiques (sécurité), on peut forcer `skipWaiting()` puis recharger",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Que se passe-t-il si l'utilisateur refuse la mise à jour ou ignore la notification ?",
+            "niveau": "easy",
+            "reponse": "Si l'utilisateur ignore la notification, le nouveau service worker reste en attente (`waiting`). Il ne sera activé que lorsque :\n- L'utilisateur ferme complètement tous les onglets de l'application, puis la rouvre\n- L'utilisateur clique sur le bouton de mise à jour proposé\n- Le navigateur décide de nettoyer les anciens workers (rare)\n\nC'est un comportement volontaire pour ne pas interrompre l'utilisateur. Pour les mises à jour critiques (correctifs de sécurité), on peut forcer l'activation via `self.skipWaiting()` dans le service worker."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Cache des assets critiques et stratégie 'offline-first'",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "textarea": "<p>Dans une PWA e-commerce, il est essentiel que la page d'accueil, le CSS et le JavaScript de base soient disponibles immédiatement, même lors de la première visite (sans connexion).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez comment implémenter une stratégie 'offline-first' où l'utilisateur peut voir la page d'accueil (avec les produits en cache) même sans connexion lors de sa première visite après installation.",
+        "niveau": "hard",
+        "reponse": "**Implémentation offline-first :**\n\n```typescript\n// vite.config.ts - Workbox configuration\nVitePWA({\n  workbox: {\n    // Précache tous les assets critiques lors de l'installation du SW\n    globPatterns: ['**/*.{js,css,html}'],\n    globIgnores: ['**/node_modules/**', '**/sw.js'],\n    \n    // Ajout manuel d'assets supplémentaires\n    additionalManifestEntries: [\n      { url: '/offline.html', revision: null },\n      { url: '/icons/icon-512x512.png', revision: null }\n    ],\n    \n    navigateFallback: '/offline.html', // Fallback pour les routes non mises en cache\n    navigateFallbackDenylist: [/^\\/api/],\n    \n    runtimeCaching: [\n      {\n        urlPattern: /^https:\\/\\/api\\..*\\/products/,\n        handler: 'CacheFirst', // Pour la première visite, on met en cache les produits\n        options: {\n          cacheName: 'products-cache',\n          expiration: { maxEntries: 50, maxAgeSeconds: 7 * 24 * 60 * 60 }\n        }\n      }\n    ]\n  }\n});\n\n// Stratégie d'installation : préchargement des données critiques\n// Dans le service worker (custom sw.js)\nself.addEventListener('install', (event) => {\n  event.waitUntil(\n    (async () => {\n      const cache = await caches.open('products-cache');\n      // Précharger les produits lors de l'installation (première visite)\n      try {\n        const response = await fetch('/api/products?limit=20');\n        if (response.ok) {\n          await cache.put('/api/products', response);\n        }\n      } catch (e) {\n        console.log('Offline first install: no network');\n      }\n    })()\n  );\n});\n\n// Dans le composant React : fallback si rien en cache\nconst useOfflineFirstProducts = () => {\n  const { data, error } = useQuery({\n    queryKey: ['products'],\n    queryFn: () => fetch('/api/products').then(r => r.json()),\n    // Fallback vers des données statiques si même le cache SW est vide\n    placeholderData: offlineFallbackProducts\n  });\n  \n  return { data, isOffline: !navigator.onLine };\n};\n```\n\n**Résultat** :\n1. **Première visite avec réseau** : Le SW s'installe et précharge les produits dans le cache\n2. **Visite suivante hors-ligne** : Le SW sert la page d'accueil depuis le cache, les produits sont affichés immédiatement",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment tester le mode hors-ligne pendant le développement avec Vite ?",
+            "niveau": "easy",
+            "reponse": "**Méthodes de test :**\n\n1. **Onglet Application de Chrome DevTools** :\n   - Onglet 'Application' → 'Service Workers'\n   - Cocher 'Offline'\n   - Rafraîchir la page\n\n2. **Configuration Vite PWA** :\n   ```typescript\n   devOptions: {\n     enabled: true,      // Activer le SW en développement\n     type: 'module',\n     navigateFallback: 'index.html'\n   }\n   ```\n\n3. **Extension Lighthouse** : Audit PWA et test offline automatique\n\n4. **Simulation réseau** :\n   - DevTools → Network → Throttling → 'Offline'\n   - Ou utiliser `npx http-server --offline` pour servir en local sans réseau\n\n5. **Build de production en local** :\n   ```bash\n   npm run build\n   npx serve dist -p 3000\n   # Puis dans DevTools, activer offline\n   ```"
+          }
+        ]
+      }
+    ]
+  }
+]

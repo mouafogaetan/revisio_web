@@ -1,0 +1,122 @@
+[
+  {
+    "intitule": "Création d'entités et relations dans une base e-commerce",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous développez une API e-commerce avec NestJS et TypeORM. Vous devez modéliser les entités suivantes :</p><ul><li><strong>User</strong> : id, email, password, createdAt, orders (liste des commandes)</li><li><strong>Product</strong> : id, name, price, stock, category (relation ManyToOne avec Category)</li><li><strong>Category</strong> : id, name, products (liste des produits)</li><li><strong>Order</strong> : id, user (ManyToOne), products (ManyToMany avec Product via une table de jonction), total, status, createdAt</li></ul>",
+      "images": [
+        "diagramme UML des entités User, Product, Category, Order avec leurs relations"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer la différence entre <code>@OneToMany</code>, <code>@ManyToOne</code> et <code>@ManyToMany</code> dans TypeORM. Donner un exemple concret pour chaque.",
+        "niveau": "medium",
+        "reponse": "<code>@ManyToOne</code> : côté 'plusieurs' d'une relation (ex: plusieurs produits appartiennent à une catégorie). <code>@OneToMany</code> : côté 'un' d'une relation (ex: une catégorie possède plusieurs produits). <code>@ManyToMany</code> : relation bidirectionnelle où plusieurs entités peuvent être liées à plusieurs autres (ex: une commande contient plusieurs produits, un produit peut être dans plusieurs commandes).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Rédiger le code TypeScript complet des entités <code>User</code>, <code>Product</code>, <code>Category</code> et <code>Order</code> avec les décorateurs TypeORM appropriés et les relations.",
+            "niveau": "hard",
+            "reponse": "```typescript\n// user.entity.ts\nimport { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';\nimport { Order } from './order.entity';\n\n@Entity()\nexport class User {\n  @PrimaryGeneratedColumn()\n  id: number;\n\n  @Column({ unique: true })\n  email: string;\n\n  @Column()\n  password: string;\n\n  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })\n  createdAt: Date;\n\n  @OneToMany(() => Order, (order) => order.user)\n  orders: Order[];\n}\n\n// category.entity.ts\nimport { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';\nimport { Product } from './product.entity';\n\n@Entity()\nexport class Category {\n  @PrimaryGeneratedColumn()\n  id: number;\n\n  @Column({ unique: true })\n  name: string;\n\n  @OneToMany(() => Product, (product) => product.category)\n  products: Product[];\n}\n\n// product.entity.ts\nimport { Entity, PrimaryGeneratedColumn, Column, ManyToOne, ManyToMany } from 'typeorm';\nimport { Category } from './category.entity';\nimport { Order } from './order.entity';\n\n@Entity()\nexport class Product {\n  @PrimaryGeneratedColumn()\n  id: number;\n\n  @Column()\n  name: string;\n\n  @Column('decimal', { precision: 10, scale: 2 })\n  price: number;\n\n  @Column({ default: 0 })\n  stock: number;\n\n  @ManyToOne(() => Category, (category) => category.products, { eager: false })\n  category: Category;\n\n  @ManyToMany(() => Order, (order) => order.products)\n  orders: Order[];\n}\n\n// order.entity.ts\nimport { Entity, PrimaryGeneratedColumn, Column, ManyToOne, ManyToMany, JoinTable } from 'typeorm';\nimport { User } from './user.entity';\nimport { Product } from './product.entity';\n\n@Entity()\nexport class Order {\n  @PrimaryGeneratedColumn()\n  id: number;\n\n  @ManyToOne(() => User, (user) => user.orders)\n  user: User;\n\n  @ManyToMany(() => Product, (product) => product.orders)\n  @JoinTable({ name: 'order_products' })\n  products: Product[];\n\n  @Column('decimal', { precision: 10, scale: 2 })\n  total: number;\n\n  @Column({ default: 'pending' })\n  status: string;\n\n  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })\n  createdAt: Date;\n}\n```"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Configuration des colonnes et options avancées",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans TypeORM, les décorateurs de colonne offrent de nombreuses options pour configurer le mapping avec la base de données.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer l'utilité des options suivantes dans <code>@Column()</code> : <code>nullable</code>, <code>default</code>, <code>unique</code>, <code>type</code>, <code>length</code>.",
+        "niveau": "medium",
+        "reponse": "<code>nullable</code> : autorise ou non les valeurs NULL. <code>default</code> : valeur par défaut en base. <code>unique</code> : contrainte d'unicité. <code>type</code> : type SQL explicite (ex: 'varchar', 'text', 'decimal'). <code>length</code> : longueur maximale pour les types string (varchar).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Écrire une entité <code>Product</code> avec les colonnes suivantes : id auto-généré, nom (unique, longueur max 100, nullable false), prix (décimal 10,2), description (type text, nullable true), stock (entier, défaut 0).",
+            "niveau": "easy",
+            "reponse": "```typescript\nimport { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';\n\n@Entity()\nexport class Product {\n  @PrimaryGeneratedColumn()\n  id: number;\n\n  @Column({ unique: true, length: 100, nullable: false })\n  name: string;\n\n  @Column('decimal', { precision: 10, scale: 2 })\n  price: number;\n\n  @Column({ type: 'text', nullable: true })\n  description: string;\n\n  @Column({ default: 0 })\n  stock: number;\n}\n```"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Quelle est la différence entre <code>@CreateDateColumn()</code> et <code>@Column({ default: () => 'CURRENT_TIMESTAMP' })</code> ?",
+            "niveau": "hard",
+            "reponse": "<code>@CreateDateColumn()</code> est un décorateur spécial de TypeORM qui définit automatiquement la date de création lors de l'insertion. TypeORM gère la valeur côté code. <code>@Column({ default: () => 'CURRENT_TIMESTAMP' })</code> définit une valeur par défaut au niveau de la base de données (SQL). La première approche est plus portable entre bases de données, la seconde peut être plus performante pour certaines opérations."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Cas pratique : Gestion d'une bibliothèque avec relations",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous devez créer une API pour une bibliothèque. Les règles métier sont :</p><ul><li>Un <strong>Livre</strong> a un titre, un ISBN unique, une année de publication, et un ou plusieurs auteurs.</li><li>Un <strong>Auteur</strong> a un nom, une date de naissance, et peut avoir plusieurs livres.</li><li>Un <strong>Emprunt</strong> est lié à un livre et un utilisateur, avec une date d'emprunt et une date de retour prévue.</li><li>Un <strong>Utilisateur</strong> peut emprunter plusieurs livres, mais pas plus de 3 simultanément.</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier et justifier les types de relations entre les entités : Livre-Auteur, Livre-Emprunt, Utilisateur-Emprunt.",
+        "niveau": "medium",
+        "reponse": "Livre-Auteur : relation ManyToMany (un livre peut avoir plusieurs auteurs, un auteur peut écrire plusieurs livres). Livre-Emprunt : OneToMany (un livre peut être emprunté plusieurs fois, un emprunt concerne un seul livre). Utilisateur-Emprunt : OneToMany (un utilisateur peut avoir plusieurs emprunts, un emprunt appartient à un seul utilisateur).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Rédiger les entités TypeORM complètes pour <code>Book</code>, <code>Author</code>, <code>Borrow</code> et <code>User</code> avec toutes les relations et contraintes de validation.",
+            "niveau": "very hard",
+            "reponse": "```typescript\n// author.entity.ts\nimport { Entity, PrimaryGeneratedColumn, Column, ManyToMany, JoinTable } from 'typeorm';\nimport { Book } from './book.entity';\n\n@Entity()\nexport class Author {\n  @PrimaryGeneratedColumn()\n  id: number;\n\n  @Column()\n  name: string;\n\n  @Column({ type: 'date' })\n  birthDate: Date;\n\n  @ManyToMany(() => Book, (book) => book.authors)\n  books: Book[];\n}\n\n// book.entity.ts\nimport { Entity, PrimaryGeneratedColumn, Column, ManyToMany, OneToMany } from 'typeorm';\nimport { Author } from './author.entity';\nimport { Borrow } from './borrow.entity';\n\n@Entity()\nexport class Book {\n  @PrimaryGeneratedColumn()\n  id: number;\n\n  @Column()\n  title: string;\n\n  @Column({ unique: true })\n  isbn: string;\n\n  @Column()\n  publicationYear: number;\n\n  @ManyToMany(() => Author, (author) => author.books)\n  @JoinTable({ name: 'book_authors' })\n  authors: Author[];\n\n  @OneToMany(() => Borrow, (borrow) => borrow.book)\n  borrows: Borrow[];\n}\n\n// user.entity.ts\nimport { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';\nimport { Borrow } from './borrow.entity';\n\n@Entity()\nexport class User {\n  @PrimaryGeneratedColumn()\n  id: number;\n\n  @Column({ unique: true })\n  email: string;\n\n  @Column()\n  name: string;\n\n  @OneToMany(() => Borrow, (borrow) => borrow.user)\n  borrows: Borrow[];\n}\n\n// borrow.entity.ts\nimport { Entity, PrimaryGeneratedColumn, ManyToOne, Column } from 'typeorm';\nimport { Book } from './book.entity';\nimport { User } from './user.entity';\n\n@Entity()\nexport class Borrow {\n  @PrimaryGeneratedColumn()\n  id: number;\n\n  @ManyToOne(() => Book, (book) => book.borrows)\n  book: Book;\n\n  @ManyToOne(() => User, (user) => user.borrows)\n  user: User;\n\n  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })\n  borrowDate: Date;\n\n  @Column({ type: 'date' })\n  expectedReturnDate: Date;\n\n  @Column({ type: 'timestamp', nullable: true })\n  actualReturnDate: Date;\n}\n```"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Proposer une requête TypeORM QueryBuilder pour trouver tous les emprunts en cours (non retournés) d'un utilisateur donné, avec le titre du livre et le nom de l'auteur.",
+            "niveau": "very hard",
+            "reponse": "```typescript\nconst activeBorrows = await borrowRepository\n  .createQueryBuilder('borrow')\n  .leftJoinAndSelect('borrow.book', 'book')\n  .leftJoinAndSelect('book.authors', 'author')\n  .where('borrow.userId = :userId', { userId })\n  .andWhere('borrow.actualReturnDate IS NULL')\n  .select([\n    'borrow.id',\n    'borrow.borrowDate',\n    'borrow.expectedReturnDate',\n    'book.id',\n    'book.title',\n    'author.id',\n    'author.name'\n  ])\n  .getMany();\n```"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Bonnes pratiques et optimisation des relations",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Dans une API e-commerce avec des milliers de produits, l'affichage de la liste des produits avec leurs catégories (relation ManyToOne) peut devenir lent si on charge toutes les catégories pour chaque produit.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analyser le problème de performance lié au <strong>chargement eager vs lazy</strong> dans TypeORM. Proposer une stratégie optimale pour une liste de produits.",
+        "niveau": "hard",
+        "reponse": "Le chargement <code>eager: true</code> charge automatiquement la relation à chaque requête, ce qui peut générer des requêtes SQL supplémentaires (problème N+1). Le chargement lazy (<code>eager: false</code>, relation Promise) permet de ne charger que quand on y accède. Pour une liste de produits, la meilleure stratégie est d'utiliser <code>relations</code> dans le find uniquement quand nécessaire, ou d'utiliser <code>QueryBuilder</code> avec <code>leftJoinAndSelect</code> pour charger les catégories en une seule requête.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Écrire deux versions de requête pour récupérer tous les produits avec leurs catégories : une avec <code>find</code> et <code>relations</code>, une avec <code>createQueryBuilder</code>. Expliquer laquelle est plus performante.",
+            "niveau": "hard",
+            "reponse": "```typescript\n// Version 1 : find avec relations\nconst products = await productRepository.find({\n  relations: ['category']\n});\n// Génère une requête SQL avec JOIN\n\n// Version 2 : QueryBuilder\nconst products = await productRepository\n  .createQueryBuilder('product')\n  .leftJoinAndSelect('product.category', 'category')\n  .getMany();\n\n// Les deux approches génèrent un JOIN SQL unique.\n// QueryBuilder est plus flexible pour les conditions complexes,\n// find() avec relations est plus lisible pour les cas simples.\n// Les deux évitent le problème N+1 car ils font un seul JOIN.\n```\nLa version avec <code>leftJoinAndSelect</code> est préférable si on a besoin de filtrer sur la catégorie ou d'ajouter des conditions supplémentaires."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Qu'est-ce que le <strong>problème N+1</strong> en ORM ? Comment TypeORM le résout-il avec <code>relations</code> ou <code>leftJoinAndSelect</code> ?",
+            "niveau": "hard",
+            "reponse": "Le problème N+1 se produit lorsqu'on charge une liste d'entités (N), puis qu'on accède à une relation pour chaque entité, générant N requêtes supplémentaires. Exemple : récupérer 100 produits, puis pour chacun accéder à product.category → 1 requête pour les produits + 100 pour les catégories = 101 requêtes. TypeORM résout ce problème avec <code>relations: ['category']</code> ou <code>leftJoinAndSelect</code> qui génèrent une seule requête avec LEFT JOIN, chargeant toutes les données en une fois."
+          }
+        ]
+      }
+    ]
+  }
+]

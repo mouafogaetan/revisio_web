@@ -1,0 +1,238 @@
+[
+  {
+    "intitule": "Architecture d'un système de notification : analyse conceptuelle",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans le cadre du développement de Sawamart, une plateforme e-commerce camerounaise, vous devez concevoir l'architecture du système de notifications. L'objectif est de pouvoir envoyer des notifications à différents types d'utilisateurs (acheteurs, vendeurs, administrateurs) pour différents événements (nouvelle commande, message reçu, mise à jour de statut, promotion).</p><p>Un schéma simplifié de l'architecture est présenté ci-dessous :</p>",
+      "images": [
+        "Diagramme d'architecture représentant trois composants: 1) Émetteurs d'événements (services métier comme Orders, Messages, Disputes), 2) Bus d'événements (EventEmitter2 ou RabbitMQ), 3) Service de notifications (NotificationService) qui détermine le canal (in-app, push FCM, email) et le destinataire"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez la structure des entités `Notification` et `NotificationPreference` en précisant les champs nécessaires pour gérer les types de notification, les canaux et les préférences utilisateur.",
+        "niveau": "medium",
+        "reponse": "L'entité `Notification` doit contenir : id, type (enum : ORDER_STATUS, MESSAGE, DISPUTE, PROMOTION, etc.), channel (enum : IN_APP, PUSH, EMAIL), recipientId (relation avec User), title, body, data (JSON pour les données supplémentaires), read (boolean), createdAt, sentAt (timestamp). L'entité `NotificationPreference` doit contenir : userId (relation), type (enum correspondant), channels (array des canaux autorisés), enabled (boolean), frequency (enum : IMMEDIATE, DIGEST, OFF).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Justifiez l'utilisation d'un système de préférences (NotificationPreference) plutôt qu'une simple table de notifications.",
+            "niveau": "medium",
+            "reponse": "Les préférences permettent aux utilisateurs de contrôler les notifications qu'ils reçoivent (opt-in/opt-out), de choisir leurs canaux préférés (ex: push vs email) et la fréquence. Cela améliore l'expérience utilisateur (UX) et réduit le bruit, tout en respectant les réglementations comme le RGPD. Cela évite aussi d'envoyer des notifications non souhaitées qui pourraient être considérées comme du spam."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Expliquez comment le système peut gérer l'envoi d'une notification via plusieurs canaux simultanément (in-app et push) selon les préférences.",
+            "niveau": "hard",
+            "reponse": "Le service de notification doit lire les préférences de l'utilisateur pour le type de notification concerné, puis itérer sur les canaux activés. Pour chaque canal, il instancie le service approprié (InAppService, FCMService, EmailService) et appelle sa méthode send(). La gestion des erreurs doit être prise en compte (un canal peut échouer, les autres doivent continuer). Un mécanisme de fallback peut être implémenté (ex: si push échoue, envoyer par email)."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Proposez un mécanisme pour assurer la délivrabilité des notifications en cas d'indisponibilité d'un service externe (ex: FCM) ou de coupure réseau.",
+        "niveau": "hard",
+        "reponse": "On peut implémenter une file d'attente persistante (Bull/Redis) avec des tentatives de ré-expédition (retry) avec backoff exponentiel. Les notifications échouées sont stockées avec un statut 'PENDING' et un scheduler Cron relance les tentatives. Un monitoring et des alertes doivent être configurés pour les échecs prolongés. On peut aussi journaliser les échecs pour analyse.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Comparez l'approche synchrone (appel direct du service de notification depuis le service métier) et l'approche asynchrone (émission d'un événement) pour envoyer des notifications. Quelle approche recommandez-vous et pourquoi ?",
+        "niveau": "medium",
+        "reponse": "L'approche synchrone est simple mais couple fortement les services et peut ralentir les opérations principales. L'approche asynchrone (basée sur des événements) est découplée, plus scalable et permet une meilleure résilience. Je recommande l'approche asynchrone pour un système comme Sawamart car elle évite que l'envoi de notification (pouvant être lent) ne bloque les requêtes principales (ex: passage d'une commande). De plus, elle permet d'ajouter facilement de nouveaux canaux ou traitements.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Mise en place des notifications de commande avec Firebase Cloud Messaging (FCM)",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous êtes développeur sur la plateforme Sawamart. Votre mission est d'implémenter le service de notification push <code>FCMService</code> pour envoyer des notifications aux vendeurs lorsqu'une nouvelle commande est passée pour l'un de leurs produits.</p><p>Vous disposez déjà des éléments suivants :</p><ul><li>Les entités <code>Order</code> et <code>User</code>.</li><li>Le fichier <code>.env</code> contenant <code>FCM_SERVER_KEY</code>.</li><li>Les dépendances <code>firebase-admin</code> et <code>@nestjs/axios</code>.</li><li>Les tokens FCM des utilisateurs sont stockés dans la table <code>User</code> (champ <code>fcmToken</code>).</li></ul><p>Un extrait du code que vous devez compléter est fourni ci-dessous :</p>",
+      "images": [
+        "Capture d'écran d'une partie du code : l'interface de FCMService avec une méthode sendNewOrderNotification(vendeurId: string, orderData: any) à implémenter. Le constructeur injecte ConfigService et HttpService."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Complétez la méthode <code>sendNewOrderNotification</code> dans le service <code>FCMService</code>. Elle doit récupérer le token FCM du vendeur, construire le payload de notification (titre et corps) avec les données de la commande, puis envoyer la notification via l'API FCM. Gérez les erreurs (token invalide, API FCM indisponible).",
+        "niveau": "hard",
+        "reponse": "Le code doit : 1) utiliser le repository User pour trouver l'utilisateur et son fcmToken, 2) si token absent, logger et return, 3) construire un payload { notification: { title, body }, data: { orderId, ... } }, 4) appeler l'API FCM avec le token et le payload via HttpService ou firebase-admin, 5) gérer les erreurs (catch) avec un log et une éventuelle mise à jour du token si invalide.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez comment le mécanisme de refresh token est généralement géré dans FCM et comment vous l'intégreriez dans cette méthode.",
+            "niveau": "medium",
+            "reponse": "Les tokens FCM peuvent expirer. Lorsque l'API FCM renvoie une erreur 'NotRegistered' ou 'InvalidRegistration', le système doit supprimer le token de la base de données pour éviter de futurs envois. Un mécanisme côté client doit aussi permettre de renouveler le token et de le mettre à jour via un endpoint dédié."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Proposez une stratégie pour tester unitairement le service <code>FCMService</code> en mockant l'appel à l'API FCM.",
+        "niveau": "medium",
+        "reponse": "Utiliser Jest pour créer un mock de HttpService ou de firebase-admin. On peut utiliser jest.spyOn pour remplacer la méthode send() par un mockReturnValue. Tester les cas : envoi réussi, token absent, erreur API (avec différents codes d'erreur pour vérifier la gestion).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Évaluez les risques de sécurité liés à l'utilisation de FCM dans une application e-commerce et proposez des mesures pour les atténuer.",
+        "niveau": "hard",
+        "reponse": "Risques : clé serveur FCM exposée, tokens FCM mal protégés (injection, fuite), envoi de messages malveillants (spoofing). Mesures : stocker la clé serveur uniquement dans les variables d'environnement, ne jamais la logger. Utiliser HTTPS pour toutes les communications. Valider les données avant envoi. Mettre en place un rate limiting sur les envois de notifications. Journaliser les envois pour audit.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Personnalisation des préférences de notification via API REST",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Pour améliorer l'expérience utilisateur sur Sawamart, vous devez créer des endpoints permettant aux utilisateurs de gérer leurs préférences de notification. Les préférences sont stockées dans l'entité <code>NotificationPreference</code>.</p><p>L'utilisateur doit pouvoir :</p><ul><li>Consulter toutes ses préférences.</li><li>Activer ou désactiver un type de notification.</li><li>Choisir les canaux (in-app, push, email) pour chaque type.</li></ul><p>Vous utiliserez les DTOs (Data Transfer Objects) <code>UpdatePreferenceDto</code> et la validation avec <code>class-validator</code>.</p>",
+      "images": [
+        "Schéma d'une requête PUT /users/me/preferences avec un corps JSON exemple : { type: 'ORDER_STATUS', enabled: true, channels: ['IN_APP', 'PUSH'] }."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevez l'endpoint <code>PUT /users/me/preferences</code> en détaillant les étapes : validation du DTO, vérification que l'utilisateur existe, mise à jour ou création de la préférence, et retour de la préférence mise à jour.",
+        "niveau": "medium",
+        "reponse": "Le contrôleur reçoit le DTO, appelle le service avec l'userId et le DTO. Le service : 1) vérifie que l'utilisateur existe, 2) recherche la préférence (findOne), 3) si existe, met à jour, sinon crée une nouvelle, 4) sauvegarde, 5) retourne la préférence. Utiliser le décorateur @Body() et @Put().",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Écrivez le DTO <code>UpdatePreferenceDto</code> avec les décorateurs de validation appropriés.",
+            "niveau": "medium",
+            "reponse": "DTO : export class UpdatePreferenceDto { @IsEnum(NotificationType) type: NotificationType; @IsBoolean() enabled: boolean; @IsArray() @IsEnum(ChannelType, { each: true }) channels: ChannelType[]; }. Utiliser class-validator avec IsEnum, IsBoolean, IsArray."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Proposez une solution pour gérer le cas où l'utilisateur n'a encore aucune préférence (première connexion ou migration).",
+            "niveau": "easy",
+            "reponse": "Lors de la première requête GET ou POST sur /preferences, si aucune préférence n'existe, le système crée automatiquement les préférences par défaut pour l'utilisateur (ex: tous les types activés sur IN_APP). Un seed ou une méthode du service peut gérer cela."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Assurez-vous que seuls les champs autorisés (type, enabled, channels) peuvent être modifiés via l'API. Expliquez comment éviter que des champs sensibles (ex: userId) ne soient mis à jour par l'utilisateur.",
+        "niveau": "medium",
+        "reponse": "Utiliser des DTOs et ne pas exposer directement l'entité. Dans le service, on utilise le DTO pour mettre à jour uniquement les champs autorisés avec une logique de mapping explicite (ex: preference.enabled = dto.enabled). Ne jamais utiliser Object.assign(preference, dto) car cela exposerait tous les champs. L'userId doit être récupéré depuis le token JWT (request.user) et non depuis le corps de la requête.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Notification d'événement métier et déclenchement de messages",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Sur la plateforme Sawamart, lorsqu'un litige est ouvert par un acheteur concernant une commande, une notification doit être envoyée :</p><ul><li>Au vendeur, pour l'informer du litige.</li><li>À l'administrateur, pour qu'il puisse intervenir.</li></ul><p>Cette notification doit être envoyée via les canaux préférés par chaque utilisateur (in-app, push).</p>",
+      "images": [
+        "Séquence illustrant l'ouverture d'un litige par un acheteur, déclenchant un événement 'dispute.opened' qui est écouté par NotificationService pour envoyer des notifications."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémentez la logique dans le <code>NotificationService</code> pour écouter l'événement <code>dispute.opened</code> et envoyer des notifications aux vendeurs et administrateurs concernés. Utilisez le <code>EventEmitter2</code> de NestJS.",
+        "niveau": "very hard",
+        "reponse": "Le service doit avoir une méthode décorée par @OnEvent('dispute.opened') qui reçoit les données du litige. Pour chaque destinataire (vendeur, admin), il appelle une méthode sendNotification() qui va : 1) déterminer le type de notification (DISPUTE_OPENED), 2) récupérer les préférences de l'utilisateur, 3) construire le message, 4) pour chaque canal activé, appeler le service correspondant (InAppService, FCMService, EmailService).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez comment vous éviteriez d'envoyer deux fois la même notification à un administrateur si plusieurs litiges sont ouverts en même temps.",
+            "niveau": "hard",
+            "reponse": "On peut implémenter un debounce ou un throttling, mais la meilleure approche est d'envoyer une notification par litige, car chaque litige est distinct et nécessite une action spécifique. Pour éviter le spam, on peut regrouper les notifications (digest) et les envoyer par email résumé. Le système de préférences permet aussi à l'admin de désactiver certains types."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Proposez une approche pour gérer les utilisateurs qui n'ont pas de préférences définies (fallback).",
+            "niveau": "medium",
+            "reponse": "Définir des préférences par défaut globales (dans la configuration ou un seed) : tous les types de notification activés sur le canal IN_APP par défaut. Dans le service, si aucune préférence n'est trouvée, utiliser ces valeurs par défaut pour envoyer la notification."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "La notification in-app (envoyée via <code>InAppService</code>) doit être stockée en base de données pour que l'utilisateur puisse la consulter sur son tableau de bord. Décrivez l'intégration entre <code>InAppService</code> et le repository <code>Notification</code>.",
+        "niveau": "medium",
+        "reponse": "InAppService a pour rôle de créer une nouvelle entité Notification (avec le type, le contenu, le destinataire, et le statut 'UNREAD') et de la sauvegarder via le repository. Le endpoint GET /users/me/notifications renverra toutes les notifications de l'utilisateur. InAppService peut aussi gérer le marquage comme lu via un endpoint PATCH /notifications/:id/read.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Sécurisation des notifications et protection des données personnelles",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Le système de notification de Sawamart manipule des données personnelles (noms, emails, numéros de téléphone) et des données sensibles (informations de commande). La conformité au RGPD (Règlement Général sur la Protection des Données) est essentielle.</p>",
+      "images": [
+        "Schéma illustrant les flux de données entre le serveur Sawamart et Firebase Cloud Messaging, avec des mentions 'Données personnelles' et 'Journalisation des accès'."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifiez trois risques majeurs de fuite ou d'utilisation abusive des données personnelles dans le système de notifications, et proposez des mesures préventives.",
+        "niveau": "hard",
+        "reponse": "Risques : 1) Exposition des tokens FCM : ils peuvent être utilisés pour envoyer des messages non autorisés. Mesure : protéger l'endpoint de mise à jour des tokens, utiliser HTTPS, ne jamais logger les tokens. 2) Données sensibles dans le payload des notifications : le titre et le corps peuvent contenir des infos comme 'Commande #123'. Mesure : anonymiser ou minimiser les données dans les notifications, éviter les PII (Personally Identifiable Information). 3) Journalisation des notifications : les logs peuvent contenir des données personnelles. Mesure : anonymiser les logs, ne pas logger les contenus sensibles, définir une politique de conservation.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Concevez la structure de l'endpoint <code>DELETE /users/me/notifications</code> permettant à un utilisateur de supprimer toutes ses notifications ou de se désabonner de tous les canaux (droit à l'oubli partiel).",
+        "niveau": "medium",
+        "reponse": "L'endpoint DELETE /users/me/notifications, sécurisé par JwtAuthGuard. Dans le service, on supprime toutes les notifications liées à l'utilisateur. On peut aussi ajouter un paramètre pour supprimer uniquement les notifications lues. Pour le désabonnement total, on peut mettre à jour toutes les préférences de l'utilisateur à disabled: true pour tous les types.",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Comment assurer que ce droit à l'oubli est bien appliqué et traçable ?",
+            "niveau": "medium",
+            "reponse": "Journaliser la demande de suppression (anonymement si possible), conserver une trace de l'action dans les logs d'audit pour prouver que le système a répondu à la demande de l'utilisateur, et documenter le processus."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation des performances des notifications avec cache",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans Sawamart, certaines notifications (ex: promotions, rappels) peuvent être envoyées à des milliers d'utilisateurs. Pour éviter de surcharger la base de données, vous décidez de mettre en cache les préférences de notification.</p><p>Vous utilisez <code>@nestjs/cache-manager</code> avec Redis comme store.</p>",
+      "images": [
+        "Schéma montrant le flux : 1) Request GET /users/me/preferences, 2) Vérification du cache Redis (clé 'pref:userId'), 3) Si cache hit, retour direct, 4) Si cache miss, requête à la base de données, stockage en cache avec TTL de 10 minutes, puis retour."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez comment implémenter le cache pour l'endpoint <code>GET /users/me/preferences</code> en utilisant <code>@CacheInterceptor</code> de NestJS.",
+        "niveau": "medium",
+        "reponse": "Importer CacheModule. Dans le contrôleur, utiliser @UseInterceptors(CacheInterceptor) sur la méthode GET. NestJS gère automatiquement le cache basé sur la requête (url + méthode + paramètres). Par défaut, il utilise le cache-manager. Configurer le TTL dans le module (CacheModule.register({ ttl: 600 })) ou via les variables d'environnement.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quel serait l'impact de l'utilisation de <code>@CacheInterceptor</code> sur la méthode <code>PUT /users/me/preferences</code> ? Comment gérer l'invalidation du cache lors d'une mise à jour ?",
+            "niveau": "hard",
+            "reponse": "@CacheInterceptor ne s'applique pas automatiquement aux méthodes PUT. Mais il faut invalider le cache après une mise à jour. On peut injecter le cache manager et appeler cache.del(`pref:${userId}`) après la mise à jour pour forcer la régénération du cache au prochain GET. Si l'intercepteur est utilisé sans précautions, la mise à jour pourrait ne pas être prise en compte immédiatement."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Évaluez la pertinence du cache pour les préférences de notification, en tenant compte du taux de modification et du nombre d'utilisateurs.",
+        "niveau": "medium",
+        "reponse": "Les préférences sont rarement modifiées par les utilisateurs (lecture intensive). Donc le cache est très pertinent pour réduire la charge sur la base de données. Un TTL de 10-15 minutes est raisonnable. En cas de modification, l'invalidation ponctuelle assure la cohérence des données.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

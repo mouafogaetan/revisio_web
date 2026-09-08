@@ -1,0 +1,108 @@
+[
+  {
+    "intitule": "Création de Graphiques de Séries Temporelles Interactifs",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous disposez d'un jeu de données contenant les ventes mensuelles d'une entreprise pour les trois dernières années. Vous souhaitez créer un graphique interactif avec <strong>Plotly</strong> pour visualiser l'évolution des ventes dans le temps.</p><p>Les données sont au format CSV avec les colonnes : <code>date</code> (YYYY-MM-DD), <code>ventes</code> (nombre d'unités vendues), <code>categorie</code> (A, B, C).</p>",
+      "images": [
+        "Graphique Plotly de séries temporelles avec plusieurs courbes (catégories A, B, C), des tooltips affichant les valeurs au survol, et la possibilité de zoomer sur une période"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire le code Python pour créer un graphique interactif de séries temporelles avec Plotly Express, montrant l'évolution des ventes pour chaque catégorie. Ajouter un titre, des labels d'axes, et personnaliser les couleurs.",
+        "niveau": "medium",
+        "reponse": "<p>Voici le code complet :</p><pre><code>import pandas as pd<br>import plotly.express as px<br><br># Charger les données<br>df = pd.read_csv('ventes_mensuelles.csv')<br>df['date'] = pd.to_datetime(df['date'])<br><br># Créer le graphique interactif<br>fig = px.line(<br>    df,<br>    x='date',<br>    y='ventes',<br>    color='categorie',<br>    title='Évolution des ventes mensuelles par catégorie (2022-2024)',<br>    labels={'date': 'Date', 'ventes': 'Nombre d\'unités vendues'},<br>    markers=True<br>)<br><br># Personnaliser le layout<br>fig.update_layout(<br>    hovermode='x unified',<br>    xaxis=dict(title='Période'),<br>    yaxis=dict(title='Ventes (unités)'),<br>    legend_title_text='Catégorie'<br>)<br><br>fig.show()</code></pre>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer l'utilité du paramètre <code>hovermode='x unified'</code> dans le graphique et comment il améliore l'interactivité.",
+            "niveau": "easy",
+            "reponse": "<p><code>hovermode='x unified'</code> permet d'afficher les tooltips de toutes les courbes simultanément pour une même abscisse (date). Cela facilite la comparaison des valeurs entre les catégories à un instant donné, car l'utilisateur peut voir toutes les informations dans un seul tooltip regroupé.</p><p>Les autres options sont :</p><ul><li><code>'closest'</code> : affiche le tooltip de la courbe la plus proche du curseur.</li><li><code>'y unified'</code> : regroupement par ordonnée.</li></ul>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse des Ventes avec Indicateurs",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous êtes analyste commercial dans une grande entreprise de distribution. Vous devez analyser les performances de vente sur les 12 derniers mois pour identifier les tendances et les anomalies.</p><p>Les données contiennent les ventes journalières pour chaque produit. Vous devez créer une visualisation interactive avec Plotly.</p>",
+      "images": [
+        "Graphique Plotly de séries temporelles avec une courbe des ventes, une moyenne mobile sur 7 jours en surbrillance, et des zones colorées indiquant les périodes de forte ou faible activité"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créer un graphique Plotly interactif avec : 1) une courbe des ventes journalières, 2) une moyenne mobile sur 7 jours, 3) des bandes de Bollinger (moyenne mobile ± 2 écarts-types). Annoter les périodes de pics et de creux.",
+        "niveau": "very hard",
+        "reponse": "<p>Voici le code pour créer la visualisation avancée :</p><pre><code>import pandas as pd<br>import plotly.graph_objects as go<br>import plotly.express as px<br><br># Charger et préparer les données<br>df = pd.read_csv('ventes_journalieres.csv')<br>df['date'] = pd.to_datetime(df['date'])<br><br># Calculer les indicateurs<br>df['moyenne_mobile_7j'] = df['ventes'].rolling(window=7).mean()<br>df['std_7j'] = df['ventes'].rolling(window=7).std()<br>df['bollinger_sup'] = df['moyenne_mobile_7j'] + 2 * df['std_7j']<br>df['bollinger_inf'] = df['moyenne_mobile_7j'] - 2 * df['std_7j']<br><br># Créer la figure<br>fig = go.Figure()<br><br># Ajouter les bandes de Bollinger<br>fig.add_trace(go.Scatter(<br>    x=df['date'], y=df['bollinger_sup'],<br>    name='Bollinger Supérieur',<br>    line=dict(color='rgba(0,150,0,0.3)'),<br>    fill=None<br>))<br>fig.add_trace(go.Scatter(<br>    x=df['date'], y=df['bollinger_inf'],<br>    name='Bollinger Inférieur',<br>    line=dict(color='rgba(0,150,0,0.3)'),<br>    fill='tonexty'<br>))<br><br># Ajouter la courbe des ventes<br>fig.add_trace(go.Scatter(<br>    x=df['date'], y=df['ventes'],<br>    name='Ventes journalières',<br>    line=dict(color='blue', width=1)<br>))<br><br># Ajouter la moyenne mobile<br>fig.add_trace(go.Scatter(<br>    x=df['date'], y=df['moyenne_mobile_7j'],<br>    name='Moyenne mobile 7 jours',<br>    line=dict(color='red', width=2)<br>))<br><br># Ajouter des annotations pour les pics<br>pics = df.loc[df['ventes'] > df['moyenne_mobile_7j'] + 2 * df['std_7j']]<br>for _, row in pics.iterrows():<br>    fig.add_annotation(<br>        x=row['date'], y=row['ventes'],<br>        text='Pic',<br>        showarrow=True,<br>        arrowhead=2<br>    )<br><br>fig.update_layout(<br>    title='Analyse des ventes - Indicateurs de tendance',<br>    xaxis_title='Date',<br>    yaxis_title='Ventes (unités)',<br>    hovermode='x unified'<br>)<br><br>fig.show()</code></pre>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer l'utilité de la moyenne mobile et des bandes de Bollinger dans l'analyse des séries temporelles.",
+            "niveau": "medium",
+            "reponse": "<p><strong>Moyenne mobile</strong> :</p><ul><li><strong>Objectif</strong> : Lisser les fluctuations courtes pour identifier la tendance de fond.</li><li><strong>Utilité</strong> : Révèle la direction générale des ventes (hausse, baisse, stagnation).</li></ul><p><strong>Bandes de Bollinger</strong> :</p><ul><li><strong>Objectif</strong> : Mesurer la volatilité autour de la moyenne mobile.</li><li><strong>Interprétation</strong> :</li><ul><li>Points en dehors des bandes indiquent une volatilité exceptionnelle (pics ou creux significatifs).</li><li>Resserrement des bandes peut indiquer une période de faible volatilité, souvent suivie d'un mouvement fort.</li></ul></ul>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Analyser les données et identifier deux périodes clés où des actions commerciales pourraient être nécessaires (ex: campagne marketing, ajustement des stocks).",
+            "niveau": "hard",
+            "reponse": "<p><strong>Analyse des périodes clés :</strong></p><p><strong>Période 1 : Pic de vente</strong><br>- Observation : Le graphique montre un pic de vente en décembre 2023, avec des ventes dépassant largement les bandes de Bollinger.<br>- Interprétation : Cette période correspond probablement aux fêtes de fin d'année.<br>- <strong>Action recommandée</strong> : Anticiper cette hausse saisonnière pour les prochaines années en augmentant les stocks et en lançant des campagnes marketing ciblées en novembre.</p><p><strong>Période 2 : Baisse prolongée</strong><br>- Observation : Une baisse des ventes est observée en juillet 2024, avec des ventes en dessous de la moyenne mobile et des bandes de Bollinger.<br>- Interprétation : Cette baisse pourrait être due à une saisonnalité (période estivale, congés).<br>- <strong>Action recommandée</strong> : Mettre en place des promotions estivales ou développer des offres spécifiques pour maintenir l'activité pendant cette période.</p>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Utilisation des Fonctions d'Interaction",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Les graphiques Plotly offrent de nombreuses fonctionnalités d'interaction qui améliorent l'exploration des données temporelles.</p><p>Décrivez les principales interactions disponibles et comment elles peuvent être utilisées pour analyser une série temporelle.</p>",
+      "images": [
+        "Graphique Plotly avec la barre d'outils d'interaction en haut à droite, montrant les options de zoom, de sélection de zone, de téléchargement de l'image, etc."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Énumérer et expliquer les principales fonctionnalités interactives disponibles dans un graphique Plotly (zoom, hover, sélection, etc.). Décrire comment elles facilitent l'analyse des données temporelles.",
+        "niveau": "easy",
+        "reponse": "<p><strong>Fonctionnalités interactives de Plotly :</strong></p><ul><li><strong>Zoom</strong> : Permet de se concentrer sur une période spécifique en cliquant-glissant ou en utilisant la molette.</li><li><strong>Pan</strong> : Permet de se déplacer le long de l'axe temporel pour explorer différentes périodes.</li><li><strong>Hover (survol)</strong> : Affiche les valeurs exactes en passant la souris sur les points, facilitant la lecture des données.</li><li><strong>Box Select</strong> : Permet de sélectionner une zone pour zoomer ou filtrer les données.</li><li><strong>Lasso Select</strong> : Sélection libre de points pour une analyse granulaire.</li><li><strong>Auto scale</strong> : Réinitialise la vue pour afficher toutes les données.</li><li><strong>Téléchargement</strong> : Exporte le graphique en PNG, SVG, ou en données CSV.</li></ul><p><strong>Utilité pour les séries temporelles :</strong></p><ul><li><strong>Zoom</strong> : Permet d'analyser des pics ou des creux spécifiques.</li><li><strong>Hover</strong> : Donne accès aux valeurs exactes sans avoir à lire le graphique approximativement.</li><li><strong>Sélection</strong> : Permet d'isoler des périodes pour une analyse comparative.</li></ul>"
+      }
+    ]
+  },
+  {
+    "intitule": "Création de Graphiques à Facettes",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous supervisez les performances de plusieurs magasins d'une chaîne de distribution. Chaque magasin a ses propres données de ventes.</p><p>Vous devez créer un graphique à facettes avec Plotly pour comparer l'évolution des ventes de chaque magasin sur une période donnée.</p>",
+      "images": [
+        "Grille de graphiques Plotly avec plusieurs sous-graphiques (facettes), chacun montrant la série temporelle d'un magasin différent, alignés verticalement pour faciliter la comparaison"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Utiliser Plotly Express pour créer un graphique à facettes avec la fonction <code>px.line()</code> et le paramètre <code>facet_row</code> ou <code>facet_col</code>, affichant les ventes des magasins. Personnaliser les titres et les axes pour une lecture optimale.",
+        "niveau": "hard",
+        "reponse": "<p>Voici le code pour créer les graphiques à facettes :</p><pre><code>import pandas as pd<br>import plotly.express as px<br><br># Données d'exemple (plusieurs magasins)<br>df = pd.read_csv('ventes_magasins.csv')<br><br># Créer un graphique à facettes par ligne (un magasin par ligne)<br>fig = px.line(<br>    df,<br>    x='date',<br>    y='ventes',<br>    color='magasin',<br>    facet_row='magasin',<br>    title='Évolution des ventes par magasin (2024)',<br>    labels={'date': 'Période', 'ventes': 'Ventes (unités)'}<br>)<br><br># Personnaliser la mise en page<br>fig.update_yaxes(matches=None)  # Permet des échelles différentes par ligne<br>fig.update_layout(height=800, showlegend=False)<br><br># Ajouter des annotations pour chaque sous-graphique<br>for i, magasin in enumerate(df['magasin'].unique()):<br>    fig.add_annotation(<br>        x=0.5, y=0.95 - i * 0.32,<br>        text=f'Magasin {magasin}',<br>        xref='paper', yref='paper',<br>        showarrow=False,<br>        font=dict(size=12, color='black')<br>    )<br><br>fig.show()</code></pre>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comparer l'utilisation de <code>facet_row</code> par rapport à <code>facet_col</code> pour ce type de visualisation. Expliquer dans quels cas chaque approche est préférable.",
+            "niveau": "medium",
+            "reponse": "<p><strong>facet_row</strong> :</p><ul><li><strong>Avantage</strong> : Facilite la comparaison verticale des tendances, car les graphiques sont empilés.</li><li><strong>Cas d'usage</strong> : Idéal lorsque les magasins ont des échelles de vente très différentes, car chaque graphique peut avoir son propre axe Y.</li></ul><p><strong>facet_col</strong> :</p><ul><li><strong>Avantage</strong> : Permet une comparaison horizontale côte à côte, mais les axes Y sont généralement partagés.</li><li><strong>Cas d'usage</strong> : Préférable lorsque les échelles sont comparables et que l'on veut comparer directement les niveaux de vente.</li></ul><p><strong>Recommandation</strong> : Utiliser <code>facet_row</code> lorsque les échelles sont très différentes pour éviter des lectures erronées de tendances.</p>"
+          }
+        ]
+      }
+    ]
+  }
+]

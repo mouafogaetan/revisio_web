@@ -1,0 +1,152 @@
+[
+  {
+    "intitule": "VM vs Conteneur : Choisir la bonne isolation",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous êtes consultant cloud pour une startup camerounaise. L’équipe doit déployer une application composée de 3 microservices (authentification, API métier, base de données MongoDB). Chaque microservice a des versions différentes de Python (3.9, 3.11) et utilise des bibliothèques spécifiques. Le budget est limité et l’équipe souhaite maximiser le nombre d’instances par serveur. Deux solutions sont envisagées : des <strong>machines virtuelles</strong> (une par service) ou des <strong>conteneurs Docker</strong>.</p>",
+      "images": [
+        "Comparaison schématique entre architecture conteneurisée et virtualisation complète avec hyperviseur"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer la différence fondamentale entre une VM et un conteneur au niveau de l’isolation et du partage du système d’exploitation.",
+        "niveau": "medium",
+        "reponse": "Une VM virtualise du matériel complet (CPU, mémoire, disque) et exécute un OS invité complet (Linux, Windows) avec son propre noyau. Un conteneur partage le noyau de l’OS hôte et isole seulement les processus, le réseau et le système de fichiers via des espaces de noms (namespaces) et cgroups. Le conteneur n’embarque pas d’OS complet, seulement son application et ses dépendances.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Justifier pourquoi, dans le contexte décrit, les conteneurs Docker sont plus adaptés que les VMs.",
+        "niveau": "medium",
+        "reponse": "Les conteneurs consomment moins de RAM et de stockage (pas d’OS invité), démarrent en millisecondes, et permettent d’exécuter plusieurs services sur un même serveur sans conflits de dépendances (Python 3.9 et 3.11 peuvent coexister). Avec des VMs, chaque service aurait besoin d’un OS complet (plusieurs Go) et d’une allocation fixe de ressources, limitant fortement le nombre d’instances par serveur.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Identifier un inconvénient majeur des conteneurs par rapport aux VMs en termes de sécurité, et proposer une solution.",
+        "niveau": "hard",
+        "reponse": "Les conteneurs partagent le même noyau hôte : une faille de sécurité dans le noyau ou une évasion de conteneur (container breakout) peut compromettre tous les conteneurs et l’hôte. Solution : utiliser des conteneurs racine (rootless), des runtime sécurisés (gVisor, Kata Containers) ou isoler les conteneurs critiques dans des VMs séparées (approche VM-per-container).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Dockerfile et construction d’image",
+    "type": "competence",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Une équipe développe une API simple en Python avec Flask. Voici le contenu de l’application (<code>app.py</code>) :</p>\n<pre><code>from flask import Flask\napp = Flask(__name__)\n\n@app.route('/')\ndef hello():\n    return \"Bonjour Cameroun !\"\n\nif __name__ == '__main__':\n    app.run(host='0.0.0.0', port=5000)\n</code></pre>\n<p>Vous devez écrire un <code>Dockerfile</code> pour empaqueter cette application.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire le Dockerfile complet en respectant les bonnes pratiques (image de base Python 3.11-slim, copie des fichiers, installation des dépendances, exposition du port, commande de démarrage).",
+        "niveau": "easy",
+        "reponse": "```Dockerfile\nFROM python:3.11-slim\nWORKDIR /app\nCOPY requirements.txt .\nRUN pip install --no-cache-dir -r requirements.txt\nCOPY app.py .\nEXPOSE 5000\nCMD [\"python\", \"app.py\"]\n```\nAvec `requirements.txt` contenant `flask`.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer le rôle de `COPY requirements.txt .` avant `COPY app.py`.",
+            "niveau": "medium",
+            "reponse": "Optimiser le cache de Docker : tant que `requirements.txt` ne change pas, Docker réutilise la couche d’installation des dépendances, accélérant les reconstructions. Si on copiait tout d’un coup, toute modification dans `app.py` invaliderait le cache et réinstallerait les dépendances inutilement."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Donner les commandes Docker pour : (a) construire l’image avec le tag `monapi:1.0`, (b) lancer un conteneur nommé `api-test` sur le port 8080 de l’hôte.",
+        "niveau": "easy",
+        "reponse": "(a) `docker build -t monapi:1.0 .`\n(b) `docker run -d --name api-test -p 8080:5000 monapi:1.0`",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Docker Compose : Application multi-conteneurs",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous devez déployer une application web avec trois services :<br>\n- <strong>frontend</strong> (image nginx:alpine, port 80)<br>\n- <strong>backend</strong> (image personnalisée backend:latest, port 5000)<br>\n- <strong>database</strong> (image postgres:15, avec variables d’environnement POSTGRES_PASSWORD, POSTGRES_DB).<br>\nLe backend doit communiquer avec la base de données sur le nom de service <code>database</code> (port 5432).</p>",
+      "images": [
+        "Diagramme d’architecture Docker Compose avec trois services interconnectés"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire un fichier <code>docker-compose.yml</code> complet pour cette application.",
+        "niveau": "medium",
+        "reponse": "```yaml\nversion: '3.8'\nservices:\n  frontend:\n    image: nginx:alpine\n    ports:\n      - \"80:80\"\n  backend:\n    image: backend:latest\n    ports:\n      - \"5000:5000\"\n    environment:\n      - DATABASE_URL=postgresql://postgres:secret@database:5432/mydb\n    depends_on:\n      - database\n  database:\n    image: postgres:15\n    environment:\n      POSTGRES_PASSWORD: secret\n      POSTGRES_DB: mydb\n    volumes:\n      - pgdata:/var/lib/postgresql/data\nvolumes:\n  pgdata:\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer le rôle du champ `depends_on` et sa limite principale.",
+            "niveau": "medium",
+            "reponse": "`depends_on` contrôle l’ordre de démarrage des conteneurs (database avant backend). Mais il ne vérifie pas que la base est *prête* à accepter les connexions (seulement que le conteneur est démarré). Pour la santé réelle, il faut utiliser `healthcheck` et `condition: service_healthy`."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer une commande pour lancer tous les services en arrière-plan, puis visualiser les logs du backend uniquement.",
+        "niveau": "easy",
+        "reponse": "Lancement : `docker-compose up -d`\nLogs backend : `docker-compose logs backend`\n(ou `docker logs <nom_conteneur_backend>` en mode classique)",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation d’un Dockerfile pour production",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Un développeur a écrit ce Dockerfile pour une application Node.js :</p>\n<pre><code>FROM node:18\nWORKDIR /app\nCOPY . .\nRUN npm install\nEXPOSE 3000\nCMD [\"node\", \"server.js\"]\n</code></pre>\n<p>L’image finale pèse 950 Mo et le build est lent.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier trois problèmes majeurs dans ce Dockerfile et proposer des corrections concrètes.",
+        "niveau": "hard",
+        "reponse": "1. **Image de base trop lourde** : `node:18` (environ 900 Mo) → utiliser `node:18-alpine` (~170 Mo).\n2. **Cache inefficace** : `COPY . .` avant `RUN npm install` invalide le cache à chaque changement de code source. Correction : copier d’abord `package.json` et `package-lock.json`, puis exécuter `npm install`, enfin copier le reste.\n3. **Fichiers inutiles** : inclusion des sources, tests, `.git` dans l’image. Correction : utiliser un `.dockerignore` (node_modules, .git, logs, tests).\n4. **Absence d’utilisateur non-root** : sécurité. Ajouter `USER node` après l’installation.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Réécrire le Dockerfile optimisé en respectant les bonnes pratiques (multi-stage build si pertinent).",
+        "niveau": "hard",
+        "reponse": "```Dockerfile\nFROM node:18-alpine AS builder\nWORKDIR /app\nCOPY package*.json ./\nRUN npm ci --only=production\n\nFROM node:18-alpine\nWORKDIR /app\nCOPY --from=builder /app/node_modules ./node_modules\nCOPY . .\nUSER node\nEXPOSE 3000\nCMD [\"node\", \"server.js\"]\n```\nAvec `.dockerignore` : `node_modules/`, `.git/`, `Dockerfile`, `*.log`",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Diagnostic et dépannage d’un conteneur défaillant",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Un stagiaire lance la commande <code>docker run -d -p 8080:80 --name web nginx</code>. Le conteneur semble fonctionner mais l’application <code>http://localhost:8080</code> est inaccessible. Il vous demande de l’aide.</p><p>Après investigation, vous constatez :</p><ul><li><code>docker ps</code> affiche le conteneur avec le port <code>0.0.0.0:8080->80/tcp</code></li><li><code>docker logs web</code> ne montre aucune erreur</li><li><code>curl localhost:8080</code> depuis l’hôte échoue (connexion refusée)</li><li><code>docker exec web curl localhost:80</code> retourne la page HTML d’accueil nginx</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Déterminer la cause probable du problème et proposer une solution.",
+        "niveau": "hard",
+        "reponse": "Cause probable : un pare-feu local (iptables, firewalld, UFW, ou sur Windows/macOS un proxy ou une règle) bloque le port 8080 sur l’interface loopback ou publique. Le fait que `docker exec` réussisse prouve que nginx tourne bien. Le port est bien publié (0.0.0.0:8080).\nSolution : \n- Vérifier les règles de pare-feu : `sudo ufw status` (si UFW) et autoriser 8080 `sudo ufw allow 8080`.\n- Vérifier que le démon Docker n’est pas en mode userland-proxy désactivé (rare).\n- Sur Linux, tester `curl 127.0.0.1:8080` vs `curl $(ip route get 1 | awk '{print $NF;exit}'):8080`.\n- Redémarrer Docker : `sudo systemctl restart docker`.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quelle commande permet de vérifier que Docker a bien créé la règle de redirection iptables ?",
+            "niveau": "hard",
+            "reponse": "`sudo iptables -t nat -L -n | grep 8080` ou `sudo iptables -t nat -L DOCKER -n`. On doit voir une règle redirigeant le port 8080 vers l’adresse IP du conteneur."
+          }
+        ]
+      }
+    ]
+  }
+]

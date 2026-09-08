@@ -7,6 +7,7 @@ import { Loader2, ArrowLeft, ChevronLeft, ChevronRight, RefreshCw, VolumeX, Play
 import { API_URL } from '@/constants'
 import { MathJaxContent } from '@/components/common/MathJaxContent'
 import { FullScreenAdModal } from '@/components/common/FullScreenAdModal'
+import { NotFoundScreen } from './NotFoundScreen'
 
 interface SlideData {
   titre: string
@@ -33,6 +34,7 @@ export const CoursDocScreen: React.FC = () => {
   const [isPaused, setIsPaused] = useState(false)
   const [isSpeechSupported, setIsSpeechSupported] = useState(true)
   const [routeLoading, setRouteLoading] = useState(true)
+  const [notFound, setNotFound] = useState(false)
   const contentRef = useRef<HTMLDivElement>(null)
   const speechSynthRef = useRef<SpeechSynthesis | null>(null)
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null)
@@ -47,20 +49,41 @@ export const CoursDocScreen: React.FC = () => {
   useEffect(() => {
     if (!classeId || !matiereId || !chapitreId) return
 
-    loadRouteData(classeId, matiereId, chapitreId).finally(() => setRouteLoading(false))
-  }, [classeId, matiereId, chapitreId, loadRouteData])
+    loadRouteData(classeId, matiereId, chapitreId)
+      .then(() => {
+        // Vérifier si les données existent après chargement
+        const updatedClasse = useAppStore.getState().classes.find(c => c.classeId === classeId)
+        const updatedMatiere = updatedClasse?.matieres.find(m => m.matiereId === matiereId)
+        const updatedChapitre = updatedMatiere?.chapitres.find(c => c.chapitreId === chapitreId)
+        const updatedLesson = updatedChapitre?.lessons.find(l => l.lessonId === lessonId)
+        
+        if (!updatedLesson) {
+          setNotFound(true)
+        }
+        setRouteLoading(false)
+      })
+      .catch(() => {
+        setNotFound(true)
+        setRouteLoading(false)
+      })
+  }, [classeId, matiereId, chapitreId, lessonId, loadRouteData])
 
   useMeta({
-    title: currentSlide?.titre
-      ? `${currentSlide.titre} — ${lesson?.lessonName || ''} | Revisio`
-      : `${lesson?.lessonName || 'Cours'} | Revisio`,
-    description: (() => {
-      const raw = (currentSlide?.contenu || lesson?.lessonName || '').replace(/<[^>]*>/g, '')
-      return raw.substring(0, 160)
-    })(),
+    title: notFound 
+      ? 'Page non trouvée | Revisio' 
+      : currentSlide?.titre
+        ? `${currentSlide.titre} — ${lesson?.lessonName || ''} | Revisio`
+        : `${lesson?.lessonName || 'Cours'} | Revisio`,
+    description: notFound
+      ? 'Le contenu demandé n\'existe pas.'
+      : (() => {
+          const raw = (currentSlide?.contenu || lesson?.lessonName || '').replace(/<[^>]*>/g, '')
+          return raw.substring(0, 160)
+        })(),
     url: typeof window !== 'undefined' ? window.location.href : undefined,
     image: 'https://revisio-web.vercel.app/icon-512.png',
-    type: 'article'
+    type: 'article',
+    noindex: notFound // Ajout de noindex si 404
   })
 
   // Vérifier la synthèse vocale
@@ -86,13 +109,24 @@ export const CoursDocScreen: React.FC = () => {
 
   useEffect(() => {
     const loadSlides = async () => {
-      if (!classeId || !matiereId || !chapitreId || !lessonId) return
+      if (!classeId || !matiereId || !chapitreId || !lessonId || notFound) return
 
       try {
         setLoading(true)
         setError(null)
         const url = `${API_URL}/data/${classeId}/${matiereId}/${chapitreId}/cours/${lessonId}.html`
         const response = await fetch(url)
+        
+        // Vérifier si le fichier existe
+        if (!response.ok) {
+          if (response.status === 404) {
+            setNotFound(true)
+            setLoading(false)
+            return
+          }
+          throw new Error(`Erreur HTTP: ${response.status}`)
+        }
+        
         const html = await response.text()
         
         const extractedSlides = extractSlidesFromHTML(html)
@@ -115,7 +149,7 @@ export const CoursDocScreen: React.FC = () => {
       }
     }
     loadSlides()
-  }, [classeId, matiereId, chapitreId, lessonId])
+  }, [classeId, matiereId, chapitreId, lessonId, notFound])
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -300,6 +334,10 @@ export const CoursDocScreen: React.FC = () => {
         contentRef.current.scrollTop = 0
       }
     }
+  }
+
+  if (notFound) {
+    return <NotFoundScreen message="Le cours demandé n'existe pas ou a été déplacé." redirectTo="/" delay={5000} />
   }
 
   if (routeLoading || loading) {

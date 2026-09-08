@@ -1,0 +1,162 @@
+[
+  {
+    "intitule": "Tests d'interaction utilisateur avec React Testing Library",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous devez tester un composant <code>AddToCartButton</code> qui appelle une mutation lorsqu'on clique dessus. Le composant affiche un spinner pendant le chargement et un message de succès.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rappelez la commande d'installation de React Testing Library et de Vitest dans un projet Vite.",
+        "niveau": "easy",
+        "reponse": "npm install --save-dev vitest @testing-library/react @testing-library/jest-dom @vitejs/plugin-react",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrivez un test qui vérifie que le composant affiche bien le spinner lorsque la mutation est en cours (loading state). Utilisez `waitFor` si nécessaire.",
+        "niveau": "hard",
+        "reponse": "```jsx\nimport { render, screen } from '@testing-library/react';\nimport AddToCartButton from './AddToCartButton';\nimport { useAddToCart } from '../hooks/useAddToCart';\n\njest.mock('../hooks/useAddToCart');\n\ntest('affiche un spinner pendant le chargement', () => {\n  useAddToCart.mockReturnValue({ mutate: jest.fn(), isLoading: true });\n  render(<AddToCartButton productId={1} />);\n  expect(screen.getByRole('status')).toBeInTheDocument();\n  expect(screen.getByText(/ajout en cours/i)).toBeInTheDocument();\n});\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquez pourquoi il est important de nettoyer le DOM après chaque test (cleanup) et comment React Testing Library le fait automatiquement.",
+        "niveau": "medium",
+        "reponse": "Le nettoyage évite que les tests ne s'influencent mutuellement (effets de bord). React Testing Library intègre un `cleanup` automatique via `afterEach` grâce à `@testing-library/react`. Si on utilise Vitest, on peut aussi appeler `cleanup` manuellement dans `afterEach`.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Mock des appels API avec MSW (Mock Service Worker)",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Pour tester le flux complet d'ajout au panier, vous devez simuler les réponses du backend sans faire de vrais appels réseau. Utilisez MSW pour intercepter les requêtes.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Installez et configurez MSW dans un projet React. Écrivez le fichier `src/mocks/handlers.js` qui intercepte `POST /api/cart` et retourne une réponse simulée.",
+        "niveau": "hard",
+        "reponse": "```js\n// src/mocks/handlers.js\nimport { http, HttpResponse } from 'msw';\n\nexport const handlers = [\n  http.post('/api/cart', async ({ request }) => {\n    const body = await request.json();\n    return HttpResponse.json({ success: true, cart: { id: 1, items: [body] } });\n  }),\n];\n```\nPuis dans `src/mocks/browser.js` :\n```js\nimport { setupWorker } from 'msw/browser';\nimport { handlers } from './handlers';\nexport const worker = setupWorker(...handlers);\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez comment intégrer MSW dans les tests unitaires (Vitest) et non pas seulement dans le développement. Quelle configuration est nécessaire ?",
+        "niveau": "very hard",
+        "reponse": "Dans les tests, on utilise `setupServer` de 'msw/node' au lieu de `setupWorker`. On démarre le serveur avant tous les tests (`beforeAll`), on le réinitialise après chaque test (`afterEach`), et on l'arrête après tous les tests (`afterAll`). Cela permet de mock les appels API sans serveur réel.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Créez un test qui simule une erreur réseau (status 500) lors de l'ajout au panier et vérifie que le composant affiche une erreur.",
+        "niveau": "very hard",
+        "reponse": "```jsx\nimport { http, HttpResponse } from 'msw';\nimport { server } from '../mocks/server';\n\ntest('affiche une erreur si l’API renvoie 500', async () => {\n  server.use(\n    http.post('/api/cart', () => {\n      return new HttpResponse(null, { status: 500 });\n    })\n  );\n  render(<AddToCartButton productId={1} />);\n  fireEvent.click(screen.getByRole('button'));\n  expect(await screen.findByText(/erreur serveur/i)).toBeInTheDocument();\n});\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Test du flux complet authentification → panier → commande",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous devez tester un parcours utilisateur complet : connexion, ajout d'un produit au panier, validation de commande. Utilisez React Testing Library et MSW pour simuler les appels API.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez comment organiser un test qui simule la connexion d'un utilisateur en remplissant le formulaire de login, en mockant la réponse d'authentification, et en vérifiant la redirection.",
+        "niveau": "hard",
+        "reponse": "On utilise `userEvent` pour remplir les champs email/password, puis on clique sur le bouton. MSW intercepte `POST /api/login` et retourne un token. On attend que la redirection se fasse (ex: `waitFor` avec `mockNavigate` ou vérification d'un texte de bienvenue).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposez un test qui enchaîne les actions : connexion → ajout au panier → ouverture du panier → validation. Expliquez comment gérer les dépendances asynchrones.",
+        "niveau": "very hard",
+        "reponse": "Chaque étape doit être `await` via `userEvent` et `findBy*`. Exemple : \n1. `await user.type(screen.getByLabelText(/email/i), 'test@example.com')`\n2. `await user.click(screen.getByRole('button', { name: /se connecter/i }))`\n3. `await screen.findByText(/bienvenue/i)`\n4. `await user.click(screen.getByTestId('add-to-cart'))`\n5. `await screen.findByText(/panier \\(1\\)/i)`\nOn utilise MSW pour chaque endpoint appelé.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Quels sont les avantages et limites de tester ce flux complet en environnement de test (JSDOM) plutôt que dans un vrai navigateur ?",
+        "niveau": "medium",
+        "reponse": "Avantages : rapidité d'exécution, pas de dépendance à un navigateur réel, facile à intégrer en CI. Limites : JSDOM ne supporte pas certaines API (layout, localStorage partiel), ne teste pas les vrais comportements réseau ni le rendu pixel-perfect. Pour les tests critiques (paiement), on préfère Playwright (e2e).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Tests unitaires de hooks personnalisés avec renderHook",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous avez un hook personnalisé <code>useDebounce</code> qui retarde la mise à jour d'une valeur. Vous devez tester son comportement.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Quelle fonction de React Testing Library permet de tester un hook personnalisé en dehors d'un composant ?",
+        "niveau": "medium",
+        "reponse": "`renderHook` de '@testing-library/react' permet d'exécuter un hook dans un composant test et d'inspecter sa valeur retournée. On peut ensuite déclencher des actions (rerender, unmount) et vérifier les résultats.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrivez un test pour `useDebounce` qui vérifie que la valeur debounced est mise à jour après le délai spécifié (ex: 300ms). Utilisez `act` et `jest.useFakeTimers`.",
+        "niveau": "very hard",
+        "reponse": "```jsx\nimport { renderHook, act } from '@testing-library/react';\nimport useDebounce from './useDebounce';\n\ntest('retarde la mise à jour de la valeur', () => {\n  jest.useFakeTimers();\n  const { result, rerender } = renderHook(({ value, delay }) => useDebounce(value, delay), {\n    initialProps: { value: 'a', delay: 300 }\n  });\n  expect(result.current).toBe('a');\n  rerender({ value: 'b', delay: 300 });\n  act(() => { jest.advanceTimersByTime(200); });\n  expect(result.current).toBe('a');\n  act(() => { jest.advanceTimersByTime(100); });\n  expect(result.current).toBe('b');\n  jest.useRealTimers();\n});\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquez pourquoi il est important de nettoyer les timers après chaque test.",
+        "niveau": "easy",
+        "reponse": "Les timers fictifs persistent entre les tests et peuvent causer des comportements inattendus ou des fuites mémoire. Il faut les restaurer avec `jest.useRealTimers()` ou utiliser `jest.clearAllTimers()` dans `afterEach`.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Tests d'accessibilité avec axe-core et React Testing Library",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Dans un souci d'inclusion, vous devez tester l'accessibilité de vos composants (ex: <code>ProductCard</code>) à l'aide de la bibliothèque <code>jest-axe</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Installez et configurez jest-axe dans un projet Vitest. Écrivez un test qui vérifie qu'un composant <code>ProductCard</code> n'a pas de violations d'accessibilité.",
+        "niveau": "hard",
+        "reponse": "```jsx\nimport { render } from '@testing-library/react';\nimport { axe, toHaveNoViolations } from 'jest-axe';\nimport ProductCard from './ProductCard';\n\nexpect.extend(toHaveNoViolations);\n\ntest('ProductCard doit être accessible', async () => {\n  const { container } = render(<ProductCard product={mockProduct} />);\n  const results = await axe(container);\n  expect(results).toHaveNoViolations();\n});\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez deux violations d'accessibilité fréquentes dans une application e-commerce et comment les corriger.",
+        "niveau": "medium",
+        "reponse": "1. Images sans `alt` : ajouter `alt` descriptif (ex: `alt=\"Photo du produit X\"`). 2. Boutons sans nom accessible : utiliser `aria-label` sur les boutons icônes (ex: `<button aria-label=\"Ajouter au panier\">🛒</button>`).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Comment intégrer ces tests d'accessibilité dans une pipeline CI (GitHub Actions) ?",
+        "niveau": "medium",
+        "reponse": "On exécute les tests Vitest (incluant axe) dans le workflow CI. Si une violation est détectée, le test échoue et bloque le déploiement. On peut également utiliser Lighthouse CI pour des tests e2e.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

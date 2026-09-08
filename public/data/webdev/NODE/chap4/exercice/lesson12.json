@@ -1,0 +1,106 @@
+[
+  {
+    "intitule": "Manipulation des paramètres de requête avec Express",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous développez une API REST avec Express. Un client envoie une requête GET à l’URL : <code>/users/42?includePosts=true&limit=10</code>.</p><p>Dans le gestionnaire de route, vous utilisez <code>req.params</code> et <code>req.query</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier la valeur de req.params et de req.query dans cet exemple.",
+        "niveau": "easy",
+        "reponse": "req.params = { id: '42' } ; req.query = { includePosts: 'true', limit: '10' }",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer la différence entre les paramètres de route et les paramètres query string.",
+        "niveau": "medium",
+        "reponse": "Les paramètres de route (req.params) font partie du chemin de l'URL et sont obligatoires pour identifier une ressource spécifique. Les query strings (req.query) sont optionnels, servent à filtrer, paginer ou modifier la réponse sans changer la ressource ciblée.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Organisation des routes avec express.Router()",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous devez structurer une API pour une boutique en ligne. Les fonctionnalités concernent :<br>- La gestion des produits (listage, ajout, modification, suppression)<br>- La gestion des commandes (création, annulation, consultation)</p><p>Écrire le code Express qui utilise <code>express.Router()</code> pour séparer ces deux groupes de routes.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créer deux routeurs séparés (productsRouter et ordersRouter) et les monter sur l’application principale aux préfixes respectifs /products et /orders.",
+        "niveau": "medium",
+        "reponse": "const express = require('express');\nconst app = express();\nconst productsRouter = express.Router();\nconst ordersRouter = express.Router();\n\nproductsRouter.get('/', (req, res) => { res.send('Liste des produits'); });\nproductsRouter.post('/', (req, res) => { res.send('Produit créé'); });\nordersRouter.post('/', (req, res) => { res.send('Commande créée'); });\n\napp.use('/products', productsRouter);\napp.use('/orders', ordersRouter);",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Création d’une route paramétrée et lecture de query string",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>On souhaite créer une route GET <code>/articles/:id/comments</code> qui retourne les commentaires d’un article identifié par son id, avec la possibilité de paginer : <code>?page=2&limit=5</code>.</p><p>Implémenter la route en utilisant <code>req.params</code> et <code>req.query</code>. Les données des commentaires seront simulées dans un tableau JavaScript.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire le code du gestionnaire de route qui : récupère l’id de l’article, extrait page et limit (avec valeurs par défaut page=1, limit=10), calcule les indices de début et fin, puis retourne la tranche des commentaires de cet article.",
+        "niveau": "hard",
+        "reponse": "app.get('/articles/:id/comments', (req, res) => {\n  const articleId = req.params.id;\n  let page = parseInt(req.query.page) || 1;\n  let limit = parseInt(req.query.limit) || 10;\n  const startIndex = (page - 1) * limit;\n  const endIndex = page * limit;\n\n  // Simulation des commentaires pour l'article\n  const allComments = [\n    { id: 1, text: 'Super article', articleId: '123' },\n    { id: 2, text: 'Merci pour l\\'info', articleId: '123' }\n  ];\n\n  const commentsForArticle = allComments.filter(c => c.articleId === articleId);\n  const paginatedComments = commentsForArticle.slice(startIndex, endIndex);\n\n  res.json({\n    page,\n    limit,\n    total: commentsForArticle.length,\n    data: paginatedComments\n  });\n});",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Critique d’une architecture de routes",
+    "type": "ressource",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Un développeur a écrit le code suivant dans un fichier <code>app.js</code> :</p><pre><code>app.get('/user/profile', getUserProfile);\napp.post('/user/profile', updateUserProfile);\napp.get('/product/list', listProducts);\napp.post('/product/create', createProduct);</code></pre><p>Il souhaite maintenant ajouter une route GET /admin/stats et une route DELETE /product/:id.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analyser les problèmes de cette organisation en termes de maintenabilité et de lisibilité.",
+        "niveau": "very hard",
+        "reponse": "Toutes les routes sont définies directement sur app, sans regroupement par ressource. L'absence d'express.Router() rend le fichier principal rapidement encombré. Les préfixes (/user, /product) ne sont pas factorisés, ce qui entraîne des répétitions. Aucune séparation logique n’existe, ce qui complique l’ajout de middlewares spécifiques à un groupe de routes.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposer une refactorisation avec express.Router() en respectant les bonnes pratiques.",
+            "niveau": "very hard",
+            "reponse": "Créer un routeur userRouter et productRouter :\nconst userRouter = express.Router();\nuserRouter.get('/profile', getUserProfile);\nuserRouter.post('/profile', updateUserProfile);\napp.use('/user', userRouter);\n\nconst productRouter = express.Router();\nproductRouter.get('/list', listProducts);\nproductRouter.post('/create', createProduct);\nproductRouter.delete('/:id', deleteProduct);\napp.use('/product', productRouter);\n\nconst adminRouter = express.Router();\nadminRouter.get('/stats', getAdminStats);\napp.use('/admin', adminRouter);"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Débogage d’une route paramétrée",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Voici une route Express censée retourner un utilisateur selon son ID :</p><pre><code>app.get('/users/:userId', (req, res) => {\n  const userId = req.query.userId;\n  const user = users.find(u => u.id == userId);\n  res.json(user);\n});</code></pre><p>Les requêtes <code>GET /users/5</code> échouent toujours et renvoient null.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Détecter l’erreur dans le code et la corriger.",
+        "niveau": "hard",
+        "reponse": "L’erreur est l’utilisation de req.query.userId au lieu de req.params.userId. req.query contient les paramètres de la chaîne de requête (?key=value), alors que userId est un paramètre de route. Correction : const userId = req.params.userId;",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

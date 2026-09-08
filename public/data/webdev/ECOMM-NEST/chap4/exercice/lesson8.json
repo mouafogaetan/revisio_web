@@ -1,0 +1,148 @@
+[
+  {
+    "intitule": "Création des entités Product et ProductImage",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous devez créer les entités TypeORM pour la gestion des produits et de leurs images. L'entité <code>Product</code> doit contenir les champs suivants :</p><ul><li><code>id</code> : UUID, clé primaire</li><li><code>name</code> : chaîne de caractères, obligatoire</li><li><code>description</code> : texte long, optionnel</li><li><code>price</code> : nombre décimal, obligatoire</li><li><code>stock</code> : nombre entier, obligatoire (valeur par défaut : 0)</li><li><code>isActive</code> : booléen (valeur par défaut : true)</li><li><code>sellerId</code> : UUID, clé étrangère vers l'utilisateur (vendeur)</li><li><code>categoryId</code> : UUID, clé étrangère vers la catégorie</li><li><code>createdAt</code> et <code>updatedAt</code> : timestamps automatiques</li></ul><p>L'entité <code>ProductImage</code> doit contenir :</p><ul><li><code>id</code> : UUID, clé primaire</li><li><code>url</code> : chaîne de caractères, obligatoire</li><li><code>isMain</code> : booléen (indique si c'est l'image principale)</li><li><code>productId</code> : UUID, clé étrangère vers le produit</li></ul><p>Établissez les relations appropriées entre les entités (OneToMany, ManyToOne).</p>",
+      "images": [
+        "Diagramme de classes UML montrant les entités Product et ProductImage avec leurs attributs et leurs relations"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédigez le code TypeScript des entités Product et ProductImage en utilisant les décorateurs TypeORM. Identifiez et justifiez le choix des types de colonnes utilisés.",
+        "niveau": "easy",
+        "reponse": "```typescript\n// product.entity.ts\nimport { Entity, Column, PrimaryGeneratedColumn, ManyToOne, OneToMany, CreateDateColumn, UpdateDateColumn, JoinColumn } from 'typeorm';\nimport { User } from './user.entity';\nimport { Category } from './category.entity';\nimport { ProductImage } from './product-image.entity';\n\n@Entity('products')\nexport class Product {\n  @PrimaryGeneratedColumn('uuid')\n  id: string;\n\n  @Column({ type: 'varchar', length: 255 })\n  name: string;\n\n  @Column({ type: 'text', nullable: true })\n  description: string;\n\n  @Column({ type: 'decimal', precision: 10, scale: 2 })\n  price: number;\n\n  @Column({ type: 'int', default: 0 })\n  stock: number;\n\n  @Column({ type: 'boolean', default: true })\n  isActive: boolean;\n\n  @Column({ type: 'uuid' })\n  sellerId: string;\n\n  @ManyToOne(() => User)\n  @JoinColumn({ name: 'sellerId' })\n  seller: User;\n\n  @Column({ type: 'uuid' })\n  categoryId: string;\n\n  @ManyToOne(() => Category)\n  @JoinColumn({ name: 'categoryId' })\n  category: Category;\n\n  @OneToMany(() => ProductImage, (image) => image.product, { cascade: true })\n  images: ProductImage[];\n\n  @CreateDateColumn({ type: 'timestamp' })\n  createdAt: Date;\n\n  @UpdateDateColumn({ type: 'timestamp' })\n  updatedAt: Date;\n}\n\n// product-image.entity.ts\n@Entity('product_images')\nexport class ProductImage {\n  @PrimaryGeneratedColumn('uuid')\n  id: string;\n\n  @Column({ type: 'varchar', length: 500 })\n  url: string;\n\n  @Column({ type: 'boolean', default: false })\n  isMain: boolean;\n\n  @Column({ type: 'uuid' })\n  productId: string;\n\n  @ManyToOne(() => Product, (product) => product.images, { onDelete: 'CASCADE' })\n  @JoinColumn({ name: 'productId' })\n  product: Product;\n}\n```\n\n<strong>Justification des types :</strong><ul><li><code>uuid</code> pour les clés primaires et étrangères : assure l'unicité et l'évolutivité.</li><li><code>decimal(10,2)</code> pour le prix : permet de stocker des montants avec précision (2 décimales).</li><li><code>varchar</code> avec longueur limitée pour <code>name</code> et <code>url</code> : optimisation des performances et validation côté base de données.</li><li><code>text</code> pour la description : permet de stocker de longs textes sans limite de taille.</li><li><code>int</code> pour le stock : entier simple pour compter les unités.</li></ul>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Configuration du service d'upload Cloudinary",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous devez intégrer Cloudinary comme service d'hébergement d'images pour la plateforme e-commerce. Créez un service <code>UploadService</code> qui :</p><ul><li>Initialise le SDK Cloudinary avec les identifiants provenant des variables d'environnement (CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET).</li><li>Fournit une méthode <code>uploadImage(file: Express.Multer.File)</code> qui télécharge une image sur Cloudinary et retourne l'URL de l'image hébergée.</li><li>Fournit une méthode <code>deleteImage(publicId: string)</code> pour supprimer une image de Cloudinary.</li></ul><p>Utilisez les bonnes pratiques de gestion d'erreurs et de logging.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédigez le code complet du service UploadService. Expliquez comment vous gérez les erreurs de téléchargement.",
+        "niveau": "medium",
+        "reponse": "```typescript\nimport { Injectable, Logger } from '@nestjs/common';\nimport { ConfigService } from '@nestjs/config';\nimport { v2 as cloudinary } from 'cloudinary';\nimport { Readable } from 'stream';\n\n@Injectable()\nexport class UploadService {\n  private readonly logger = new Logger(UploadService.name);\n\n  constructor(private configService: ConfigService) {\n    cloudinary.config({\n      cloud_name: this.configService.get('CLOUDINARY_CLOUD_NAME'),\n      api_key: this.configService.get('CLOUDINARY_API_KEY'),\n      api_secret: this.configService.get('CLOUDINARY_API_SECRET'),\n    });\n  }\n\n  async uploadImage(file: Express.Multer.File): Promise<{ url: string; publicId: string }> {\n    try {\n      return new Promise((resolve, reject) => {\n        const uploadStream = cloudinary.uploader.upload_stream(\n          {\n            resource_type: 'image',\n            folder: 'sawamart/products',\n          },\n          (error, result) => {\n            if (error) {\n              this.logger.error(`Erreur d'upload Cloudinary: ${error.message}`);\n              reject(error);\n            } else {\n              resolve({ url: result.secure_url, publicId: result.public_id });\n            }\n          },\n        );\n\n        const bufferStream = new Readable();\n        bufferStream.push(file.buffer);\n        bufferStream.push(null);\n        bufferStream.pipe(uploadStream);\n      });\n    } catch (error) {\n      this.logger.error(`Échec du téléchargement: ${error.message}`);\n      throw new Error(`Impossible de télécharger l'image: ${error.message}`);\n    }\n  }\n\n  async deleteImage(publicId: string): Promise<void> {\n    try {\n      await cloudinary.uploader.destroy(publicId);\n      this.logger.log(`Image supprimée: ${publicId}`);\n    } catch (error) {\n      this.logger.error(`Erreur lors de la suppression: ${error.message}`);\n      throw new Error(`Impossible de supprimer l'image: ${error.message}`);\n    }\n  }\n}\n```\n\n<strong>Gestion des erreurs :</strong><ul><li>Utilisation de <code>try/catch</code> pour capturer les exceptions.</li><li>Logging des erreurs avec <code>Logger</code> de NestJS pour le suivi.</li><li>Promesse avec rejet explicite pour gérer les erreurs asynchrones de Cloudinary.</li><li>Propagation d'une erreur générique au client pour éviter de révéler des détails internes.</li></ul>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposez une alternative de stockage si Cloudinary n'est pas disponible (fallback).",
+            "niveau": "medium",
+            "reponse": "<strong>Solution de fallback :</strong> Utiliser un stockage local en premier lieu, puis une synchronisation avec Cloudinary en tâche de fond. Exemple :<ul><li>Enregistrer l'image dans le système de fichiers local (<code>fs.createWriteStream</code>).</li><li>Ajouter une file d'attente (BullMQ) pour tenter le téléchargement vers Cloudinary de manière asynchrone.</li><li>Si Cloudinary est indisponible, retourner l'URL locale temporairement et planifier un nouvel essai.</li><li>Utiliser un mécanisme de monitoring pour alerter les administrateurs en cas d'échec persistant.</li></ul>",
+            "reponse": ""
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Endpoint de création de produit avec upload d'images",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Développez l'endpoint <code>POST /products</code> pour la création d'un produit avec upload d'images. Les images doivent être téléchargées via <code>FilesInterceptor</code> de NestJS.</p><ul><li>Utilisez <code>FilesInterceptor</code> pour accepter plusieurs fichiers (max 5 images).</li><li>Validez les données du produit (nom, prix, catégorie, description) avec <code>class-validator</code>.</li><li>Téléchargez chaque image sur Cloudinary via <code>UploadService</code>.</li><li>Enregistrez les URLs des images dans la base de données avec la relation appropriée (la première image téléchargée sera l'image principale).</li><li>Protégez la route avec <code>JwtAuthGuard</code> et vérifiez que l'utilisateur authentifié est un vendeur (<code>RolesGuard</code> avec rôle SELLER).</li></ul><p>Utilisez une transaction TypeORM pour garantir l'intégrité des données.</p>",
+      "images": [
+        "Schéma du flux de création de produit : Frontend -> API (validation, upload images, sauvegarde en base)"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédigez le code du contrôleur, du DTO et du service pour la création d'un produit avec upload d'images.",
+        "niveau": "hard",
+        "reponse": "```typescript\n// DTOs\nexport class CreateProductDto {\n  @IsString()\n  @IsNotEmpty()\n  @Length(3, 100)\n  name: string;\n\n  @IsString()\n  @IsOptional()\n  description?: string;\n\n  @IsNumber()\n  @Min(0)\n  price: number;\n\n  @IsInt()\n  @Min(0)\n  stock: number;\n\n  @IsUUID()\n  categoryId: string;\n}\n\n// Contrôleur\n@Controller('products')\nexport class ProductController {\n  constructor(private productService: ProductService) {}\n\n  @Post()\n  @UseGuards(JwtAuthGuard, RolesGuard)\n  @Roles('SELLER')\n  @UseInterceptors(\n    FilesInterceptor('images', 5, {\n      fileFilter: (req, file, callback) => {\n        if (!file.originalname.match(/\\.(jpg|jpeg|png|gif|webp)$/)) {\n          return callback(new BadRequestException('Format d\\'image non supporté'), false);\n        }\n        callback(null, true);\n      },\n      limits: { fileSize: 5 * 1024 * 1024 },\n    }),\n  )\n  async createProduct(\n    @Req() req: Request,\n    @Body() createProductDto: CreateProductDto,\n    @UploadedFiles() files: Array<Express.Multer.File>,\n  ) {\n    const sellerId = req.user.id;\n    return this.productService.createProduct(sellerId, createProductDto, files);\n  }\n}\n\n// Service\n@Injectable()\nexport class ProductService {\n  constructor(\n    @InjectRepository(Product) private productRepository: Repository<Product>,\n    @InjectRepository(ProductImage) private productImageRepository: Repository<ProductImage>,\n    private uploadService: UploadService,\n    private dataSource: DataSource,\n  ) {}\n\n  async createProduct(sellerId: string, createProductDto: CreateProductDto, files: Express.Multer.File[]) {\n    const queryRunner = this.dataSource.createQueryRunner();\n    await queryRunner.connect();\n    await queryRunner.startTransaction();\n\n    try {\n      // Création du produit\n      const product = this.productRepository.create({\n        ...createProductDto,\n        sellerId,\n      });\n      const savedProduct = await queryRunner.manager.save(product);\n\n      // Upload des images\n      const productImages = [];\n      for (let i = 0; i < files.length; i++) {\n        const file = files[i];\n        const { url, publicId } = await this.uploadService.uploadImage(file);\n        const productImage = this.productImageRepository.create({\n          url,\n          publicId,\n          isMain: i === 0, // La première image est la principale\n          productId: savedProduct.id,\n        });\n        productImages.push(productImage);\n      }\n      await queryRunner.manager.save(productImages);\n\n      // Commit de la transaction\n      await queryRunner.commitTransaction();\n\n      // Retourner le produit avec ses images\n      return this.productRepository.findOne({\n        where: { id: savedProduct.id },\n        relations: ['images', 'category', 'seller'],\n      });\n    } catch (error) {\n      await queryRunner.rollbackTransaction();\n      throw new InternalServerErrorException('Erreur lors de la création du produit');\n    } finally {\n      await queryRunner.release();\n    }\n  }\n}\n```\n\n<strong>Explications :</strong><ul><li><code>FilesInterceptor</code> avec limite de 5 fichiers et filtrage des formats d'image.</li><li>Transaction TypeORM pour garantir l'atomicité (le produit et les images sont enregistrés ensemble).</li><li>La première image est définie comme <code>isMain: true</code>.</li><li>Les rôles sont vérifiés avec <code>RolesGuard</code> pour restreindre l'accès aux vendeurs.</li><li>Gestion des erreurs avec rollback en cas d'échec (upload Cloudinary ou sauvegarde en base).</li></ul>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Mise à jour et suppression d'un produit avec gestion des images",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Développez les endpoints suivants :</p><ul><li><code>PUT /products/:id</code> : Met à jour les informations d'un produit (nom, prix, description, stock). L'utilisateur ne peut modifier que ses propres produits.</li><li><code>DELETE /products/:id</code> : Supprime un produit. La suppression doit également supprimer les images associées de Cloudinary et de la base de données.</li></ul><p>Ajoutez une logique pour supprimer les images de Cloudinary lors de la mise à jour si de nouvelles images sont téléchargées. Utilisez une transaction pour garantir l'intégrité.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédigez le code des endpoints de mise à jour et de suppression avec la gestion des images.",
+        "niveau": "hard",
+        "reponse": "```typescript\n// DTO de mise à jour\nexport class UpdateProductDto extends PartialType(CreateProductDto) {}\n\n// Dans le contrôleur\n@Put(':id')\n@UseGuards(JwtAuthGuard, RolesGuard)\n@Roles('SELLER')\nasync updateProduct(\n  @Param('id') id: string,\n  @Body() updateProductDto: UpdateProductDto,\n  @Req() req: Request,\n) {\n  const sellerId = req.user.id;\n  return this.productService.updateProduct(id, sellerId, updateProductDto);\n}\n\n@Delete(':id')\n@UseGuards(JwtAuthGuard, RolesGuard)\n@Roles('SELLER')\nasync deleteProduct(@Param('id') id: string, @Req() req: Request) {\n  const sellerId = req.user.id;\n  return this.productService.deleteProduct(id, sellerId);\n}\n\n// Dans le service\nasync updateProduct(id: string, sellerId: string, updateProductDto: UpdateProductDto) {\n  const product = await this.productRepository.findOne({\n    where: { id, sellerId },\n    relations: ['images'],\n  });\n\n  if (!product) {\n    throw new NotFoundException('Produit non trouvé ou vous n\\'êtes pas autorisé');\n  }\n\n  Object.assign(product, updateProductDto);\n  return this.productRepository.save(product);\n}\n\nasync deleteProduct(id: string, sellerId: string) {\n  const product = await this.productRepository.findOne({\n    where: { id, sellerId },\n    relations: ['images'],\n  });\n\n  if (!product) {\n    throw new NotFoundException('Produit non trouvé ou vous n\\'êtes pas autorisé');\n  }\n\n  const queryRunner = this.dataSource.createQueryRunner();\n  await queryRunner.connect();\n  await queryRunner.startTransaction();\n\n  try {\n    // Suppression des images de Cloudinary\n    for (const image of product.images) {\n      await this.uploadService.deleteImage(image.publicId);\n    }\n\n    // Suppression du produit (les images sont supprimées en cascade)\n    await queryRunner.manager.remove(product);\n    await queryRunner.commitTransaction();\n\n    return { message: 'Produit supprimé avec succès' };\n  } catch (error) {\n    await queryRunner.rollbackTransaction();\n    throw new InternalServerErrorException('Erreur lors de la suppression du produit');\n  } finally {\n    await queryRunner.release();\n  }\n}\n```\n\n<strong>Gestion des images :</strong><ul><li>Vérification que le produit appartient au vendeur connecté.</li><li>Suppression des images de Cloudinary avant la suppression du produit en base.</li><li>Transaction pour garantir que les deux opérations (suppression Cloudinary + base) sont atomiques.</li></ul>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Endpoint de consultation des produits avec filtres",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Développez des endpoints publics pour la consultation des produits :</p><ul><li><code>GET /products/:id</code> : Récupère un produit par son ID avec ses images et sa catégorie.</li><li><code>GET /products</code> : Récupère une liste de produits avec des filtres (par catégorie, par prix min/max, par vendeur).</li></ul><p>Ajoutez une pagination et un tri (par prix, par date). Optimisez les requêtes avec <code>findAndCount</code> de TypeORM.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédigez le code des endpoints de consultation avec filtres et pagination.",
+        "niveau": "medium",
+        "reponse": "```typescript\n// DTO de filtres\nexport class ProductFiltersDto {\n  @IsOptional()\n  @IsUUID()\n  categoryId?: string;\n\n  @IsOptional()\n  @IsNumber()\n  @Min(0)\n  minPrice?: number;\n\n  @IsOptional()\n  @IsNumber()\n  @Min(0)\n  maxPrice?: number;\n\n  @IsOptional()\n  @IsUUID()\n  sellerId?: string;\n\n  @IsOptional()\n  @IsInt()\n  @Min(1)\n  @Default(1)\n  page?: number;\n\n  @IsOptional()\n  @IsInt()\n  @Min(1)\n  @Max(100)\n  @Default(20)\n  limit?: number;\n\n  @IsOptional()\n  @IsIn(['price', 'createdAt'])\n  sortBy?: 'price' | 'createdAt';\n\n  @IsOptional()\n  @IsIn(['ASC', 'DESC'])\n  sortOrder?: 'ASC' | 'DESC';\n}\n\n// Dans le contrôleur\n@Get()\nasync findAll(@Query() filters: ProductFiltersDto) {\n  return this.productService.findAll(filters);\n}\n\n@Get(':id')\nasync findOne(@Param('id') id: string) {\n  return this.productService.findOne(id);\n}\n\n// Dans le service\nasync findAll(filters: ProductFiltersDto) {\n  const { page = 1, limit = 20, sortBy = 'createdAt', sortOrder = 'DESC' } = filters;\n\n  const queryBuilder = this.productRepository.createQueryBuilder('product')\n    .leftJoinAndSelect('product.images', 'images')\n    .leftJoinAndSelect('product.category', 'category')\n    .leftJoinAndSelect('product.seller', 'seller')\n    .where('product.isActive = :isActive', { isActive: true });\n\n  if (filters.categoryId) {\n    queryBuilder.andWhere('product.categoryId = :categoryId', { categoryId: filters.categoryId });\n  }\n\n  if (filters.minPrice) {\n    queryBuilder.andWhere('product.price >= :minPrice', { minPrice: filters.minPrice });\n  }\n\n  if (filters.maxPrice) {\n    queryBuilder.andWhere('product.price <= :maxPrice', { maxPrice: filters.maxPrice });\n  }\n\n  if (filters.sellerId) {\n    queryBuilder.andWhere('product.sellerId = :sellerId', { sellerId: filters.sellerId });\n  }\n\n  queryBuilder\n    .orderBy(`product.${sortBy}`, sortOrder)\n    .skip((page - 1) * limit)\n    .take(limit);\n\n  const [products, total] = await queryBuilder.getManyAndCount();\n\n  return {\n    data: products,\n    meta: {\n      total,\n      page,\n      limit,\n      totalPages: Math.ceil(total / limit),\n    },\n  };\n}\n\nasync findOne(id: string) {\n  const product = await this.productRepository.findOne({\n    where: { id, isActive: true },\n    relations: ['images', 'category', 'seller'],\n  });\n\n  if (!product) {\n    throw new NotFoundException('Produit non trouvé');\n  }\n\n  return product;\n}\n```\n\n<strong>Optimisations :</strong><ul><li>Utilisation de <code>createQueryBuilder</code> pour des requêtes dynamiques et flexibles.</li><li>Pagination avec <code>skip</code> et <code>take</code> pour limiter les résultats.</li><li>Tri par prix ou par date de création.</li><li>Filtrage par catégorie, prix, vendeur.</li></ul>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion des produits invalides et modération",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Sur une plateforme e-commerce, les vendeurs peuvent publier des produits. Cependant, certains produits peuvent être frauduleux ou contenir des informations incorrectes. Mettez en place :</p><ul><li>Un statut <code>status</code> sur le produit (<code>pending</code>, <code>approved</code>, <code>rejected</code>).</li><li>Un endpoint pour les administrateurs pour approuver ou rejeter un produit.</li><li>Une notification envoyée au vendeur lors de l'approbation ou du rejet (en utilisant le système de notifications existant).</li><li>Un mécanisme pour que les produits en attente ne soient pas visibles publiquement.</li></ul><p>Proposez une solution pour lutter contre la duplication de produits (détection de doublons).</p>",
+      "images": [
+        "Diagramme de flux de validation des produits : vendeur soumet -> admin modère -> notification envoyée"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevez l'architecture et le code pour la modération des produits. Expliquez comment vous gérez la visibilité des produits selon leur statut.",
+        "niveau": "hard",
+        "reponse": "<strong>Architecture :</strong><ul><li><strong>Entité Product</strong> avec un champ <code>status</code> enum (<code>PENDING</code>, <code>APPROVED</code>, <code>REJECTED</code>).</li><li><strong>AdminController</strong> : Endpoints <code>POST /admin/products/:id/approve</code> et <code>POST /admin/products/:id/reject</code>.</li><li><strong>ProductService</strong> : Méthodes <code>approveProduct</code> et <code>rejectProduct</code> avec notifications.</li><li><strong>NotificationService</strong> : Envoi d'email ou de notification push au vendeur.</li><li><strong>Filtrage public</strong> : Les endpoints publics de consultation ne retournent que les produits avec <code>status = 'APPROVED'</code>.</li></ul>\n\n<strong>Détection des doublons :</strong> Utilisation d'un trigger sur l'insertion ou d'une tâche planifiée pour comparer les nouveaux produits avec les existants (par nom, description, catégorie).\n\n```typescript\n// Dans le service de création\nasync createProduct(sellerId: string, createProductDto: CreateProductDto, files: Express.Multer.File[]) {\n  // Vérification des doublons\n  const existingProduct = await this.productRepository.findOne({\n    where: {\n      name: createProductDto.name,\n      sellerId,\n      status: In(['PENDING', 'APPROVED']),\n    },\n  });\n\n  if (existingProduct) {\n    throw new ConflictException('Un produit similaire existe déjà');\n  }\n\n  // Création avec statut PENDING\n  // ...\n}\n\n// Dans le service d'approbation\nasync approveProduct(productId: string) {\n  const product = await this.productRepository.findOne({ where: { id: productId }, relations: ['seller'] });\n  if (!product) throw new NotFoundException('Produit non trouvé');\n\n  product.status = 'APPROVED';\n  await this.productRepository.save(product);\n\n  // Notification au vendeur\n  await this.notificationService.sendNotification(\n    product.sellerId,\n    `Votre produit \"${product.name}\" a été approuvé et est maintenant en ligne.`,\n  );\n\n  return product;\n}\n```\n\n<strong>Visibilité publique :</strong> Ajout d'un filtre <code>status = 'APPROVED'</code> dans tous les endpoints de consultation publique. Utilisation de <code>@Exclude</code> ou de méthodes de transformation pour cacher les produits non approuvés.\n\n<strong>Mesures anti-fraude :</strong><ul><li>Limitation du nombre de produits en attente par vendeur.</li><li>Analyse des prix anormalement bas avec des alertes automatiques.</li><li>Vérification des descriptions pour les mots-clés interdits.</li></ul>",
+        "reponse": "",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposez des mesures pour prévenir la publication de produits frauduleux.",
+            "niveau": "hard",
+            "reponse": "<strong>Mesures de prévention :</strong><ul><li><strong>Vérification du vendeur :</strong> Exiger une vérification d'identité (KYC) avant la première publication.</li><li><strong>Analyse des prix :</strong> Détection automatique des prix anormalement bas (par rapport à la moyenne du marché).</li><li><strong>Modération automatique :</strong> Utilisation d'un modèle ML pour détecter les descriptions suspectes (phishing, contrefaçon).</li><li><strong>Limitation des publications :</strong> Nombre maximal de produits en attente par vendeur (ex: 5).</li><li><strong>Signalement utilisateur :</strong> Permettre aux utilisateurs de signaler un produit suspect.</li><li><strong>Historique des publications :</strong> Suivi des modifications pour détecter les comportements malveillants (ex: changement de prix après approbation).</li></ul>",
+            "reponse": ""
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation des performances pour l'affichage des produits",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>La plateforme e-commerce rencontre des problèmes de performances lors de l'affichage des produits, notamment lors des pics de connexion (Black Friday, promotions). Proposez et mettez en œuvre :</p><ul><li>Une stratégie de mise en cache pour les endpoints publics de consultation de produits.</li><li>Une optimisation des requêtes SQL pour réduire le temps de réponse.</li><li>Une solution pour servir les images de manière optimisée (CDN, formats modernes).</li><li>Un mécanisme pour prévenir les requêtes trop lourdes (pagination stricte, limitation des filtres).</li></ul>",
+      "images": [
+        "Graphique comparant les temps de réponse avant et après l'optimisation du cache"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevez une stratégie d'optimisation des performances pour l'affichage des produits.",
+        "niveau": "very hard",
+        "reponse": "<strong>1. Mise en cache avec Redis :</strong>\n```typescript\n@Injectable()\nexport class ProductService {\n  constructor(\n    private cacheManager: Cache,\n    private productRepository: Repository<Product>,\n  ) {}\n\n  async findAllCached(filters: ProductFiltersDto) {\n    const cacheKey = `products:${JSON.stringify(filters)}`;\n    const cached = await this.cacheManager.get(cacheKey);\n    if (cached) return cached;\n\n    const result = await this.findAll(filters);\n    await this.cacheManager.set(cacheKey, result, 300); // TTL 5 min\n    return result;\n  }\n}\n```\n\n<strong>2. Optimisation des requêtes :</strong><ul><li>Utilisation de <code>select</code> pour limiter les champs retournés.</li><li>Indexation des colonnes utilisées dans les <code>WHERE</code> (<code>categoryId</code>, <code>price</code>, <code>sellerId</code>).</li><li>Utilisation de <code>JOIN</code> sélectifs au lieu de <code>leftJoinAndSelect</code> systématique.</li></ul>\n\n<strong>3. Optimisation des images :</strong><ul><li>Utilisation de Cloudinary avec transformation d'image : paramètres <code>w_300,h_300,c_fill</code> pour les vignettes.</li><li>Utilisation du format WebP pour une meilleure compression.</li><li>Délivrance via CDN pour réduire la latence.</li></ul>\n\n<strong>4. Pagination stricte :</strong><ul><li>Limitation de <code>limit</code> à 100 produits par requête.</li><li>Utilisation de curseurs (cursor-based pagination) pour les données volumineuses.</li></ul>\n\n<strong>5. Prévention des requêtes lourdes :</strong><ul><li>Validation des paramètres de filtre

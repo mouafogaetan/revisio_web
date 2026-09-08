@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+ "matiere": "NestJS - Framework Node.js progressif",
+ "classe": "Développement Web",
+ "sequence": "Séquence 5",
+ "anneeScolaire": "2025-2026",
+ "exercices": [
+   {
+     "titre": "Questions de Cours sur les Fondamentaux de NestJS",
+     "points": "8 pts",
+     "enonce": "Répondez aux questions suivantes de manière claire et précise en vous appuyant sur les concepts clés du framework.",
+     "questions":[
+       {
+         "question": "1) Expliquez ce qu'est NestJS et en quoi il se distingue d'un framework minimaliste comme Express. Citez deux avantages majeurs de son architecture. (2 pts)",
+         "reponse": "NestJS est un framework progressif pour Node.js, construit avec TypeScript, qui propose une architecture d'application prête à l'emploi [citation:1]. Contrairement à Express qui est minimaliste et laisse toute liberté au développeur, NestJS impose des conventions claires (modules, contrôleurs, services) inspirées d'Angular [citation:6]. Cela permet de construire des applications plus structurées, maintenables et évolutives. Deux avantages majeurs sont : 1) L'Inversion de Contrôle (IoC) et l'Injection de Dépendances, qui rendent le code faiblement couplé et facilement testable ; 2) La modularité, qui permet d'organiser le code par domaine et facilite le travail en équipe."
+       },
+       {
+         "question": "2) Qu'est-ce qu'un module dans NestJS et quel est son rôle fondamental dans l'architecture d'une application ? (2 pts)",
+         "reponse": "Un module est la brique de construction principale de l'architecture NestJS [citation:6]. Décoré avec @Module(), il permet d'organiser l'application en domaines fonctionnels cohérents. Il joue le rôle de conteneur pour regrouper les composants liés : les contrôleurs (qui gèrent les routes), les providers (services qui contiennent la logique métier) et les imports/exports pour les dépendances avec d'autres modules. Cette organisation en modules rend l'application plus facile à maintenir, à tester et à faire évoluer."
+       },
+       {
+         "question": "3) Décrivez le rôle d'un contrôleur et celui d'un service (provider). Donnez un exemple de décorateur utilisé pour chacun. (2 pts)",
+         "reponse": "Le contrôleur est responsable de recevoir les requêtes HTTP et de retourner les réponses. Il définit les routes via des décorateurs comme @Get(), @Post(), etc. Il ne doit pas contenir la logique métier, mais déléguer ce travail aux services. Le service, décoré avec @Injectable(), est un provider qui encapsule la logique métier et l'accès aux données. Il peut être injecté dans un contrôleur ou un autre service via le constructeur. Exemple : @Controller('users') pour un contrôleur et @Injectable() pour un service."
+       },
+       {
+         "question": "4) Expliquez le concept d'Injection de Dépendances (DI) et son avantage principal pour les tests unitaires. (2 pts)",
+         "reponse": "L'Injection de Dépendances est un patron de conception où une classe reçoit ses dépendances de l'extérieur plutôt que de les créer elle-même (via new) [citation:6]. NestJS possède un conteneur IoC (Inversion of Control) qui gère automatiquement la création et l'injection des dépendances. Pour les tests unitaires, cela permet de remplacer facilement une dépendance réelle (par exemple, un service qui accède à une base de données) par un mock. On peut ainsi tester une classe de manière isolée, sans dépendre de composants externes, ce qui rend les tests plus rapides, fiables et faciles à écrire [citation:6]."
+       }
+     ]
+   },
+   {
+     "titre": "Authentification et Sécurité avec JWT",
+     "points": "5 pts",
+     "enonce": "On souhaite sécuriser une API REST développée avec NestJS. Les utilisateurs doivent s'authentifier via un login (email/mot de passe) et recevoir un token JWT pour accéder aux routes protégées.",
+     "questions":[
+       {
+         "question": "1) Quels sont les principaux packages NestJS à installer pour mettre en place une authentification JWT ? (1 pt)",
+         "reponse": "Les packages à installer sont : @nestjs/jwt pour la génération et la validation des tokens JWT, @nestjs/passport et passport pour l'intégration de Passport dans NestJS, et passport-jwt pour la stratégie d'authentification par token."
+       },
+       {
+         "question": "2) Expliquez le rôle d'une stratégie (strategy) Passport dans ce contexte. Citez les deux stratégies à implémenter. (2 pts)",
+         "reponse": "Une stratégie Passport définit comment un utilisateur est authentifié [citation:6]. Dans le cas d'une authentification JWT, on implémente généralement deux stratégies : la LocalStrategy, qui valide les identifiants (email/mot de passe) et génère le token JWT, et la JwtStrategy, qui vérifie la validité du token JWT à chaque requête vers une route protégée et extrait l'utilisateur."
+       },
+       {
+         "question": "3) Comment protéger une route avec un guard AuthGuard ? Donnez un exemple de code simple. (2 pts)",
+         "reponse": "Pour protéger une route, on utilise le décorateur @UseGuards() avec AuthGuard('jwt'). Exemple : <br><pre style='background:#1e293b; color:#f1f5f9; padding:10px; border-radius:6px; font-size:0.85em;'>@Get('profile')<br/>@UseGuards(AuthGuard('jwt'))<br/>getProfile(@Req() req) {<br/>  return req.user;<br/>}</pre> Le guard intercepte la requête, valide le token JWT (via JwtStrategy) et si l'authentification est réussie, l'utilisateur est attaché à l'objet request."
+       }
+     ]
+   },
+   {
+     "titre": "Gestion des Périphériques et Configuration",
+     "points": "4 pts",
+     "enonce": "Votre application NestJS doit s'adapter à différents environnements (développement, production). Elle doit également pouvoir se connecter à une base de données PostgreSQL dont les paramètres sont variables.",
+     "questions":[
+       {
+         "question": "1) Comment gérer la configuration de manière centralisée et sécurisée dans NestJS ? Citez le module et les grandes étapes. (2 pts)",
+         "reponse": "On utilise le module @nestjs/config. Les grandes étapes sont : 1) Installation : npm install @nestjs/config ; 2) Importation de ConfigModule.forRoot() dans le module racine ; 3) Création d'un fichier .env à la racine du projet ; 4) Injection de ConfigService dans les composants pour récupérer les variables d'environnement via configService.get('NOM_VARIABLE')."
+       },
+       {
+         "question": "2) Décrivez la méthode recommandée pour configurer TypeORM de manière asynchrone avec ces variables d'environnement. (2 pts)",
+         "reponse": "La méthode recommandée est d'utiliser TypeOrmModule.forRootAsync() avec une factory (useFactory). On importe ConfigModule et on injecte ConfigService. Exemple : <br><pre style='background:#1e293b; color:#f1f5f9; padding:10px; border-radius:6px; font-size:0.8em;'>TypeOrmModule.forRootAsync({<br/>  imports: [ConfigModule],<br/>  useFactory: (configService: ConfigService) => ({<br/>    type: 'postgres',<br/>    host: configService.get('DB_HOST'),<br/>    port: configService.get('DB_PORT'),<br/>    username: configService.get('DB_USER'),<br/>    password: configService.get('DB_PASS'),<br/>    database: configService.get('DB_NAME'),<br/>  }),<br/>  inject: [ConfigService],<br/>})</pre> Cette approche permet de charger la configuration dynamiquement à partir des variables d'environnement."
+       }
+     ]
+   },
+   {
+     "titre": "Tests avec Jest",
+     "points": "3 pts",
+     "enonce": "Vous devez tester un service UserService qui dépend d'un repository TypeORM.",
+     "questions":[
+       {
+         "question": "1) Quel est l'outil de test par défaut dans NestJS et comment crée-t-on un module de test pour tester un service de manière isolée ? (1.5 pts)",
+         "reponse": "L'outil de test par défaut est Jest. Pour tester un service de manière isolée, on crée un module de test avec Test.createTestingModule() en fournissant le service à tester et des mocks pour ses dépendances. On utilise provide avec un token personnalisé ou getRepositoryToken pour le repository et useValue pour définir les méthodes mockées avec jest.fn(). Le module est ensuite compilé avec compile() et on peut récupérer l'instance du service avec module.get()."
+       },
+       {
+         "question": "2) Pourquoi est-il important d'utiliser des mocks pour les dépendances dans les tests unitaires ? (1.5 pts)",
+         "reponse": "Les mocks sont essentiels pour isoler la logique du service à tester. En simulant le comportement du repository (par exemple, en retournant une liste d'utilisateurs ou en simulant une erreur), on s'assure que le test ne dépend pas de l'état réel de la base de données. Cela rend les tests reproductibles, rapides et plus fiables. On peut ainsi vérifier que le service se comporte correctement quelles que soient les données, et que les interactions avec le repository (méthodes appelées avec les bons paramètres) sont correctes."
+       }
+     ]
+   }
+ ]
+};
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,158 @@
+[
+  {
+    "intitule": "IDS vs IPS : différences fondamentales",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Un IDS (Intrusion Detection System) et un IPS (Intrusion Prevention System) sont deux dispositifs de sécurité réseau. Expliquez leurs différences en termes de positionnement et d'action.</p>",
+      "images": [
+        "schéma : IDS en mode passif (copie du trafic, alerte), IPS en mode actif (inline, blocage du trafic)"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Comparez l'IDS et l'IPS : où se placent-ils dans le réseau ? Que font-ils face à une attaque ?",
+        "niveau": "easy",
+        "reponse": "IDS : placé en mode passif (port mirroring ou tap), analyse une copie du trafic et émet des alertes sans bloquer. IPS : placé en ligne (inline) sur le flux réseau, peut bloquer activement les paquets malveillants en temps réel. L'IPS est plus risqué (faux positifs peuvent couper le trafic légitime) mais plus protecteur.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Méthodes de détection d'intrusions",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Trois approches principales existent pour détecter des intrusions : <strong>par signature</strong>, <strong>par anomalie</strong> et <strong>comportementale</strong>. Associez chaque approche à sa description et à ses avantages/inconvénients.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez chaque méthode. Pour chacune, donnez un exemple et identifiez un avantage et un inconvénient majeur.",
+        "niveau": "medium",
+        "reponse": "Signature : recherche de motifs connus (ex: 'ET USER_AGENTS Suspicious User-Agent'). Avantage : faible taux de faux positifs. Inconvénient : ne détecte pas les attaques zero-day ou variantes. Anomalie : apprentissage d'un profil de comportement normal (débit, protocoles), alerte en cas d'écart. Avantage : détecte les nouveautés. Inconvénient : taux de faux positifs élevé. Comportementale : analyse séquences d'actions (ex: plusieurs échecs de connexion puis succès). Avantage : contextualise. Inconvénient : complexe à paramétrer.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Snort : règles et fonctionnement",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Snort est un IDS/IPS open source très répandu. Voici une règle Snort typique :<br><code>alert tcp $HOME_NET any -> $EXTERNAL_NET 80 (msg:\"SQL Injection Attempt\"; content:\"union select\"; nocase; sid:1000001;)</code></p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Interprétez cette règle. Que signifie chaque partie ? Quel type de détection utilise-t-elle ?",
+        "niveau": "hard",
+        "reponse": "alert : génère une alerte. tcp : protocole. $HOME_NET any → $EXTERNAL_NET 80 : trafic du réseau interne (n'importe quel port) vers l'externe sur le port 80 (HTTP). msg : message de l'alerte. content:\"union select\" : recherche la chaîne 'union select' dans le paquet. nocase : insensible à la casse. sid : identifiant unique. C'est une détection par signature (contient 'union select', typique d'injection SQL).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Que signifie le mot-clé 'flow' dans une règle Snort ?",
+            "niveau": "hard",
+            "reponse": "'flow' permet de spécifier la direction du flux (ex: 'to_client', 'to_server', 'established'). Cela évite d'analyser les deux sens d'une connexion ou de cibler seulement le trafic établi."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Suricata : performances et multi-threading",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Suricata est un autre moteur IDS/IPS, plus récent que Snort. Un de ses avantages majeurs est le support du multi-threading et de l'accélération GPU. Expliquez pourquoi c'est important sur des liens haut débit (10 Gbps et plus).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Comparez l'architecture de Snort (monothread historique) et Suricata (multi-thread). Quel impact sur les performances ?",
+        "niveau": "hard",
+        "reponse": "Snort traite les paquets séquentiellement sur un seul cœur, limitant le débit à environ 1-2 Gbps sur du matériel standard. Suricata répartit la charge sur plusieurs cœurs (multi-thread) et peut utiliser l'accélération GPU, atteignant 10-40 Gbps. Sur des liens 10 Gbps, Suricata est donc plus adapté pour éviter la perte de paquets.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Choisir un système de détection pour une PME",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Une PME de 50 personnes dispose d'un accès Internet de 500 Mbps. Elle souhaite se protéger contre les menaces réseau sans interrompre son activité. Le budget est limité. Faut-il choisir un IDS ou un IPS ? Justifiez.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez une solution adaptée. Quels compromis entre sécurité et continuité d'activité ?",
+        "niveau": "medium",
+        "reponse": "Recommandation : IDS en mode passif (ou IPS en mode alert only) dans un premier temps. Raison : évite les coupures dues aux faux positifs. Avec 500 Mbps, Snort (bien dimensionné) ou Suricata conviennent. L'IPS actif (blocage) est risqué sans équipe dédiée pour analyser les alertes. Si besoin de blocage, on peut configurer l'IPS sur quelques règles critiques (ex: signatures de malwares connus) et laisser le reste en alerte.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quel est le risque principal d'un IPS mal configuré ?",
+            "niveau": "easy",
+            "reponse": "Un faux positif (trafic légitime identifié comme malveillant) peut bloquer des applications métier critiques, entraînant un arrêt de production."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Mettre en place une détection d'anomalies",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Une université souhaite détecter des comportements suspects sur son réseau, y compris des attaques zero-day. La méthode par signature ne suffit pas. Proposez une approche par détection d'anomalies (statistiques ou machine learning).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez comment mettre en place un système de détection par anomalie. Quelles métriques surveiller ? Quelles précautions prendre ?",
+        "niveau": "hard",
+        "reponse": "Phase 1 (apprentissage) : collecter le trafic normal pendant plusieurs semaines (pics d'activité, horaires creux). Métriques : débit entrant/sortant, nombre de connexions par seconde, types de protocoles, ports, tailles de paquets, ratio SYN/ACK, etc. Phase 2 (détection) : définir des seuils (ex: écart-type). Un écart >3 sigma déclenche une alerte. Précautions : 1) Réapprentissage périodique (évolution du trafic légitime). 2) Différencier week-end/jour de semaine. 3) Combiner avec une signature pour réduire les faux positifs. Outils : Zeek (ex-Bro), Suricata avec stats, ou ML avec isolation forest.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi une attaque lente et distribuée (low and slow) est-elle difficile à détecter par anomalie ?",
+            "niveau": "hard",
+            "reponse": "Parce que le trafic additionnel est noyé dans la variation normale ; il faut des métriques très fines (ex: taux de requêtes par IP) ou des modèles temporels plus sophistiqués."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Analyser une alerte Snort",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Un administrateur reçoit cette alerte Snort :<br><code>[**] [1:2010934:2] ET EXPLOIT MS17-010 EternalBlue SMBv2 [**]</code><br><code>10/10-15:23:45.123456 192.168.1.15:49155 -> 192.168.1.88:445</code></p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifiez l'attaque potentielle, les machines impliquées, le protocole et le port. Quelle action l'administrateur doit-il entreprendre ?",
+        "niveau": "very hard",
+        "reponse": "Attaque : EternalBlue (exploit MS17-010) qui cible une vulnérabilité SMBv2 (port 445). Machine source : 192.168.1.15 (port 49155), cible : 192.168.1.88 (port 445). Actions : 1) Vérifier si le serveur 192.168.1.88 a le patch MS17-010 installé. 2) Isoler la machine source (peut être compromise). 3) Bloquer le trafic SMB entrant/sortant si non nécessaire. 4) Analyser les logs pour voir si d'autres tentatives ont réussi.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Que signifie le préfixe [1:2010934:2] dans l'alerte Snort ?",
+            "niveau": "hard",
+            "reponse": "1 : générateur (Snort standard). 2010934 : identifiant unique de la règle (SID). 2 : numéro de révision de la règle."
+          }
+        ]
+      }
+    ]
+  }
+]

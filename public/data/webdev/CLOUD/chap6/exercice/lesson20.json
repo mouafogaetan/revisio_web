@@ -1,0 +1,103 @@
+[
+  {
+    "intitule": "Identifier les services managés de conteneurs",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Dans le cloud computing, plusieurs services permettent d’exécuter des conteneurs sans gérer les serveurs sous-jacents. Vous devez identifier ces services et leurs caractéristiques.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Citez deux services de conteneurs managés de type serverless (un chez AWS, un chez Azure). Expliquez en quoi ils sont « serverless ».",
+        "niveau": "easy",
+        "reponse": "AWS Fargate et Azure Container Instances (ACI). Ils sont serverless car ils suppriment la gestion des serveurs, des clusters et des mises à jour du système d’exploitation : l’utilisateur ne provisionne que les conteneurs et paye à l’exécution.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Distinguez AWS Fargate d’Amazon ECS avec EC2 en listant deux différences majeures.",
+        "niveau": "medium",
+        "reponse": "1. Avec Fargate, AWS gère l’infrastructure des nœuds (pas de choix de type d’instance, pas de patch OS) alors qu’avec ECS sur EC2, l’utilisateur provisionne et gère les instances EC2. 2. Facturation : Fargate facture le CPU et la mémoire consommés par seconde, tandis que ECS sur EC2 facture les instances EC2 (à l’heure ou réservées).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Choisir le bon service pour déployer une API de calcul scientifique",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Votre entreprise doit déployer une API de traitement d’images écrite en Python (basée sur FastAPI) dans le cloud. Le trafic est très variable : 0 requête la nuit, puis des pics à 500 requêtes/seconde pendant 2 heures en journée. L’équipe ne veut pas gérer de clusters Kubernetes.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Justifiez pourquoi AWS Fargate ou Azure Container Instances serait plus adapté qu’un service Kubernetes (EKS, AKS, GKE) pour ce besoin.",
+        "niveau": "medium",
+        "reponse": "Parce que l’équipe ne veut pas gérer de clusters Kubernetes (pas d’administration du plan de contrôle, pas de mise à jour, pas de configuration des nœuds). Fargate/ACI offrent une exécution serverless de conteneurs avec scaling automatique, parfait pour un trafic très variable et des pics de charge.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Décrivez le mécanisme de scaling automatique sur AWS Fargate pour cette API afin d’absorber le pic à 500 req/s.",
+        "niveau": "hard",
+        "reponse": "On configure un service ECS avec type de lancement Fargate, associé à une cible Application Load Balancer (ALB). On définit une politique de scaling automatique basée sur une métrique comme ‘Nombre de requêtes par cible’ ou ‘CPU utilisée’. La politique fixe une capacité minimale (ex: 1 tâche), maximale (ex: 20 tâches). Lorsque la métrique dépasse un seuil (ex: 70 % CPU), ECS lance de nouvelles tâches Fargate automatiquement. Chaque tâche est un conteneur de l’API. Quand le trafic baisse, ECS arrête les tâches excédentaires.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Mise à jour continue d’une application conteneurisée sans interruption",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Une startup utilise Azure Container Instances (ACI) pour exécuter un conteneur d’un front-end web. Chaque semaine, une nouvelle version de l’image Docker est publiée. Actuellement, la mise à jour entraîne une interruption de service.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez une architecture améliorée sur Azure pour permettre des mises à jour sans interruption (zero downtime), en restant serverless le plus possible.",
+        "niveau": "hard",
+        "reponse": "On ne peut pas faire de rolling update directement sur un seul ACI. Solution : utiliser Azure Container Apps (une couche au-dessus d’ACI) qui gère les révisions et le trafic fractionné. Ou bien déployer deux groupes de conteneurs ACI derrière Azure Front Door ou Application Gateway. Stratégie : lancer le nouveau groupe de conteneurs avec la nouvelle version, tester, puis basculer le trafic progressivement (weighted routing), puis supprimer l’ancien groupe. Pour une solution plus native serverless : migrer vers Azure Container Apps (révisions, trafic splitting, zero downtime).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez ce qu’est une ‘révision’ dans Azure Container Apps.",
+            "niveau": "medium",
+            "reponse": "Une révision est une version immuable de l’application conteneurisée. Chaque modification de la configuration ou de l’image crée une nouvelle révision. Container Apps permet d’activer plusieurs révisions simultanément et de répartir le trafic entre elles (ex: 90% révision v1, 10% révision v2), puis d’augmenter progressivement le trafic vers la nouvelle révision.",
+            "sousQuestions": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Calculer le coût d’une exécution serverless sur AWS Fargate",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Une tâche Fargate utilise $0.5$ vCPU et $1$ Go de RAM. Le prix AWS dans la région est de $0.04048$ $\\text{\\$}$ par vCPU/heure et $0.004445$ $\\text{\\$}$ par Go/heure. La tâche s’exécute 3 heures par jour pendant 30 jours.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Calculez le coût total mensuel de cette tâche Fargate.",
+        "niveau": "medium",
+        "reponse": "Coût CPU = 0,5 vCPU × 0,04048 $/h × (3h × 30) = 0,5 × 0,04048 × 90 = 1,8216 $. Coût RAM = 1 Go × 0,004445 $/h × 90 = 0,40005 $. Coût total = 1,8216 + 0,40005 = 2,22165 $ (environ 2,22 $).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Comparez ce coût avec des instances EC2 réservées pour une charge de 24h/24, justifiez pourquoi le serverless reste intéressant malgré un coût horaire plus élevé.",
+        "niveau": "hard",
+        "reponse": "Avec une instance EC2 réservée à 0,01 $/h pour un t4g.nano (1 vCPU, 0,5 Go), sur 720h = 7,2 $/mois. Soit plus cher que 2,22 $ si utilisée 24h/24. Mais l’avantage serverless ici n’est pas le prix horaire, c’est de ne payer que 90 heures au lieu de 720 heures. Pour une charge intermittente, Fargate est bien moins cher. De plus, sans gestion serveur, on économise en administration. Le serverless est donc intéressant pour des workloads burst ou irréguliers.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

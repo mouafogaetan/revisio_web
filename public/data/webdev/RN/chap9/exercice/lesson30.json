@@ -1,0 +1,105 @@
+[
+  {
+    "intitule": "Migration d'une animation simple de Animated vers Reanimated 2",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans React Native, l'API Animated classique permet de créer des animations fluides. Reanimated 2 offre de meilleures performances et une gestion plus fine des gestes. On souhaite convertir un composant qui fait rebondir un cercle (<code>scale</code> de 1 à 1.3 puis retour à 1) de <code>Animated</code> vers <code>Reanimated 2</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer pourquoi Reanimated 2 est préféré à Animated pour des animations liées à des gestes complexes ou des mises à jour fréquentes.",
+        "niveau": "medium",
+        "reponse": "Reanimated 2 exécute les animations directement sur le thread UI natif sans passer par le bridge JavaScript, ce qui évite les saccades et garantit 60 FPS. Il permet également de partager facilement des valeurs entre le thread UI et le thread JavaScript, et offre une syntaxe déclarative avec des hooks comme useSharedValue, useAnimatedStyle, et des gesture handlers optimisés.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Comparer le code Animated classique et Reanimated 2 pour une animation d'échelle au toucher. Identifier les différences syntaxiques et conceptuelles.",
+        "niveau": "hard",
+        "reponse": "Avec Animated : on utilise useRef(new Animated.Value(1)), puis Animated.spring(...).start(). Avec Reanimated 2 : on utilise useSharedValue(1) et un style animé via useAnimatedStyle, puis on modifie la shared value dans un gesture handler ou une fonction. Le code Reanimated 2 sépare clairement la valeur partagée, le style réactif, et l’animation via withSpring ou withTiming. Exemple Reanimated :\n\n```js\nconst scale = useSharedValue(1);\nconst animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));\nconst handlePress = () => { scale.value = withSpring(1.2, { damping: 3 }, () => { scale.value = withSpring(1); }); };\n```\nLa grande différence : la logique d’animation est déportée sur le thread UI et la mise à jour du style est automatique.",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Justifier l’utilisation de <code>useSharedValue</code> plutôt que <code>useState</code> pour les animations.",
+            "niveau": "medium",
+            "reponse": "useSharedValue crée une valeur qui peut être lue et modifiée depuis le thread UI sans provoquer de re-rendu du composant React. Cela évite des allers-retours coûteux entre JavaScript et le thread UI, améliorant les performances."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Animation gestuelle : suivi du doigt avec Reanimated 2",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous devez créer un composant React Native qui affiche un cercle bleu de 80 pixels de diamètre. L’utilisateur peut déplacer ce cercle en glissant le doigt sur l’écran (drag). La position du cercle doit suivre le doigt en temps réel, avec une inertie optionnelle lorsque le doigt est relâché. On utilise <code>react-native-gesture-handler</code> et <code>react-native-reanimated</code> version 2.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire les étapes nécessaires pour implémenter le suivi du doigt avec <code>PanGestureHandler</code> et <code>useAnimatedGestureHandler</code>. Expliquer le rôle de <code>onStart</code>, <code>onUpdate</code> et <code>onEnd</code>.",
+        "niveau": "hard",
+        "reponse": "1) Créer une shared value pour la position (translateX, translateY).\n2) Utiliser PanGestureHandler et dans useAnimatedGestureHandler, onStart initialise des variables de contexte pour stocker la position précédente. onUpdate met à jour la shared value en ajoutant le déplacement (translationX, translationY) à la position de départ. onEnd peut déclencher un withSpring ou withDecay pour l’inertie.\n3) Appliquer le style animé via useAnimatedStyle pour lier la transformation translate.\n4) Placer le composant Animated.View dans le PanGestureHandler.\nRôle : onStart capture la position initiale, onUpdate déplace l’objet, onEnd gère l’inertie ou l’arrêt.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi utiliser <code>withDecay</code> dans <code>onEnd</code> plutôt qu’un arrêt brutal ?",
+            "niveau": "medium",
+            "reponse": "withDecay simule une inertie naturelle basée sur la vélocité du geste, ce qui améliore l’expérience utilisateur (effet de glissement fluide). Un arrêt brutal serait moins naturel et moins moderne."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Rédiger le code complet d’un composant <code>DraggableCircle</code> qui utilise Reanimated 2 et PanGestureHandler pour déplacer un cercle. Inclure l’inertie avec <code>withDecay</code>.",
+        "niveau": "very hard",
+        "reponse": "```jsx\nimport React from 'react';\nimport { View, StyleSheet } from 'react-native';\nimport { PanGestureHandler } from 'react-native-gesture-handler';\nimport Animated, { useSharedValue, useAnimatedStyle, useAnimatedGestureHandler, withDecay } from 'react-native-reanimated';\n\nconst DraggableCircle = () => {\n  const translateX = useSharedValue(0);\n  const translateY = useSharedValue(0);\n\n  const gestureHandler = useAnimatedGestureHandler({\n    onStart: (_, ctx) => {\n      ctx.startX = translateX.value;\n      ctx.startY = translateY.value;\n    },\n    onUpdate: (event, ctx) => {\n      translateX.value = ctx.startX + event.translationX;\n      translateY.value = ctx.startY + event.translationY;\n    },\n    onEnd: (event) => {\n      translateX.value = withDecay({ velocity: event.velocityX, deceleration: 0.997 });\n      translateY.value = withDecay({ velocity: event.velocityY, deceleration: 0.997 });\n    },\n  });\n\n  const animatedStyle = useAnimatedStyle(() => ({\n    transform: [{ translateX: translateX.value }, { translateY: translateY.value }],\n  }));\n\n  return (\n    <View style={styles.container}>\n      <PanGestureHandler onGestureEvent={gestureHandler}>\n        <Animated.View style={[styles.circle, animatedStyle]} />\n      </PanGestureHandler>\n    </View>\n  );\n};\n\nconst styles = StyleSheet.create({\n  container: { flex: 1, justifyContent: 'center', alignItems: 'center' },\n  circle: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#3b82f6' },\n});\n\nexport default DraggableCircle;\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposer deux améliorations possibles pour ce composant (ex: limites de l’écran, retour haptique). Expliquer comment les implémenter avec Reanimated 2.",
+        "niveau": "hard",
+        "reponse": "1) Limites de l’écran : calculer les dimensions de l’écran (useWindowDimensions) et dans onUpdate, contraindre translateX et translateY pour ne pas dépasser les bords (en soustrayant le rayon du cercle). Utiliser clamp (fonction mathématique).\n2) Retour haptique : importer react-native-haptics et déclencher une vibration légère dans onStart ou onEnd pour signaler le début ou la fin du drag. Avec Reanimated, on peut utiliser runOnJS pour appeler la fonction haptique depuis le thread UI.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Animation d’entrée avec interpolation et séquence",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>On souhaite créer une animation de bienvenue : un logo apparaît avec une opacité progressive et une translation du haut. Ensuite, un texte glisse depuis la droite. On utilise <code>useSharedValue</code>, <code>withTiming</code> et <code>interpolate</code> (ou <code>withSequence</code>).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer le rôle de la fonction <code>interpolate</code> dans Reanimated 2. Donner un exemple concret appliqué à une translation qui se transforme en rotation.",
+        "niveau": "medium",
+        "reponse": "interpolate permet de mapper une valeur d’entrée (ex: 0 à 1) à une plage de sortie (ex: -100 à 0 pour translateY). On peut créer des animations complexes. Exemple : pour transformer un déplacement horizontal en rotation : rotation.value = interpolate(translateX.value, [0, 200], [0, 360], Extrapolate.CLAMP). Cela lie deux propriétés animées.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Rédiger une animation séquentielle : le logo effectue un fondu (opacity 0 → 1) et une translation Y (de -50 à 0) en 800ms, puis après 300ms de délai, un texte entre par translation X (+100 → 0). Utiliser <code>withDelay</code> et <code>withSequence</code> ou des appels dans un useEffect.",
+        "niveau": "hard",
+        "reponse": "```jsx\nimport React, { useEffect } from 'react';\nimport { View, Text } from 'react-native';\nimport Animated, { useSharedValue, useAnimatedStyle, withTiming, withDelay, withSequence } from 'react-native-reanimated';\n\nconst SplashAnimation = () => {\n  const logoOpacity = useSharedValue(0);\n  const logoTranslateY = useSharedValue(-50);\n  const textTranslateX = useSharedValue(100);\n\n  useEffect(() => {\n    logoOpacity.value = withTiming(1, { duration: 800 });\n    logoTranslateY.value = withTiming(0, { duration: 800 });\n    // texte retardé de 300ms après début\n    textTranslateX.value = withDelay(1100, withTiming(0, { duration: 600 }));\n  }, []);\n\n  const logoStyle = useAnimatedStyle(() => ({\n    opacity: logoOpacity.value,\n    transform: [{ translateY: logoTranslateY.value }],\n  }));\n  const textStyle = useAnimatedStyle(() => ({\n    transform: [{ translateX: textTranslateX.value }],\n  }));\n\n  return (\n    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>\n      <Animated.Image source={require('./logo.png')} style={[logoStyle, { width: 100, height: 100 }]} />\n      <Animated.Text style={[textStyle, { fontSize: 20, marginTop: 20 }]}>Bienvenue !</Animated.Text>\n    </View>\n  );\n};\n```",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Que fait <code>withDelay(1100, ...)</code> ? Pourquoi utilise-t-on 1100ms ?",
+            "niveau": "easy",
+            "reponse": "withDelay attend 1100 millisecondes avant d’exécuter l’animation. On utilise 1100 ms car l’animation du logo dure 800 ms, et on souhaite un délai supplémentaire de 300 ms après la fin du logo, soit 800+300 = 1100 ms."
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -1,0 +1,130 @@
+[
+  {
+    "intitule": "Reconnaissance des composants d’un pipeline GitLab CI",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Observez le fichier <code>.gitlab-ci.yml</code> suivant :</p><pre><code>stages:\n  - build\n  - test\n  - deploy\n\njob_build:\n  stage: build\n  script:\n    - echo \"Compilation en cours...\"\n    - make build\n\njob_test:\n  stage: test\n  script:\n    - echo \"Exécution des tests unitaires\"\n    - npm test\n\njob_deploy:\n  stage: deploy\n  script:\n    - echo \"Déploiement sur le serveur\"\n    - scp ./dist user@server:/app/\n  only:\n    - main</code></pre><p>Répondez aux questions suivantes en vous basant sur ce pipeline.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifiez les trois stages définis dans ce pipeline.",
+        "niveau": "easy",
+        "reponse": "Les trois stages sont : build, test, deploy.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez le rôle de la section `only: main` dans le job `job_deploy`.",
+        "niveau": "easy",
+        "reponse": "La section `only: main` indique que ce job ne sera exécuté que lorsque le pipeline est déclenché par un commit sur la branche `main`. Sur une autre branche (ex: develop), le job deploy ne sera pas lancé.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Déterminez l’ordre d’exécution des trois jobs. Justifiez votre réponse.",
+        "niveau": "medium",
+        "reponse": "L’ordre d’exécution est : job_build, puis job_test, puis job_deploy. L’ordre est déterminé par l’ordre des stages déclarés dans `stages:` et par l’affectation de chaque job à un stage. GitLab CI exécute les stages séquentiellement : tous les jobs d’un stage doivent réussir avant de passer au stage suivant.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Comparaison de deux fichiers .gitlab-ci.yml",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Voici deux pipelines GitLab CI différents pour le même projet Node.js :</p><p><strong>Pipeline A</strong></p><pre><code>stages:\n  - test\n  - deploy\n\ntest:\n  stage: test\n  script: npm test\n\ndeploy:\n  stage: deploy\n  script: npm run deploy\n  only:\n    - main</code></pre><p><strong>Pipeline B</strong></p><pre><code>stages:\n  - build\n  - test\n  - package\n  - deploy\n\nbuild:\n  stage: build\n  script: npm run build\n  artifacts:\n    paths:\n      - dist/\n\ntest:\n  stage: test\n  script: npm test\n\npackage:\n  stage: package\n  script: docker build -t app .\n\ndeploy:\n  stage: deploy\n  script: docker push app\n  only:\n    - main</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Comparez le nombre de stages et leur objectif dans les deux pipelines.",
+        "niveau": "medium",
+        "reponse": "Pipeline A a deux stages : test (validation) et deploy (mise en production). Pipeline B a quatre stages : build (construction des assets), test (vérification), package (création d’image Docker), deploy (envoi de l’image). Pipeline B est plus complet et proche d’un workflow DevOps réel avec conteneurisation.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez l’utilité de la section `artifacts` dans le job `build` du Pipeline B.",
+        "niveau": "medium",
+        "reponse": "`artifacts` permet de sauvegarder les fichiers générés par le job (ici le dossier `dist/`) afin qu’ils soient disponibles pour les jobs suivants (comme `package` ou `deploy`). Sans cela, les fichiers compilés ne seraient pas accessibles car chaque job tourne dans un environnement frais.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Critiquez le Pipeline A. Proposez une amélioration concrète pour qu’il intègre une phase de construction avant les tests.",
+        "niveau": "hard",
+        "reponse": "Pipeline A manque d’une étape de construction explicite. Si le projet nécessite une compilation (TypeScript, Webpack, etc.), les tests pourraient être exécutés sur du code source non compilé, ce qui est incorrect. Amélioration : ajouter un stage `build` avant `test` avec compilation et conservation des artefacts (comme dans Pipeline B).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Déboguer un pipeline GitLab CI qui échoue",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous êtes DevOps junior. Un développeur a poussé le fichier <code>.gitlab-ci.yml</code> suivant sur la branche <code>feature/paiement</code>. Le pipeline échoue au job <code>test_backend</code>. Aidez-le à corriger les erreurs.</p><pre><code>stages:\n  - build\n  - test\n  - deploy\n\nvariables:\n  DATABASE_URL: \"postgresql://user:pass@postgres:5432/app\"\n\nbuild_backend:\n  stage: build\n  script:\n    - cd backend\n    - npm install\n    - npm run build\n  artifacts:\n    paths:\n      - backend/dist/\n\ntest_backend:\n  stage: test\n  script:\n    - cd backend\n    - npm test  # ⚠️ échoue car la base de données n'est pas accessible\n  services:\n    - postgres:13\n  variables:\n    POSTGRES_DB: app\n    POSTGRES_USER: user\n    POSTGRES_PASSWORD: pass\n\ndeploy:\n  stage: deploy\n  script:\n    - echo \"Déploiement sur serveur\"\n  only:\n    - main</code></pre><p>Le job <code>test_backend</code> échoue avec l’erreur : <code>ECONNREFUSED 127.0.0.1:5432</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Diagnostiquez la cause probable de l’échec de connexion à PostgreSQL.",
+        "niveau": "medium",
+        "reponse": "Le service PostgreSQL est exposé sur son nom de service (`postgres`) et non sur `127.0.0.1`. Dans GitLab CI, le service est accessible via l’hôte `postgres` (le nom donné dans `services:`). De plus, la variable `DATABASE_URL` pointe vers `postgres:5432` mais le test essaie peut-être `localhost` ou `127.0.0.1`.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposez deux corrections concrètes dans le fichier YAML ou le code pour résoudre cette erreur.",
+        "niveau": "hard",
+        "reponse": "1. Modifier la variable `DATABASE_URL` pour utiliser l’hôte `postgres` : `DATABASE_URL: \"postgresql://user:pass@postgres:5432/app\"` (déjà correcte, mais vérifier que le test utilise cette variable).<br>2. Si le test utilise en dur `localhost`, changer le code pour lire la variable d’environnement. Ou modifier le service pour qu’il soit exposé sur `localhost` en utilisant l’alias `postgres:5432` et en configurant le réseau du job. Mais la meilleure pratique est d’utiliser le nom du service.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Après correction, le job test_backend réussit. Pourquoi le job deploy n’est-il pas exécuté sur cette branche feature/paiement ? Justifiez et corrigez si nécessaire.",
+        "niveau": "easy",
+        "reponse": "Le job `deploy` contient la directive `only: main`. Il ne sera exécuté que sur la branche `main`. Sur `feature/paiement`, ce job est ignoré. Ce comportement est normal et souhaitable (on ne déploie pas en production depuis une branche de fonctionnalité). Aucune correction n’est nécessaire, mais on pourrait ajouter un environnement de staging avec `only: /^feature/` si voulu.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Concevoir un pipeline CI/CD complet pour une application Web avec GitLab CI",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous devez mettre en place une chaîne DevOps pour une application React + Node.js (API REST). L’équipe veut :</p><ul><li>Exécuter les tests unitaires et d’intégration</li><li>Construire l’application frontend (React) et backend (Node.js)</li><li>Construire une image Docker pour l’API</li><li>Construire une image Docker pour le frontend (servi par Nginx)</li><li>Déployer les deux images sur un cluster Kubernetes (namespace <code>staging</code> pour la branche <code>develop</code> et <code>production</code> pour <code>main</code>)</li><li>Ne déployer en production qu’après validation manuelle (button dans l’UI GitLab).</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Définissez les stages nécessaires pour ce pipeline. Justifiez leur ordre.",
+        "niveau": "hard",
+        "reponse": "Stages proposés : <br>1. `test` – exécute les tests (unitaires + intégration) rapidement pour valider le code.<br>2. `build` – compile le frontend et le backend (assets, etc.)<br>3. `package` – construit les images Docker (API, frontend)<br>4. `deploy_staging` – déploiement automatique sur l’environnement staging (branche develop)<br>5. `manual_approve` – job manuel pour déclencher le déploiement en prod<br>6. `deploy_prod` – déploiement sur production (branche main).<br>Ordre justifié : tests avant construction pour éviter de perdre du temps à builder si les tests échouent ; packaging après build ; staging avant validation manuelle pour tester ; approval explicite avant prod pour respecter la gouvernance.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrivez la structure YAML de ce pipeline avec les sections `stages`, un exemple de job `test`, un job `package` et le job `deploy_prod` avec `when: manual`. Utilisez des variables GitLab pour gérer les noms d’images (ex: $CI_REGISTRY_IMAGE).",
+        "niveau": "very hard",
+        "reponse": "```yaml\nstages:\n  - test\n  - build\n  - package\n  - deploy_staging\n  - manual_approve\n  - deploy_prod\n\ntest:\n  stage: test\n  script:\n    - cd backend && npm test\n    - cd ../frontend && npm test\n\nbuild:\n  stage: build\n  script:\n    - cd frontend && npm run build\n    - cd ../backend && npm run build\n  artifacts:\n    paths:\n      - frontend/build/\n      - backend/dist/\n\npackage:\n  stage: package\n  script:\n    - docker build -t $CI_REGISTRY_IMAGE/backend:$CI_COMMIT_SHA -f backend/Dockerfile ./backend\n    - docker build -t $CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHA -f frontend/Dockerfile ./frontend\n    - docker push $CI_REGISTRY_IMAGE/backend:$CI_COMMIT_SHA\n    - docker push $CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHA\n\ndeploy_staging:\n  stage: deploy_staging\n  script:\n    - kubectl set image deployment/backend backend=$CI_REGISTRY_IMAGE/backend:$CI_COMMIT_SHA -n staging\n    - kubectl set image deployment/frontend frontend=$CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHA -n staging\n  only:\n    - develop\n\ndeploy_prod:\n  stage: deploy_prod\n  script:\n    - kubectl set image deployment/backend backend=$CI_REGISTRY_IMAGE/backend:$CI_COMMIT_SHA -n production\n    - kubectl set image deployment/frontend frontend=$CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHA -n production\n  only:\n    - main\n  when: manual\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquez comment vous gérerez les variables d’environnement (clés API, URLs) pour les environnements staging vs production sans les écrire en dur dans le code ni dans .gitlab-ci.yml.",
+        "niveau": "hard",
+        "reponse": "On utilise les **GitLab CI/CD Variables** protégées (Protected) et scoped par environnement :<br>- Définir dans Settings → CI/CD → Variables des variables comme `API_URL`, `DB_PASSWORD` avec `Environment scope` = `staging` ou `production`.<br>- Dans le pipeline, passer ces variables aux conteneurs (via `env` dans Dockerfile ou via ConfigMap/Secret dans Kubernetes).<br>- Option : injecter dans les pods Kubernetes via des Secrets Kubernetes créés automatiquement par GitLab (via integration Kubernetes).<br>- Ne jamais versionner les secrets.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

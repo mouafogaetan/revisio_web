@@ -1,0 +1,64 @@
+[
+  {
+    "intitule": "Exercice 1 : Compréhension de l'Extraction de Relations",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>L'extraction de relations (Relation Extraction) est une tâche du NLP qui consiste à identifier et à classer les relations sémantiques entre entités nommées dans un texte.</p><p>Considérons la phrase suivante :</p><p><em>'Steve Jobs a fondé Apple Inc. en 1976 à Cupertino, en Californie.'</em></p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifiez les entités nommées présentes dans cette phrase et les relations possibles entre elles. Proposez un schéma de relations (ex: fondateur_de, situé_dans, etc.).",
+        "niveau": "medium",
+        "reponse": "<p><strong>Entités nommées :</strong></p><ul><li><strong>Steve Jobs :</strong> Personne</li><li><strong>Apple Inc. :</strong> Organisation</li><li><strong>1976 :</strong> Date</li><li><strong>Cupertino :</strong> Lieu</li><li><strong>Californie :</strong> Lieu (État)</li></ul><p><strong>Relations possibles :</strong></p><ul><li><strong>fondateur_de (Steve Jobs, Apple Inc.)</strong></li><li><strong>date_de_fondation (Apple Inc., 1976)</strong></li><li><strong>siège_social (Apple Inc., Cupertino)</strong></li><li><strong>situé_dans (Cupertino, Californie)</strong></li><li><strong>lieu_de_fondation (Apple Inc., Cupertino)</strong></li></ul><p>Le schéma de relations peut être représenté comme un graphe où les nœuds sont les entités et les arêtes les relations.</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi l'extraction de relations est-elle une tâche difficile en NLP ?",
+            "niveau": "hard",
+            "reponse": "<p>L'extraction de relations est difficile car :</p><ul><li>Les relations peuvent être exprimées de multiples façons (ex: 'fondé par', 'a créé', 'est le fondateur de').</li><li>Les entités et les relations peuvent être éloignées dans le texte, nécessitant une compréhension du contexte global.</li><li>L'ambiguïté : une même phrase peut contenir plusieurs relations possibles.</li><li>Les relations peuvent être implicites (non exprimées directement).</li><li>La variété des schémas de relations (toujours de nouvelles relations à découvrir).</li></ul>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Proposez une approche supervisée pour l'extraction de relations.",
+            "niveau": "hard",
+            "reponse": "<p>Une approche supervisée pour l'extraction de relations consiste à :</p><ol><li><strong>Annoter un corpus</strong> avec des entités et des relations.</li><li><strong>Entraîner un classifieur</strong> (SVM, forêt aléatoire, ou un modèle de deep learning comme BERT) à prédire la relation entre deux entités.</li><li><strong>Les caractéristiques (features)</strong> peuvent inclure les mots entre les entités, les types d'entités, la position relative, des embeddings de mots, etc.</li><li><strong>Les modèles modernes</strong> utilisent des architectures de type Transformers (BERT) qui capturent le contexte des entités et peuvent prédire les relations avec une grande précision.</li></ol>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 2 : Mise en Œuvre d'un Système d'Extraction de Relations avec BERT",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous devez développer un système d'extraction de relations en utilisant un modèle BERT fine-tuné. Le système doit prendre en entrée une phrase contenant deux entités et prédire la relation qui les lie parmi un ensemble de relations prédéfinies.</p><p>Le jeu de données d'entraînement contient des paires (phrase, entité1, entité2, relation).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez l'architecture du modèle (comment les entrées sont encodées, comment la relation est prédite), puis proposez une implémentation utilisant la bibliothèque Hugging Face Transformers.",
+        "niveau": "very hard",
+        "reponse": "<p><strong>Architecture du modèle :</strong></p><ol><li><strong>Entrée :</strong> La phrase est tokenisée avec le tokenizer BERT. Les entités sont marquées par des tokens spéciaux (ex: <e1> et </e1> pour l'entité1, <e2> et </e2> pour l'entité2).</li><li><strong>Encodage :</strong> La phrase encodée est passée à travers BERT pour obtenir des représentations contextuelles.</li><li><strong>Pooling :</strong> On extrait les représentations des tokens correspondant aux entités (par exemple, en faisant la moyenne des tokens de l'entité).</li><li><strong>Classification :</strong> Les représentations des deux entités sont concaténées et passées à une couche entièrement connectée qui prédit la relation (classification multi-classe).</li></ol><p><strong>Implémentation avec Hugging Face :</strong></p><pre><code>from transformers import AutoTokenizer, AutoModelForSequenceClassification, Trainer, TrainingArguments\nfrom datasets import Dataset\nimport torch\n\n# 1. Charger le tokenizer et le modèle\nmodel_name = 'bert-base-uncased'\ntokenizer = AutoTokenizer.from_pretrained(model_name)\nmodel = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=10)  # 10 relations\n\n# 2. Préparer les données\ndef prepare_data(examples):\n    # Ajouter les tokens spéciaux autour des entités\n    texts = []\n    for text, e1, e2 in zip(examples['text'], examples['e1'], examples['e2']):\n        # Exemple : 'Steve Jobs a fondé Apple Inc.'\n        # On remplace les entités par des tokens spéciaux\n        text = text.replace(e1, f'<e1>{e1}</e1>')\n        text = text.replace(e2, f'<e2>{e2}</e2>')\n        texts.append(text)\n    return tokenizer(texts, padding='max_length', truncation=True)\n\ndataset = Dataset.from_dict({'text': ['Steve Jobs a fondé Apple Inc.'], 'label': [0]})\ntokenized_dataset = dataset.map(prepare_data, batched=True)\n\n# 3. Entraîner le modèle\ntraining_args = TrainingArguments(\n    output_dir='./results',\n    num_train_epochs=3,\n    per_device_train_batch_size=8,\n    evaluation_strategy='epoch'\n)\n\ntrainer = Trainer(\n    model=model,\n    args=training_args,\n    train_dataset=tokenized_dataset,\n    eval_dataset=tokenized_dataset\n)\n\ntrainer.train()\n</code></pre>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi utiliser des tokens spéciaux pour marquer les entités plutôt que de les passer comme des entrées séparées au modèle ?",
+            "niveau": "hard",
+            "reponse": "<p>L'utilisation de tokens spéciaux pour marquer les entités est une pratique standard car elle permet de conserver la structure de la phrase et de fournir un indice explicite au modèle sur les entités à considérer. BERT est capable d'apprendre à utiliser ces tokens pour mieux localiser les entités. Des approches alternatives (comme passer les entités séparément) sont possibles, mais l'insertion de tokens spéciaux est plus simple et souvent plus efficace car elle préserve l'ordre des mots et le contexte.</p>"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Comment évaluer la performance d'un système d'extraction de relations ?",
+            "niveau": "medium",
+            "reponse": "<p>La performance d'un système d'extraction de relations est généralement évaluée avec les métriques de classification standard :</p><ul><li><strong>Précision</strong> : Proportion de relations prédites qui sont correctes.</li><li><strong>Rappel</strong> : Proportion de relations réelles qui sont correctement prédites.</li><li><strong>F1-score</strong> : Moyenne harmonique de la précision et du rappel.</li><li>La <strong>matrice de confusion</strong> permet également d'analyser les erreurs par type de relation.</li></ul>"
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -1,0 +1,98 @@
+[
+  {
+    "questionText": "En Entity Framework Core, quelle méthode permet de récupérer <strong>tous</strong> les enregistrements d'une table sans aucune condition <code>WHERE</code> ?",
+    "options": [
+      "<code>FindAsync()</code>",
+      "<code>FirstOrDefault()</code>",
+      "<code>ToListAsync()</code>",
+      "<code>SingleAsync()</code>"
+    ],
+    "correctAnswer": 2,
+    "difficulty": "easy",
+    "explanation": "La méthode <code>ToListAsync()</code> exécute la requête et matérialise tous les résultats sous forme de liste. <code>FindAsync()</code> cherche par clé primaire, <code>FirstOrDefault()</code> retourne le premier élément (ou null), et <code>SingleAsync()</code> attend un seul élément, sinon lève une exception."
+  },
+  {
+    "questionText": "Quelle est la différence fondamentale entre <code>FirstOrDefault()</code> et <code>Find()</code> sur un <code>DbSet&lt;T&gt;</code> ?",
+    "options": [
+      "Aucune différence, ce sont des alias",
+      "<code>Find()</code> cherche uniquement en mémoire tandis que <code>FirstOrDefault()</code> va toujours en base",
+      "<code>Find()</code> cherche d'abord dans le cache local (Change Tracker) avant d'aller en base, <code>FirstOrDefault()</code> exécute toujours une requête SQL",
+      "<code>FirstOrDefault()</code> est asynchrone, <code>Find()</code> est synchrone"
+    ],
+    "correctAnswer": 2,
+    "difficulty": "medium",
+    "explanation": "<code>Find()</code> vérifie d'abord si l'entité avec la clé primaire donnée est déjà suivie par le <code>DbContext</code> (cache). Si oui, il la retourne sans requête SQL. Sinon, il interroge la base. <code>FirstOrDefault()</code> exécute systématiquement une requête SQL même si l'objet est déjà en mémoire."
+  },
+  {
+    "questionText": "Soit le code suivant : <br><code>var produit = context.Produits.Find(42);</code><br><code>produit.Prix = 99.99m;</code><br><code>await context.SaveChangesAsync();</code><br>Que se passe-t-il ?",
+    "options": [
+      "Une erreur car il faut appeler <code>Update()</code> avant <code>SaveChangesAsync()</code>",
+      "L'enregistrement avec l'ID 42 est modifié en base avec le nouveau prix",
+      "Seule l'entité en mémoire est modifiée, la base reste inchangée",
+      "Une nouvelle ligne est insérée dans la table"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "easy",
+    "explanation": "Entity Framework Core suit automatiquement les entités récupérées via le <code>DbContext</code>. <code>Find()</code> ou toute requête de sélection attache l'entité au Change Tracker avec l'état <code>Unchanged</code>. Toute modification de propriété passe l'état à <code>Modified</code>, et <code>SaveChangesAsync()</code> génère un <code>UPDATE SQL</code>."
+  },
+  {
+    "questionText": "Quelle est la manière correcte d'ajouter une nouvelle entité <code>Article</code> de façon asynchrone ?",
+    "options": [
+      "<code>context.Articles.Add(newArticle); await context.SaveChangesAsync();</code>",
+      "<code>await context.Articles.AddAsync(newArticle); await context.SaveChangesAsync();</code>",
+      "<code>context.Articles.Add(newArticle); context.SaveChanges();</code>",
+      "<code>context.Articles.Insert(newArticle); context.SubmitChanges();</code>"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "easy",
+    "explanation": "La méthode <code>AddAsync()</code> est recommandée pour les opérations asynchrones car elle génère des valeurs (comme les clés générées par la base) de manière non bloquante. <code>Add()</code> synchrone existe aussi mais n'est pas optimale dans un contexte async. L'appel à <code>SaveChangesAsync()</code> est essentiel pour persister réellement les changements."
+  },
+  {
+    "questionText": "Pour supprimer un produit dont l'ID est 10, sans le charger préalablement en mémoire, quelle approche est la plus performante ?",
+    "options": [
+      "<code>var p = context.Produits.Find(10); context.Produits.Remove(p); await context.SaveChangesAsync();</code>",
+      "<code>var p = new Produit { Id = 10 }; context.Produits.Attach(p); context.Produits.Remove(p); await context.SaveChangesAsync();</code>",
+      "<code>await context.Produits.Where(p =&gt; p.Id == 10).DeleteAsync();</code> (si package tiers autorisé)",
+      "<code>context.Database.ExecuteSqlRaw(\"DELETE FROM Produits WHERE Id = 10\");</code>"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "hard",
+    "explanation": "L'approche la plus performante sans requête SELECT préalable est de créer une entité factice (avec l'ID uniquement), l'attacher au contexte en état <code>Unchanged</code>, puis appeler <code>Remove()</code> (qui passe l'état à <code>Deleted</code>). Option 3 (ExecuteDelete) existe en EF Core 7+ mais n'est pas standard dans les objectifs de la leçon. L'option 0 fait un SELECT inutile."
+  },
+  {
+    "questionText": "Que retourne la méthode <code>SaveChangesAsync()</code> ?",
+    "options": [
+      "Le nombre total d'entités suivies par le <code>DbContext</code>",
+      "Le nombre d'enregistrements (lignes) affectés en base de données",
+      "Un booléen indiquant si la sauvegarde a réussi",
+      "La liste des clés primaires des entités modifiées"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium",
+    "explanation": "<code>SaveChangesAsync()</code> retourne un <code>int</code> représentant le nombre d'états d'entités convertis en commandes SQL qui ont affecté une ou plusieurs lignes. Par exemple, une insertion (1 ligne) retourne 1, une mise à jour retourne 1, une suppression retourne 1. Cela permet de vérifier qu'une opération a bien eu lieu."
+  },
+  {
+    "questionText": "Quelle méthode faut-il utiliser pour mettre à jour une entité détachée (non suivie par le contexte) reçue depuis un client HTTP ?",
+    "options": [
+      "<code>context.Update(entiteDetachee); await context.SaveChangesAsync();</code>",
+      "<code>context.Attach(entiteDetachee); context.Entry(entiteDetachee).State = EntityState.Modified; await context.SaveChangesAsync();</code>",
+      "<code>context.ChangeTracker.TrackGraph(entiteDetachee, ...);</code>",
+      "Les deux premières réponses sont correctes selon le scénario"
+    ],
+    "correctAnswer": 3,
+    "difficulty": "hard",
+    "explanation": "Les deux premières sont valides : <code>Update()</code> marque toutes les propriétés comme modifiées (génère un UPDATE sur toutes les colonnes). La seconde méthode permet de marquer uniquement certaines propriétés modifiées pour un UPDATE partiel. Le choix dépend si on veut écraser toutes les valeurs ou seulement certaines."
+  },
+  {
+    "questionText": "Dans une API REST, pourquoi est-il important d'utiliser <code>AddAsync()</code> et <code>SaveChangesAsync()</code> plutôt que leurs versions synchrones ?",
+    "options": [
+      "Pour éviter les deadlocks et améliorer la scalabilité du serveur web",
+      "Parce que Entity Framework Core n'offre pas de méthodes synchrones",
+      "Uniquement pour respecter une convention de nommage",
+      "Les méthodes async sont plus rapides en termes de temps d'exécution pur"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "medium",
+    "explanation": "Dans un contexte serveur (ASP.NET Core), les opérations asynchrones libèrent le thread pendant les I/O (accès disque/réseau de la base), permettant au serveur de traiter d'autres requêtes simultanément. Cela améliore la scalabilité et évite l'épuisement du pool de threads."
+  }
+]

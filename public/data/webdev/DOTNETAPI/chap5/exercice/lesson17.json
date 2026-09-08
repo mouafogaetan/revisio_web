@@ -1,0 +1,149 @@
+[
+  {
+    "intitule": "Comprendre le rôle d’un filtre d’exception",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>En vous appuyant sur le cours (lesson17), expliquez le rôle d’un filtre d’exception (<code>IExceptionFilter</code>) dans une API ASP.NET Core. Distinguez-le d’un middleware de gestion d’erreurs classique (<code>UseExceptionHandler</code>).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez la fonction principale d’un filtre d’exception et citez deux avantages par rapport à un middleware.",
+        "niveau": "easy",
+        "reponse": "Un filtre d’exception permet d’intercepter les exceptions levées dans l’action d’un contrôleur (et après). Avantages : 1) Il fonctionne dans le pipeline MVC avec accès au contexte de l’action (données de la requête, modèle, etc.). 2) Il peut être appliqué globalement, par contrôleur ou par action, offrant plus de granularité qu’un middleware unique.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Créer et enregistrer un filtre d’exception personnalisé",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous développez une API de gestion de produits. Actuellement, les exceptions non gérées retournent un détail technique (stack trace). Implémentez un filtre d’exception qui :<br>1. Capture toute exception (<code>Exception</code>) dans les actions.<br>2. Journalise l’erreur avec <code>ILogger</code>.<br>3. Retourne une réponse standardisée de type <code>ProblemDetails</code> (RFC 7807) avec le code HTTP 500.<br>4. Enregistrez ce filtre globalement.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez la classe du filtre nommé <code>GlobalExceptionFilter</code> implémentant <code>IExceptionFilter</code> ou <code>IAsyncExceptionFilter</code>.",
+        "niveau": "medium",
+        "reponse": "```csharp\npublic class GlobalExceptionFilter : IAsyncExceptionFilter\n{\n    private readonly ILogger<GlobalExceptionFilter> _logger;\n\n    public GlobalExceptionFilter(ILogger<GlobalExceptionFilter> logger)\n    {\n        _logger = logger;\n    }\n\n    public Task OnExceptionAsync(ExceptionContext context)\n    {\n        _logger.LogError(context.Exception, \"Une erreur non gérée s'est produite\");\n\n        var problemDetails = new ProblemDetails\n        {\n            Status = StatusCodes.Status500InternalServerError,\n            Title = \"Erreur interne du serveur\",\n            Detail = \"Une erreur s'est produite. Veuillez réessayer plus tard.\",\n            Instance = context.HttpContext.Request.Path\n        };\n\n        context.Result = new ObjectResult(problemDetails)\n        {\n            StatusCode = StatusCodes.Status500InternalServerError\n        };\n        context.ExceptionHandled = true;\n\n        return Task.CompletedTask;\n    }\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Enregistrez ce filtre globalement dans <code>Program.cs</code>.",
+            "niveau": "easy",
+            "reponse": "```csharp\nbuilder.Services.AddControllers(options =>\n{\n    options.Filters.Add<GlobalExceptionFilter>();\n});\n```\nOu si vous utilisez <code>AddMvc</code> : <code>options.Filters.Add(typeof(GlobalExceptionFilter))</code>."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Journalisation des exceptions avec ILogger",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Dans un filtre d’exception, on utilise <code>ILogger&lt;T&gt;</code> pour tracer les erreurs. Montrez comment injecter <code>ILogger&lt;GlobalExceptionFilter&gt;</code> et écrivez deux exemples de logs : l’un de niveau <code>Error</code> avec l’exception complète, l’autre de niveau <code>Warning</code> pour une condition métier particulière.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Fournissez le code d’injection et les deux appels de log.",
+        "niveau": "easy",
+        "reponse": "Injection via constructeur : <code>public GlobalExceptionFilter(ILogger&lt;GlobalExceptionFilter&gt; logger) { _logger = logger; }</code><br>Log Error : <code>_logger.LogError(ex, \"Exception dans {ActionName}\", context.ActionDescriptor.DisplayName);</code><br>Log Warning : <code>_logger.LogWarning(\"Condition métier non respectée pour l'utilisateur {UserId}\", userId);</code>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Appliquer un filtre uniquement sur un contrôleur spécifique",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous souhaitez qu’un filtre d’exception personnalisé <code>OrderExceptionFilter</code> ne s’applique qu’au contrôleur <code>OrdersController</code>, et non globalement. Écrivez l’attribut (ou l’enregistrement) nécessaire et justifiez cette approche.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le code d’application du filtre au contrôleur, soit via attribut, soit via registration dans <code>Program.cs</code>.",
+        "niveau": "medium",
+        "reponse": "Approche attribut : <code>[TypeFilter(typeof(OrderExceptionFilter))]</code> ou <code>[ServiceFilter(typeof(OrderExceptionFilter))]</code> (si enregistré dans DI).<br>Ou bien dans <code>Program.cs</code> : <code>options.Filters.Add&lt;OrderExceptionFilter&gt;();</code> à l’intérieur de <code>AddControllers()</code> mais cela l’applique globalement. Pour restreindre à <code>OrdersController</code>, on utilise directement l’attribut sur la classe du contrôleur.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez un cas où un filtre spécifique à un contrôleur est préférable à un filtre global.",
+            "niveau": "medium",
+            "reponse": "Quand la logique de gestion d’erreur diffère selon le domaine métier (ex : pour OrdersController, on veut envoyer un email à l’administrateur ; pour ProductsController, seulement un log). Ou pour éviter d’exposer des détails internes sur certaines APIs publiques vs internes."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse d’une situation : erreur de base de données",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Dans une API, une exception <code>DbUpdateConcurrencyException</code> se produit lors d’une mise à jour. Proposez un filtre d’exception spécifique pour intercepter cette exception uniquement, retourner un code 409 (Conflict) avec un message personnalisé, et logger l’avertissement. Écrivez le code complet du filtre et montrez son enregistrement pour l’ensemble de l’application.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le filtre <code>ConcurrencyExceptionFilter</code> qui implémente <code>IExceptionFilter</code> et ne traite que <code>DbUpdateConcurrencyException</code> (les autres exceptions sont laissées aux autres filtres ou middleware).",
+        "niveau": "hard",
+        "reponse": "```csharp\npublic class ConcurrencyExceptionFilter : IExceptionFilter\n{\n    private readonly ILogger<ConcurrencyExceptionFilter> _logger;\n\n    public ConcurrencyExceptionFilter(ILogger<ConcurrencyExceptionFilter> logger)\n    {\n        _logger = logger;\n    }\n\n    public void OnException(ExceptionContext context)\n    {\n        if (context.Exception is DbUpdateConcurrencyException concurrencyEx)\n        {\n            _logger.LogWarning(concurrencyEx, \"Conflit de concurrence sur {Entity}\", concurrencyEx.Entries.First().Entity.GetType().Name);\n\n            var problemDetails = new ProblemDetails\n            {\n                Status = StatusCodes.Status409Conflict,\n                Title = \"Conflit de modification\",\n                Detail = \"La ressource a été modifiée par un autre utilisateur. Rechargez puis réessayez.\",\n                Instance = context.HttpContext.Request.Path\n            };\n\n            context.Result = new ConflictObjectResult(problemDetails);\n            context.ExceptionHandled = true;\n        }\n    }\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Enregistrez ce filtre globalement ET assurez-vous qu’il ne bloque pas d’autres filtres (ordre d’exécution).",
+            "niveau": "hard",
+            "reponse": "Enregistrement : <code>builder.Services.AddControllers(options => options.Filters.Add&lt;ConcurrencyExceptionFilter&gt;());</code><br>Ordre : les filtres s’exécutent dans l’ordre d’enregistrement. On peut aussi contrôler l’ordre avec <code>IOrderedFilter</code>. Ici, on gère seulement une exception spécifique, les autres passeront aux filtres suivants car on ne marque <code>ExceptionHandled = true</code> que pour celle-ci."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Comparer middleware et filtre d’exception",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un étudiant pense qu’un middleware <code>UseExceptionHandler</code> est toujours suffisant et qu’un filtre d’exception n’apporte rien. Réfutez cette affirmation en donnant 3 situations où le filtre est plus adapté ou complémentaire.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Citez 3 avantages spécifiques d’un filtre d’exception par rapport à un middleware de gestion d’erreur, en lien avec le contexte MVC/API.",
+        "niveau": "medium",
+        "reponse": "1) Accès direct au contexte de l’action (ex : paramètres du modèle, résultat de liaison, etc.).<br>2) Possibilité de modifier le résultat de l’action (ex : retourner un <code>ValidationProblemDetails</code> précis).<br>3) Peut être conditionné par attribut sur certaines actions/contrôleurs uniquement, sans réécrire le pipeline global.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Implémenter un filtrage par type d’exception avec fallback",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Concevez un système où :<br>- <code>NotFoundException</code> (personnalisée) → retourne 404 avec détails.<br>- <code>ValidationException</code> (personnalisée) → retourne 400 avec liste d’erreurs.<br>- Toute autre exception → retourne 500 via un filtre générique.<br>Écrivez deux filtres (ou un seul capable de distinguer) et montrez comment les chaîner pour que le premier qui correspond traite l’exception.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez l’implémentation (filtres ou un filtre avec pattern matching) et l’ordre d’enregistrement.",
+        "niveau": "very hard",
+        "reponse": "Approche 1 : plusieurs filtres où chacun vérifie son type d’exception et pose <code>ExceptionHandled = true</code> si correspond. Ordre : NotFoundExceptionFilter, ValidationExceptionFilter, GenericExceptionFilter.<br><br>Exemple partiel :<br>```csharp\npublic class NotFoundExceptionFilter : IExceptionFilter\n{\n    public void OnException(ExceptionContext context)\n    {\n        if (context.Exception is NotFoundException notFound)\n        {\n            context.Result = new NotFoundObjectResult(new { error = notFound.Message });\n            context.ExceptionHandled = true;\n        }\n    }\n}\n```\nEnregistrement :<br><code>options.Filters.Add<NotFoundExceptionFilter>();</code><br><code>options.Filters.Add<ValidationExceptionFilter>();</code><br><code>options.Filters.Add<GenericExceptionFilter>();</code><br>Ordre garanti par la séquence d’ajout.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

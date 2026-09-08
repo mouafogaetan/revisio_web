@@ -1,0 +1,130 @@
+[
+  {
+    "intitule": "Découpage en couches d’une API .NET",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans une API ASP.NET Core, on souhaite séparer l’application en plusieurs couches : Controllers, Services, Repository et DTOs.</p><p>Répondez aux questions ci-dessous.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez le rôle de chaque couche (Controllers, Services, Repository, DTOs) dans une architecture en couches pour une API REST.",
+        "niveau": "medium",
+        "reponse": "Controllers : gestion des requêtes HTTP et réponses. Services : logique métier. Repository : accès aux données. DTOs : transfert de données entre couches.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Justifiez pourquoi on évite d’exposer directement les entités EF Core dans les réponses de l’API.",
+        "niveau": "medium",
+        "reponse": "Pour éviter l’exposition excessive de données (sécurité), réduire la surcharge réseau, découpler la couche de persistance de la couche API, et améliorer la maintenabilité.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposez un exemple de hiérarchie de dossiers/namespaces pour une API structurée avec ces couches.",
+        "niveau": "easy",
+        "reponse": "Exemple : Controllers/, Services/, Repository/, DTOs/, Models/. Namespaces correspondants : MonApi.Controllers, MonApi.Services, MonApi.Repository, MonApi.DTOs.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Implémentation du pattern Service",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Dans une API de gestion de produits, le contrôleur <code>ProductsController</code> contient toute la logique métier (validation, calculs, appels au repository). Refactorisez cette API pour utiliser le pattern Service.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créez une interface <code>IProductService</code> avec les méthodes <code>GetAllAsync()</code>, <code>GetByIdAsync(int id)</code>, <code>AddAsync(ProductCreateDto dto)</code>. Justifiez le choix des types de retour.",
+        "niveau": "hard",
+        "reponse": "Task<IEnumerable<ProductDto>> GetAllAsync(), Task<ProductDto> GetByIdAsync(int id), Task<ProductDto> AddAsync(ProductCreateDto dto). Retour asynchrone pour ne pas bloquer, DTO pour ne pas exposer l’entité.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Implémentez la méthode <code>AddAsync</code> dans <code>ProductService</code> qui vérifie qu’un produit avec le même nom n’existe pas déjà avant de l’ajouter via le repository. Gérez le cas d’erreur.",
+        "niveau": "hard",
+        "reponse": "public async Task<ProductDto> AddAsync(ProductCreateDto dto) { var existing = await _productRepo.GetByNameAsync(dto.Name); if (existing != null) throw new InvalidOperationException(\"Product already exists\"); var product = new Product { Name = dto.Name, Price = dto.Price }; await _productRepo.AddAsync(product); await _unitOfWork.SaveChangesAsync(); return new ProductDto { Id = product.Id, Name = product.Name, Price = product.Price }; }",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Réécrivez l’action <code>AddProduct</code> du contrôleur pour qu’elle délègue au service. Ajoutez la gestion des exceptions.",
+        "niveau": "medium",
+        "reponse": "[HttpPost] public async Task<ActionResult<ProductDto>> AddProduct(ProductCreateDto dto) { try { var product = await _productService.AddAsync(dto); return CreatedAtAction(nameof(GetProduct), new { id = product.Id }, product); } catch (InvalidOperationException ex) { return Conflict(new { message = ex.Message }); } }",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Configuration et utilisation d’AutoMapper",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous avez une entité <code>User</code> (Id, Name, Email, PasswordHash) et un DTO <code>UserResponseDto</code> (Id, Name, Email). Écrivez la configuration AutoMapper et son utilisation dans un service.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créez un profil AutoMapper qui mappe <code>User</code> vers <code>UserResponseDto</code> en ignorant <code>PasswordHash</code>.",
+        "niveau": "medium",
+        "reponse": "public class UserProfile : Profile { public UserProfile() { CreateMap<User, UserResponseDto>(); } }",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Injectez <code>IMapper</code> dans un service et mappez une liste d’entités <code>User</code> en liste de <code>UserResponseDto</code>.",
+        "niveau": "medium",
+        "reponse": "public class UserService { private readonly IMapper _mapper; public UserService(IMapper mapper) { _mapper = mapper; } public async Task<IEnumerable<UserResponseDto>> GetAllAsync() { var users = await _userRepo.GetAllAsync(); return _mapper.Map<IEnumerable<UserResponseDto>>(users); } }",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquez pourquoi AutoMapper est utile dans une architecture en couches.",
+        "niveau": "easy",
+        "reponse": "Il évite d’écrire manuellement le code de conversion entre entités et DTOs, réduit les erreurs, améliore la lisibilité et facilite la maintenance.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Débogage d’une architecture mal structurée",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Voici un extrait de code d’un projet existant. Identifiez les problèmes d’architecture et proposez des corrections.</p><pre>public class ProductsController : ControllerBase { private readonly AppDbContext _context; public ProductsController(AppDbContext context) { _context = context; } [HttpGet] public async Task<IActionResult> GetAll() { var products = await _context.Products.ToListAsync(); return Ok(products); } [HttpPost] public async Task<IActionResult> Create([FromBody] Product product) { if (product.Price < 0) return BadRequest(); await _context.Products.AddAsync(product); await _context.SaveChangesAsync(); return Ok(product); } }</pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Listez les violations des principes d’architecture en couches dans ce contrôleur.",
+        "niveau": "hard",
+        "reponse": "1. Accès direct au DbContext (pas de Repository). 2. Logique métier (validation Price < 0) dans le contrôleur. 3. Renvoi direct de l’entité Product (exposition excessive). 4. Absence de DTO.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposez une nouvelle version de ce contrôleur utilisant un service et un repository.",
+        "niveau": "hard",
+        "reponse": "public class ProductsController : ControllerBase { private readonly IProductService _productService; public ProductsController(IProductService productService) { _productService = productService; } [HttpGet] public async Task<ActionResult<IEnumerable<ProductDto>>> GetAll() { return Ok(await _productService.GetAllAsync()); } [HttpPost] public async Task<ActionResult<ProductDto>> Create(ProductCreateDto dto) { var result = await _productService.CreateAsync(dto); return CreatedAtAction(nameof(GetById), new { id = result.Id }, result); } }",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Où placeriez-vous la validation que le prix est positif ? Justifiez.",
+        "niveau": "medium",
+        "reponse": "Dans la couche Service ou via un attribut de validation sur le DTO. Car la validation métier doit être indépendante du contrôleur et réutilisable.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

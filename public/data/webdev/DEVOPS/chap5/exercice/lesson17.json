@@ -1,0 +1,101 @@
+[
+  {
+    "intitule": "Analyse d'un Dockerfile existant",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous recevez le Dockerfile suivant pour une application Node.js :</p><pre><code>FROM node:14<br>WORKDIR /app<br>COPY . .<br>RUN npm install<br>EXPOSE 3000<br>CMD [\"node\", \"server.js\"]<br></code></pre><p>Identifiez les problèmes potentiels liés à la taille de l’image et à la sécurité.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier les couches du Dockerfile qui augmentent inutilement la taille finale de l’image. Justifier votre réponse.",
+        "niveau": "easy",
+        "reponse": "La ligne 'COPY . .' copie tous les fichiers du contexte (y compris node_modules, fichiers temporaires, etc.) sans optimisation. La ligne 'RUN npm install' installe les dépendances après la copie, ce qui empêche la mise en cache efficace. L'absence de .dockerignore aggrave le problème.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer une amélioration simple (sans multi-stage) pour réduire la taille de l’image.",
+        "niveau": "medium",
+        "reponse": "Ajouter un fichier .dockerignore pour exclure node_modules, .git, logs, etc. Puis séparer la copie : d'abord copier uniquement package.json et package-lock.json, exécuter 'RUN npm install', puis copier le reste du code source. Cela permet la mise en cache de la couche d'installation.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation multi-stage pour une application Go",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous devez containeriser une application Go qui génère un binaire statique. Le Dockerfile actuel produit une image de 950 Mo. En utilisant le multi-stage build, réduisez cette taille à moins de 20 Mo.</p><p>Rappel : Go peut compiler un binaire statique avec <code>CGO_ENABLED=0 go build -a -installsuffix cgo -o app .</code></p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédiger un Dockerfile multi-stage complet. Expliquer chaque étape.",
+        "niveau": "hard",
+        "reponse": "```dockerfile\n# Étape 1 : build\nFROM golang:1.19 AS builder\nWORKDIR /src\nCOPY go.mod go.sum ./\nRUN go mod download\nCOPY . .\nRUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o app .\n\n# Étape 2 : image finale\nFROM scratch\nCOPY --from=builder /src/app /app\nEXPOSE 8080\nCMD [\"/app\"]\n```\nExplication : La première étape utilise Golang complet pour compiler. La seconde étape part de 'scratch' (image vide) et ne copie que le binaire, supprimant tous les outils de compilation, sources et dépendances.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi utilise-t-on 'FROM scratch' plutôt que 'alpine' ?",
+            "niveau": "medium",
+            "reponse": "'scratch' est une image totalement vide, ce qui donne une taille minimale (uniquement le binaire). 'alpine' ajouterait une couche d'environnement Linux minimal (~5 Mo), ce qui reste acceptable mais plus volumineux. Pour un binaire Go statique, scratch est optimal."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Création d’un .dockerignore pour un projet Python",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un projet Python contient les dossiers et fichiers suivants : <code>src/</code>, <code>tests/</code>, <code>.git/</code>, <code>.env</code>, <code>__pycache__/</code>, <code>venv/</code>, <code>requirements.txt</code>, <code>Dockerfile</code>, <code>README.md</code>, <code>data/raw/</code> (fichiers de test volumineux).</p><p>Rédigez un fichier <code>.dockerignore</code> pertinent pour éviter d’envoyer des fichiers inutiles au contexte de build Docker.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Définir le contenu du fichier .dockerignore ligne par ligne. Expliquer chaque exclusion.",
+        "niveau": "medium",
+        "reponse": "__pycache__/\n*.pyc\n.git/\n.env\nvenv/\ntests/\nREADME.md\ndata/raw/\nDockerfile\n\nExplication : __pycache__ et *.pyc sont des caches Python inutiles dans l'image. .git contient l'historique de version (lourd). .env contient des secrets. venv est un environnement virtuel local. tests/ n'est pas nécessaire en production. README.md est documentaire. data/raw/ peut être très volumineux et provient souvent de données de test. Dockerfile lui-même n'a pas besoin d'être copié.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Déboguer un Dockerfile d’application React (build et serveur statique)",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Un développeur junior a écrit ce Dockerfile pour une application React :</p><pre><code>FROM node:16<br>WORKDIR /app<br>COPY . .<br>RUN npm install<br>RUN npm run build<br>RUN npm install -g serve<br>EXPOSE 5000<br>CMD [\"serve\", \"-s\", \"build\", \"-l\", \"5000\"]<br></code></pre><p>La build échoue car l’image est trop volumineuse (> 1 Go) et certaines étapes ne sont pas optimisées.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Réécrire ce Dockerfile en utilisant une stratégie multi-stage pour produire une image finale contenant uniquement les fichiers statiques (build) et un serveur HTTP léger.",
+        "niveau": "very hard",
+        "reponse": "```dockerfile\n# Étape 1 : build\nFROM node:16 AS builder\nWORKDIR /app\nCOPY package*.json ./\nRUN npm ci --only=production\nCOPY . .\nRUN npm run build\n\n# Étape 2 : serveur statique\nFROM nginx:alpine\nCOPY --from=builder /app/build /usr/share/nginx/html\nEXPOSE 80\nCMD [\"nginx\", \"-g\", \"daemon off;\"]\n```\nVariante avec 'serve' : FROM node:16-alpine AS runner, mais nginx est plus standard.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi utilise-t-on 'npm ci' plutôt que 'npm install' dans l’étape de build ?",
+            "niveau": "medium",
+            "reponse": "npm ci est plus rapide, strict sur les versions du lock file, et conçu pour les environnements d'intégration continue. Il échoue si package-lock.json n'est pas cohérent, ce qui évite les surprises."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Quelle est la taille approximative de l’image finale après optimisation par rapport à l’image initiale ?",
+            "niveau": "medium",
+            "reponse": "L'image initiale (node:16 + serve) > 1 Go. L'image finale avec nginx:alpine fait environ 20-30 Mo, car elle ne contient que le binaire nginx et les fichiers HTML/CSS/JS statiques, sans Node.js ni les outils de build."
+          }
+        ]
+      }
+    ]
+  }
+]

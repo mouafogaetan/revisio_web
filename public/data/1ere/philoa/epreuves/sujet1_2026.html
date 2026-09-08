@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+  "matiere": "Philo 1ère A",
+  "classe": "1ère",
+  "sequence": "Séquence 1",
+  "anneeScolaire": "2025-2026",
+  "exercices": [
+    {
+      "titre": "Exercice 1 : Commentaire de texte philosophique",
+      "points": "8 pts",
+      "enonce": "<div style='font-size: 16px; line-height: 1.8; color: #1a1a1a; font-family: Arial, sans-serif;'>\n<p><strong>Texte :</strong></p>\n<div style='background-color: #f9f9f9; padding: 15px; border-left: 4px solid #2c3e50; margin: 15px 0;'>\n<p>« L'homme est né libre, et partout il est dans les fers. Tel se croit le maître des autres, qui ne laisse pas d'être plus esclave qu'eux. Comment ce changement s'est-il fait ? Je l'ignore. Qu'est-ce qui peut le rendre légitime ? Je crois pouvoir résoudre cette question. »</p>\n<p style='text-align: right;'><strong>Jean-Jacques Rousseau, <em>Du Contrat social</em>, 1762</strong></p>\n</div>\n<p>Après avoir lu attentivement le texte, rédigez un commentaire composé en suivant la méthode apprise en classe. Votre commentaire devra comporter une introduction, un développement structuré en trois parties et une conclusion.</p>\n</div>",
+      "questions": [
+        {
+          "question": "Rédigez l'introduction du commentaire. Elle devra : situer le texte (auteur, œuvre, contexte), présenter le thème et le problème posé par l'auteur, formuler une problématique claire.",
+          "reponse": "L'introduction doit comporter les éléments suivants :<br>1) Présentation de l'auteur : Jean-Jacques Rousseau, philosophe des Lumières, auteur du *Contrat social* (1762).<br>2) Contexte : Rousseau s'interroge sur la légitimité de l'autorité politique.<br>3) Thème : l'origine et la légitimité du pouvoir politique.<br>4) Problème : comment concilier la liberté naturelle de l'homme avec la sujétion sociale ?<br>5) Thèse : l'homme naît libre mais la société l'a enchaîné ; il faut trouver un principe de légitimité.<br>6) Problématique : dans quelle mesure la liberté de l'homme peut-elle se concilier avec l'obéissance à une autorité politique légitime ?"
+        },
+        {
+          "question": "Rédigez la première partie du développement. Elle doit analyser la thèse de l'auteur en expliquant les concepts de 'liberté naturelle' et d' 'esclavage social'.",
+          "reponse": "La première partie doit montrer que Rousseau oppose la liberté naturelle à la servitude sociale. Il affirme que l'homme est né libre, ce qui signifie que la liberté est une caractéristique essentielle de l'humanité. Mais partout, dans les sociétés, il est 'dans les fers', c'est-à-dire soumis à des contraintes, des lois et des autorités qui limitent sa liberté. La contradiction entre l'idéal de liberté et la réalité sociale est le point de départ de sa réflexion."
+        },
+        {
+          "question": "Rédigez la deuxième partie du développement. Elle doit confronter la position de Rousseau à celle d'un autre auteur (exemple : Hobbes, qui défend la nécessité d'un pouvoir absolu pour éviter la guerre de tous contre tous).",
+          "reponse": "La deuxième partie doit confronter la vision de Rousseau à celle de Thomas Hobbes. Pour Hobbes, l'homme est un loup pour l'homme et la liberté naturelle conduit à la guerre perpétuelle. Pour assurer la paix, il est nécessaire de renoncer à une partie de sa liberté et de se soumettre à un pouvoir absolu (le Léviathan). Rousseau, au contraire, ne renonce pas à la liberté : il cherche à fonder une société où l'homme obéit à la loi qu'il s'est lui-même donnée."
+        },
+        {
+          "question": "Rédigez la troisième partie du développement. Elle doit proposer une réinterprétation personnelle ou nuancer la thèse de Rousseau.",
+          "reponse": "La troisième partie peut nuancer la thèse de Rousseau en montrant qu'elle est idéale mais difficile à réaliser. On peut par exemple évoquer le problème de la volonté générale : comment s'assurer que la volonté générale est bien celle de tous ? On peut aussi montrer que l'idée de liberté naturelle est contestable, car l'homme est toujours déjà un être social (Aristote). Enfin, on peut souligner l'actualité de la question : les sociétés contemporaines sont-elles plus libres ou plus aliénées ?"
+        },
+        {
+          "question": "Rédigez la conclusion du commentaire. Elle devra rappeler le problème, faire le bilan de l'analyse et dégager l'intérêt philosophique du texte.",
+          "reponse": "La conclusion doit :<br>1) Rappeler le problème : l'origine de l'inégalité et de l'aliénation sociale.<br>2) Faire le bilan de l'analyse : Rousseau a montré que la liberté est naturelle mais que la société l'a corrompue ; Hobbes propose une vision plus pessimiste ; la question de la légitimité reste ouverte.<br>3) Dégager l'intérêt philosophique : le texte de Rousseau pose la question fondamentale du rapport entre l'individu et la société, question qui traverse toute la philosophie politique jusqu'à nos jours."
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 2 : Dissertation philosophique",
+      "points": "8 pts",
+      "enonce": "<div style='font-size: 16px; line-height: 1.8; color: #1a1a1a; font-family: Arial, sans-serif;'>\n<p><strong>Sujet :</strong> « La conscience de soi est-elle nécessaire pour être libre ? »</p>\n<p>Vous traiterez ce sujet sous forme d'une dissertation structurée. Votre travail devra comporter une introduction, un développement organisé en trois parties (thèse, antithèse, synthèse) et une conclusion. Vous mobiliserez les auteurs et concepts étudiés en classe.</p>\n</div>",
+      "questions": [
+        {
+          "question": "Rédigez l'introduction de la dissertation. Elle devra : amener le sujet, poser le problème, formuler une problématique et annoncer le plan.",
+          "reponse": "L'introduction doit comporter :<br>1) Une amorce : constat sur la liberté comme valeur essentielle.<br>2) Le problème : pour être libre, faut-il avoir conscience de soi ?<br>3) La problématique : la liberté suppose-t-elle une réflexion sur soi-même, ou peut-on être libre sans se connaître ?<br>4) L'annonce du plan : dans une première partie, nous montrerons que la liberté exige une conscience de soi (Descartes, Sartre). Dans une seconde partie, nous verrons que la liberté peut être vécue sans conscience explicite (Aristote, Spinoza). Enfin, nous proposerons une synthèse nuancée."
+        },
+        {
+          "question": "Rédigez la première partie (thèse). Elle devra défendre l'idée que la conscience de soi est nécessaire à la liberté, en vous appuyant sur Descartes et Sartre.",
+          "reponse": "La première partie doit défendre la thèse selon laquelle la liberté exige une conscience de soi.<br>1) Descartes : le *cogito* (je pense donc je suis) est le fondement de la liberté. Pour être libre, il faut avoir conscience de ses propres pensées.<br>2) Sartre : la liberté est liée à la conscience. L'homme est condamné à être libre, et cette liberté suppose une lucidité sur sa condition.<br>3) Conclusion partielle : sans conscience de soi, on n'est pas maître de ses actes."
+        },
+        {
+          "question": "Rédigez la deuxième partie (antithèse). Elle devra montrer que la liberté peut s'exercer sans conscience de soi explicite, en vous appuyant sur Aristote ou Spinoza.",
+          "reponse": "La deuxième partie doit montrer que la liberté ne dépend pas nécessairement de la conscience de soi.<br>1) Aristote : la vertu est une habitude. On peut agir librement sans avoir une connaissance explicite de ses actes.<br>2) Spinoza : la liberté est le fait de comprendre les causes qui nous déterminent. Mais cette compréhension n'est pas toujours consciente.<br>3) Conclusion partielle : la liberté peut être vécue comme une spontanéité."
+        },
+        {
+          "question": "Rédigez la troisième partie (synthèse). Elle devra dépasser l'opposition en montrant que la conscience de soi est un idéal vers lequel la liberté tend.",
+          "reponse": "La troisième partie doit proposer un dépassement :<br>1) La conscience de soi est un idéal régulateur : la liberté parfaite consiste à se connaître soi-même.<br>2) Mais cette conscience n'est pas toujours nécessaire pour agir librement.<br>3) La liberté est un processus : on devient libre en prenant conscience de soi.<br>4) Conclusion : la liberté est à la fois un donné (nous sommes libres) et un projet (nous devons le devenir)."
+        },
+        {
+          "question": "Rédigez la conclusion de la dissertation. Elle devra rappeler le problème, dresser le bilan de l'analyse et proposer une ouverture.",
+          "reponse": "La conclusion doit :<br>1) Rappeler le problème : la liberté suppose-t-elle la conscience de soi ?<br>2) Faire le bilan : la conscience de soi est un idéal, mais la liberté peut être vécue sans elle.<br>3) Proposer une ouverture : la liberté est peut-être moins affaire de connaissance que d'action. (ouverture sur la pensée de Hannah Arendt ou de Simone de Beauvoir)."
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 3 : Épreuve de culture philosophique",
+      "points": "4 pts",
+      "enonce": "<div style='font-size: 16px; line-height: 1.8; color: #1a1a1a; font-family: Arial, sans-serif;'>\n<p>Répondez aux questions suivantes en vous appuyant sur vos connaissances historiques et philosophiques :</p>\n</div>",
+      "questions": [
+        {
+          "question": "1) Citer trois philosophes de la période antique et préciser un concept ou une idée associée à chacun.",
+          "reponse": "Socrate : la maïeutique, l'ironie.<br>Platon : la théorie des Idées, la République.<br>Aristote : la vertu (éthique), la logique."
+        },
+        {
+          "question": "2) Expliquer en quoi consiste le mouvement de la Négritude. Citer deux de ses principaux représentants.",
+          "reponse": "La Négritude est un mouvement littéraire et politique fondé dans les années 1930 par Léopold Sédar Senghor, Aimé Césaire et Léon-Gontran Damas. Il revendique la dignité et la valeur de la culture noire, contre le racisme et la domination coloniale. Représentants : Senghor (Sénégal), Césaire (Martinique)."
+        },
+        {
+          "question": "3) Qu'est-ce que l'ethnophilosophie ? En quoi a-t-elle été critiquée par des penseurs africains comme Paulin Hountondji ?",
+          "reponse": "L'ethnophilosophie est un courant de pensée qui considère que la philosophie africaine se trouve dans les traditions, les mythes et les coutumes des peuples africains. Elle a été critiquée par Paulin Hountondji (Bénin) qui y voit une forme de 'colonialisme scientifique' et qui défend l'idée d'une philosophie africaine savante, écrite et critique."
+        }
+      ]
+    }
+  ]
+};
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

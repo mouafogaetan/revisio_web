@@ -1,0 +1,136 @@
+[
+  {
+    "intitule": "Architecture Transformer : Encodeur et Décodeur",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Le Transformer est une architecture de deep learning qui a révolutionné le traitement du langage naturel. Il repose sur un mécanisme d'attention multi-têtes et une structure encodeur-décodeur.</p><p>Dans cet exercice, vous allez analyser et comparer les différentes composantes de l'architecture Transformer.</p>",
+      "images": [
+        "Schéma de l'architecture Transformer montrant l'encodeur (à gauche) avec ses couches d'auto-attention et feed-forward, et le décodeur (à droite) avec ses couches d'auto-attention masquée, d'attention croisée et feed-forward."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez les rôles respectifs de l'encodeur et du décodeur dans l'architecture Transformer. Quelle est la différence fondamentale entre leur traitement ?",
+        "niveau": "medium",
+        "reponse": "L'<strong>encodeur</strong> traite la séquence d'entrée (source) et produit des représentations contextuelles pour chaque token. Il utilise l'<strong>auto-attention</strong> qui permet à chaque token de prendre en compte tous les autres tokens de la séquence d'entrée.<br/>Le <strong>décodeur</strong> génère la séquence de sortie (cible) de manière auto-régressive. Il utilise :<br/>1. Une <strong>auto-attention masquée</strong> qui empêche les tokens de voir les tokens futurs (pour préserver l'ordre de génération).<br/>2. Une <strong>attention croisée</strong> qui permet au décodeur de se focaliser sur les représentations de l'encodeur.<br/>La différence fondamentale est que l'encodeur est <strong>bidirectionnel</strong> (tous les tokens sont visibles), tandis que le décodeur est <strong>unidirectionnel</strong> (gauche vers droite) pour la génération.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Comparez le mécanisme d'auto-attention de l'encodeur et celui du décodeur. Pourquoi l'auto-attention du décodeur est-elle masquée ?",
+        "niveau": "hard",
+        "reponse": "<strong>Auto-attention de l'encodeur :</strong> Chaque token peut s'intéresser à tous les autres tokens de la séquence d'entrée, sans restriction. Cela permet de capturer le contexte bidirectionnel.<br/><strong>Auto-attention du décodeur :</strong> Elle est masquée (masked self-attention) : chaque token ne peut s'intéresser qu'aux tokens qui le précèdent dans la séquence de sortie. Cela est nécessaire car le décodeur génère la séquence de façon auto-régressive (token par token). Pendant l'entraînement, on utilise le 'teacher forcing' et le masque empêche le modèle de tricher en voyant les tokens futurs.<br/>Le masque est une matrice triangulaire supérieure qui met les scores d'attention des tokens futurs à \\(-\\infty\\), les rendant nuls après le softmax.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "À quoi servent les embeddings positionnels dans un Transformer ? Expliquez comment ils sont calculés et pourquoi ils sont nécessaires.",
+        "niveau": "medium",
+        "reponse": "Les <strong>embeddings positionnels</strong> sont ajoutés aux embeddings des tokens pour encoder l'information de position dans la séquence. Ils sont nécessaires car le mécanisme d'attention du Transformer est invariant par permutation : sans information de position, la séquence 'le chat mange' et 'mange le chat' auraient la même représentation.<br/>Le calcul des embeddings positionnels peut se faire de deux manières :<br/>1. <strong>Positionnels fixes :</strong> Utilisation de fonctions sinusoïdales (comme dans le papier original) : <br/>   <div class='math-block' style='background-color: #fcf8e8; padding: 10px; border-radius: 5px;'><div class='math'>$$ PE_{(pos, 2i)} = \\sin\\left(\\frac{pos}{10000^{2i/d}}\\right), \\quad PE_{(pos, 2i+1)} = \\cos\\left(\\frac{pos}{10000^{2i/d}}\\right) $$</div></div><br/>2. <strong>Positionnels appris :</strong> On apprend un embedding pour chaque position (comme dans BERT et GPT).<br/>Les deux approches fonctionnent bien, les embeddings appris étant légèrement plus flexibles.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Mécanisme d'Attention et Flux de Données",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous travaillez sur un modèle de traduction automatique basé sur l'architecture Transformer. Vous devez comprendre le flux des données à travers les différentes couches.</p><p>On considère une phrase source en français : 'Le chat noir dort' et une phrase cible en anglais : 'The black cat sleeps'. Le modèle est en phase d'entraînement avec le 'teacher forcing'.</p>",
+      "images": [
+        "Schéma simplifié du flux de données dans un Transformer pour la traduction, montrant les entrées de l'encodeur (phrase source), les sorties de l'encodeur, l'entrée du décodeur (phrase cible décalée), et les couches d'attention."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez le flux des données dans l'encodeur : de l'entrée à la sortie. Quelles transformations subit la phrase source ?",
+        "niveau": "medium",
+        "reponse": "Le flux dans l'encodeur :<br/>1. La phrase source <em>'Le chat noir dort'</em> est tokenisée en tokens.<br/>2. Chaque token est converti en un embedding (vecteur dense).<br/>3. L'<strong>embedding positionnel</strong> est ajouté à chaque embedding pour encoder la position.<br/>4. Les embeddings passent à travers une <strong>pile de \\( N \\) couches identiques</strong> (ex: 6 couches). Chaque couche contient :<br/>   - Une <strong>auto-attention multi-têtes</strong> : chaque token regarde tous les autres tokens de la phrase.<br/>   - Une <strong>couche feed-forward</strong> (perceptron multicouche).<br/>   - Des <strong>connexions résiduelles</strong> (skip connections) et des <strong>couches de normalisation</strong> (LayerNorm) après chaque sous-couche.<br/>5. La sortie de l'encodeur est une <strong>séquence de représentations contextuelles</strong> de même longueur que l'entrée, contenant les informations de contexte.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez le processus de génération dans le décodeur durant l'entraînement avec le 'teacher forcing'. Que reçoit le décodeur en entrée et comment procède-t-il ?",
+        "niveau": "hard",
+        "reponse": "Durant l'entraînement avec le 'teacher forcing', le décodeur reçoit :<br/>1. La <strong>sortie de l'encodeur</strong> (les représentations contextuelles de la phrase source).<br/>2. La <strong>phrase cible décalée à droite</strong> (shifted right). Pour la phrase 'The black cat sleeps', l'entrée du décodeur est : <code>[START] The black cat</code>.<br/>Le processus :<br/>- Les tokens de la phrase cible sont transformés en embeddings + embeddings positionnels.<br/>- Ils passent à travers une <strong>auto-attention masquée</strong> : chaque token ne voit que les tokens précédents (pour préserver l'ordre).<br/>- Puis une <strong>attention croisée</strong> : le décodeur interroge les représentations de l'encodeur pour trouver les informations pertinentes.<br/>- Enfin, une <strong>couche feed-forward</strong>.<br/>- La sortie est une distribution de probabilité sur le vocabulaire pour prédire le prochain token. Avec le 'teacher forcing', on utilise les tokens réels pour l'entrée, ce qui accélère l'entraînement.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Comparez l'attention croisée (cross-attention) et l'auto-attention dans le décodeur. Quelles sont leurs fonctions respectives ?",
+        "niveau": "hard",
+        "reponse": "<strong>Auto-attention dans le décodeur :</strong> Permet au décodeur de modéliser les relations entre les tokens de la séquence de sortie (déjà générés). Elle est masquée pour respecter l'ordre auto-régressif. Elle permet au modèle de comprendre la structure interne de la phrase cible.<br/><strong>Attention croisée (cross-attention) :</strong> Permet au décodeur de s'aligner sur les tokens de la phrase source. Dans cette couche, les <strong>requêtes (queries)</strong> viennent du décodeur (la sortie de l'auto-attention), et les <strong>clés (keys) et valeurs (values)</strong> viennent de l'encodeur (les représentations contextuelles). Cela permet au décodeur de décider quelles parties de la source sont les plus pertinentes pour générer le prochain token.<br/>Fonctions : L'auto-attention gère la <strong>cohérence interne</strong> de la sortie, tandis que l'attention croisée gère l'<strong>alignement</strong> entre la source et la cible.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse de l'Attention dans un Transformer",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Le mécanisme d'attention est au cœur du Transformer. Il permet de pondérer l'importance des différents tokens d'une séquence.</p><p>Dans cet exercice, vous allez analyser le fonctionnement du calcul d'attention pour une séquence simple.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Définissez le mécanisme d'attention scaled dot-product. Décomposez les étapes de calcul en détaillant les matrices \\( Q \\), \\( K \\), \\( V \\).",
+        "niveau": "medium",
+        "reponse": "Le mécanisme d'attention scaled dot-product est défini par : <div class='math-block' style='background-color: #fcf8e8; padding: 10px; border-radius: 5px; text-align: center;'><div class='math'>$$ \\text{Attention}(Q, K, V) = \\text{softmax}\\left(\\frac{Q K^T}{\\sqrt{d_k}}\\right) V $$</div></div><br/>Étapes :<br/>1. <strong>Calcul des scores :</strong> \\( Q \\) (requêtes) est multiplié par la transposée de \\( K \\) (clés). Le résultat donne une matrice de scores d'attention.<br/>2. <strong>Mise à l'échelle :</strong> Division par \\( \\sqrt{d_k} \\) où \\( d_k \\) est la dimension des clés. Cela évite que les scores soient trop grands, ce qui pousserait le softmax vers des gradients très petits.<br/>3. <strong>Softmax :</strong> Application du softmax sur chaque ligne pour obtenir une distribution de probabilité (les poids d'attention).<br/>4. <strong>Somme pondérée :</strong> Les poids d'attention sont multipliés par \\( V \\) (valeurs) pour produire la sortie de l'attention.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez le rôle de la mise à l'échelle par \\( \\sqrt{d_k} \\) dans l'attention scaled dot-product. Pourquoi est-elle importante ?",
+        "niveau": "hard",
+        "reponse": "La mise à l'échelle par \\( \\sqrt{d_k} \\) est cruciale car sans elle, les scores \\( Q K^T \\) auraient une variance proportionnelle à \\( d_k \\) (la dimension des clés). Pour des valeurs de \\( d_k \\) grandes (ex: 512, 1024), les scores deviennent très grands en magnitude. Un grand score avant le softmax signifie que les probabilités seront très proches de 0 ou 1 (distribution très 'pointue'), ce qui donne des gradients très petits et ralentit l'apprentissage. La division par \\( \\sqrt{d_k} \\) ramène la variance à 1, stabilisant les gradients et permettant un apprentissage plus efficace.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Qu'est-ce que l'attention multi-têtes (multi-head attention) ? Pourquoi est-elle préférable à une attention simple ?",
+        "niveau": "medium",
+        "reponse": "L'attention multi-têtes consiste à utiliser plusieurs têtes d'attention en parallèle. Chaque tête est une attention scaled dot-product avec ses propres matrices \\( Q_i, K_i, V_i \\) (projetions). Les sorties de toutes les têtes sont concaténées puis projetées linéairement.<br/>Formule : <div class='math-block' style='background-color: #fcf8e8; padding: 10px; border-radius: 5px; text-align: center;'><div class='math'>$$ \\text{MultiHead}(Q,K,V) = \\text{Concat}(\\text{head}_1, ..., \\text{head}_h) W^O $$</div></div><br/><strong>Avantages :</strong><br/>- Chaque tête peut se focaliser sur différents types de relations (ex: une tête sur la syntaxe, une autre sur la sémantique).<br/>- Permet au modèle d'apprendre plusieurs représentations sous différents angles.<br/>- Augmente la capacité du modèle sans augmenter la complexité excessive.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Application du Transformer à la Génération de Texte",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous devez développer un modèle de <strong>génération de texte</strong> pour une application de chatbot en français. Vous décidez d'utiliser un modèle Transformer pré-entraîné (type GPT) pour générer des réponses.</p><p>Vous disposez d'un dataset de conversations en français pour fine-tuner le modèle.</p>",
+      "images": [
+        "Interface d'un chatbot avec des exemples de questions/réponses en français pour contextualiser l'exercice."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez pourquoi un modèle de type GPT (décodeur seul) est plus adapté qu'un modèle de type BERT (encodeur seul) pour la génération de texte.",
+        "niveau": "hard",
+        "reponse": "GPT est un modèle de type <strong>décodeur seul</strong> (auto-régressif) qui est pré-entraîné sur la tâche de prédiction du prochain token (LM). Cela le rend naturellement adapté à la <strong>génération de texte</strong> : il peut produire une séquence token par token de manière auto-régressive.<br/>BERT est un modèle de type <strong>encodeur seul</strong> qui est pré-entraîné sur des tâches de compréhension (MLM, NSP). Il produit des représentations contextuelles mais n'est pas conçu pour la génération. Pour générer du texte avec BERT, il faudrait ajouter un décodeur (ex: BART, T5).<br/>Donc pour un chatbot, GPT ou un modèle décodeur seul est le choix naturel.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Décrivez les étapes du fine-tuning de GPT sur votre dataset de conversations. Quelles précautions prendre pour éviter le surapprentissage ?",
+        "niveau": "very hard",
+        "reponse": "Étapes du fine-tuning :<br/>1. <strong>Préparation des données :</strong> Formatage des conversations en séquences (ex: prompt + réponse). Tokenisation avec le tokenizer de GPT.<br/>2. <strong>Configuration :</strong> Chargement du modèle pré-entraîné. Ajout d'une tête de classification (si nécessaire) ou utilisation directe de la sortie LM.<br/>3. <strong>Entraînement :</strong> Fine-tuning avec un taux d'apprentissage plus faible (ex: 1e-5 à 5e-5) sur le dataset. Utilisation de l'optimiseur AdamW.<br/>4. <strong>Régularisation :</strong><br/>   - Utiliser le <strong>dropout</strong> (dans le modèle).<br/>   - Utiliser le <strong>weight decay</strong> (régularisation L2).<br/>   - Utiliser l'<strong>early stopping</strong> sur la validation.<br/>   - Limiter le nombre d'époques (souvent 2-5).<br/>5. <strong>Évaluation :</strong> Utiliser la perplexité ou des métriques humaines (ex: évaluation par des utilisateurs).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposez une stratégie de décodage pour générer des réponses pertinentes et variées. Comparez le greedy search, le beam search, et le top-k/top-p sampling.",
+        "niveau": "very hard",
+        "reponse": "<strong>Stratégies de décodage :</strong><br/>1. <strong>Greedy search :</strong> Choisit le token avec la plus haute probabilité à chaque étape. Rapide mais produit souvent des répétitions et des textes peu variés.<br/>2. <strong>Beam search :</strong> Maintient les \\( k \\) meilleures séquences partielles. Meilleur que greedy, mais peut encore être répétitif et manquer de créativité.<br/>3. <strong>Top-k sampling :</strong> Sélectionne aléatoirement parmi les \\( k \\) tokens les plus probables. Introduit de la variété, mais peut être instable.<br/>4. <strong>Top-p sampling (nucleus sampling) :</strong> Sélectionne aléatoirement parmi les tokens dont la probabilité cumulée atteint \\( p \\) (ex: 0.9). Plus flexible que top-k car s'adapte à la distribution.<br/><strong>Recommandation :</strong> Utiliser <strong>top-p sampling</strong> avec \\( p = 0.9 \\) et une température \\( \\tau = 0.8-1.0 \\) pour contrôler la créativité. Une température plus basse rend la distribution plus pointue (moins créative), une température plus haute la rend plus plate (plus créative).",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

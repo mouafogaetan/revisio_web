@@ -1,0 +1,152 @@
+[
+  {
+    "intitule": "Installation et configuration de Playwright dans un projet React",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous devez ajouter des tests end-to-end (e2e) à votre application e-commerce React. Vous choisissez Playwright pour sa rapidité et sa fiabilité.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire les commandes nécessaires pour installer Playwright et initialiser sa configuration dans un projet existant.",
+        "niveau": "easy",
+        "reponse": "```bash\nnpm init playwright@latest\n# ou\nnpx playwright install\n```\nCela crée un dossier `tests/`, un fichier `playwright.config.js` et installe les navigateurs nécessaires (Chromium, Firefox, WebKit).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer ce que contient le fichier `playwright.config.js` et comment configurer le projet pour tester une application locale sur le port 5173 (Vite).",
+        "niveau": "medium",
+        "reponse": "Le fichier contient les paramètres : `use: { baseURL: 'http://localhost:5173' }`, les navigateurs à utiliser, le timeout, le nombre de workers, etc. On peut aussi définir `webServer` pour lancer automatiquement l'application avant les tests : `webServer: { command: 'npm run dev', port: 5173, reuseExistingServer: !process.env.CI }`.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Écriture d'un test e2e de connexion utilisateur",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un utilisateur doit pouvoir se connecter à son compte via la page <code>/login</code>. Le formulaire contient les champs email et mot de passe. Après connexion réussie, l'utilisateur est redirigé vers la page d'accueil et un message 'Bienvenue' apparaît.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire un test Playwright qui navigue vers /login, remplit le formulaire avec un email et un mot de passe valides, soumet le formulaire, et vérifie la présence du message de bienvenue.",
+        "niveau": "medium",
+        "reponse": "```javascript\nimport { test, expect } from '@playwright/test';\n\ntest('connexion utilisateur réussie', async ({ page }) => {\n  await page.goto('/login');\n  await page.fill('input[name=\"email\"]', 'user@example.com');\n  await page.fill('input[name=\"password\"]', 'password123');\n  await page.click('button[type=\"submit\"]');\n  await expect(page).toHaveURL('/');\n  await expect(page.locator('text=Bienvenue')).toBeVisible();\n});\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer comment gérer le cas d'un mot de passe incorrect : vérifier qu'un message d'erreur approprié s'affiche.",
+            "niveau": "medium",
+            "reponse": "On remplit le formulaire avec un mauvais mot de passe, on soumet, et on vérifie que l'URL n'a pas changé (toujours /login) et qu'un message d'erreur (ex: 'Email ou mot de passe invalide') est visible : `await expect(page.locator('.error-message')).toBeVisible();`."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Test du flux d'achat complet (end-to-end)",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Le flux d'achat complet comprend : recherche d'un produit, ajout au panier, validation du panier, remplissage de l'adresse de livraison, paiement (simulation Stripe), et vérification de la page de confirmation avec le numéro de commande.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevoir un test e2e qui simule un achat complet, en utilisant des données de test (utilisateur factice, produit existant, mode de paiement simulé).",
+        "niveau": "hard",
+        "reponse": "```javascript\ntest('flux d\\'achat complet', async ({ page }) => {\n  // 1. Connexion\n  await page.goto('/login');\n  await page.fill('input[name=\"email\"]', 'test@example.com');\n  await page.fill('input[name=\"password\"]', 'test123');\n  await page.click('button[type=\"submit\"]');\n  \n  // 2. Recherche produit\n  await page.fill('input[placeholder=\"Rechercher\"]', 'Tee-shirt');\n  await page.click('button[aria-label=\"Rechercher\"]');\n  await page.click('text=Tee-shirt Premium');\n  \n  // 3. Ajout au panier\n  await page.click('button:has-text(\"Ajouter au panier\")');\n  await page.click('a:has-text(\"Voir le panier\")');\n  \n  // 4. Validation panier\n  await page.click('button:has-text(\"Valider la commande\")');\n  \n  // 5. Adresse de livraison\n  await page.fill('input[name=\"street\"]', '123 Rue de Test');\n  await page.fill('input[name=\"city\"]', 'Yaoundé');\n  await page.fill('input[name=\"postalCode\"]', '00237');\n  await page.click('button:has-text(\"Continuer vers paiement\")');\n  \n  // 6. Paiement simulé\n  await page.frameLocator('iframe[title=\"Secure payment input\"]').locator('input[name=\"cardnumber\"]').fill('4242424242424242');\n  await page.click('button:has-text(\"Payer\")');\n  \n  // 7. Vérification confirmation\n  await expect(page.locator('text=Votre commande a été confirmée')).toBeVisible();\n  await expect(page.locator('.order-number')).toBeVisible();\n});\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer comment isoler ce test pour qu'il ne dépende pas d'une base de données réelle (utilisation de données mockées ou d'une base de test séparée).",
+        "niveau": "very hard",
+        "reponse": "On peut : (1) Utiliser une base de données de test dédiée, réinitialisée avant chaque test (ex: Docker, Prisma avec `db push`). (2) Mocker les appels API backend avec `page.route()` pour intercepter les requêtes et retourner des réponses prédéfinies. (3) Lancer un serveur de développement avec des fixtures (données de test fixes) via une variable d'environnement `NODE_ENV=test`. La méthode `page.route()` est la plus fiable car elle ne modifie pas le backend réel.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Exécution des tests en CI (GitHub Actions)",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous souhaitez exécuter automatiquement les tests Playwright à chaque push sur la branche principale et sur chaque pull request. Vous utilisez GitHub Actions.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire la structure d'un workflow GitHub Actions (.github/workflows/playwright.yml) qui installe les dépendances, lance l'application et exécute les tests Playwright.",
+        "niveau": "hard",
+        "reponse": "```yaml\nname: Playwright Tests\non: [push, pull_request]\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/setup-node@v4\n        with:\n          node-version: '20'\n      - run: npm ci\n      - run: npx playwright install --with-deps\n      - run: npm run build\n      - run: npm run start & npx wait-on http://localhost:5173\n      - run: npx playwright test\n      - uses: actions/upload-artifact@v4\n        if: always()\n        with:\n          name: playwright-report\n          path: playwright-report/\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer comment configurer Playwright pour qu'il utilise les variables d'environnement (ex: URL de l'API de test) dans le CI sans exposer les secrets.",
+        "niveau": "hard",
+        "reponse": "On utilise les secrets GitHub (`Settings > Secrets and variables > Actions`). Dans le workflow, on les passe en variables d'environnement : `env: { API_URL: ${{ secrets.TEST_API_URL }}, TEST_USER_PASSWORD: ${{ secrets.TEST_PASSWORD }} }`. Dans `playwright.config.js`, on peut accéder à `process.env.API_URL`. Le fichier `.env` de test n'est jamais commité.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Débogage et analyse des résultats des tests e2e",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un test échoue en CI mais passe en local. Vous devez analyser la cause en utilisant les outils de débogage de Playwright.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer comment générer un rapport HTML détaillé et des traces vidéo/trace viewer pour un test qui échoue.",
+        "niveau": "medium",
+        "reponse": "Dans `playwright.config.js`, on configure : `reporter: 'html'` et `trace: 'on-first-retry'` ou `trace: 'on'`. Après exécution, on lance `npx playwright show-trace trace.zip` pour visualiser la trace. Le rapport HTML se trouve dans `playwright-report/index.html` et contient les captures d'écran et les appels réseau.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Décrire comment exécuter un seul test en mode débogage (headed mode avec slow motion) pour observer son comportement.",
+        "niveau": "easy",
+        "reponse": "```bash\nnpx playwright test nom-du-fichier.spec.js --headed --debug\n# ou\nnpx playwright test --headed --slowMo=1000\n```\nL'option `--debug` ouvre l'inspecteur Playwright. `--headed` affiche le navigateur. `--slowMo` ralentit les actions pour voir les étapes.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Tests cross-browser avec Playwright",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Votre application doit fonctionner sur Chrome, Firefox et Safari (WebKit). Playwright permet d'exécuter le même test sur ces trois moteurs.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Modifier la configuration Playwright pour exécuter les tests sur Chromium, Firefox et WebKit, et expliquer comment exécuter un test sur un seul navigateur spécifique.",
+        "niveau": "medium",
+        "reponse": "Dans `playwright.config.js` : `projects: [ { name: 'chromium', use: { ...devices['Desktop Chrome'] } }, { name: 'firefox', use: { ...devices['Desktop Firefox'] } }, { name: 'webkit', use: { ...devices['Desktop Safari'] } } ]`. Pour exécuter sur un seul navigateur : `npx playwright test --project=chromium`.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Identifier un piège courant : une fonctionnalité qui fonctionne sur Chrome mais pas sur Safari. Comment détecter cela avec Playwright ?",
+        "niveau": "hard",
+        "reponse": "En exécutant les tests sur WebKit, on peut détecter les incohérences (ex: certaines API JavaScript modernes, styles CSS spécifiques à WebKit). Playwright affichera l'erreur avec la stack trace. On peut aussi utiliser `await expect(page.locator(...)).toHaveCSS(...)` pour vérifier les styles. Le mode `--trace` permet de comparer le rendu sur chaque navigateur.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

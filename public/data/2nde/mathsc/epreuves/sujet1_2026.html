@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+  "matiere": "Mathématiques",
+  "classe": "Seconde C",
+  "sequence": "Séquence 1",
+  "anneeScolaire": "2025-2026",
+  "exercices": [
+    {
+      "titre": "Exercice 1 : Ensembles de nombres et intervalles",
+      "points": "4 pts",
+      "enonce": "<div style='font-size: 1.05em; line-height: 1.8;'>Le but de cet exercice est de maîtriser la classification des nombres réels et la notation des intervalles.<br><br> <strong>1.</strong> Classer chacun des nombres suivants dans le plus petit ensemble <span style='background: #eef2ff; padding: 0.1rem 0.4rem; border-radius: 4px;'>(N, Z, D, Q, R)</span> auquel il appartient : <br> <div style='background: #f8fafc; padding: 0.75rem 1rem; border-radius: 8px; margin: 0.75rem 0;'> \\( -5 \\) ; \\( \\dfrac{7}{3} \\) ; \\( \\sqrt{16} \\) ; \\( \\pi \\) ; \\( 0.25 \\) ; \\( \\sqrt{2} \\) </div> <strong>2.</strong> Écrire les ensembles suivants sous forme d'intervalles : <br> <div style='background: #f8fafc; padding: 0.75rem 1rem; border-radius: 8px; margin: 0.75rem 0;'> a) \\( \\{ x \\in \\mathbb{R} \\mid -2 \\leq x < 5 \\} \\) <br> b) \\( \\{ x \\in \\mathbb{R} \\mid x \\geq 3 \\} \\) <br> c) \\( \\{ x \\in \\mathbb{R} \\mid x < -1 \\text{ ou } x > 4 \\} \\) </div> <strong>3.</strong> Donner un nombre irrationnel compris entre 2 et 3. Justifier brièvement.</div>",
+      "questions": [
+        {
+          "question": "<div style='display: flex; align-items: baseline; gap: 0.5rem;'><span style='font-weight: bold; color: #2563eb;'>1.</span> <span>Classer les nombres \\( -5 \\), \\( \\dfrac{7}{3} \\), \\( \\sqrt{16} \\), \\( \\pi \\), \\( 0.25 \\) et \\( \\sqrt{2} \\) dans le plus petit ensemble auquel ils appartiennent.</span></div>",
+          "reponse": "<div style='display: grid; grid-template-columns: auto 1fr; gap: 0.25rem 1rem; background: #f0fdf4; padding: 0.5rem 1rem; border-radius: 8px; border-left: 4px solid #22c55e;'> <span style='font-weight: 500;'>\\( -5 \\)</span> <span>\\( \\in \\mathbb{Z} \\)</span> <span style='font-weight: 500;'>\\( \\dfrac{7}{3} \\)</span> <span>\\( \\in \\mathbb{Q} \\)</span> <span style='font-weight: 500;'>\\( \\sqrt{16} = 4 \\)</span> <span>\\( \\in \\mathbb{N} \\)</span> <span style='font-weight: 500;'>\\( \\pi \\)</span> <span>\\( \\in \\mathbb{R} \\setminus \\mathbb{Q} \\) (irrationnel)</span> <span style='font-weight: 500;'>\\( 0.25 = \\dfrac{1}{4} \\)</span> <span>\\( \\in \\mathbb{D} \\)</span> <span style='font-weight: 500;'>\\( \\sqrt{2} \\)</span> <span>\\( \\in \\mathbb{R} \\setminus \\mathbb{Q} \\) (irrationnel)</span> </div>"
+        },
+        {
+          "question": "<div style='display: flex; align-items: baseline; gap: 0.5rem; margin-top: 1rem;'><span style='font-weight: bold; color: #2563eb;'>2.</span> <span>Écrire les ensembles sous forme d'intervalles.</span></div>",
+          "reponse": "<div style='display: grid; grid-template-columns: auto 1fr; gap: 0.25rem 1rem; background: #f0fdf4; padding: 0.5rem 1rem; border-radius: 8px; border-left: 4px solid #22c55e;'> <span>a)</span> <span>\\( [-2; 5[ \\)</span> <span>b)</span> <span>\\( [3; +\\infty[ \\)</span> <span>c)</span> <span>\\( ]-\\infty; -1[ \\cup ]4; +\\infty[ \\)</span> </div>"
+        },
+        {
+          "question": "<div style='display: flex; align-items: baseline; gap: 0.5rem; margin-top: 1rem;'><span style='font-weight: bold; color: #2563eb;'>3.</span> <span>Donner un nombre irrationnel compris entre 2 et 3. Justifier brièvement.</span></div>",
+          "reponse": "<div style='background: #f0fdf4; padding: 0.5rem 1rem; border-radius: 8px; border-left: 4px solid #22c55e;'> \\( \\sqrt{5} \\) est un nombre irrationnel car 5 n'est pas un carré parfait, et \\( 2 < \\sqrt{5} < 3 \\) car \\( 2^2 = 4 < 5 < 9 = 3^2 \\). </div>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 2 : Opérations sur les réels et puissances",
+      "points": "5 pts",
+      "enonce": "<div style='font-size: 1.05em; line-height: 1.8;'>Cet exercice teste la maîtrise des calculs avec des puissances, des racines carrées et la notation scientifique.<br><br> <strong>1.</strong> Calculer et donner le résultat sous forme d'une fraction irréductible : <br> <div style='background: #f8fafc; padding: 0.75rem 1rem; border-radius: 8px; margin: 0.75rem 0;'> \\( A = \\dfrac{2^{-3} \\times 4^2}{8^{-1}} \\) </div> <strong>2.</strong> Simplifier l'expression suivante, en rendant le dénominateur rationnel : <br> <div style='background: #f8fafc; padding: 0.75rem 1rem; border-radius: 8px; margin: 0.75rem 0;'> \\( B = \\dfrac{3}{\\sqrt{5} + \\sqrt{2}} \\) </div> <strong>3.</strong> Écrire le nombre \\( C = 0.00045 \\times 10^{-3} \\) en notation scientifique. <br> <strong>4.</strong> Le diamètre d'un cheveu est d'environ \\( 60 \\times 10^{-6} \\) m. Donner son ordre de grandeur.</div>",
+      "questions": [
+        {
+          "question": "<div style='display: flex; align-items: baseline; gap: 0.5rem;'><span style='font-weight: bold; color: #2563eb;'>1.</span> <span>Calculer \\( A = \\dfrac{2^{-3} \\times 4^2}{8^{-1}} \\) et donner le résultat sous forme d'une fraction irréductible.</span></div>",
+          "reponse": "<div style='background: #f0fdf4; padding: 0.5rem 1rem; border-radius: 8px; border-left: 4px solid #22c55e;'> \\( A = \\dfrac{2^{-3} \\times (2^2)^2}{(2^3)^{-1}} = \\dfrac{2^{-3} \\times 2^4}{2^{-3}} = 2^{-3+4-(-3)} = 2^{4} = 16 \\). <br> Donc \\( A = 16 = \\dfrac{16}{1} \\). </div>"
+        },
+        {
+          "question": "<div style='display: flex; align-items: baseline; gap: 0.5rem; margin-top: 1rem;'><span style='font-weight: bold; color: #2563eb;'>2.</span> <span>Simplifier \\( B = \\dfrac{3}{\\sqrt{5} + \\sqrt{2}} \\) en rendant le dénominateur rationnel.</span></div>",
+          "reponse": "<div style='background: #f0fdf4; padding: 0.5rem 1rem; border-radius: 8px; border-left: 4px solid #22c55e;'> \\( B = \\dfrac{3(\\sqrt{5} - \\sqrt{2})}{(\\sqrt{5} + \\sqrt{2})(\\sqrt{5} - \\sqrt{2})} = \\dfrac{3(\\sqrt{5} - \\sqrt{2})}{5 - 2} = \\dfrac{3(\\sqrt{5} - \\sqrt{2})}{3} = \\sqrt{5} - \\sqrt{2} \\). </div>"
+        },
+        {
+          "question": "<div style='display: flex; align-items: baseline; gap: 0.5rem; margin-top: 1rem;'><span style='font-weight: bold; color: #2563eb;'>3.</span> <span>Écrire \\( C = 0.00045 \\times 10^{-3} \\) en notation scientifique.</span></div>",
+          "reponse": "<div style='background: #f0fdf4; padding: 0.5rem 1rem; border-radius: 8px; border-left: 4px solid #22c55e;'> \\( C = 4.5 \\times 10^{-4} \\times 10^{-3} = 4.5 \\times 10^{-7} \\). </div>"
+        },
+        {
+          "question": "<div style='display: flex; align-items: baseline; gap: 0.5rem; margin-top: 1rem;'><span style='font-weight: bold; color: #2563eb;'>4.</span> <span>Donner l'ordre de grandeur du diamètre d'un cheveu \\( 60 \\times 10^{-6} \\) m.</span></div>",
+          "reponse": "<div style='background: #f0fdf4; padding: 0.5rem 1rem; border-radius: 8px; border-left: 4px solid #22c55e;'> \\( 60 \\times 10^{-6} = 6.0 \\times 10^1 \\times 10^{-6} = 6 \\times 10^{-5} \\) m. L'ordre de grandeur est \\( 10^{-4} \\) m. </div>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 3 : Comparaisons, valeurs absolues et calculs approchés",
+      "points": "6 pts",
+      "enonce": "<div style='font-size: 1.05em; line-height: 1.8;'>Cet exercice aborde la comparaison de nombres réels, la résolution d'équations avec valeurs absolues et les calculs d'arrondis.<br><br> <strong>1.</strong> Comparer les deux nombres \\( a = 2\\sqrt{3} \\) et \\( b = \\sqrt{13} \\).<br> <strong>2.</strong> Résoudre dans \\( \\mathbb{R} \\) l'équation \\( |2x - 3| = 7 \\). <br> <strong>3.</strong> Résoudre dans \\( \\mathbb{R} \\) l'inéquation \\( |x - 1| \\leq 4 \\). Représenter l'ensemble solution sur une droite graduée. <br> <strong>4.</strong> Donner l'arrondi à \\( 10^{-2} \\) près du nombre \\( \\sqrt{7} \\). On donne \\( \\sqrt{7} \\approx 2.64575131... \\)</div>",
+      "questions": [
+        {
+          "question": "<div style='display: flex; align-items: baseline; gap: 0.5rem;'><span style='font-weight: bold; color: #2563eb;'>1.</span> <span>Comparer \\( a = 2\\sqrt{3} \\) et \\( b = \\sqrt{13} \\).</span></div>",
+          "reponse": "<div style='background: #f0fdf4; padding: 0.5rem 1rem; border-radius: 8px; border-left: 4px solid #22c55e;'> \\( a^2 = (2\\sqrt{3})^2 = 12 \\) et \\( b^2 = (\\sqrt{13})^2 = 13 \\). Comme les nombres sont positifs, \\( a^2 < b^2 \\), donc \\( a < b \\). </div>"
+        },
+        {
+          "question": "<div style='display: flex; align-items: baseline; gap: 0.5rem; margin-top: 1rem;'><span style='font-weight: bold; color: #2563eb;'>2.</span> <span>Résoudre dans \\( \\mathbb{R} \\) l'équation \\( |2x - 3| = 7 \\).</span></div>",
+          "reponse": "<div style='background: #f0fdf4; padding: 0.5rem 1rem; border-radius: 8px; border-left: 4px solid #22c55e;'> \\( |2x - 3| = 7 \\iff 2x - 3 = 7 \\quad \\text{ou} \\quad 2x - 3 = -7 \\). <br> Soit \\( 2x = 10 \\Rightarrow x = 5 \\) ou \\( 2x = -4 \\Rightarrow x = -2 \\). <br> L'ensemble solution est \\( \\mathcal{S} = \\{-2; 5\\} \\). </div>"
+        },
+        {
+          "question": "<div style='display: flex; align-items: baseline; gap: 0.5rem; margin-top: 1rem;'><span style='font-weight: bold; color: #2563eb;'>3.</span> <span>Résoudre \\( |x - 1| \\leq 4 \\) et représenter l'ensemble solution sur une droite graduée.</span></div>",
+          "reponse": "<div style='background: #f0fdf4; padding: 0.5rem 1rem; border-radius: 8px; border-left: 4px solid #22c55e;'> \\( |x - 1| \\leq 4 \\iff -4 \\leq x - 1 \\leq 4 \\iff -3 \\leq x \\leq 5 \\). <br> L'ensemble solution est \\( \\mathcal{S} = [-3; 5] \\). <br> <div style='background: #f1f5f9; padding: 0.5rem; border-radius: 4px; text-align: center; font-family: monospace;'> ←───[───●═══════════════════●───]───→ <br> -3 0 5 </div> </div>"
+        },
+        {
+          "question": "<div style='display: flex; align-items: baseline; gap: 0.5rem; margin-top: 1rem;'><span style='font-weight: bold; color: #2563eb;'>4.</span> <span>Donner l'arrondi à \\( 10^{-2} \\) près de \\( \\sqrt{7} \\approx 2.64575131... \\)</span></div>",
+          "reponse": "<div style='background: #f0fdf4; padding: 0.5rem 1rem; border-radius: 8px; border-left: 4px solid #22c55e;'> L'arrondi à \\( 10^{-2} \\) près (2 décimales) est \\( 2.65 \\). </div>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 4 : Problème de synthèse sur les calculs dans IR",
+      "points": "5 pts",
+      "enonce": "<div style='font-size: 1.05em; line-height: 1.8;'>Un problème concret pour appliquer les notions de puissances, de comparaisons et d'encadrement.<br><br> La vitesse de la lumière dans le vide est d'environ \\( 3 \\times 10^8 \\) m/s. Une année-lumière est la distance parcourue par la lumière en une année (365 jours). <br> <strong>1.</strong> Calculer la valeur d'une année-lumière en mètres. Donner le résultat en notation scientifique. <br> <strong>2.</strong> L'étoile la plus proche du Soleil, Proxima du Centaure, se trouve à environ \\( 4.2 \\) années-lumière. Exprimer cette distance en mètres. <br> <strong>3.</strong> Encadrer cette distance par deux puissances de 10 consécutives.</div>",
+      "questions": [
+        {
+          "question": "<div style='display: flex; align-items: baseline; gap: 0.5rem;'><span style='font-weight: bold; color: #2563eb;'>1.</span> <span>Calculer la valeur d'une année-lumière en mètres (1 an = 365 jours).</span></div>",
+          "reponse": "<div style='background: #f0fdf4; padding: 0.5rem 1rem; border-radius: 8px; border-left: 4px solid #22c55e;'> \\( 1 \\text{ al} = 3 \\times 10^8 \\times (365 \\times 24 \\times 60 \\times 60) \\) <br> \\( = 3 \\times 10^8 \\times 31,536,000 \\) <br> \\( = 3 \\times 10^8 \\times 3.1536 \\times 10^7 \\) <br> \\( \\approx 9.4608 \\times 10^{15} \\) m. </div>"
+        },
+        {
+          "question": "<div style='display: flex; align-items: baseline; gap: 0.5rem; margin-top: 1rem;'><span style='font-weight: bold; color: #2563eb;'>2.</span> <span>Exprimer en mètres la distance de Proxima du Centaure (4.2 al).</span></div>",
+          "reponse": "<div style='background: #f0fdf4; padding: 0.5rem 1rem; border-radius: 8px; border-left: 4px solid #22c55e;'> \\( d = 4.2 \\times 9.4608 \\times 10^{15} \\approx 39.73536 \\times 10^{15} = 3.973536 \\times 10^{16} \\) m. </div>"
+        },
+        {
+          "question": "<div style='display: flex; align-items: baseline; gap: 0.5rem; margin-top: 1rem;'><span style='font-weight: bold; color: #2563eb;'>3.</span> <span>Encadrer cette distance par deux puissances de 10 consécutives.</span></div>",
+          "reponse": "<div style='background: #f0fdf4; padding: 0.5rem 1rem; border-radius: 8px; border-left: 4px solid #22c55e;'> \\( 10^{16} < 3.97 \\times 10^{16} < 10^{17} \\). <br> La distance est encadrée par \\( 10^{16} \\) et \\( 10^{17} \\) mètres. </div>"
+        }
+      ]
+    }
+  ]
+};
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,99 @@
+[
+  {
+    "intitule": "Configuration d'une application web avec ConfigMap et Secret",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous êtes DevOps dans une startup qui développe une application web nommée <strong>WebApp</strong>. L'application nécessite :</p><ul><li>Une variable d'environnement <code>APP_COLOR</code> (valeur: <code>blue</code>) pour la couleur du thème.</li><li>Une variable d'environnement <code>LOG_LEVEL</code> (valeur: <code>debug</code>) pour le niveau de logs.</li><li>Un fichier de configuration <code>app.properties</code> contenant : <code>cache.ttl=300</code> et <code>max.connections=100</code>.</li><li>Le mot de passe de la base de données <code>DB_PASSWORD</code> (valeur: <code>SuperSecret123</code>) qui ne doit pas apparaître en clair dans vos fichiers YAML.</li></ul><p>Vous devez créer les ressources Kubernetes adaptées pour fournir ces configurations à un Pod.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez pourquoi vous devez utiliser un ConfigMap pour les trois premières configurations et un Secret pour le mot de passe.",
+        "niveau": "medium",
+        "reponse": "Un ConfigMap est adapté pour les données non sensibles comme les variables d'environnement et les fichiers de configuration qui ne contiennent pas d'informations confidentielles. Un Secret est obligatoire pour le mot de passe car il contient des données sensibles ; Kubernetes le stocke en encodé (base64) et peut le chiffrer au repos si configuré, limitant les risques d'exposition.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Créez un fichier YAML pour un ConfigMap nommé `webapp-config` qui contient : les variables `APP_COLOR` et `LOG_LEVEL` sous forme de `data`, et le fichier `app.properties` sous forme de `data` également.",
+        "niveau": "medium",
+        "reponse": "```yaml\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: webapp-config\ndata:\n  APP_COLOR: blue\n  LOG_LEVEL: debug\n  app.properties: |\n    cache.ttl=300\n    max.connections=100\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Créez un fichier YAML pour un Secret nommé `webapp-secret` contenant le mot de passe `DB_PASSWORD`. Utilisez une chaîne en clair dans le YAML (sans encodage manuel préalable).",
+        "niveau": "medium",
+        "reponse": "```yaml\napiVersion: v1\nkind: Secret\nmetadata:\n  name: webapp-secret\ntype: Opaque\ndata:\n  DB_PASSWORD: U3VwZXJTZWNyZXQxMjM=\n```\n(Remarque : `SuperSecret123` encodé en base64 donne `U3VwZXJTZWNyZXQxMjM=`. En production, on utilise `kubectl create secret` ou un outil comme `kubectl create secret generic webapp-secret --from-literal=DB_PASSWORD=SuperSecret123 --dry-run=client -o yaml` pour générer l'encodage.)",
+        "sousQuestions": []
+      },
+      {
+        "numero": 4,
+        "texte": "Écrivez la définition YAML d'un Pod nommé `webapp` qui utilise l'image `nginx:alpine`. Montez le ConfigMap `webapp-config` de sorte que :",
+        "niveau": "hard",
+        "reponse": "Voir sous-questions.",
+        "sousQuestions": [
+          {
+            "numero": "4.a",
+            "texte": "les variables `APP_COLOR` et `LOG_LEVEL` soient injectées comme variables d'environnement.",
+            "niveau": "medium",
+            "reponse": "```yaml\napiVersion: v1\nkind: Pod\nmetadata:\n  name: webapp\nspec:\n  containers:\n  - name: app\n    image: nginx:alpine\n    env:\n    - name: APP_COLOR\n      valueFrom:\n        configMapKeyRef:\n          name: webapp-config\n          key: APP_COLOR\n    - name: LOG_LEVEL\n      valueFrom:\n        configMapKeyRef:\n          name: webapp-config\n          key: LOG_LEVEL\n```"
+          },
+          {
+            "numero": "4.b",
+            "texte": "le fichier `app.properties` soit monté dans le répertoire `/etc/config/` du conteneur.",
+            "niveau": "medium",
+            "reponse": "Ajouter dans la section `volumes` et `volumeMounts` :\n```yaml\n    volumeMounts:\n    - name: config-volume\n      mountPath: /etc/config\n  volumes:\n  - name: config-volume\n    configMap:\n      name: webapp-config\n```"
+          },
+          {
+            "numero": "4.c",
+            "texte": "le Secret `webapp-secret` soit monté comme variable d'environnement `DB_PASSWORD`.",
+            "niveau": "hard",
+            "reponse": "Ajouter dans `env` :\n```yaml\n    - name: DB_PASSWORD\n      valueFrom:\n        secretKeyRef:\n          name: webapp-secret\n          key: DB_PASSWORD\n```\nLe Pod complet devient :\n```yaml\napiVersion: v1\nkind: Pod\nmetadata:\n  name: webapp\nspec:\n  containers:\n  - name: app\n    image: nginx:alpine\n    env:\n    - name: APP_COLOR\n      valueFrom:\n        configMapKeyRef:\n          name: webapp-config\n          key: APP_COLOR\n    - name: LOG_LEVEL\n      valueFrom:\n        configMapKeyRef:\n          name: webapp-config\n          key: LOG_LEVEL\n    - name: DB_PASSWORD\n      valueFrom:\n        secretKeyRef:\n          name: webapp-secret\n          key: DB_PASSWORD\n    volumeMounts:\n    - name: config-volume\n      mountPath: /etc/config\n  volumes:\n  - name: config-volume\n    configMap:\n      name: webapp-config\n```"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Correction d'un déploiement buggé : ConfigMap vs Secret",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Un développeur junior a créé le fichier YAML suivant pour déployer une application de paiement. Il a mis toutes les configurations (y compris la clé API Stripe et le token d'accès à la base de données) dans un ConfigMap nommé <code>payment-config</code>. Le Pod s'appelle <code>payment-app</code>.</p><pre><code>apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: payment-config\ndata:\n  STRIPE_API_KEY: sk_test_4eC39HqLyjWDarjtT1zdp7dc\n  DB_TOKEN: dbtoken_987654321\n  LOG_LEVEL: info\n  APP_MODE: production\n---\napiVersion: v1\nkind: Pod\nmetadata:\n  name: payment-app\nspec:\n  containers:\n  - name: app\n    image: myapp:latest\n    env:\n    - name: STRIPE_API_KEY\n      valueFrom:\n        configMapKeyRef:\n          name: payment-config\n          key: STRIPE_API_KEY\n    - name: DB_TOKEN\n      valueFrom:\n        configMapKeyRef:\n          name: payment-config\n          key: DB_TOKEN\n    - name: LOG_LEVEL\n      valueFrom:\n        configMapKeyRef:\n          name: payment-config\n          key: LOG_LEVEL\n    - name: APP_MODE\n      valueFrom:\n        configMapKeyRef:\n          name: payment-config\n          key: APP_MODE\n</code></pre><p>L'application tourne en production et traite des transactions financières réelles.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifiez le problème principal de sécurité dans cette configuration.",
+        "niveau": "easy",
+        "reponse": "Le problème principal est que des données sensibles (clé API Stripe, token de base de données) sont stockées dans un ConfigMap au lieu d'un Secret. Un ConfigMap stocke les données en clair dans etcd et n'offre pas de protection appropriée pour les secrets.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Justifiez pourquoi cette mauvaise pratique est particulièrement dangereuse dans le contexte d'une application de paiement en production.",
+        "niveau": "medium",
+        "reponse": "1. Toute personne ayant accès au cluster (via `kubectl get configmap`) peut voir les clés en clair.\n2. Les ConfigMaps ne sont pas chiffrés par défaut dans etcd, donc un attaquant accédant au disque du master peut voler les clés.\n3. Avec la clé Stripe, un attaquant pourrait effectuer des transactions frauduleuses. Avec le token DB, il pourrait lire/modifier les données de paiement des clients.\n4. En production réelle, cela violerait les normes PCI-DSS (Payment Card Industry Data Security Standard).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposez une correction complète en réécrivant uniquement les parties nécessaires du YAML. Séparez les données sensibles dans un Secret et les données non sensibles dans un ConfigMap.",
+        "niveau": "hard",
+        "reponse": "```yaml\n# ConfigMap pour les données non sensibles\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: payment-config\ndata:\n  LOG_LEVEL: info\n  APP_MODE: production\n---\n# Secret pour les données sensibles (à créer avec kubectl ou encodé)\napiVersion: v1\nkind: Secret\nmetadata:\n  name: payment-secret\ntype: Opaque\ndata:\n  STRIPE_API_KEY: c2tfdGVzdF80ZUMzOUhxTHlqV0RhcmpUdDF6ZHA3ZGM=  # base64 de sk_test_4eC39HqLyjWDarjtT1zdp7dc\n  DB_TOKEN: ZGJ0b2tlbl85ODc2NTQzMjE=  # base64 de dbtoken_987654321\n---\napiVersion: v1\nkind: Pod\nmetadata:\n  name: payment-app\nspec:\n  containers:\n  - name: app\n    image: myapp:latest\n    env:\n    # Données sensibles depuis le Secret\n    - name: STRIPE_API_KEY\n      valueFrom:\n        secretKeyRef:\n          name: payment-secret\n          key: STRIPE_API_KEY\n    - name: DB_TOKEN\n      valueFrom:\n        secretKeyRef:\n          name: payment-secret\n          key: DB_TOKEN\n    # Données non sensibles depuis le ConfigMap\n    - name: LOG_LEVEL\n      valueFrom:\n        configMapKeyRef:\n          name: payment-config\n          key: LOG_LEVEL\n    - name: APP_MODE\n      valueFrom:\n        configMapKeyRef:\n          name: payment-config\n          key: APP_MODE\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 4,
+        "texte": "Expliquez les précautions supplémentaires à prendre pour les Secrets en production réelle.",
+        "niveau": "hard",
+        "reponse": "1. Activer le chiffrement des Secrets au repos dans etcd (via `--encryption-provider-config`).\n2. Utiliser un gestionnaire de secrets externe comme HashiCorp Vault, AWS Secrets Manager ou Azure Key Vault avec CSI Driver.\n3. Ne jamais versionner les Secrets en clair dans Git ; utiliser des outils comme `sealed-secrets`, `sops` ou `external-secrets`.\n4. Restreindre l'accès aux Secrets via RBAC (ne donner l'accès qu'aux services qui en ont besoin).\n5. Pour les très hautes sécurités, utiliser des solutions comme Kubernetes Secrets Store CSI Driver avec fournisseur cloud.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

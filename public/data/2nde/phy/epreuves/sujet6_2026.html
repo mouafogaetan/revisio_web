@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = [
+  {
+    "intitule": "Les bases du principe d'inertie",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Le principe d'inertie, énoncé par Isaac Newton, est une loi fondamentale de la mécanique. Il s'énonce ainsi :</p><p><em>\"Dans un référentiel galiléen, si la somme des forces extérieures appliquées à un système est nulle, alors le vecteur vitesse du centre d'inertie du système est constant.\"</em></p><p>Un système est dit <strong>isolé</strong> lorsqu'aucune force extérieure ne s'exerce sur lui. Il est dit <strong>pseudo-isolé</strong> lorsque la somme des forces extérieures qui s'exercent sur lui est nulle.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "À partir de l'énoncé du principe d'inertie, réponds aux questions suivantes.",
+        "niveau": "easy",
+        "reponse": "Voir sous-questions.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quelle est la condition pour qu'un système soit pseudo-isolé ?",
+            "niveau": "easy",
+            "reponse": "Un système est pseudo-isolé lorsque la somme des forces extérieures qui s'exercent sur lui est nulle : $\\sum \\vec{F}_{ext} = \\vec{0}$."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Que peut-on dire du mouvement du centre d'inertie d'un système pseudo-isolé ?",
+            "niveau": "easy",
+            "reponse": "Dans un référentiel galiléen, le centre d'inertie d'un système pseudo-isolé est animé d'un mouvement rectiligne uniforme (MRU) ou reste au repos."
+          },
+          {
+            "numero": "1.c",
+            "texte": "Cite deux exemples de référentiels galiléens.",
+            "niveau": "easy",
+            "reponse": "Le référentiel héliocentrique (centré sur le Soleil) et le référentiel géocentrique (centré sur la Terre). Le référentiel terrestre peut être considéré comme galiléen pour des expériences de courte durée."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Application du principe d'inertie à un solide sur une table",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un solide de masse $m = 2\\ \\text{kg}$ est posé sur une table horizontale. Il est soumis à son poids $\\vec{P}$ et à la réaction normale $\\vec{R}$ de la table.</p><p>On considère que les frottements sont négligeables.</p>",
+      "images": [
+        "Schéma d'un solide posé sur une table horizontale, avec les forces P (vers le bas) et R (vers le haut)."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Le solide est initialement au repos.",
+        "niveau": "medium",
+        "reponse": "Voir sous-questions.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Le solide est-il isolé ou pseudo-isolé ? Justifie ta réponse.",
+            "niveau": "medium",
+            "reponse": "Le solide est pseudo-isolé car la somme des forces extérieures est nulle : $\\vec{P} + \\vec{R} = \\vec{0}$ (les deux forces ont même intensité, même direction et sont de sens opposés)."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Que peut-on dire du mouvement du solide d'après le principe d'inertie ?",
+            "niveau": "medium",
+            "reponse": "D'après le principe d'inertie, le centre d'inertie du solide, initialement au repos, reste au repos. Le solide ne se met pas en mouvement spontanément."
+          },
+          {
+            "numero": "1.c",
+            "texte": "On pousse le solide avec une vitesse constante $v = 2\\ \\text{m/s}$ sur la table. Que devient son mouvement après l'avoir lâché ?",
+            "niveau": "medium",
+            "reponse": "Après l'avoir lâché, la somme des forces est toujours nulle ($\\vec{P} + \\vec{R} = \\vec{0}$). D'après le principe d'inertie, le solide conserve sa vitesse : il continue son mouvement rectiligne uniforme à la vitesse $v = 2\\ \\text{m/s}$."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Le principe d'inertie dans un véhicule",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un passager est dans un bus en mouvement. Le bus roule à vitesse constante sur une route droite et horizontale. Le passager est debout, sans se tenir.</p>",
+      "images": [
+        "Schéma d'un passager debout dans un bus en mouvement, avec les forces P (vers le bas) et R (vers le haut)."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analyse la situation du passager dans différentes phases du mouvement.",
+        "niveau": "medium",
+        "reponse": "Voir sous-questions.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Le bus roule à vitesse constante. Le passager est-il en équilibre ? Justifie.",
+            "niveau": "medium",
+            "reponse": "Oui, le passager est en équilibre. Il est soumis à son poids $\\vec{P}$ et à la réaction du sol $\\vec{R}$, qui se compensent ($\\vec{P} + \\vec{R} = \\vec{0}$). Le passager est pseudo-isolé et conserve son mouvement rectiligne uniforme."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Le bus freine brusquement. Que se passe-t-il pour le passager ? Explique en utilisant le principe d'inertie.",
+            "niveau": "hard",
+            "reponse": "Lorsque le bus freine, le passager a tendance à continuer son mouvement rectiligne uniforme (principe d'inertie). Il est donc projeté vers l'avant du bus. Ce n'est pas une force qui le pousse, mais l'inertie de son corps qui le maintient dans son état de mouvement."
+          },
+          {
+            "numero": "1.c",
+            "texte": "Le bus accélère brusquement. Que se passe-t-il pour le passager ? Explique.",
+            "niveau": "hard",
+            "reponse": "Lorsque le bus accélère, le passager a tendance à conserver sa vitesse initiale (plus faible). Il est donc projeté vers l'arrière du bus. L'inertie de son corps le maintient dans son état de mouvement initial."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Centre d'inertie d'un système",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Le centre d'inertie (ou centre de masse) d'un système est le point où l'on peut considérer que toute la masse du système est concentrée pour l'étude de son mouvement.</p><p>Pour un système de deux points matériels de masses $m_1$ et $m_2$ situés respectivement en $G_1$ et $G_2$, le centre d'inertie $G$ est défini par la relation barycentrique :</p><p>$m_1 \\vec{GG_1} + m_2 \\vec{GG_2} = \\vec{0}$</p>",
+      "images": [
+        "Schéma de deux points matériels G1 et G2 avec leur centre d'inertie G situé entre eux."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "On considère deux masses : $m_1 = 3\\ \\text{kg}$ en $G_1$ et $m_2 = 5\\ \\text{kg}$ en $G_2$. La distance $G_1G_2 = 40\\ \\text{cm}$.",
+        "niveau": "medium",
+        "reponse": "Voir sous-questions.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Détermine la position du centre d'inertie $G$ du système par rapport à $G_1$.",
+            "niveau": "hard",
+            "reponse": "On utilise la relation barycentrique : $m_1 \\vec{GG_1} + m_2 \\vec{GG_2} = \\vec{0}$.\n\nSoit $x = G_1G$ la distance de $G$ à $G_1$. Alors $GG_1 = -x$ (si on oriente l'axe de $G_1$ vers $G_2$). $GG_2 = 40 - x$.\n\nLa relation devient : $m_1(-x) + m_2(40 - x) = 0$\n\n$3(-x) + 5(40 - x) = 0$\n\n$-3x + 200 - 5x = 0$\n\n$200 = 8x$\n\n$x = 25\\ \\text{cm}$\n\nLe centre d'inertie est situé à $25\\ \\text{cm}$ de $G_1$ (et à $15\\ \\text{cm}$ de $G_2$). Il est plus proche de la masse la plus grande ($m_2 = 5\\ \\text{kg}$)."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Que devient la position du centre d'inertie si les deux masses sont égales ($m_1 = m_2$) ?",
+            "niveau": "medium",
+            "reponse": "Si $m_1 = m_2$, alors $G$ est le milieu du segment $G_1G_2$. $G$ est situé à $20\\ \\text{cm}$ de chaque point."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Application : Le palet sur une table à coussin d'air",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Un palet de masse $m = 200\\ \\text{g}$ glisse sur une table à coussin d'air horizontale. Les frottements sont négligeables. Le palet est initialement lancé avec une vitesse $v_0 = 2,5\\ \\text{m/s}$.</p>",
+      "images": [
+        "Schéma d'un palet sur une table à coussin d'air, avec indication de la vitesse initiale v0."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Étudie le mouvement du palet après son lancement.",
+        "niveau": "hard",
+        "reponse": "Voir sous-questions.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Le palet est-il isolé ou pseudo-isolé ? Justifie.",
+            "niveau": "hard",
+            "reponse": "Le palet est pseudo-isolé car la somme des forces extérieures est nulle : son poids $\\vec{P}$ est compensé par la réaction de la table $\\vec{R}$ ($\\vec{P} + \\vec{R} = \\vec{0}$). Les frottements étant négligeables, aucune autre force ne s'exerce."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Quelle est la nature du mouvement du palet ?",
+            "niveau": "hard",
+            "reponse": "D'après le principe d'inertie, le centre d'inertie du palet, une fois lancé, conserve un mouvement rectiligne uniforme (MRU) à la vitesse $v_0 = 2,5\\ \\text{m/s}$."
+          },
+          {
+            "numero": "1.c",
+            "texte": "Quelle distance parcourt le palet en $t = 2\\ \\text{s}$ après son lancement ?",
+            "niveau": "hard",
+            "reponse": "Pour un MRU : $x = v \\times t = 2,5 \\times 2 = 5\\ \\text{m}$."
+          },
+          {
+            "numero": "1.d",
+            "texte": "Le palet rencontre un obstacle. Explique ce qui se passe en utilisant le principe d'inertie.",
+            "niveau": "hard",
+            "reponse": "Lorsque le palet rencontre un obstacle, une force extérieure (la réaction de l'obstacle) s'exerce sur lui. La somme des forces n'est plus nulle, le principe d'inertie ne s'applique plus. La vitesse du palet va changer : il va s'arrêter ou rebondir selon la nature de l'obstacle."
+          }
+        ]
+      }
+    ]
+  }
+];
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

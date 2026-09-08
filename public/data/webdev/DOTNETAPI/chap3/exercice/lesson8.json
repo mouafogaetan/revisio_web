@@ -1,0 +1,102 @@
+[
+  {
+    "intitule": "Identifier les durées de vie des services",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>En ASP.NET Core, l’injection de dépendances propose trois durées de vie principales : <strong>Transient</strong>, <strong>Scoped</strong> et <strong>Singleton</strong>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Associer chaque durée de vie à son comportement :",
+        "niveau": "easy",
+        "reponse": "Transient → une nouvelle instance à chaque demande ; Scoped → une instance par requête HTTP ; Singleton → une instance unique partagée pendant toute l’application.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer pourquoi une instance Singleton peut poser problème dans un contexte multi-utilisateur si elle contient des données propres à un utilisateur.",
+            "niveau": "easy",
+            "reponse": "Une instance Singleton est partagée entre toutes les requêtes ; si elle stocke des données utilisateur, ces données seront visibles par d’autres utilisateurs, ce qui cause des fuites d’informations ou des incohérences."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Choisir la bonne durée de vie selon le contexte métier",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans une API de gestion de commandes, vous avez les services suivants :<br>\n- <code>PricingService</code> : calcule les prix avec des règles fixes (pas d’état interne).<br>\n- <code>PanierService</code> : conserve les articles ajoutés par l’utilisateur pendant sa session.<br>\n- <code>LoggerService</code> : écrit des logs dans un fichier partagé.<br>\n- <code>DbContext</code> : accès à la base de données (doit éviter les conflits concurrents).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Déterminer la durée de vie appropriée pour chaque service en justifiant votre choix.",
+        "niveau": "medium",
+        "reponse": "PricingService → Singleton (pas d’état, règles fixes). PanierService → Scoped (conservation par requête/utilisateur). LoggerService → Singleton (ressource partagée). DbContext → Scoped (évite les problèmes de concurrence et garantit la cohérence d’une requête).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Prédire ce qui se passerait si <code>PanierService</code> était en Singleton dans une API sollicitée par plusieurs clients en même temps.",
+            "niveau": "medium",
+            "reponse": "Tous les utilisateurs partageraient le même panier, mêlant leurs articles. Cela causerait des erreurs de commandes, des achats croisés et une impossibilité de suivre le panier individuel."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Analyser un bug lié à une mauvaise durée de vie",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Voici un extrait de code d’une API .NET :</p>\n<pre><code>public class MonService\n{\n    private int compteur = 0;\n    public int Incrementer() => ++compteur;\n}\n\n// Dans Program.cs\nbuilder.Services.AddSingleton&lt;MonService&gt;();\n\n// Dans un contrôleur\n[HttpGet]\npublic IActionResult Get([FromServices] MonService service)\n{\n    return Ok(service.Incrementer());\n}\n</code></pre>\n<p>Deux utilisateurs appellent simultanément l’endpoint. Le premier reçoit 1, le second reçoit 2.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer pourquoi cette situation est problématique dans une API web normale.",
+        "niveau": "hard",
+        "reponse": "Le compteur est partagé entre tous les utilisateurs à cause de Singleton. On s’attend à ce que chaque utilisateur ait son propre compteur indépendant. Cette conception viole l’isolation des requêtes et peut créer des comportements imprévisibles ou des failles de sécurité.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposer une correction en choisissant une autre durée de vie et en justifiant le choix.",
+            "niveau": "hard",
+            "reponse": "Remplacer AddSingleton par AddScoped. Ainsi, chaque requête HTTP obtient sa propre instance de MonService, et le compteur est isolé par utilisateur. Transient conviendrait aussi mais créerait une instance par appel, pas par requête complète."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Implémenter un compteur de requêtes utilisateur avec DI",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous devez créer un service <code>StatsService</code> qui compte le nombre d’appels à certains endpoints <strong>pour chaque utilisateur</strong> pendant sa session (requête HTTP).</p>\n<p>Le service doit être injecté dans un contrôleur et offrir une méthode <code>void Incrementer(string userId)</code> et <code>int GetNombreAppels(string userId)</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Choisir la durée de vie la plus adaptée pour <code>StatsService</code> et justifier.",
+        "niveau": "hard",
+        "reponse": "Durée de vie Scoped. En effet, les données doivent être conservées pendant toute la requête HTTP (même session utilisateur), mais pas partagées entre plusieurs utilisateurs ni réinitialisées à chaque appel de méthode.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Écrire l’enregistrement du service dans <code>Program.cs</code> et son injection dans un contrôleur (code uniquement).",
+            "niveau": "hard",
+            "reponse": "// Program.cs\nbuilder.Services.AddScoped&lt;StatsService&gt;();\n\n// Contrôleur\n[ApiController]\n[Route(\"api/[controller]\")]\npublic class TestController : ControllerBase\n{\n    private readonly StatsService _statsService;\n    public TestController(StatsService statsService)\n    {\n        _statsService = statsService;\n    }\n}"
+          }
+        ]
+      }
+    ]
+  }
+]

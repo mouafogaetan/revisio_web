@@ -1,0 +1,142 @@
+[
+  {
+    "intitule": "Identifier les politiques de rate limiting",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous lisez la documentation d’une API qui mentionne qu’elle utilise <strong>Fixed Window</strong>, <strong>Sliding Window</strong> et <strong>Token Bucket</strong> comme politiques de rate limiting. Associez chaque politique à sa description correcte.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez brièvement chacune des trois politiques de rate limiting (Fixed Window, Sliding Window, Token Bucket).",
+        "niveau": "easy",
+        "reponse": "Fixed Window : limite le nombre de requêtes dans un intervalle de temps fixe (ex. 100 requêtes par minute). Sliding Window : divise le temps en petites sous-fenêtres pour lisser la limite. Token Bucket : un seau contient des jetons ; chaque requête consomme un jeton ; les jetons se reconstituent à un taux constant.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Configurer le rate limiting dans Program.cs",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous devez protéger une API contre les abus. Ajoutez la configuration nécessaire dans <code>Program.cs</code> pour :</p><ul><li>Activer le rate limiting avec une politique nommée <strong>FixedWindowPolicy</strong></li><li>Autoriser 50 requêtes toutes les 10 secondes</li><li>Appliquer cette politique à tous les controllers</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le code C# complet à placer dans Program.cs pour répondre aux exigences.",
+        "niveau": "medium",
+        "reponse": "builder.Services.AddRateLimiter(options => { options.AddFixedWindowLimiter(\"FixedWindowPolicy\", opt => { opt.PermitLimit = 50; opt.Window = TimeSpan.FromSeconds(10); }); }); app.UseRateLimiter();",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Ajoutez ensuite l’attribut pour appliquer cette politique à un contrôleur spécifique.",
+            "niveau": "medium",
+            "reponse": "[EnableRateLimiting(\"FixedWindowPolicy\")]"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Diagnostiquer un dépassement de limite",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un client appelle votre endpoint <code>/api/produits</code> et reçoit une réponse HTTP <strong>503</strong>. Vous suspectez un problème de rate limiting.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Quel code HTTP est normalement retourné par ASP.NET Core lorsqu’une requête dépasse la limite autorisée ? Justifiez.",
+        "niveau": "medium",
+        "reponse": "Le code normal est 503 Service Unavailable, souvent accompagné d’un en-tête Retry-After. Cependant, depuis .NET 7, on peut configurer un code 429 (Too Many Requests).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quel en-tête HTTP permet d’indiquer au client combien de temps attendre avant une nouvelle tentative ?",
+            "niveau": "easy",
+            "reponse": "L’en-tête Retry-After."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Appliquer une politique par endpoint",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous avez deux endpoints sensibles : <code>/api/paiement</code> et <code>/api/recherche</code>. Le premier doit supporter 10 requêtes par minute. Le second doit supporter 100 requêtes par minute avec un lissage (Sliding Window). Seul <code>/api/paiement</code> exige une authentification JWT. Configurez le rate limiting différencié.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez la configuration dans Program.cs et l’utilisation des attributs sur les contrôleurs ou actions correspondants.",
+        "niveau": "hard",
+        "reponse": "builder.Services.AddRateLimiter(options => { options.AddFixedWindowLimiter(\"PaiementLimit\", opt => { opt.PermitLimit = 10; opt.Window = TimeSpan.FromMinutes(1); }); options.AddSlidingWindowLimiter(\"RechercheLimit\", opt => { opt.PermitLimit = 100; opt.Window = TimeSpan.FromMinutes(1); opt.SegmentsPerWindow = 6; }); }); app.UseRateLimiter(); // Dans le contrôleur PaiementController : [EnableRateLimiting(\"PaiementLimit\")] // Dans RechercheController : [EnableRateLimiting(\"RechercheLimit\")]",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Comparer les algorithmes de rate limiting",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Une start-up prévoit des pics de trafic soudains mais veut éviter qu’un seul client ne monopolise l’API. Comparez <strong>Token Bucket</strong> et <strong>Fixed Window</strong> pour ce besoin.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Lequel des deux algorithmes est le plus adapté aux pics soudains et pourquoi ?",
+        "niveau": "hard",
+        "reponse": "Token Bucket est plus adapté car il autorise des rafales courtes (jusqu’à la capacité du seau) tout en lissant le débit moyen. Fixed Window peut bloquer toutes les requêtes en début de fenêtre même si le trafic est faible le reste du temps.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Désactiver le rate limiting en développement",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Pendant les tests, vous ne voulez pas que le rate limiting s’applique, mais il doit être actif en production. Écrivez la condition dans <code>Program.cs</code> pour désactiver toute politique lorsque l’environnement est <strong>Development</strong>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Donnez le code utilisant IWebHostEnvironment pour contourner le rate limiting en développement.",
+        "niveau": "medium",
+        "reponse": "if (!app.Environment.IsDevelopment()) { app.UseRateLimiter(); }",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyser l’impact du sliding window",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Une politique Sliding Window est configurée avec : <code>PermitLimit = 60</code>, <code>Window = TimeSpan.FromMinutes(1)</code>, <code>SegmentsPerWindow = 6</code>.</p><p>Calculez combien de requêtes sont encore autorisées à $t = 35$ secondes sachant que les 6 sous-fenêtres de 10 secondes ont reçu respectivement : [10, 8, 12, 9, 11, 5] requêtes.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez la formule de calcul de la fenêtre glissante et déterminez le nombre de requêtes restantes.",
+        "niveau": "very hard",
+        "reponse": "La fenêtre glissante pondère la sous-fenêtre courante et les précédentes. À t=35s, la fenêtre de 60s est constituée des 5 sous-fenêtres pleines (10+8+12+9+11 = 50) + une fraction de la dernière sous-fenêtre (5 * (35 mod 10)/10 = 5 * 0.5 = 2.5) soit total estimé 52.5 requêtes. PermitLimit = 60, il reste 60 - 52.5 = 7.5, soit 7 requêtes complètes possibles.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

@@ -1,0 +1,146 @@
+[
+  {
+    "intitule": "Composants d'Airflow",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Apache Airflow est une plateforme d'orchestration de workflows avec une architecture modulaire.</p><p><strong>Consigne :</strong> Répondez aux questions suivantes sur l'architecture d'Airflow :</p><ol><li>Quel est le rôle du Scheduler ?</li><li>À quoi sert le Web Server ?</li><li>Que stocke la Metadata Database ?</li><li>Quelle est la fonction de l'Executor ?</li></ol>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez les rôles des composants de l'architecture Airflow.",
+        "niveau": "easy",
+        "reponse": "1. Le Scheduler planifie l'exécution des tâches selon le schedule_interval des DAGs.\n2. Le Web Server fournit une interface web pour surveiller l'état des DAGs et des tâches.\n3. La Metadata Database stocke l'état des DAGs, des tâches, des exécutions et toutes les métadonnées.\n4. L'Executor est responsable de l'exécution des tâches (LocalExecutor pour un environnement mono-nœud, CeleryExecutor pour un environnement distribué).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Définition d'un DAG Simple",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Un DAG (Directed Acyclic Graph) est la structure centrale d'Airflow.</p><p><strong>Consigne :</strong> Écrivez un DAG Airflow complet qui :</p><ol><li>S'appelle <code>mon_premier_dag</code>.</li><li>S'exécute chaque jour à 8h.</li><li>A une date de début au 1er janvier 2025.</li><li>Contient trois tâches Python qui affichent respectivement \"Étape 1\", \"Étape 2\" et \"Étape 3\".</li></ol>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez le code Python pour ce DAG Airflow.",
+        "niveau": "easy",
+        "reponse": "from airflow import DAG\nfrom airflow.operators.python import PythonOperator\nfrom datetime import datetime, timedelta\n\ndef etape1():\n    print(\"Étape 1\")\n\ndef etape2():\n    print(\"Étape 2\")\n\ndef etape3():\n    print(\"Étape 3\")\n\nwith DAG(\n    'mon_premier_dag',\n    schedule_interval='0 8 * * *',\n    start_date=datetime(2025, 1, 1),\n    catchup=False\n) as dag:\n    \n    t1 = PythonOperator(task_id='etape1', python_callable=etape1)\n    t2 = PythonOperator(task_id='etape2', python_callable=etape2)\n    t3 = PythonOperator(task_id='etape3', python_callable=etape3)\n    \n    t1 >> t2 >> t3",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Définition des Dépendances entre Tâches",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Airflow permet de définir des dépendances complexes entre les tâches.</p><p><strong>Consigne :</strong> Dans un DAG nommé <code>pipeline_etl</code>, vous avez les tâches suivantes :</p><ul><li><code>extract</code> : Extraction des données</li><li><code>transform</code> : Transformation des données</li><li><code>load</code> : Chargement des données</li><li><code>send_report</code> : Envoi du rapport</li><li><code>backup</code> : Sauvegarde des données</li></ul><p>Définissez les dépendances suivantes :</p><ol><li><code>extract</code> doit s'exécuter avant <code>transform</code>.</li><li><code>transform</code> doit s'exécuter avant <code>load</code> ET <code>backup</code>.</li><li><code>load</code> et <code>backup</code> doivent se terminer avant <code>send_report</code>.</li></ol>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez la définition des dépendances en utilisant les opérateurs >> et <<.",
+        "niveau": "medium",
+        "reponse": "# Méthode 1 : Utilisation de >>\nextract >> transform\n[load, backup] >> send_report\ntransform >> [load, backup]\n\n# Méthode 2 : Chaînage complet\nextract >> transform >> [load, backup] >> send_report\n\n# Méthode 3 : Avec des listes\n[extract] >> transform >> [load, backup] >> [send_report]",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Utilisation de BashOperator",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>BashOperator permet d'exécuter des commandes shell dans Airflow.</p><p><strong>Consigne :</strong> Écrivez un DAG qui :</p><ol><li>Télécharge un fichier depuis une URL avec <code>wget</code>.</li><li>Décompresse le fichier si c'est un zip.</li><li>Compte le nombre de lignes dans le fichier.</li><li>Supprime le fichier téléchargé.</li></ol><p>Les commandes doivent être exécutées via BashOperator.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le code Airflow avec BashOperator pour ce pipeline.",
+        "niveau": "medium",
+        "reponse": "from airflow import DAG\nfrom airflow.operators.bash import BashOperator\nfrom datetime import datetime, timedelta\n\nwith DAG(\n    'pipeline_bash',\n    schedule_interval='@daily',\n    start_date=datetime(2025, 1, 1),\n    catchup=False\n) as dag:\n    \n    telecharger = BashOperator(\n        task_id='telecharger',\n        bash_command='wget -O donnees.zip http://example.com/donnees.zip'\n    )\n    \n    decompresser = BashOperator(\n        task_id='decompresser',\n        bash_command='unzip -o donnees.zip -d ./'\n    )\n    \n    compter = BashOperator(\n        task_id='compter_lignes',\n        bash_command='wc -l donnees.csv > nb_lignes.txt'\n    )\n    \n    nettoyer = BashOperator(\n        task_id='nettoyer',\n        bash_command='rm donnees.zip'\n    )\n    \n    telecharger >> decompresser >> compter >> nettoyer",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Orchestration d'un Pipeline ETL",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous devez mettre en place un pipeline ETL (Extract, Transform, Load) avec Airflow pour une entreprise de e-commerce.</p><p><strong>Contexte :</strong> Les données de ventes arrivent quotidiennement dans un dossier HDFS. Vous devez :</p><ol><li>Extraire les données du jour.</li><li>Nettoyer les données (supprimer les doublons, valeurs nulles).</li><li>Transformer les données (calculer le CA, agréger par région).</li><li>Charger les données transformées dans une base PostgreSQL.</li><li>Envoyer un email de notification à l'équipe.</li></ol><p><strong>Consigne :</strong> Concevez un DAG Airflow pour ce pipeline en utilisant les Operators appropriés.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Définissez les tâches et leurs dépendances pour ce pipeline ETL.",
+        "niveau": "hard",
+        "reponse": "from airflow import DAG\nfrom airflow.operators.bash import BashOperator\nfrom airflow.operators.python import PythonOperator\nfrom airflow.operators.email import EmailOperator\nfrom airflow.providers.postgres.operators.postgres import PostgresOperator\nfrom datetime import datetime, timedelta\n\ndef extraire():\n    # Code pour extraire les données depuis HDFS\n    pass\n\ndef nettoyer():\n    # Code pour nettoyer les données\n    pass\n\ndef transformer():\n    # Code pour transformer les données\n    pass\n\ndef charger():\n    # Code pour charger dans PostgreSQL\n    pass\n\nwith DAG(\n    'etl_pipeline',\n    schedule_interval='0 6 * * *',\n    start_date=datetime(2025, 1, 1),\n    catchup=False,\n    default_args={'retries': 3, 'retry_delay': timedelta(minutes=5)}\n) as dag:\n    \n    extract_task = PythonOperator(\n        task_id='extraire_donnees',\n        python_callable=extraire\n    )\n    \n    clean_task = PythonOperator(\n        task_id='nettoyer_donnees',\n        python_callable=nettoyer\n    )\n    \n    transform_task = PythonOperator(\n        task_id='transformer_donnees',\n        python_callable=transformer\n    )\n    \n    load_task = PythonOperator(\n        task_id='charger_donnees',\n        python_callable=charger\n    )\n    \n    notify_task = EmailOperator(\n        task_id='envoyer_email',\n        to='team@example.com',\n        subject='Pipeline ETL terminé avec succès',\n        html_content='<p>Le pipeline ETL du jour est terminé.</p>'\n    )\n    \n    extract_task >> clean_task >> transform_task >> load_task >> notify_task",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion des Erreurs et Retries dans Airflow",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Les pipelines peuvent échouer pour diverses raisons : panne réseau, erreur de données, timeout, etc.</p><p><strong>Consigne :</strong> Pour un DAG de traitement de données, proposez une stratégie de gestion des erreurs :</p><ol><li>Comment configurer les retries (nombre de tentatives, délai entre les tentatives) ?</li><li>Quelles actions entreprendre en cas d'échec d'une tâche critique ?</li><li>Comment notifier l'équipe en cas d'échec ?</li><li>Comment gérer les dépendances entre tâches en cas d'échec ?</li></ol>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez votre stratégie de gestion des erreurs pour un pipeline Airflow.",
+        "niveau": "hard",
+        "reponse": "1. Configurer retries dans default_args ou au niveau de chaque tâche : retries=3, retry_delay=timedelta(minutes=5).\n2. Pour les tâches critiques, utiliser des Sensors pour vérifier l'état avant d'exécuter, ou des on_failure_callbacks pour des actions spécifiques.\n3. Utiliser EmailOperator ou SlackOperator pour notifier en cas d'échec.\n4. Les dépendances restent en place : si une tâche échoue, les tâches en aval ne s'exécutent pas (par défaut). Utiliser trigger_rule='all_done' pour exécuter même en cas d'échec.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Orchestration d'un Pipeline Machine Learning",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous devez orchestrer un pipeline complet de Machine Learning avec Airflow. Le pipeline comprend :</p><ul><li>Extraction des données depuis une base de données.</li><li>Prétraitement des données (encodage, normalisation).</li><li>Entraînement d'un modèle Random Forest.</li><li>Évaluation du modèle sur les données de test.</li><li>Si la performance est bonne (accuracy > 0.85), déployer le modèle en production.</li></ul><p><strong>Consigne :</strong> Concevez un DAG Airflow pour orchestrer ce pipeline. Incluez une condition pour décider du déploiement en fonction de la performance du modèle.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le code du DAG Airflow avec les tâches et les conditions nécessaires.",
+        "niveau": "very hard",
+        "reponse": "from airflow import DAG\nfrom airflow.operators.python import PythonOperator, BranchPythonOperator\nfrom airflow.operators.dummy import DummyOperator\nfrom datetime import datetime, timedelta\n\ndef extraire_donnees():\n    return \"donnees_brutes\"\n\ndef pretratier():\n    return \"donnees_pretraitees\"\n\ndef entrainer_modele():\n    accuracy = 0.88  # Simulé\n    return accuracy\n\ndef evaluer_modele(**context):\n    accuracy = context['ti'].xcom_pull(task_ids='entrainer_modele')\n    if accuracy > 0.85:\n        return 'deployer_modele'\n    else:\n        return 'notifier_echec'\n\ndef deployer():\n    print(\"Modèle déployé en production\")\n\ndef notifier_echec():\n    print(\"Modèle non déployé - performance insuffisante\")\n\nwith DAG(\n    'pipeline_ml',\n    schedule_interval='@weekly',\n    start_date=datetime(2025, 1, 1),\n    catchup=False\n) as dag:\n    \n    extraction = PythonOperator(\n        task_id='extraire_donnees',\n        python_callable=extraire_donnees\n    )\n    \n    preprocess = PythonOperator(\n        task_id='pretraiter_donnees',\n        python_callable=pretratier\n    )\n    \n    train = PythonOperator(\n        task_id='entrainer_modele',\n        python_callable=entrainer_modele\n    )\n    \n    branche = BranchPythonOperator(\n        task_id='decider_deploiement',\n        python_callable=evaluer_modele\n    )\n    \n    deploy = PythonOperator(\n        task_id='deployer_modele',\n        python_callable=deployer\n    )\n    \n    notify = PythonOperator(\n        task_id='notifier_echec',\n        python_callable=notifier_echec\n    )\n    \n    fin = DummyOperator(task_id='fin')\n    \n    extraction >> preprocess >> train >> branche\n    branche >> deploy >> fin\n    branche >> notify >> fin",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Planification et Scheduling dans Airflow",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>La planification est un aspect clé d'Airflow. Les DAGs peuvent être planifiés avec différentes fréquences.</p><p><strong>Consigne :</strong> Pour un pipeline qui doit s'exécuter :</p><ol><li>Toutes les heures.</li><li>Chaque jour à 23h00.</li><li>Chaque lundi à 9h00.</li><li>Le premier jour de chaque mois.</li></ol><p>Écrivez les expressions cron ou les intervales de planification pour chaque cas.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez les schedule_interval pour chaque fréquence d'exécution.",
+        "niveau": "medium",
+        "reponse": "1. Toutes les heures : schedule_interval='@hourly' ou '0 * * * *'\n2. Chaque jour à 23h00 : schedule_interval='0 23 * * *'\n3. Chaque lundi à 9h00 : schedule_interval='0 9 * * 1'\n4. Premier jour de chaque mois : schedule_interval='0 0 1 * *' ou '@monthly'",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

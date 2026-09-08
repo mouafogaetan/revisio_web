@@ -1,0 +1,122 @@
+[
+  {
+    "questionText": "Quel est le principal risque de sécurité lié au stockage d'un token JWT dans localStorage ?",
+    "options": [
+      "Le token expire trop rapidement",
+      "Le token est accessible par tout script JavaScript injecté via une attaque XSS (Cross-Site Scripting)",
+      "Le token est automatiquement envoyé à tous les sous-domaines",
+      "Le token n'est pas persistant après redémarrage du navigateur"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "easy",
+    "explanation": "localStorage est accessible par n'importe quel script JavaScript s'exécutant sur le même domaine. En cas d'attaque XSS, un attaquant peut voler le token et l'utiliser pour usurper l'identité de l'utilisateur. C'est pourquoi certains préfèrent les cookies httpOnly pour stocker les tokens sensibles."
+  },
+  {
+    "questionText": "Pourquoi stocke-t-on généralement l'access token en mémoire (state) et le refresh token dans un cookie httpOnly ?",
+    "options": [
+      "Parce que l'access token est plus volumineux que le refresh token",
+      "Pour limiter l'exposition aux XSS (l'access token est éphémère et non persistant, le refresh token est protégé par httpOnly)",
+      "Pour des raisons de performance uniquement",
+      "Parce que l'API backend ne peut lire que les cookies"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium",
+    "explanation": "L'access token (court terme) stocké en mémoire limite la fenêtre de vol : si un XSS survient, le token disparaît au rechargement. Le refresh token (longue durée) dans un cookie httpOnly + Secure + SameSite n'est pas accessible en JavaScript, ce qui le protège des XSS."
+  },
+  {
+    "questionText": "Quelle est la séquence typique du mécanisme de refresh token automatique quand l'access token expire ?",
+    "options": [
+      "L'utilisateur est déconnecté immédiatement et doit se reconnecter",
+      "L'application envoie silencieusement le refresh token à un endpoint /refresh, reçoit un nouvel access token et réessaie la requête originale",
+      "Le backend envoie automatiquement un email pour informer l'utilisateur",
+      "L'application supprime tous les tokens et recharge la page"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "easy",
+    "explanation": "Le refresh token permet de renouveler l'access token sans interaction utilisateur. L'application intercepte l'erreur 401, appelle /refresh avec le refresh token, puis rejoue la requête initiale avec le nouveau token. L'utilisateur ne voit rien."
+  },
+  {
+    "questionText": "Dans une application React, comment implémenter un intercepteur Axios pour gérer le refresh token automatique ?",
+    "options": [
+      "En ajoutant un setTimeout avant chaque requête",
+      "En utilisant response interceptors pour capturer les erreurs 401, tenter un refresh, puis réessayer la requête originale",
+      "En stockant les tokens dans sessionStorage uniquement",
+      "En désactivant les requêtes API"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium",
+    "explanation": "Axios permet d'ajouter des intercepteurs de réponse. On vérifie si l'erreur a un statut 401 (unauthorized), on appelle une fonction de refresh, on met à jour le token dans l'en-tête Authorization, et on renvoie la requête originale avec `axios.request(originalRequest)`."
+  },
+  {
+    "questionText": "Lors de la déconnexion, quelles actions sont nécessaires pour nettoyer proprement les données ?",
+    "options": [
+      "Supprimer seulement l'access token du localStorage",
+      "Effacer les tokens (access et refresh) côté client, supprimer le cookie httpOnly via une requête API logout, réinitialiser les stores Zustand/Redux et rediriger vers login",
+      "Recharger simplement la page",
+      "Ne rien faire, l'utilisateur reviendra plus tard"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "hard",
+    "explanation": "Une déconnexion propre doit : 1) Appeler l'API logout pour invalider le refresh token côté serveur (et supprimer le cookie httpOnly). 2) Supprimer les tokens du client (localStorage, state). 3) Réinitialiser les stores (panier, utilisateur). 4) Rediriger vers la page de connexion. Cela évite les fuites de données et les sessions résiduelles."
+  },
+  {
+    "questionText": "Pourquoi le refresh token doit-il être stocké dans un cookie httpOnly plutôt que dans localStorage ?",
+    "options": [
+      "Parce que les cookies sont plus rapides à lire",
+      "Parce que httpOnly empêche l'accès via JavaScript, protégeant ainsi le refresh token contre les attaques XSS",
+      "Parce que localStorage a une capacité limitée à 5KB",
+      "Parce que les cookies fonctionnent hors ligne"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium",
+    "explanation": "Le flag httpOnly indique au navigateur que le cookie ne doit pas être accessible via JavaScript (document.cookie). Ainsi, même en cas de faille XSS, le refresh token ne peut pas être volé. C'est une protection importante pour un token longue durée."
+  },
+  {
+    "questionText": "Que doit faire l'application si la requête de refresh token échoue (ex: refresh token expiré ou révoqué) ?",
+    "options": [
+      "Ignorer l'erreur et continuer comme si de rien n'était",
+      "Déconnecter l'utilisateur (effacer les tokens, réinitialiser les stores) et le rediriger vers la page de connexion",
+      "Réessayer indéfiniment toutes les secondes",
+      "Changer automatiquement l'utilisateur vers un compte invité"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium",
+    "explanation": "Si le refresh token est invalide (expiré ou révoqué), l'utilisateur doit se réauthentifier. L'application doit alors nettoyer toutes les données de session et rediriger vers /login. C'est une mesure de sécurité pour éviter les sessions orphelines."
+  },
+  {
+    "questionText": "Quelle est la durée de vie recommandée pour un access token vs un refresh token ?",
+    "options": [
+      "Access token : quelques minutes (15-30 min), Refresh token : plusieurs jours (7-30 jours)",
+      "Les deux doivent durer 1 heure",
+      "Access token : 1 an, Refresh token : 1 mois",
+      "Access token : 1 jour, Refresh token : 1 heure"
+    ],
+    "correctAnswer": 0,
+    "difficulty": "easy",
+    "explanation": "L'access token a une courte durée de vie pour limiter l'impact en cas de vol. Le refresh token a une durée plus longue pour éviter de demander trop souvent le mot de passe. Les valeurs typiques sont 15-30 minutes pour l'access token et 7-30 jours pour le refresh token."
+  },
+  {
+    "questionText": "Comment gérer le cas où plusieurs requêtes échouent en parallèle à cause d'un access token expiré, afin d'éviter d'appeler le refresh token plusieurs fois ?",
+    "options": [
+      "Laisser chaque requête appeler /refresh indépendamment",
+      "Utiliser un système de file d'attente (queue) avec un flag isRefreshing et mettre les requêtes en attente pendant le refresh",
+      "Recharger la page entièrement",
+      "Ignorer les requêtes supplémentaires"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "hard",
+    "explanation": "On utilise un booléen `isRefreshing` et une file d'attente de callbacks. La première requête déclenche le refresh. Les suivantes sont mises en attente. Une fois le nouveau token reçu, toutes les requêtes en attente sont réessayées avec le nouveau token. Cela évite d'envoyer plusieurs appels /refresh simultanés."
+  },
+  {
+    "questionText": "Quelle est la meilleure pratique pour réinitialiser les stores (Zustand/Redux) lors de la déconnexion ?",
+    "options": [
+      "Recharger complètement la page avec window.location.reload()",
+      "Appeler une action `reset()` dans chaque store pour remettre l'état à sa valeur initiale",
+      "Supprimer manuellement chaque propriété une par une",
+      "Ne pas réinitialiser, laisser l'utilisateur voir les anciennes données"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium",
+    "explanation": "La meilleure pratique est de définir une action `reset()` dans chaque store (Zustand) ou un reducer spécifique (Redux) qui rétablit l'état initial. Cela évite les fuites de données utilisateur. Le rechargement complet (reload) est une solution de dernier recours car elle est brutale et moins performante."
+  }
+]

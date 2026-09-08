@@ -1,0 +1,186 @@
+[
+  {
+    "intitule": "Analyse de l'Architecture du Chat",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous avez analysé le code d'un module de chat dans une application NestJS. Le module est structuré comme suit : un <code>ChatGateway</code>, un <code>ChatService</code> et des entités <code>Chat</code>, <code>Message</code>, et <code>Dispute</code>. Un développeur a ajouté la méthode suivante dans le <code>ChatService</code> :</p><pre><code>async createMessage(createMessageDto: CreateMessageDto): Promise<Message> {\n  const chat = await this.chatRepository.findOne({\n    where: { id: createMessageDto.chatId },\n    relations: ['participants'],\n  });\n  if (!chat) {\n    throw new NotFoundException('Chat non trouvé');\n  }\n  // Vérification que l'utilisateur fait partie du chat\n  const isParticipant = chat.participants.some(\n    p => p.id === createMessageDto.senderId\n  );\n  if (!isParticipant) {\n    throw new UnauthorizedException('Vous n\\'êtes pas participant de ce chat');\n  }\n  const message = this.messageRepository.create(createMessageDto);\n  message.chat = chat;\n  return this.messageRepository.save(message);\n}</code></pre><p>En vous basant sur ce code, répondez aux questions suivantes. </p>",
+      "images": [
+        "Un diagramme de classes simplifié représentant les relations entre les entités Chat, Message, User et Dispute. Les attributs principaux de chaque entité sont visibles."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifiez le rôle des décorateurs dans un gateway NestJS.",
+        "niveau": "easy",
+        "reponse": "Les décorateurs sont des fonctions qui permettent de définir des métadonnées pour les classes et leurs membres. Dans un gateway, ils servent à déclarer des gestionnaires d'événements (ex: `@SubscribeMessage('event_name')`) et à configurer le comportement du gateway (ex: `@WebSocketGateway(port, { namespace: 'chat'})`)."
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez le fonctionnement de la méthode `createMessage` du `ChatService`.",
+        "niveau": "easy",
+        "reponse": "La méthode `createMessage` prend en entrée un DTO (`createMessageDto`). Elle utilise un repository pour rechercher un chat existant par son ID en incluant ses participants. Si le chat n'est pas trouvé, une exception est levée. Ensuite, elle vérifie si l'utilisateur qui envoie le message est bien un participant du chat. Si ce n'est pas le cas, une exception est levée. Enfin, elle crée un nouvel objet `Message`, l'associe au chat trouvé et le sauvegarde en base de données."
+      },
+      {
+        "numero": 3,
+        "texte": "Décrivez le rôle du pattern Observer dans l'implémentation des WebSockets avec Socket.IO.",
+        "niveau": "medium",
+        "reponse": "Le pattern Observer est au cœur du fonctionnement des WebSockets. Le serveur (le gateway) agit comme un sujet. Les clients (les navigateurs) sont les observateurs. Lorsque le serveur reçoit un événement d'un client (via `@SubscribeMessage`), il peut diffuser (émettre) cet événement à un ou plusieurs autres clients, qui, en tant qu'observateurs, réagiront. Les `rooms` permettent de créer des groupes d'observateurs pour des communications ciblées."
+      }
+    ]
+  },
+  {
+    "intitule": "Mise en place de l'envoi de messages",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous devez implémenter la fonctionnalité d'envoi de messages en temps réel. Le client émet un événement <code>send_message</code> avec les données suivantes : <code>{ chatId: \"uuid\", content: \"Bonjour !\", senderId: \"uuid\" }</code>. Le message doit être sauvegardé en base de données via le <code>ChatService</code>.</p><p>Le code du <code>ChatGateway</code> est partiellement écrit. Complétez-le.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Complétez le code du `ChatGateway` pour l'événement `send_message` en utilisant le `ChatService`.",
+        "niveau": "medium",
+        "reponse": "```typescript\n@SubscribeMessage('send_message')\nasync handleMessage(@ConnectedSocket() client: Socket, @MessageBody() payload: { chatId: string, content: string, senderId: string }): Promise<void> {\n  try {\n    const message = await this.chatService.createMessage(payload);\n    // Émettre le message à tous les participants du chat\n    this.server.to(`chat_${payload.chatId}`).emit('new_message', message);\n    // Envoyer une confirmation à l'expéditeur\n    client.emit('message_sent', message);\n  } catch (error) {\n    client.emit('error', { message: error.message });\n  }\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quel décorateur utilise-t-on pour écouter l'événement `send_message` ?",
+            "niveau": "easy",
+            "reponse": "`@SubscribeMessage('send_message')`"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Pourquoi utilise-t-on `this.server.to(...).emit(...)` ?",
+            "niveau": "medium",
+            "reponse": "Cette syntaxe permet d'émettre l'événement `new_message` à tous les clients qui se trouvent dans la room spécifique, identifiée par l'ID du chat. Cela garantit que seuls les participants du chat reçoivent le message."
+          },
+          {
+            "numero": "1.c",
+            "texte": "Expliquez l'utilité d'utiliser un `try...catch` dans cette méthode.",
+            "niveau": "easy",
+            "reponse": "Le `try...catch` permet de capturer les erreurs qui pourraient survenir lors de la sauvegarde du message (ex: problème de base de données) ou de la validation (ex: le chat n'existe pas). Il permet d'envoyer une réponse d'erreur au client pour lui indiquer que son message n'a pas été envoyé, plutôt que de laisser la connexion planter silencieusement."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion des Litiges : Cas d'Usage Administratif",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>La plateforme e-commerce Sawamart permet aux acheteurs et vendeurs de discuter en temps réel. Un acheteur n'a pas reçu son produit et ouvre un litige contre le vendeur. Ce litige est géré par un administrateur.</p><p>Vous devez concevoir et justifier la solution backend pour ce processus. Le litige passe par les états suivants : <code>OPEN</code> (ouvert par l'acheteur), <code>REVIEW</code> (en cours de traitement par l'admin), <code>ESCALATED</code> (escaladé à un supérieur), <code>RESOLVED</code> (résolu).</p>",
+      "images": [
+        "Un diagramme d'état-transition pour un litige, montrant les états et les transitions possibles."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevez la structure des entités et des DTOs nécessaires à la gestion d'un litige.",
+        "niveau": "hard",
+        "reponse": "**Entités**\n- **Dispute** : `id`, `chat` (Relation OneToOne avec Chat), `buyerId` (UUID), `sellerId` (UUID), `reason` (string), `description` (string), `status` (enum: OPEN, REVIEW, ESCALATED, RESOLVED), `adminId` (UUID), `createdAt`, `updatedAt`.\n- **DisputeMessage** (Optionnel) : `id`, `dispute` (Relation ManyToOne), `senderId` (UUID), `content` (string), `createdAt`.\n\n**DTOs**\n- `CreateDisputeDto`: `chatId`, `reason`, `description`.\n- `UpdateDisputeStatusDto`: `status`, `adminId`.\n- `DisputeResponseDto` (Sortie) : Tous les champs de Dispute + les messages associés."
+      },
+      {
+        "numero": 2,
+        "texte": "Développez le service `DisputeService` en intégrant des règles de gestion pour les transitions d'état.",
+        "niveau": "very hard",
+        "reponse": "```typescript\n// dispute.service.ts\n@Injectable()\nexport class DisputeService {\n  constructor(@InjectRepository(Dispute) private disputeRepo: Repository<Dispute>) {}\n\n  async createDispute(userId: string, createDisputeDto: CreateDisputeDto): Promise<Dispute> {\n    const dispute = this.disputeRepo.create({\n      ...createDisputeDto,\n      buyerId: userId,\n      status: DisputeStatus.OPEN,\n    });\n    // Logique d'association avec le chat\n    return this.disputeRepo.save(dispute);\n  }\n\n  async updateStatus(disputeId: string, updateDto: UpdateDisputeStatusDto): Promise<Dispute> {\n    const dispute = await this.disputeRepo.findOne({ where: { id: disputeId } });\n    if (!dispute) throw new NotFoundException('Litige non trouvé');\n\n    const { status, adminId } = updateDto;\n    // Règles de gestion\n    if (dispute.status === DisputeStatus.OPEN && status === DisputeStatus.REVIEW) {\n      dispute.status = status;\n      dispute.adminId = adminId;\n    } else if (dispute.status === DisputeStatus.REVIEW && status === DisputeStatus.ESCALATED) {\n      dispute.status = status;\n      // Logique d'escalade\n    } else if (dispute.status === DisputeStatus.REVIEW && status === DisputeStatus.RESOLVED) {\n      dispute.status = status;\n      // Logique de résolution\n    } else {\n      throw new BadRequestException('Transition d\\'état non autorisée');\n    }\n\n    return this.disputeRepo.save(dispute);\n  }\n}\n```"
+      },
+      {
+        "numero": 3,
+        "texte": "Justifiez votre choix pour l'intégration entre le chat et le module de litige.",
+        "niveau": "hard",
+        "reponse": "Il est judicieux de lier le litige à un chat spécifique. Cela permet à l'administrateur, une fois le litige ouvert, d'accéder à l'historique complet de la conversation entre l'acheteur et le vendeur. Cela facilite la prise de décision et l'arbitrage. La relation est une `OneToOne` ou `OneToMany` selon le design. De plus, le module de litige peut émettre des événements (via le `ChatGateway`) pour notifier les parties prenantes en temps réel du changement de statut du litige, ce qui améliore l'expérience utilisateur."
+      }
+    ]
+  },
+  {
+    "intitule": "Indicateurs de Frappe et de Lecture",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Pour améliorer l'expérience utilisateur du chat, vous devez implémenter les indicateurs de frappe et le marquage des messages comme \"lu\".</p>",
+      "images": [
+        "Un schéma d'interaction entre un émetteur et un receveur montrant l'émission des événements 'typing', 'stop_typing' et 'mark_as_read'."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez et mettez en œuvre la gestion des indicateurs de frappe dans le `ChatGateway`.",
+        "niveau": "medium",
+        "reponse": "```typescript\n@SubscribeMessage('typing')\nhandleTyping(@ConnectedSocket() client: Socket, @MessageBody() data: { chatId: string, userId: string, isTyping: boolean }): void {\n  const event = data.isTyping ? 'user_typing' : 'user_stop_typing';\n  client.to(`chat_${data.chatId}`).emit(event, { userId: data.userId });\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi est-il important de gérer un événement 'stop_typing' ?",
+            "niveau": "easy",
+            "reponse": "L'événement 'stop_typing' permet d'indiquer aux autres participants que l'utilisateur a cessé de taper. Cela évite que l'indicateur de frappe reste affiché indéfiniment et donne un retour d'information précis aux utilisateurs."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Quel mécanisme de Socket.IO est utilisé pour diffuser l'état de frappe ?",
+            "niveau": "easy",
+            "reponse": "On utilise `client.to(`chat_${data.chatId}`).emit(...)` pour diffuser l'événement à tous les clients dans la room du chat, sauf à l'émetteur."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Décrivez et codez la fonctionnalité pour marquer un message comme lu.",
+        "niveau": "medium",
+        "reponse": "```typescript\n// Dans MessageService\nasync markMessageAsRead(messageId: string, userId: string): Promise<void> {\n  const message = await this.messageRepo.findOne({ where: { id: messageId }, relations: ['chat'] });\n  if (!message) throw new NotFoundException('Message non trouvé');\n\n  // Vérifier que l'utilisateur fait partie du chat\n  const isParticipant = await this.chatService.isUserParticipant(message.chat.id, userId);\n  if (!isParticipant) throw new UnauthorizedException();\n\n  message.isRead = true;\n  message.readAt = new Date();\n  await this.messageRepo.save(message);\n\n  // Émettre l'événement pour mettre à jour l'interface\n  this.gateway.server.to(`chat_${message.chat.id}`).emit('message_read', { messageId, userId });\n}\n```"
+      }
+    ]
+  },
+  {
+    "intitule": "Évaluation de la Sécurité et des Bonnes Pratiques du Chat",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous effectuez une revue de code du module de chat. Voici quelques extraits du code du <code>ChatGateway</code>. Identifiez les problèmes de sécurité et de performance et proposez des solutions.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analyser le code du `ChatGateway` pour détecter les vulnérabilités.",
+        "niveau": "hard",
+        "reponse": "1. **Manque d'authentification WebSocket**: Le code n'utilise pas de middleware pour valider le token JWT. Tout client pourrait se connecter sans authentification. **Solution**: Utiliser un middleware d'authentification avec `socket.use` pour vérifier le token JWT avant la connexion. 2. **Absence de Rate Limiting**: Des attaques par déni de service (DoS) sont possibles si les clients envoient trop de messages. **Solution**: Implémenter un rate limit par utilisateur ou par IP. 3. **Absence de validation des données**: Les DTOs doivent être validés avec `class-validator` pour éviter l'injection de scripts malveillants. **Solution**: Utiliser un `ValidationPipe` global ou un intercepteur pour valider les entrées du gateway."
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer comment garantir que les messages ne peuvent être envoyés que par les participants au chat.",
+        "niveau": "medium",
+        "reponse": "Cette vérification doit être effectuée dans le service `ChatService` avant de sauvegarder un message. On récupère le chat avec ses participants et on vérifie que l'ID de l'utilisateur émetteur est bien présent dans la liste des participants. Il est également impératif que l'ID de l'utilisateur soit récupéré à partir du token JWT validé, et non transmis directement par le client, pour éviter la falsification (par exemple, un utilisateur pourrait envoyer un message en prétendant être un autre participant)."
+      }
+    ]
+  },
+  {
+    "intitule": "Mise en œuvre de la Résolution de Litige avec Notifications",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Un administrateur de la plateforme doit pouvoir résoudre un litige. La résolution du litige doit déclencher des notifications pour l'acheteur et le vendeur. De plus, le statut du litige doit être mis à jour en temps réel dans l'interface web du chat.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevoir l'architecture de cette fonctionnalité en décrivant les services impliqués et leurs interactions.",
+        "niveau": "hard",
+        "reponse": "**Architecture**\n1. **AdminController**: Reçoit la requête HTTP `PUT /admin/disputes/:id/resolve` avec le corps de la résolution (ex: `{ resolution: 'Remboursement effectué' }`).\n2. **AdminService**: Appelle la méthode `resolveDispute(disputeId, adminId, resolutionData)`.\n3. **DisputeService**: Met à jour le statut du litige à `RESOLVED`, enregistre la résolution et lance un événement 'dispute_resolved' (ou utilise directement le gateway).\n4. **DisputeGateway**: Écoute l'événement `dispute_resolved` et émet un événement WebSocket à la room du chat pour informer les participants.\n5. **NotificationService**: Envoie une notification push (via FCM) et/ou in-app aux utilisateurs concernés.\n6. **ChatService**: Met à jour le chat pour indiquer qu'il est fermé ou associé à un litige résolu."
+      },
+      {
+        "numero": 2,
+        "texte": "Écrire le code du contrôleur administrateur et du service pour la résolution du litige.",
+        "niveau": "very hard",
+        "reponse": "```typescript\n// dispute.controller.ts\n@Put(':id/resolve')\n@Roles(Role.ADMIN)\n@UseGuards(JwtAuthGuard, RolesGuard)\nasync resolveDispute(@Param('id') id: string, @Body() resolveDto: ResolveDisputeDto, @CurrentUser() admin: User) {\n  return this.disputeService.resolveDispute(id, admin.id, resolveDto.resolution);\n}\n\n// dispute.service.ts\nasync resolveDispute(disputeId: string, adminId: string, resolution: string): Promise<Dispute> {\n  const dispute = await this.disputeRepo.findOne({\n    where: { id: disputeId },\n    relations: ['chat', 'buyer', 'seller']\n  });\n  if (!dispute) throw new NotFoundException('Litige non trouvé');\n  \n  if (dispute.status !== DisputeStatus.REVIEW) {\n    throw new BadRequestException('Le litige doit être en cours de revue pour être résolu');\n  }\n\n  dispute.status = DisputeStatus.RESOLVED;\n  dispute.resolution = resolution;\n  dispute.resolvedBy = adminId;\n  dispute.resolvedAt = new Date();\n  \n  const savedDispute = await this.disputeRepo.save(dispute);\n\n  // Déclencher des actions\n  this.disputeGateway.notifyDisputeResolved(savedDispute);\n  await this.notificationService.notifyDisputeResolution(dispute.buyer, dispute.seller, resolution);\n  await this.chatService.closeChat(dispute.chat.id);\n\n  return savedDispute;\n}\n```"
+      }
+    ]
+  }
+]

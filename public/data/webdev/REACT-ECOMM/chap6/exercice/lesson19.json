@@ -1,0 +1,170 @@
+[
+  {
+    "intitule": "Exercice 1 : Identifier les bonnes pratiques de stockage des tokens",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Dans une application React e-commerce, après authentification, le serveur retourne un <code>access_token</code> (court terme) et un <code>refresh_token</code> (longue durée).</p><p><strong>Consigne :</strong> À partir de vos connaissances sur la sécurité et les performances, identifiez les avantages et inconvénients de stocker ces tokens dans <code>localStorage</code> versus <code>httpOnly cookie</code>.</p>",
+      "images": [
+        "schéma comparatif entre localStorage et cookie httpOnly",
+        "illustration d'une attaque XSS contre localStorage"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Énumérez deux risques principaux liés au stockage des tokens dans localStorage.",
+        "niveau": "easy",
+        "reponse": "1. Vulnérabilité aux attaques XSS (Cross-Site Scripting) : un script malveillant injecté peut lire localStorage et voler les tokens. 2. Pas de protection automatique contre les CSRF (Cross-Site Request Forgery) contrairement aux cookies avec SameSite.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Comparez l'approche httpOnly cookie avec localStorage pour la gestion du refresh token. Quelle approche est généralement plus sécurisée ? Justifiez.",
+        "niveau": "medium",
+        "reponse": "L'approche httpOnly cookie est plus sécurisée car le cookie n'est pas accessible via JavaScript (protection XSS). Le navigateur l'envoie automatiquement avec chaque requête. Cependant, il faut le protéger contre CSRF (avec SameSite=Strict ou un token CSRF). localStorage expose les tokens au JavaScript, donc vulnérable en cas de faille XSS. La meilleure pratique combine : access_token en mémoire (ou court cookie) + refresh_token httpOnly.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 2 : Implémenter le refresh token automatique avec Axios interceptors",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous travaillez sur une application React qui communique avec une API NestJS. L'access_token expire après 15 minutes. Vous devez implémenter un mécanisme qui, lorsqu'une requête échoue avec une erreur 401 (token expiré), utilise le refresh_token pour obtenir un nouveau access_token et réessayer automatiquement la requête initiale.</p><p><strong>Consigne :</strong> Écrivez le code de l'intercepteur Axios (avec gestion de file d'attente pour éviter plusieurs refresh simultanés).</p>",
+      "images": [
+        "schéma du flow de refresh token avec intercepteur Axios",
+        "diagramme séquentiel requête -> 401 -> refresh -> retry"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémentez l'intercepteur de réponse Axios qui gère le refresh token automatique. Utilisez une variable `isRefreshing` et une file d'attente `failedQueue`.",
+        "niveau": "very hard",
+        "reponse": "```javascript\nlet isRefreshing = false;\nlet failedQueue = [];\n\nconst processQueue = (error, token = null) => {\n  failedQueue.forEach(prom => {\n    if (error) prom.reject(error);\n    else prom.resolve(token);\n  });\n  failedQueue = [];\n};\n\napi.interceptors.response.use(\n  (response) => response,\n  async (error) => {\n    const originalRequest = error.config;\n    if (error.response?.status === 401 && !originalRequest._retry) {\n      if (isRefreshing) {\n        return new Promise((resolve, reject) => {\n          failedQueue.push({ resolve, reject });\n        }).then(token => {\n          originalRequest.headers.Authorization = `Bearer ${token}`;\n          return api(originalRequest);\n        }).catch(err => Promise.reject(err));\n      }\n      originalRequest._retry = true;\n      isRefreshing = true;\n      try {\n        const { data } = await authService.refreshToken();\n        const newToken = data.access_token;\n        localStorage.setItem('access_token', newToken);\n        processQueue(null, newToken);\n        originalRequest.headers.Authorization = `Bearer ${newToken}`;\n        return api(originalRequest);\n      } catch (refreshError) {\n        processQueue(refreshError, null);\n        // Rediriger vers login\n        window.location.href = '/login';\n        return Promise.reject(refreshError);\n      } finally {\n        isRefreshing = false;\n      }\n    }\n    return Promise.reject(error);\n  }\n);\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez pourquoi il est nécessaire d'utiliser une file d'attente (`failedQueue`) et la variable `isRefreshing`.",
+            "niveau": "medium",
+            "reponse": "Lorsque plusieurs requêtes simultanées reçoivent une erreur 401, on ne doit appeler le endpoint `/refresh` qu'une seule fois. La variable `isRefreshing` empêche les appels parallèles. La `failedQueue` stocke les promesses des requêtes en attente ; après obtention du nouveau token, toutes ces requêtes sont retentées avec le token frais."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Que se passe-t-il si le refresh_token a également expiré ? Comment votre code doit-il réagir ?",
+        "niveau": "hard",
+        "reponse": "Si le refresh_token est expiré, le endpoint `/refresh` retournera une erreur 401 ou 403. Dans le bloc `catch` de la fonction refresh, on appelle `processQueue(refreshError)` pour rejeter toutes les requêtes en attente, puis on redirige l'utilisateur vers la page de login (ou on déclenche une déconnexion avec nettoyage du store). On doit également supprimer les tokens stockés.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 3 : Nettoyer les données utilisateur lors de la déconnexion",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans une application e-commerce, l'utilisateur clique sur \"Se déconnecter\". Vous devez non seulement supprimer les tokens, mais aussi effacer toutes les données sensibles stockées côté client (panier local, favoris, préférences utilisateur).</p><p><strong>Consigne :</strong> Écrivez une fonction `logout` qui utilise Zustand (authStore, cartStore) et efface localStorage de manière sécurisée.</p>",
+      "images": [
+        "bouton de déconnexion dans l'interface utilisateur",
+        "schéma de nettoyage des stores Zustand"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémentez la méthode `logout` dans un store Zustand (authStore) qui : 1) appelle l'API `/logout` (optionnel), 2) supprime les tokens de localStorage, 3) réinitialise l'état du store auth, 4) appelle une fonction `clearCart` d'un autre store.",
+        "niveau": "medium",
+        "reponse": "```javascript\n// authStore.js\nconst useAuthStore = create((set, get) => ({\n  user: null,\n  token: null,\n  login: (user, token) => set({ user, token }),\n  logout: async () => {\n    // Appel API logout (optionnel, pour invalider token côté serveur)\n    try {\n      await authService.logout();\n    } catch(e) { console.warn(e); }\n    // Supprimer des localStorage\n    localStorage.removeItem('access_token');\n    localStorage.removeItem('refresh_token');\n    // Réinitialiser auth store\n    set({ user: null, token: null });\n    // Nettoyer le panier (autre store)\n    useCartStore.getState().clearCart();\n    // Optionnel : réinitialiser filtres, favoris...\n    useFilterStore.getState().resetFilters();\n  }\n}));\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi est-il recommandé d'appeler l'API `/logout` même si l'on supprime les tokens localement ?",
+            "niveau": "easy",
+            "reponse": "Pour invalider le refresh_token côté serveur, empêchant son utilisation ultérieure. Cela améliore la sécurité, surtout si le token a été compromis. Le serveur peut également ajouter le token à une liste noire (blacklist) jusqu'à son expiration naturelle."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Quel est le risque si l'on oublie de nettoyer le panier stocké dans localStorage après déconnexion ?",
+        "niveau": "easy",
+        "reponse": "Un autre utilisateur qui se connecte sur le même navigateur pourrait voir le panier de l'ancien utilisateur. Cela cause des problèmes de confidentialité et de mélange de données. Il faut donc vider le panier (et tous les autres stores persistants) lors de la déconnexion.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 4 : Analyser la persistance de session après refresh de la page",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un utilisateur se connecte à votre site e-commerce, puis rafraîchit la page (F5). Normalement, il devrait rester connecté. Expliquez comment l'application React peut restaurer l'état d'authentification après un rafraîchissement.</p>",
+      "images": [
+        "cycle de vie d'une application React avec persist middleware",
+        "exemple de localStorage contenant token et user"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez le rôle du middleware `persist` de Zustand et comment il permet de restaurer la session après rechargement.",
+        "niveau": "easy",
+        "reponse": "Le middleware `persist` sauvegarde automatiquement l'état du store (ou une partie) dans localStorage (ou sessionStorage). Au chargement de l'application, il réhydrate le store avec les données sauvegardées. Ainsi, si le token et l'utilisateur sont persistés, la session est restaurée sans nécessiter de nouvelle connexion.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quelle est la principale précaution à prendre lors de l'utilisation de `persist` pour un store d'authentification ?",
+            "niveau": "medium",
+            "reponse": "Il faut éviter de persister des données sensibles en clair si l'on craint les failles XSS. On peut configurer `persist` pour ne stocker que le token (qui reste vulnérable) ou combiner avec un mécanisme de rotation. Une meilleure approche est de stocker uniquement le refresh_token dans un cookie httpOnly et de récupérer un nouveau access_token au chargement."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Proposez une alternative à `persist` pour restaurer la session après un refresh, en utilisant uniquement le refresh_token stocké dans un cookie httpOnly.",
+        "niveau": "hard",
+        "reponse": "Dans le composant racine (App.js), on exécute un effet `useEffect` qui appelle une API `/refresh` (avec le cookie httpOnly automatiquement envoyé) pour obtenir un nouvel access_token. Si la requête réussit, on met à jour le store auth ; sinon, l'utilisateur est considéré comme déconnecté. Cela évite de stocker l'access_token dans localStorage, améliorant la sécurité contre XSS.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 5 : Implémenter la redirection après connexion",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un utilisateur non authentifié tente d'accéder à la page `/checkout`. Il est redirigé vers `/login`. Après une connexion réussie, il doit être renvoyé automatiquement vers `/checkout`.</p><p><strong>Consigne :</strong> Écrivez le code React Router et la logique de redirection utilisant `useNavigate` et `location.state`.</p>",
+      "images": [
+        "schéma de redirection avec sauvegarde de l'URL précédente",
+        "extrait de code React Router avec state"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créez un composant `ProtectedRoute` qui, si l'utilisateur n'est pas connecté, redirige vers `/login` en enregistrant l'URL actuelle dans `location.state`.",
+        "niveau": "medium",
+        "reponse": "```jsx\nimport { Navigate, useLocation } from 'react-router-dom';\nimport useAuthStore from '../stores/authStore';\n\nconst ProtectedRoute = ({ children }) => {\n  const isAuthenticated = useAuthStore((state) => !!state.token);\n  const location = useLocation();\n  if (!isAuthenticated) {\n    return <Navigate to=\"/login\" state={{ from: location }} replace />;\n  }\n  return children;\n};\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Dans le composant `Login`, comment récupérer l'URL sauvegardée et rediriger l'utilisateur après une connexion réussie ?",
+            "niveau": "medium",
+            "reponse": "```jsx\nconst Login = () => {\n  const navigate = useNavigate();\n  const location = useLocation();\n  const from = location.state?.from?.pathname || '/';\n  const { login } = useAuth();\n  const handleSubmit = async (data) => {\n    const success = await login(data.email, data.password);\n    if (success) navigate(from, { replace: true });\n  };\n  // ...\n};\n```"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Que se passe-t-il si l'utilisateur visite `/login` alors qu'il est déjà connecté ? Comment éviter qu'il revoie le formulaire de connexion ?",
+        "niveau": "easy",
+        "reponse": "On crée une route ou un composant `PublicRoute` ou bien dans la page Login, on redirige vers l'accueil si l'utilisateur est authentifié. Exemple : `if (isAuthenticated) return <Navigate to=\"/\" replace />;`. Cela évite d'afficher le formulaire de connexion à un utilisateur déjà connecté.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

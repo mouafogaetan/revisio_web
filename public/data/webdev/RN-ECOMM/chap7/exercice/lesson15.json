@@ -1,0 +1,199 @@
+[
+  {
+    "intitule": "Conception de l'écran du portefeuille",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Dans le cadre du développement de l'application Sawamart, vous devez concevoir l'écran <code>WalletScreen</code>. Cet écran affiche les informations financières de l'utilisateur : solde, historique des transactions, et statistiques.</p><p>L'application utilise Zustand pour la gestion d'état. Le <code>walletStore</code> contient les données du portefeuille.</p>",
+      "images": [
+        "Maquette d'écran de portefeuille montrant : une carte de solde avec le montant en FCFA, un graphique d'évolution des transactions, une liste d'historique avec des items (type, montant, date, statut), et un bouton 'Recharger'."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez la structure du <code>walletStore</code> et expliquez comment vous l'utiliseriez pour afficher le solde et l'historique dans <code>WalletScreen</code>.",
+        "niveau": "easy",
+        "reponse": "Le <code>walletStore</code> contient généralement : <code>balance</code> (nombre), <code>transactions</code> (tableau d'objets avec id, type, amount, status, createdAt), <code>loading</code> (booléen), <code>error</code> (chaîne). Dans <code>WalletScreen</code>, on utilise <code>useWalletStore(state => state.balance)</code> pour le solde et <code>useWalletStore(state => state.transactions)</code> pour l'historique.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Identifiez comment vous formateriez le montant pour l'affichage en FCFA.",
+            "niveau": "easy",
+            "reponse": "Utiliser <code>new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XAF' }).format(amount)</code>. On peut aussi simplement utiliser <code>{amount.toLocaleString('fr-FR')} FCFA</code>."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez comment vous implémenteriez le chargement des données du portefeuille au premier affichage de l'écran.",
+        "niveau": "medium",
+        "reponse": "Dans <code>useEffect</code> ou <code>useFocusEffect</code>, appeler <code>walletStore.fetchWalletData()</code> (ou une méthode équivalente) pour charger le solde et l'historique. Afficher un <code>ActivityIndicator</code> pendant le chargement. Utiliser <code>useFocusEffect</code> de React Navigation pour recharger à chaque visite.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Implémentation de l'écran de recharge",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>L'écran <code>RechargeScreen</code> permet à l'utilisateur d'initier un dépôt via mobile money. Le processus est le suivant :</p><ol><li>L'utilisateur saisit le montant à déposer</li><li>Il sélectionne son opérateur (MTN, Orange, etc.)</li><li>Il clique sur 'Recharger'</li><li>Le backend génère un code de paiement et un compte à rebours s'affiche</li><li>L'utilisateur effectue le paiement et clique sur 'J'ai payé'</li></ol>",
+      "images": [
+        "Écran de recharge avec un champ de saisie pour le montant, une liste de sélection d'opérateurs, un bouton 'Recharger', et un compteur de temps affiché après l'initiation."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémentez la logique d'initiation d'un dépôt dans <code>RechargeScreen</code> en utilisant <code>depositService.initiateDeposit</code>.",
+        "niveau": "medium",
+        "reponse": "Dans le composant, utiliser <code>useState</code> pour <code>amount</code>, <code>operator</code>, <code>loading</code>. La fonction <code>handleSubmit</code> valide le montant (minimum 100 FCFA), appelle <code>await depositService.initiateDeposit({ amount, operator })</code>, puis sauvegarde la réponse (code de paiement, expiration) dans l'état local et affiche le compte à rebours.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez comment vous gérez le compte à rebours (timer) pour l'expiration du dépôt.",
+            "niveau": "medium",
+            "reponse": "Utiliser <code>useEffect</code> avec <code>setInterval</code> pour décrémenter un état <code>secondsLeft</code> chaque seconde. Nettoyer l'intervalle avec <code>clearInterval</code> dans le return. Lorsque le temps atteint 0, désactiver le bouton 'J'ai payé' et afficher un message d'expiration."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Décrivez comment vous implémentez le bouton 'J'ai payé' pour confirmer le paiement.",
+        "niveau": "medium",
+        "reponse": "Le bouton 'J'ai payé' appelle <code>depositService.confirmDeposit(depositId)</code>. En cas de succès, afficher un message de confirmation et mettre à jour le <code>walletStore</code> avec le nouveau solde. En cas d'erreur, afficher un message d'erreur (ex: 'Dépôt non trouvé', 'Délai expiré').",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Affichage de l'historique des transactions",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>L'écran <code>WalletScreen</code> affiche l'historique des transactions de l'utilisateur. Chaque transaction est représentée par un item avec : le type (crédit ou débit), le montant, la date et le statut.</p><p>Les données sont stockées dans <code>walletStore</code>.</p>",
+      "images": [
+        "Liste d'items de transactions avec des icônes distinctes pour les crédits (flèche verte vers le haut) et les débits (flèche rouge vers le bas), le montant, la date formatée et un badge de statut (Réussi, En attente, Échoué)."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevez le composant <code>TransactionItem</code> pour afficher une transaction avec les informations appropriées.",
+        "niveau": "easy",
+        "reponse": "Le composant reçoit une prop <code>transaction</code> contenant : <code>{ id, type, amount, status, createdAt, description }</code>. Il affiche une icône (crédit/débit), le montant avec couleur (vert pour crédit, rouge pour débit), la date formatée (ex: '12/01/2025 à 14:30'), et un badge de statut (Réussi, En attente, Échoué).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez comment vous gérez l'affichage du statut avec des couleurs différentes.",
+            "niveau": "easy",
+            "reponse": "Utiliser un objet de mapping : <code>const statusColors = { 'pending': '#f39c12', 'completed': '#2ecc71', 'failed': '#e74c3c' };</code> et <code>const statusLabels = { 'pending': 'En attente', 'completed': 'Réussi', 'failed': 'Échoué' };</code>."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez comment vous utilisez <code>FlatList</code> pour afficher l'historique des transactions avec un en-tête personnalisé.",
+        "niveau": "medium",
+        "reponse": "Utiliser <code>FlatList</code> avec <code>data={transactions}</code> et <code>renderItem={({ item }) => <TransactionItem transaction={item} />}</code>. Pour l'en-tête, utiliser <code>ListHeaderComponent</code> pour afficher le solde et le graphique. Ajouter <code>keyExtractor={(item) => item.id}</code> pour une performance optimale.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion des dépôts actifs et des actions",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>L'écran <code>RechargeScreen</code> doit gérer les états suivants :</p><ul><li><strong>IDLE</strong> : L'utilisateur peut saisir un montant et sélectionner un opérateur</li><li><strong>PENDING</strong> : Le dépôt a été initié, un compte à rebours est affiché</li><li><strong>PAID</strong> : L'utilisateur a cliqué sur 'J'ai payé', en attente de confirmation du backend</li></ul>",
+      "images": [
+        "Diagramme des états (IDLE, PENDING, PAID) avec les transitions (saisie → INITIATE → PENDING, PENDING → CONFIRM → PAID, PENDING → EXPIRED → IDLE)."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevez la machine à états pour gérer ces transitions en utilisant React (useState ou useReducer).",
+        "niveau": "hard",
+        "reponse": "Utiliser <code>useState</code> avec un état <code>status</code> de type <code>'idle' | 'pending' | 'paid'</code>. Les actions : <code>initiateDeposit</code> passe de 'idle' à 'pending', <code>confirmPayment</code> passe de 'pending' à 'paid' (ou 'error' en cas d'échec), <code>expireDeposit</code> passe de 'pending' à 'idle' (réinitialisation). Utiliser <code>useReducer</code> si les transitions sont plus complexes.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez comment vous gérez le cas où l'utilisateur quitte l'écran pendant un dépôt en attente.",
+            "niveau": "hard",
+            "reponse": "Sauvegarder l'état du dépôt dans un store (ex: <code>depositStore</code>) avec persistance. Lorsque l'utilisateur revient sur l'écran, restaurer l'état et recalculer le temps restant. Utiliser <code>useFocusEffect</code> pour récupérer l'état du dépôt actif."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Décrivez comment vous implémentez l'annulation d'un dépôt.",
+        "niveau": "medium",
+        "reponse": "Ajouter un bouton 'Annuler' visible en état PENDING. Appeler <code>depositService.cancelDeposit(depositId)</code> pour annuler côté serveur. Réinitialiser l'état local (IDLE) et afficher un message de confirmation. Si l'appel échoue, afficher une erreur et proposer de réessayer.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Intégration du wallet avec d'autres écrans",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Le solde du portefeuille doit être visible dans plusieurs écrans de l'application :</p><ul><li>L'écran de profil (<code>ProfileScreen</code>)</li><li>L'écran de chat (<code>ChatScreen</code>) pendant une transaction</li><li>L'écran de paiement (si implémenté)</li></ul><p>Les données sont partagées via <code>walletStore</code>.</p>",
+      "images": [
+        "Schéma montrant <code>walletStore</code> comme source unique de vérité, partagé entre <code>ProfileScreen</code>, <code>ChatScreen</code> et <code>WalletScreen</code>."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez comment vous assurez que le solde est toujours à jour dans tous les écrans après une opération de dépôt ou de retrait.",
+        "niveau": "medium",
+        "reponse": "Le <code>walletStore</code> est la source unique de vérité. Après chaque opération (dépôt, retrait), le store est mis à jour avec le nouveau solde. Tous les composants utilisant <code>useWalletStore(state => state.balance)</code> se mettent automatiquement à jour grâce à Zustand. On peut aussi utiliser <code>walletStore.setState({ balance: newBalance })</code>.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposez une solution pour éviter des appels API redondants pour le solde sur plusieurs écrans.",
+        "niveau": "medium",
+        "reponse": "Utiliser un cache avec TTL dans le <code>walletStore</code>. Charger le solde uniquement si la dernière mise à jour date de plus de 1 minute. Utiliser <code>useFocusEffect</code> pour recharger, mais avec un mécanisme de debounce pour éviter les appels multiples. On peut aussi utiliser un flag <code>isLoading</code> pour éviter les appels simultanés.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion des erreurs et des états de chargement",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>L'écran <code>RechargeScreen</code> doit gérer les erreurs suivantes :</p><ul><li>Erreur de réseau</li><li>Montant invalide (trop petit, trop grand, non numérique)</li><li>Erreur serveur (500, 503)</li><li>Délai d'expiration du dépôt</li></ul>",
+      "images": [
+        "Maquette montrant différents messages d'erreur : 'Le montant minimum est 100 FCFA' (sous le champ), 'Erreur de réseau, veuillez réessayer' (toast), 'Délai expiré, veuillez recommencer' (message centré)."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez comment vous validez les entrées utilisateur dans l'écran de recharge.",
+        "niveau": "easy",
+        "reponse": "Valider le montant : <code>if (isNaN(amount) || amount < 100) { setError('Le montant minimum est 100 FCFA'); return; }</code>. Valider l'opérateur : <code>if (!operator) { setError('Veuillez sélectionner un opérateur'); return; }</code>. Afficher les messages d'erreur en dessous des champs concernés.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez comment vous gérez les erreurs API de manière centralisée et affichez des messages appropriés.",
+        "niveau": "hard",
+        "reponse": "Dans le bloc <code>catch</code>, analyser <code>error.response</code>. Si <code>status === 400</code>, afficher le message du backend. Si <code>status === 401</code>, rediriger vers la connexion. Si <code>status === 500</code>, afficher 'Erreur serveur, veuillez réessayer plus tard'. Pour les erreurs réseau, afficher 'Vérifiez votre connexion internet'. Utiliser un service d'erreur centralisé ou un hook personnalisé.",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Proposez un mécanisme de réessai automatique pour les erreurs de réseau.",
+            "niveau": "hard",
+            "reponse": "Utiliser une bibliothèque comme <code>axios-retry</code> pour réessayer automatiquement les appels en cas d'erreur réseau. Configurer un nombre maximum de tentatives et un délai entre les tentatives. Afficher un message si toutes les tentatives échouent."
+          }
+        ]
+      }
+    ]
+  }
+]

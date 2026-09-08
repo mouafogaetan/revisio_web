@@ -1,0 +1,98 @@
+[
+  {
+    "questionText": "Pourquoi est-il essentiel de hacher les mots de passe dans une API .NET avant de les stocker en base de données ?",
+    "options": [
+      "Pour permettre aux administrateurs de lire les mots de passe en clair",
+      "Pour éviter de stocker les mots de passe en texte clair en cas de fuite de données",
+      "Pour accélérer le processus d'authentification",
+      "Pour économiser de l'espace de stockage dans la base de données"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "easy",
+    "explanation": "Le hachage cryptographique est une fonction à sens unique. Il permet de ne jamais stocker le mot de passe en clair. Si la base de données est compromise, l'attaquant ne pourra pas récupérer directement les mots de passe originaux."
+  },
+  {
+    "questionText": "Quel est le rôle spécifique du 'salt' (sel) dans l'algorithme BCrypt ?",
+    "options": [
+      "Chiffrer le mot de passe pour le rendre plus long",
+      "Rendre le hachage unique même pour deux mots de passe identiques, protégeant ainsi contre les attaques par tables rainbow",
+      "Compresser le mot de passe avant hachage",
+      "Ajouter une signature numérique au mot de passe"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium",
+    "explanation": "Le 'salt' est une donnée aléatoire ajoutée au mot de passe avant hachage. Même si deux utilisateurs ont le même mot de passe ('azerty'), les sels différents produiront des hachages totalement différents, rendant les attaques par tables pré-calculées (rainbow tables) inefficaces."
+  },
+  {
+    "questionText": "Dans le contexte d'une API ASP.NET Core utilisant BCrypt, quelle est la méthode correcte pour vérifier un mot de passe lors de la connexion ?",
+    "options": [
+      "if (user.PasswordHash == password)",
+      "if (BCrypt.Net.BCrypt.HashPassword(password) == user.PasswordHash)",
+      "if (BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))",
+      "if (BCrypt.Net.BCrypt.Equals(password, user.PasswordHash))"
+    ],
+    "correctAnswer": 2,
+    "difficulty": "medium",
+    "explanation": "Contrairement à un hash standard, BCrypt intègre le sel dans le hash final. On ne peut pas simplement re-hacher le mot de passe entré et comparer (car un nouveau sel serait généré). Il faut utiliser la méthode `Verify` qui extrait le sel du hash stocké, l'applique au mot de passe entré, et compare les résultats."
+  },
+  {
+    "questionText": "Vous souhaitez installer le package NuGet nécessaire pour utiliser BCrypt dans votre projet d'API .NET. Laquelle de ces commandes est correcte ?",
+    "options": [
+      "dotnet add package BCrypt",
+      "dotnet add package Microsoft.AspNetCore.BCrypt",
+      "dotnet add package BCrypt.Net-Next",
+      "Install-Package BCryptOfficial"
+    ],
+    "correctAnswer": 2,
+    "difficulty": "easy",
+    "explanation": "Le package standard et le plus à jour pour .NET Core / .NET 5/6/7/8 est 'BCrypt.Net-Next'. Il s'agit d'un port du célèbre algorithme BCrypt utilisé dans d'autres langages (comme PHP ou Ruby)."
+  },
+  {
+    "questionText": "Lors de l'inscription d'un nouvel utilisateur, vous recevez son mot de passe en clair via le corps de la requête. Quelle est la séquence d'opérations correcte avant de sauvegarder en base de données ?",
+    "options": [
+      "user.PasswordHash = BCrypt.Net.BCrypt.Verify(password);",
+      "user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(password);",
+      "user.PasswordHash = BCrypt.Net.BCrypt.Encrypt(password);",
+      "user.PasswordHash = password;"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "easy",
+    "explanation": "Il faut impérativement utiliser `HashPassword`. Cette méthode génère automatiquement un sel aléatoire et applique l'algorithme de hachage plusieurs fois (facteur de coût). Le résultat contenant le sel et le hash est alors stocké dans la colonne dédiée (généralement de type string)."
+  },
+  {
+    "questionText": "Vous développez une API sécurisée. Un attaquant a volé votre base de données contenant les hashs BCrypt. Quel paramètre rendra le cassage des mots de passe le plus coûteux pour l'attaquant ?",
+    "options": [
+      "La longueur du nom d'utilisateur",
+      "Le 'work factor' (ou rounds) de BCrypt",
+      "La taille de la colonne PasswordHash (varchar)",
+      "Le nombre de colonnes dans la table"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "hard",
+    "explanation": "Le 'work factor' (souvent 10, 12, 13) définit le nombre de passes de l'algorithme. Sur BCrypt, le temps de calcul est exponentiel (2^work factor). Un work factor élevé (ex: 13) ralentit considérablement l'attaque par brute force, même si l'attaquant possède le hash."
+  },
+  {
+    "questionText": "Supposons que `user.HashedPassword` contienne la valeur stockée en base : `$2a$11$KssBXx...`. Lors de la vérification, BCrypt.Net.BCrypt.Verify(password, hash) retourne `true`. Que signifie le segment `$11$` dans le hash ?",
+    "options": [
+      "La version de l'algorithme BCrypt",
+      "La longueur du sel en bytes",
+      "Le 'work factor' (2^11 itérations), indiquant la difficulté de calcul du hash",
+      "L'identifiant de l'utilisateur"
+    ],
+    "correctAnswer": 2,
+    "difficulty": "hard",
+    "explanation": "Le format BCrypt stocke tout dans le même string : `$algo$rounds$sel+hash`. '$2a$' est l'identifiant d'algo. '$11$' signifie que le hash a été généré avec 2^11 = 2048 itérations. C'est le 'cost factor'."
+  },
+  {
+    "questionText": "Lors de l'authentification, une erreur fréquente est de comparer le nouveau hash du mot de passe fourni avec l'ancien hash sans utiliser Verify. Quelle est la conséquence directe ?",
+    "options": [
+      "Le hash sera identique si les mots de passe sont identiques",
+      "Les hashs ne correspondront jamais, même si le mot de passe est correct, car un nouveau sel aléatoire sera généré à chaque hashage",
+      "L'API plantera avec une NullReferenceException",
+      "Le mot de passe sera automatiquement mis à jour en base"
+    ],
+    "correctAnswer": 1,
+    "difficulty": "medium",
+    "explanation": "`HashPassword` génère un nouveau sel à chaque appel. Donc BCrypt.Net.BCrypt.HashPassword(\"monMotDePasse\") ne sera jamais égal à BCrypt.Net.BCrypt.HashPassword(\"monMotDePasse\") (les deux chaînes de caractères seront différentes). La seule façon de comparer est d'extraire le sel du hash en base via `Verify`."
+  }
+]

@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+  "matiere": "Langue",
+  "classe": "Première",
+  "sequence": "Séquence 4",
+  "anneeScolaire": "2025-2026",
+  "exercices": [
+    {
+      "titre": "Exercice 1 : Les paramètres de la communication (4 pts)",
+      "points": "4 pts",
+      "enonce": "<div style='background-color: #f8f9fa; padding: 12px; border-radius: 8px;'><p style='margin: 0; color: #2c3e50;'>Cet exercice porte sur l'identification des paramètres de la communication et l'analyse des relations entre les interlocuteurs.</p></div>",
+      "questions": [
+        {
+          "question": "<p><strong>1. Identification de l'émetteur et du récepteur (2 pts)</strong></p><p>a) (1 pt) Définis l'émetteur et le récepteur dans une situation de communication.</p><p>b) (1 pt) Dans la phrase suivante, relève deux indices qui permettent d'identifier l'émetteur et deux indices qui permettent d'identifier le récepteur : <em>« Mon cher ami, je suis vraiment désolé de ce qui t'est arrivé. Je te promets que je ferai tout pour t'aider. »</em></p>",
+          "reponse": "<p><strong>a) (1 pt)</strong></p><ul><li><strong>L'émetteur</strong> (ou locuteur) est celui qui produit l'énoncé. Il est à l'origine du message.</li><li><strong>Le récepteur</strong> (ou destinataire) est celui à qui l'énoncé est destiné.</li></ul><p><strong>b) (1 pt)</strong></p><ul><li><strong>Indices de l'émetteur (je) :</strong> pronom personnel « je » (1ère personne), adjectif possessif « mon ».</li><li><strong>Indices du récepteur (tu) :</strong> pronom personnel « te » (2ème personne), adjectif possessif « ton ».</li></ul>"
+        },
+        {
+          "question": "<p><strong>2. Analyse de la relation émetteur-récepteur (2 pts)</strong></p><p>a) (1 pt) Détermine la nature de la relation entre les interlocuteurs dans l'exemple précédent.</p><p>b) (1 pt) Quelle est l'attitude de l'émetteur vis-à-vis du récepteur ? Justifie ta réponse.</p>",
+          "reponse": "<p><strong>a) (1 pt)</strong> Il s'agit d'une relation <strong>amicale</strong> ou <strong>familiale</strong> marquée par la proximité et la confiance (usage de « mon cher ami »).</p><p><strong>b) (1 pt)</strong> L'émetteur adopte une attitude de <strong>compassion</strong> et de <strong>soutien</strong> envers le récepteur. Il exprime son regret (« je suis désolé ») et sa volonté d'aider (« je ferai tout pour t'aider »).</p>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 2 : Les fonctions du langage (4 pts)",
+      "points": "4 pts",
+      "enonce": "<div style='background-color: #f8f9fa; padding: 12px; border-radius: 8px;'><p style='margin: 0; color: #2c3e50;'>Cet exercice évalue la capacité à identifier et analyser les fonctions du langage selon le modèle de Jakobson.</p></div>",
+      "questions": [
+        {
+          "question": "<p><strong>1. Les six fonctions du langage (2 pts)</strong></p><p>a) (1 pt) Cite et définis deux fonctions du langage selon Jakobson.</p><p>b) (1 pt) Identifie la fonction dominante dans la phrase suivante : <em>« Que le Seigneur vous bénisse et vous garde ! »</em></p>",
+          "reponse": "<p><strong>a) (1 pt)</strong></p><ul><li><strong>La fonction expressive (ou émotive)</strong> : centrée sur l'émetteur, elle exprime ses sentiments et émotions (ex: « Hélas ! »).</li><li><strong>La fonction conative (ou impressive)</strong> : centrée sur le récepteur, elle vise à agir sur lui (ex: ordres, conseils).</li><li><strong>La fonction référentielle</strong> : centrée sur le référent, elle transmet une information objective.</li><li><strong>La fonction phatique</strong> : centrée sur le canal, elle vise à vérifier le contact.</li></ul><p><strong>b) (1 pt)</strong> La fonction dominante est la <strong>fonction conative</strong> (ou impressive) car la phrase vise à agir sur le récepteur (bénédiction, souhait). On note l'emploi de l'impératif (« bénisse ») et l'interpellation indirecte.</p>"
+        },
+        {
+          "question": "<p><strong>2. Fonction expressive ou fonction conative ? (2 pts)</strong></p><p>a) (1 pt) Distingue la fonction expressive de la fonction conative.</p><p>b) (1 pt) Relève dans la phrase ci-dessous les indices de la fonction expressive : <em>« Ô malheureux ! Que suis-je venu faire en ce lieu ? Hélas ! Mon cœur se brise de douleur. »</em></p>",
+          "reponse": "<p><strong>a) (1 pt)</strong></p><ul><li>La <strong>fonction expressive</strong> est centrée sur l'émetteur. Elle exprime les sentiments, les émotions, les opinions du locuteur. Indices : pronoms de la 1ère personne, interjections, vocabulaire affectif.</li><li>La <strong>fonction conative</strong> est centrée sur le récepteur. Elle vise à influencer le destinataire. Indices : pronoms de la 2ème personne, impératifs, apostrophes.</li></ul><p><strong>b) (1 pt)</strong> Indices de la fonction expressive :</p><ul><li>Interjection « Ô », « Hélas ! »</li><li>Pronom de la 1ère personne « mon », « me »</li><li>Vocabulaire affectif : « malheureux », « douleur », « cœur se brise »</li><li>Ponctuation exclamative et points de suspension</li></ul>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 3 : Les temps, modes et types de phrases (6 pts)",
+      "points": "6 pts",
+      "enonce": "<div style='background-color: #f8f9fa; padding: 12px; border-radius: 8px;'><p style='margin: 0; color: #2c3e50;'>Cet exercice porte sur l'identification et l'analyse des temps et modes verbaux ainsi que des types de phrases.</p></div>",
+      "questions": [
+        {
+          "question": "<p><strong>1. Les temps du passé (2 pts)</strong></p><p>a) (1 pt) Explique la différence de valeur entre l'imparfait et le passé simple dans un récit.</p><p>b) (1 pt) Identifie les temps du passé dans le texte suivant et justifie leur emploi : <em>« La nuit était sombre. La pluie tombait sans cesse. Soudain, un éclair déchira le ciel. Le voyageur s'arrêta, saisi d'effroi. »</em></p>",
+          "reponse": "<p><strong>a) (1 pt)</strong></p><ul><li>L'<strong>imparfait</strong> est un temps de l'arrière-plan du récit. Il sert à décrire une action en cours, une habitude ou une durée dans le passé.</li><li>Le <strong>passé simple</strong> est un temps du premier plan du récit. Il exprime une action ponctuelle, achevée et qui fait avancer l'histoire.</li></ul><p><strong>b) (1 pt)</strong></p><ul><li><strong>Imparfait :</strong> « était », « tombait » → description du décor (arrière-plan, atmosphère).</li><li><strong>Passé simple :</strong> « déchira », « s'arrêta » → actions ponctuelles qui font avancer le récit (premier plan).</li></ul>"
+        },
+        {
+          "question": "<p><strong>2. Les modes (2 pts)</strong></p><p>a) (1 pt) Quelles sont les valeurs du conditionnel ?</p><p>b) (1 pt) Analyse l'emploi du subjonctif dans la phrase : <em>« Il faut que tu viennes avant qu'il ne soit trop tard. »</em></p>",
+          "reponse": "<p><strong>a) (1 pt)</strong> Le conditionnel peut exprimer :</p><ul><li>L'<strong>hypothèse</strong> ou la condition (ex: « Si j'avais de l'argent, je voyagerais »).</li><li>Un <strong>souhait</strong> ou un rêve (ex: « J'aimerais visiter le Cameroun »).</li><li>Une <strong>atténuation</strong> polie (ex: « Je voudrais un café »).</li><li>Le <strong>futur dans le passé</strong> (ex: « Il m'a dit qu'il viendrait »).</li></ul><p><strong>b) (1 pt)</strong></p><ul><li><strong>« Il faut que »</strong> est une construction verbale qui impose l'emploi du subjonctif (nécessité/obligation).</li><li><strong>« avant qu'il ne soit trop tard »</strong> est une conjonction de subordination (avant que) qui exige le subjonctif.</li></ul>"
+        },
+        {
+          "question": "<p><strong>3. Les types de phrases (2 pts)</strong></p><p>a) (1 pt) Distingue la phrase interrogative totale de la phrase interrogative partielle.</p><p>b) (1 pt) Analyse l'intention de communication de la phrase suivante : <em>« N'auriez-vous pas une minute pour m'écouter ? »</em></p>",
+          "reponse": "<p><strong>a) (1 pt)</strong></p><ul><li>Une <strong>interrogation totale</strong> (ou fermée) appelle une réponse par oui ou non. Elle ne comporte pas de mot interrogatif. Exemple : « Viens-tu ? »</li><li>Une <strong>interrogation partielle</strong> (ou ouverte) appelle une réponse plus développée. Elle comporte un mot interrogatif (quoi, qui, où, quand, comment, pourquoi, combien). Exemple : « Où vas-tu ? »</li></ul><p><strong>b) (1 pt)</strong></p><ul><li>Cette phrase est une <strong>interrogative</strong> de forme négative.</li><li>L'intention de communication est <strong>polie et persuasive</strong>.</li><li>La négation et l'emploi du conditionnel (« auriez-vous ») atténuent la demande, ce qui suggère une volonté de ne pas déranger tout en sollicitant l'attention de l'interlocuteur.</li></ul>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 4 : Analyse stylistique et lexicale (6 pts)",
+      "points": "6 pts",
+      "enonce": "<div style='background-color: #f8f9fa; padding: 12px; border-radius: 8px;'><p style='margin: 0; color: #2c3e50;'>Cet exercice permet d'analyser les champs lexicaux, la dénotation/connotation, les figures de style et la tonalité d'un texte.</p></div>",
+      "questions": [
+        {
+          "question": "<p><strong>Texte support :</strong></p><div style='background-color: #e8f4f8; padding: 12px; border-radius: 8px; margin: 10px 0; font-style: italic;'><p>« Le vieillard, courbé sous le poids des ans, regardait au loin. Ses doigts, tels des sarments desséchés, caressaient machinalement le bois de sa canne. Son regard, voilé de larmes, semblait chercher dans l'horizon un sens à cette vie qui s'achève. Le vent, complice de sa mélancolie, faisait danser les feuilles mortes autour de ses pieds. »</p></div>",
+          "reponse": "<p><em>Les réponses ci-dessous correspondent aux questions posées.</em></p>"
+        },
+        {
+          "question": "<p><strong>1. Champs lexicaux (2 pts)</strong></p><p>a) (1 pt) Construis le champ lexical de la <strong>vieillesse</strong> à partir du texte.</p><p>b) (1 pt) Construis le champ lexical de la <strong>tristesse</strong> à partir du texte.</p>",
+          "reponse": "<p><strong>a) (1 pt)</strong> Champ lexical de la <strong>vieillesse</strong> : vieillard, courbé, poids des ans, desséchés, canne, s'achève.</p><p><strong>b) (1 pt)</strong> Champ lexical de la <strong>tristesse</strong> : larmes, mélancolie, voilé, feuilles mortes.</p>"
+        },
+        {
+          "question": "<p><strong>2. Dénotation et connotation (1 pt)</strong></p><p>Analyse la connotation du mot <strong>« sarments »</strong> dans l'expression « tels des sarments desséchés ».</p>",
+          "reponse": "<p>La <strong>dénotation</strong> de « sarments » est : branche de vigne.</p><p>La <strong>connotation</strong> est double :</p><ul><li>Elle suggère la <strong>fragilité</strong>, la <strong>sécheresse</strong>, l'absence de vie (comme le vieillard dont la force diminue).</li><li>Elle associe la vieillesse à la <strong>nature</strong> qui se fane, créant une image poétique et symbolique du temps qui passe.</li></ul>"
+        },
+        {
+          "question": "<p><strong>3. Figures de style (2 pts)</strong></p><p>a) (1 pt) Identifie et nomme les figures de style dans les expressions suivantes du texte :</p><ul><li>« Ses doigts, <strong>tels des sarments desséchés</strong> »</li><li>« Le vent, <strong>complice de sa mélancolie</strong> »</li></ul><p>b) (1 pt) Quelle est la figure de style dominante dans ce texte ? Justifie ta réponse en relevant deux indices.</p>",
+          "reponse": "<p><strong>a) (1 pt)</strong></p><ul><li>« Ses doigts, <strong>tels des sarments desséchés</strong> » → <strong>comparaison</strong> (outil de comparaison « tels »).</li><li>« Le vent, <strong>complice de sa mélancolie</strong> » → <strong>personnification</strong> (le vent est doté d'un comportement humain : complicité).</li></ul><p><strong>b) (1 pt)</strong> La figure de style dominante est la <strong>personnification</strong>.</p><ul><li>Indice 1 : « Le vent, complice de sa mélancolie, faisait danser les feuilles mortes » → le vent agit comme un être humain (complice, qui fait danser).</li><li>Indice 2 : La nature est représentée comme un personnage qui participe aux sentiments du vieillard.</li></ul>"
+        },
+        {
+          "question": "<p><strong>4. Tonalité du texte (1 pt)</strong></p><p>Identifie la tonalité dominante du texte et justifie ta réponse en relevant au moins deux indices.</p>",
+          "reponse": "<p>La tonalité dominante est la tonalité <strong>pathétique</strong>.</p><p><strong>Indices :</strong></p><ul><li><strong>Vocabulaire de la souffrance et de la tristesse :</strong> « mélancolie », « larmes », « s'achève ».</li><li><strong>Ponctuation et rythme :</strong> phrases lentes, ponctuation (virgules, point) qui créent un rythme langoureux.</li><li><strong>Figure de style :</strong> personnification du vent qui partage la mélancolie du vieillard, renforçant l'émotion.</li><li><strong>Choix lexicaux :</strong> mots à connotation triste (« voilé », « desséchés », « feuilles mortes »).</li></ul>"
+        }
+      ]
+    }
+  ]
+};
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

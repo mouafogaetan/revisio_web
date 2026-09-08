@@ -1,0 +1,95 @@
+[
+  {
+    "intitule": "Manipulation des Pods et Deployments Kubernetes",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous êtes DevOps dans une startup qui déploie une application web nommée <strong>web-app</strong>. L’équipe doit gérer plusieurs versions et assurer des mises à jour sans interruption. Actuellement, un Pod unique nommé <code>web-app-v1</code> tourne avec l’image <code>nginx:1.20</code>. Vous devez migrer cette application vers un <strong>Deployment</strong> pour permettre les mises à jour progressives (rollout) et le scaling.</p><p>La spécification actuelle du Pod (simplifiée) :</p><pre>apiVersion: v1\nkind: Pod\nmetadata:\n  name: web-app-v1\n  labels:\n    app: web-app\n    version: v1\nspec:\n  containers:\n  - name: app\n    image: nginx:1.20\n    ports:\n    - containerPort: 80</pre><p>Rédigez un fichier YAML pour un Deployment nommé <code>web-app-deploy</code> avec 3 réplicas, utilisant la même image et les mêmes labels. Ajoutez une stratégie <code>RollingUpdate</code> avec <code>maxSurge=1</code> et <code>maxUnavailable=0</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire le fichier YAML complet du Deployment en respectant les consignes.",
+        "niveau": "medium",
+        "reponse": "```yaml\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: web-app-deploy\nspec:\n  replicas: 3\n  strategy:\n    type: RollingUpdate\n    rollingUpdate:\n      maxSurge: 1\n      maxUnavailable: 0\n  selector:\n    matchLabels:\n      app: web-app\n  template:\n    metadata:\n      labels:\n        app: web-app\n        version: v1\n    spec:\n      containers:\n      - name: app\n        image: nginx:1.20\n        ports:\n        - containerPort: 80\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse de stratégie de mise à jour",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Un <strong>Deployment</strong> Kubernetes gère 5 réplicas d’une API. L’équipe souhaite mettre à jour l’image de <code>my-api:1.0</code> vers <code>my-api:2.0</code>. Deux stratégies sont proposées :</p><ul><li><strong>Stratégie A</strong> : <code>maxSurge=2, maxUnavailable=1</code></li><li><strong>Stratégie B</strong> : <code>maxSurge=0, maxUnavailable=2</code></li></ul><p>L’application doit rester disponible pendant le déploiement (zéro downtime).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer pourquoi la stratégie A permet un déploiement sans interruption de service alors que la stratégie B risque une interruption.",
+        "niveau": "hard",
+        "reponse": "La stratégie A (maxSurge=2, maxUnavailable=1) crée jusqu'à 2 nouveaux Pods avant d'en supprimer un ancien, garantissant qu'au moins 4 Pods restent disponibles (sur 5). La stratégie B (maxUnavailable=2) supprime immédiatement 2 Pods anciens, réduisant la capacité à 3 Pods disponibles pendant un temps. Si le seuil de tolérance aux pannes est bas, cela peut entraîner une indisponibilité partielle.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Calculer le nombre minimal de Pods disponibles pendant la mise à jour pour chaque stratégie.",
+            "niveau": "medium",
+            "reponse": "Stratégie A : 5 - maxUnavailable = 5 - 1 = 4 Pods disponibles. Stratégie B : 5 - 2 = 3 Pods disponibles."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Diagnostic d’un Rollback Kubernetes",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Après un déploiement avec <code>kubectl apply -f deploy.yaml</code>, les développeurs constatent que la nouvelle version de l’application (<code>app:2.0</code>) retourne des erreurs HTTP 500. L’administrateur exécute les commandes suivantes :</p><pre>$ kubectl rollout status deployment/web-app\nerror: deployment \"web-app\" exceeded its progress deadline\n$ kubectl rollout history deployment/web-app\nREVISION  CHANGE-CAUSE\n1         &lt;none&gt;\n2         &lt;none&gt;\n$ kubectl describe deployment web-app | grep -A5 \"Replicas\"\nReplicas:               3 desired | 1 updated | 2 total | 0 available | 3 unavailable</pre><p>Interpréter ces sorties et proposer une commande pour revenir à la révision précédente.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analyser les informations fournies et décrire l’état actuel du Deployment.",
+        "niveau": "hard",
+        "reponse": "Le déploiement a échoué (progress deadline exceeded). Sur 3 réplicas souhaités, seulement 1 Pod a la nouvelle version (updated) mais aucun Pod n’est disponible (0 available). Les 3 Pods sont en state 'unavailable', ce qui signifie que les readiness probes échouent ou que les Pods ne démarrent pas. La révision 2 est défectueuse.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Donner la commande `kubectl rollout` pour annuler le déploiement vers la révision précédente (révision 1).",
+            "niveau": "medium",
+            "reponse": "`kubectl rollout undo deployment/web-app --to-revision=1`"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Passage à l’échelle horizontal",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Un Deployment nommé <code>api-gateway</code> tourne avec 2 réplicas. Pendant un pic de trafic, l’utilisation CPU atteint 85% sur chaque Pod. L’équipe décide de passer manuellement à 5 réplicas.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rappeler la commande `kubectl scale` pour effectuer ce changement.",
+        "niveau": "easy",
+        "reponse": "`kubectl scale deployment api-gateway --replicas=5`",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer ce que fait automatiquement le ReplicaSet sous-jacent après cette commande.",
+            "niveau": "medium",
+            "reponse": "Le ReplicaSet va créer 3 nouveaux Pods (car il en existe déjà 2) pour atteindre le nombre désiré de 5 réplicas. Il utilise le modèle de Pod défini dans le Deployment."
+          }
+        ]
+      }
+    ]
+  }
+]

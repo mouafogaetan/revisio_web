@@ -1,0 +1,83 @@
+[
+  {
+    "intitule": "Refactoring et tests d’une application existante",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous reprenez un module de gestion d’utilisateurs écrit en Python/Flask. Le code actuel fonctionne mais est difficile à maintenir : une fonction <code>process_user</code> fait à la fois la validation, l’enregistrement en base et l’envoi d’un email. Aucun test n’est présent. Votre mission : <strong>refactorer</strong> selon les principes SOLID (Single Responsibility), <strong>écrire des tests unitaires</strong> avec mocks, et <strong>mettre à jour le pipeline CI</strong> pour les exécuter automatiquement. Utilisez la démarche TDD (Red, Green, Refactor) pour une nouvelle règle métier : <em>“un utilisateur avec email invalide ne doit pas être enregistré”</em>.</p>",
+      "images": [
+        "schéma d’une pipeline CI simple avec les étapes : commit, build, tests unitaires, déploiement",
+        "exemple de code smell avec une méthode de 50 lignes faisant trois responsabilités différentes"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer pourquoi la fonction actuelle viole le principe de responsabilité unique (SRP) et proposer une nouvelle répartition des responsabilités.",
+        "niveau": "medium",
+        "reponse": "La fonction violerait SRP car elle valide, persiste et notifie. On peut la découper en trois modules/classe distincts : ValidateurUtilisateur, RepositoryUtilisateur, ServiceNotification.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Rédiger le test unitaire (en pseudo-code ou Python avec pytest) pour la nouvelle règle 'email invalide → pas d’enregistrement' en utilisant un mock pour éviter l’accès réel à la base.",
+        "niveau": "hard",
+        "reponse": "def test_creation_utilisateur_email_invalide():\n    mock_repo = Mock()\n    service = ServiceUtilisateur(mock_repo)\n    avec pytest.raises(ValidationError):\n        service.creer_utilisateur({\"email\": \"invalide\"})\n    mock_repo.save.assert_not_called()",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Décrire les trois étapes de TDD (Red, Green, Refactor) appliquées à cette règle.",
+            "niveau": "medium",
+            "reponse": "RED : écrire le test qui échoue car la validation n’existe pas. GREEN : écrire le minimum de code pour que le test passe (ajouter une condition if). REFACTOR : nettoyer le code (extraire méthode valider_email, supprimer duplication)."
+          }
+        ]
+      },
+      {
+        "numero": 3,
+        "texte": "Modifier le fichier de configuration d’un pipeline CI (GitHub Actions ou GitLab CI) pour qu’il exécute les tests unitaires à chaque push sur la branche main.",
+        "niveau": "hard",
+        "reponse": "(GitHub Actions) :\nname: CI\non: [push]\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v3\n      - name: Run tests\n        run: pytest tests/",
+        "sousQuestions": [
+          {
+            "numero": "3.a",
+            "texte": "Expliquer l’intérêt d’exécuter les tests dans le CI plutôt que seulement en local.",
+            "niveau": "easy",
+            "reponse": "Cela évite qu’un code non testé ou cassé soit fusionné dans la branche principale, garantit que tous les membres de l’équipe passent les mêmes vérifications et automatisie la détection de régressions."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Bonnes pratiques de test et d’intégration continue",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Lisez le scénario ci-dessous et répondez aux questions en vous appuyant sur le cours (lesson35 : tests unitaires/intégration/E2E, TDD, mocks, CI/CD).</p>\n<p><em>Dans une équipe de 5 développeurs, on utilise Git, mais personne ne fait de revue de code ni n’exécute les tests avant de pousser. Un bug de validation d’email est découvert en production.</em></p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Citer trois niveaux de tests (pyramide des tests) et donner un exemple d’outil pour chacun.",
+        "niveau": "easy",
+        "reponse": "Unitaire (JUnit/pytest), Intégration (Supertest/Testcontainers), E2E (Cypress/Selenium).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer pourquoi le bug d’email invalide aurait pu être évité par une pratique de TDD.",
+        "niveau": "medium",
+        "reponse": "Avec TDD, on écrit d’abord un test qui échoue pour un email invalide avant d’écrire la validation. Si le développeur avait écrit ce test, la validation aurait été présente et le bug n’aurait pas atteint la production.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Décrire une règle simple à intégrer dans un pipeline CI pour éviter qu’une fusion (merge) casse les fonctionnalités existantes.",
+        "niveau": "medium",
+        "reponse": "Exiger que tous les tests unitaires et d’intégration passent avec succès avant d’autoriser le merge, et interdire le merge si le taux de couverture de code diminue (ex: < 80%).",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

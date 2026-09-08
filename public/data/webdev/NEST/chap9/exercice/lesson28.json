@@ -1,0 +1,169 @@
+[
+  {
+    "intitule": "Installation et configuration d'un WebSocket Gateway",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous développez une application de chat en temps réel pour une startup camerounaise. Les utilisateurs doivent pouvoir échanger des messages instantanément sans recharger la page. Vous choisissez d'utiliser WebSockets avec NestJS et Socket.IO.</p><p>La partie frontend (application React Native) est déjà développée et se connecte sur <code>http://localhost:3000</code>. Vous devez maintenant implémenter le backend WebSocket.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Citer les commandes npm permettant d'installer les dépendances nécessaires pour utiliser WebSockets avec Socket.IO dans NestJS.",
+        "niveau": "easy",
+        "reponse": "<code>npm install @nestjs/websockets @nestjs/platform-socket.io socket.io</code><br/>Pour le typage TypeScript (optionnel mais recommandé) : <code>npm install -D @types/socket.io</code>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer à quoi sert le décorateur <code>@WebSocketGateway()</code> et quelles options peuvent lui être passées.",
+        "niveau": "medium",
+        "reponse": "Le décorateur <code>@WebSocketGateway()</code> marque une classe comme un gateway WebSocket. Il peut prendre des options :<ul><li><code>port</code> : le port d'écoute (par défaut le même que le serveur HTTP)</li><li><code>namespace</code> : le namespace Socket.IO (ex: '/chat', '/notifications')</li><li><code>cors</code> : configuration CORS pour les connexions cross-origin</li><li><code>path</code> : le chemin personnalisé pour Socket.IO</li><li><code>transport</code> : types de transport autorisés (websocket, polling, etc.)</li></ul>Exemple : <code>@WebSocketGateway({ namespace: 'chat', cors: { origin: '*' } })</code>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Rédiger le code d'un gateway de base nommé <code>ChatGateway</code> qui écoute sur le port 3000 (même port que l'API HTTP) et accepte les connexions de n'importe quelle origine (CORS ouvert pour le développement).",
+        "niveau": "easy",
+        "reponse": "<pre><code>import { WebSocketGateway, WebSocketServer } from '@nestjs/websockets';\nimport { Server } from 'socket.io';\n\n@WebSocketGateway({\n  cors: {\n    origin: '*',\n  },\n})\nexport class ChatGateway {\n  @WebSocketServer()\n  server: Server;\n\n  // La logique des événements viendra ici\n}</code></pre>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion des événements WebSocket (SubscribeMessage)",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Après avoir configuré le gateway de chat, vous devez maintenant implémenter les événements WebSocket suivants :</p><ul><li><code>joinRoom</code> : permet à un utilisateur de rejoindre une salle spécifique (ex: salon de discussion)</li><li><code>sendMessage</code> : permet d'envoyer un message dans une salle. Tous les membres de la salle reçoivent le message.</li><li><code>typing</code> : indique qu'un utilisateur est en train d'écrire (broadcast aux autres membres)</li></ul><p>Le client envoie des données avec la structure suivante :</p><pre><code>// pour joinRoom\n{ roomId: string, username: string }\n\n// pour sendMessage\n{ roomId: string, username: string, message: string, timestamp: number }</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire le rôle du décorateur <code>@SubscribeMessage()</code> et comment il s'utilise dans un gateway.",
+        "niveau": "easy",
+        "reponse": "Le décorateur <code>@SubscribeMessage()</code> est utilisé pour déclarer qu'une méthode de gateway répond à un type d'événement WebSocket spécifique. Il prend en paramètre le nom de l'événement (ex: 'sendMessage'). La méthode annotée reçoit deux paramètres : <code>client: Socket</code> (le client qui a envoyé l'événement) et <code>payload: any</code> (les données envoyées). Elle peut retourner une valeur qui sera émise directement au client appelant.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Implémenter la méthode <code>joinRoom</code> qui utilise <code>client.join(roomId)</code> pour ajouter le client à une salle. Envoyer une confirmation au client qui a rejoint.",
+        "niveau": "medium",
+        "reponse": "<pre><code>import { SubscribeMessage, MessageBody, ConnectedSocket } from '@nestjs/websockets';\nimport { Socket } from 'socket.io';\n\n@SubscribeMessage('joinRoom')\njoinRoom(\n  @MessageBody() data: { roomId: string; username: string },\n  @ConnectedSocket() client: Socket,\n) {\n  const { roomId, username } = data;\n  client.join(roomId);\n  \n  // Confirmation au client qui a rejoint\n  client.emit('joinedRoom', { roomId, username, message: `Bienvenue ${username} dans le salon ${roomId}` });\n  \n  // Notifier les autres membres du salon (optionnel)\n  client.to(roomId).emit('userJoined', { username, roomId });\n  \n  return { success: true, roomId };\n}</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Implémenter la méthode <code>sendMessage</code> qui diffuse un message à tous les clients présents dans la salle (y compris l'expéditeur). Utiliser <code>server.to(roomId).emit()</code>.",
+        "niveau": "medium",
+        "reponse": "<pre><code>@SubscribeMessage('sendMessage')\nasync sendMessage(\n  @MessageBody() data: { roomId: string; username: string; message: string; timestamp: number },\n  @ConnectedSocket() client: Socket,\n) {\n  const { roomId, username, message, timestamp } = data;\n  \n  // Optionnel : sauvegarder le message en base de données\n  // await this.messageService.save({ roomId, username, message, timestamp });\n  \n  // Diffuser le message à TOUS les clients de la salle (y compris l'expéditeur)\n  this.server.to(roomId).emit('newMessage', {\n    username,\n    message,\n    timestamp,\n    roomId,\n  });\n  \n  return { success: true, messageId: Date.now() };\n}</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 4,
+        "texte": "Créer l'événement <code>typing</code> qui indique qu'un utilisateur est en train d'écrire. Cet événement doit être diffusé à tous les autres membres de la salle (pas à l'expéditeur).",
+        "niveau": "medium",
+        "reponse": "<pre><code>@SubscribeMessage('typing')\nhandleTyping(\n  @MessageBody() data: { roomId: string; username: string; isTyping: boolean },\n  @ConnectedSocket() client: Socket,\n) {\n  const { roomId, username, isTyping } = data;\n  \n  // Diffuser aux AUTRES clients de la salle (broadcast)\n  client.to(roomId).emit('userTyping', {\n    username,\n    isTyping,\n    roomId,\n  });\n  \n  // Ne rien retourner car l'expéditeur n'a pas besoin de confirmation\n}</code></pre>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Gateway avec authentification et guards WebSocket",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Votre application de chat doit être sécurisée : seuls les utilisateurs authentifiés avec un token JWT valide peuvent se connecter au WebSocket et envoyer des messages.</p><p>Le token JWT est passé dans le handshake WebSocket via un paramètre de requête ou via l'en-tête <code>Authorization</code>. Vous devez implémenter un guard WebSocket pour valider ce token.</p><p>Le payload du token contient : <code>{ sub: 'userId', email: 'user@example.com', username: 'john_doe' }</code></p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer la différence entre l'authentification HTTP classique (Guard) et l'authentification WebSocket. Pourquoi un guard WebSocket n'est pas identique à un guard HTTP ?",
+        "niveau": "medium",
+        "reponse": "Les guards HTTP fonctionnent avec <code>ExecutionContext</code> qui expose <code>getRequest()</code> et <code>getResponse()</code>. Pour WebSockets, le contexte est différent : on utilise <code>WsContext</code> et <code>WsArgumentsHost</code>. Le client WebSocket est représenté par l'objet <code>Socket</code> de Socket.IO. De plus, l'authentification WebSocket doit se faire au moment du handshake (connexion initiale), pas à chaque message. Un guard WebSocket implémente <code>CanActivate</code> mais travaille sur <code>ExecutionContext</code> avec <code>getType() === 'ws'</code>.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Créer un guard WebSocket nommé <code>WsJwtGuard</code> qui extrait le token JWT du handshake (dans l'en-tête 'Authorization' ou le paramètre de requête 'token'), le valide avec <code>JwtService</code>, et attache l'utilisateur au client.",
+        "niveau": "very hard",
+        "reponse": "<pre><code>import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';\nimport { JwtService } from '@nestjs/jwt';\nimport { WsException } from '@nestjs/websockets';\nimport { Socket } from 'socket.io';\n\n@Injectable()\nexport class WsJwtGuard implements CanActivate {\n  constructor(private jwtService: JwtService) {}\n\n  async canActivate(context: ExecutionContext): Promise&lt;boolean&gt; {\n    try {\n      const client: Socket = context.switchToWs().getClient();\n      \n      // Récupérer le token du handshake\n      let token: string;\n      const authHeader = client.handshake.headers.authorization;\n      if (authHeader && authHeader.startsWith('Bearer ')) {\n        token = authHeader.substring(7);\n      } else {\n        // Fallback : paramètre de requête\n        token = client.handshake.query.token as string;\n      }\n      \n      if (!token) {\n        throw new WsException('Token manquant');\n      }\n      \n      // Vérifier et décoder le token\n      const payload = await this.jwtService.verifyAsync(token);\n      \n      // Attacher l'utilisateur au client pour une utilisation ultérieure\n      client.data.user = {\n        id: payload.sub,\n        email: payload.email,\n        username: payload.username,\n      };\n      \n      return true;\n    } catch (error) {\n      throw new WsException('Token invalide ou expiré');\n    }\n  }\n}</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Appliquer ce guard au gateway <code>ChatGateway</code> en utilisant le décorateur <code>@UseGuards()</code>. Expliquer comment accéder aux données utilisateur attachées au client dans les méthodes <code>@SubscribeMessage</code>.",
+        "niveau": "hard",
+        "reponse": "<pre><code>import { UseGuards } from '@nestjs/common';\nimport { WebSocketGateway, SubscribeMessage, ConnectedSocket } from '@nestjs/websockets';\nimport { Socket } from 'socket.io';\nimport { WsJwtGuard } from './ws-jwt.guard';\n\n@WebSocketGateway({ cors: { origin: '*' } })\n@UseGuards(WsJwtGuard)  // Protection au niveau du gateway\n// OU au niveau d'une méthode spécifique\nexport class ChatGateway {\n  \n  @SubscribeMessage('sendMessage')\n  async sendMessage(\n    @MessageBody() data: { roomId: string; message: string },\n    @ConnectedSocket() client: Socket,\n  ) {\n    // Récupérer l'utilisateur attaché par le guard\n    const user = client.data.user;\n    console.log(`Message de ${user.username} (${user.id})`);\n    \n    // Utiliser les infos utilisateur pour enrichir le message\n    this.server.to(data.roomId).emit('newMessage', {\n      username: user.username,\n      userId: user.id,\n      message: data.message,\n      timestamp: Date.now(),\n    });\n  }\n}</code></pre><p><strong>Remarque :</strong> Il faut également configurer le module pour injecter <code>JwtService</code> et rendre le guard disponible.</p>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Namespaces, salles et événements avancés",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Une plateforme de livraison de repas (comme UberEats au Cameroun) doit implémenter des notifications en temps réel avec WebSockets. Les cas d'usage sont :</p><ul><li>Les livreurs reçoivent les commandes dès qu'elles sont passées</li><li>Les clients suivent l'avancement de leur commande (préparation, départ, livraison)</li><li>Les restaurants reçoivent les notifications de nouvelles commandes</li><li>Les administrateurs surveillent les statistiques en temps réel</li></ul><p>Chaque type d'utilisateur doit recevoir des notifications différentes. Vous devez concevoir une architecture WebSocket utilisant les namespaces et les rooms.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer la différence entre un namespace et une room dans Socket.IO. Proposer une stratégie d'organisation pour les cas d'usage ci-dessus.",
+        "niveau": "medium",
+        "reponse": "<ul><li><strong>Namespace</strong> : c'est un canal de communication séparé avec son propre chemin (ex: '/delivery', '/restaurant'). Chaque namespace a sa propre gestion de connexion, de rooms et d'événements. Les clients se connectent à un namespace spécifique.</li><li><strong>Room</strong> : c'est un sous-ensemble de clients à l'intérieur d'un même namespace. Les rooms sont dynamiques : les clients peuvent les rejoindre et les quitter.</li></ul><p>Stratégie proposée :</p><ul><li>Namespace <code>/delivery</code> : pour les livreurs et les clients (suivi des livraisons)</li><li>Namespace <code>/restaurant</code> : pour les restaurateurs (gestion des commandes)</li><li>Namespace <code>/admin</code> : pour les administrateurs (statistiques)</li><li>Dans <code>/delivery</code> : chaque commande a sa propre room (ex: room = orderId) ; le client et le livreur rejoignent cette room</li><li>Dans <code>/restaurant</code> : chaque restaurant a sa propre room (ex: room = restaurantId)</li></ul>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Créer un gateway pour le namespace <code>/delivery</code> avec :<br/>- Un événement <code>joinOrder</code> pour rejoindre la room d'une commande<br/>- Un événement <code>updateOrderStatus</code> (utilisé par le livreur) pour diffuser la mise à jour à tous les membres de la room (client et livreur)",
+        "niveau": "hard",
+        "reponse": "<pre><code>import { WebSocketGateway, WebSocketServer, SubscribeMessage, MessageBody, ConnectedSocket } from '@nestjs/websockets';\nimport { Server, Socket } from 'socket.io';\n\n@WebSocketGateway({ namespace: 'delivery', cors: { origin: '*' } })\nexport class DeliveryGateway {\n  @WebSocketServer()\n  server: Server;\n\n  @SubscribeMessage('joinOrder')\n  joinOrder(\n    @MessageBody() data: { orderId: string; userType: 'customer' | 'delivery' },\n    @ConnectedSocket() client: Socket,\n  ) {\n    client.join(data.orderId);\n    client.emit('joined', { orderId: data.orderId, userType: data.userType });\n  }\n\n  @SubscribeMessage('updateOrderStatus')\n  updateOrderStatus(\n    @MessageBody() data: { orderId: string; status: 'pending' | 'preparing' | 'picked_up' | 'delivered'; location?: { lat: number; lng: number } },\n  ) {\n    // Diffuser à tous les clients dans la room de la commande\n    this.server.to(data.orderId).emit('orderStatusUpdated', {\n      orderId: data.orderId,\n      status: data.status,\n      location: data.location,\n      timestamp: new Date().toISOString(),\n    });\n  }\n\n  @SubscribeMessage('driverLocation')\n  updateDriverLocation(\n    @MessageBody() data: { orderId: string; location: { lat: number; lng: number } },\n  ) {\n    // Le client dans la room reçoit la position du livreur\n    this.server.to(data.orderId).emit('driverLocationChanged', {\n      orderId: data.orderId,\n      location: data.location,\n    });\n  }\n}</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquer comment un client frontend se connecterait à un namespace spécifique et écouterait les événements.",
+        "niveau": "medium",
+        "reponse": "<pre><code>// Côté client (JavaScript/TypeScript)\nimport { io } from 'socket.io-client';\n\n// Connexion au namespace /delivery\nconst socket = io('http://localhost:3000/delivery', {\n  auth: { token: 'jwt_token_here' },\n});\n\n// Rejoindre la salle d'une commande\nsocket.emit('joinOrder', { orderId: 'order_123', userType: 'customer' });\n\n// Écouter les mises à jour de statut\nsocket.on('orderStatusUpdated', (data) => {\n  console.log(`Commande ${data.orderId} : ${data.status}`);\n  // Mettre à jour l'interface utilisateur\n});\n\n// Écouter les changements de position du livreur\nsocket.on('driverLocationChanged', (data) => {\n  console.log('Position du livreur :', data.location);\n  // Mettre à jour la carte\n});\n\n// Déconnexion\nsocket.disconnect();</code></pre>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Tests unitaires d'un Gateway WebSocket",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Pour assurer la qualité de votre application, vous devez écrire des tests unitaires pour le <code>ChatGateway</code> que vous avez développé. Vous utiliserez le module de test de NestJS (<code>Test.createTestingModule</code>) et vous simulerez les connexions WebSocket.</p><p>Le gateway a les fonctionnalités suivantes : <code>joinRoom</code>, <code>sendMessage</code> et <code>typing</code> (tels que développés précédemment).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédiger la configuration du module de test pour <code>ChatGateway</code> en important uniquement le gateway (pas de dépendances réelles, utiliser des mocks).",
+        "niveau": "hard",
+        "reponse": "<pre><code>import { Test, TestingModule } from '@nestjs/testing';\nimport { ChatGateway } from './chat.gateway';\n\ndescribe('ChatGateway', () => {\n  let gateway: ChatGateway;\n\n  beforeEach(async () => {\n    const module: TestingModule = await Test.createTestingModule({\n      providers: [ChatGateway],\n    }).compile();\n\n    gateway = module.get&lt;ChatGateway&gt;(ChatGateway);\n  });\n\n  it('should be defined', () => {\n    expect(gateway).toBeDefined();\n  });\n});</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrire un test unitaire qui vérifie que la méthode <code>joinRoom</code> appelle correctement <code>client.join()</code> et <code>client.emit()</code>.",
+        "niveau": "very hard",
+        "reponse": "<pre><code>import { Test, TestingModule } from '@nestjs/testing';\nimport { ChatGateway } from './chat.gateway';\nimport { Socket } from 'socket.io';\n\ndescribe('ChatGateway', () => {\n  let gateway: ChatGateway;\n  let mockClient: Partial&lt;Socket&gt;;\n\n  beforeEach(async () => {\n    mockClient = {\n      join: jest.fn(),\n      emit: jest.fn(),\n      to: jest.fn().mockReturnThis(),\n    };\n\n    const module: TestingModule = await Test.createTestingModule({\n      providers: [ChatGateway],\n    }).compile();\n\n    gateway = module.get&lt;ChatGateway&gt;(ChatGateway);\n    // Injecter le server mocké si nécessaire\n    gateway.server = { to: jest.fn().mockReturnThis(), emit: jest.fn() } as any;\n  });\n\n  describe('joinRoom', () => {\n    it('devrait rejoindre la salle et émettre une confirmation', () => {\n      const data = { roomId: 'room1', username: 'Alice' };\n      \n      gateway.joinRoom(data, mockClient as Socket);\n      \n      expect(mockClient.join).toHaveBeenCalledWith('room1');\n      expect(mockClient.emit).toHaveBeenCalledWith('joinedRoom', {\n        roomId: 'room1',\n        username: 'Alice',\n        message: 'Bienvenue Alice dans le salon room1',\n      });\n    });\n  });\n});</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquer comment tester un événement <code>sendMessage</code> qui doit diffuser un message à tous les clients d'une salle via <code>server.to().emit()</code>. Décrire la stratégie de mock.",
+        "niveau": "very hard",
+        "reponse": "Stratégie de test pour <code>sendMessage</code> :<br/><ul><li>Mocker le <code>server</code> du gateway avec une méthode <code>to</code> qui retourne un objet avec une méthode <code>emit</code></li><li>Vérifier que <code>server.to().emit()</code> est appelé avec les bons paramètres</li><li>S'assurer que la méthode retourne un objet de confirmation</li></ul><pre><code>it('devrait diffuser le message à tous les membres de la salle', async () => {\n  const mockServer = {\n    to: jest.fn().mockReturnThis(),\n    emit: jest.fn(),\n  };\n  gateway.server = mockServer as any;\n\n  const data = {\n    roomId: 'room1',\n    username: 'Alice',\n    message: 'Bonjour tout le monde',\n    timestamp: 1234567890,\n  };\n\n  const result = await gateway.sendMessage(data, mockClient as Socket);\n\n  expect(mockServer.to).toHaveBeenCalledWith('room1');\n  expect(mockServer.emit).toHaveBeenCalledWith('newMessage', {\n    username: 'Alice',\n    message: 'Bonjour tout le monde',\n    timestamp: 1234567890,\n    roomId: 'room1',\n  });\n  expect(result).toEqual({ success: true, messageId: expect.any(Number) });\n});</code></pre>",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

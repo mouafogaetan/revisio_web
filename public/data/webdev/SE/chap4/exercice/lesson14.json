@@ -1,0 +1,98 @@
+[
+  {
+    "intitule": "Décoder un diagramme de séquence existant",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un diagramme de séquence UML représente l'interaction entre un <strong>Client</strong>, un <strong>ContrôleurCommande</strong> et une <strong>BaseDeDonnées</strong> lors de la consultation du statut d'une commande. Analysez ce diagramme puis répondez aux questions.</p>",
+      "images": [
+        "diagramme de séquence UML avec les lifelines Client, ContrôleurCommande, BaseDeDonnées, flèche synchrone 'consulterStatut(commandeId)', flèche auto-appel 'validerAccès()', flèche asynchrone 'getStatut(commandeId)', retour avec tireté 'statut', et boucle loop pour plusieurs tentatives"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier et expliquer le rôle des trois lignes de vie (lifelines) présentes dans ce diagramme.",
+        "niveau": "easy",
+        "reponse": "Les trois lifelines sont : Client (acteur externe qui initie la demande), ContrôleurCommande (composant métier qui traite la requête), BaseDeDonnées (ressource qui stocke les informations). Elles représentent les entités qui interagissent dans le temps."
+      },
+      {
+        "numero": 2,
+        "texte": "Reconnaître et décrire la différence entre un message synchrone (flèche pleine) et un message asynchrone (flèche ouverte) dans ce diagramme. Donnez un exemple de chacun.",
+        "niveau": "medium",
+        "reponse": "Le message synchrone (ex: 'consulterStatut(commandeId)') attend une réponse avant de continuer, matérialisée par un retour en pointillés. Le message asynchrone (ex: 'getStatut(commandeId)') ne bloque pas l'émetteur : l'exécution se poursuit immédiatement."
+      },
+      {
+        "numero": 3,
+        "texte": "Interpréter la signification de la boîte 'loop' sur le fragment combiné. Quelle condition implicite pourrait s’y trouver ? Justifier.",
+        "niveau": "hard",
+        "reponse": "La boîte 'loop' indique une répétition. La condition implicite pourrait être 'tant que la requête échoue ou que le nombre d'essais est inférieur à 3'. Cela illustre une logique de reprise sur échec temporaire d'accès à la base de données."
+      },
+      {
+        "numero": 4,
+        "texte": "Distinguer l’activation (barre verticale sur une lifeline) de l’absence d’activation. Que représente la fin d’une activation ?",
+        "niveau": "medium",
+        "reponse": "L'activation (rectangle blanc sur la lifeline) représente la période pendant laquelle un objet exécute une opération. La fin de l'activation correspond à la sortie de la méthode ou à la fin du traitement. Une absence d'activation signifie que l'objet est inactif."
+      }
+    ]
+  },
+  {
+    "intitule": "Résoudre un problème de commande en ligne avec un diagramme de séquence",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous développez une application e-commerce. Le client souhaite visualiser son historique de commandes. Le système doit :</p><ul><li>Vérifier l'authentification avant d’afficher les données</li><li>Si l’utilisateur n’est pas connecté, afficher une erreur</li><li>Si l’utilisateur est connecté, charger l’historique depuis une API externe (asynchrone)</li><li>Afficher un message de chargement pendant la récupération des données</li></ul><p>Proposez un diagramme de séquence décrivant ce scénario nominal et alternatif (non authentifié).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Dessiner le diagramme de séquence (description textuelle ou PlantUML attendue) en utilisant au moins : lifelines (Utilisateur, Frontend, ServiceAuth, APIHistorique), message synchrone pour l’authentification, message asynchrone pour l’API, fragment ‘alt’ pour le cas d’erreur et fragment ‘loop’ optionnel.",
+        "niveau": "very hard",
+        "reponse": "Exemple de description textuelle du diagramme : \nUtilisateur -> Frontend : consulterHistorique()\nFrontend -> ServiceAuth : verifierSession() synchrone\nServiceAuth --> Frontend : sessionValide ou non\nalt sessionInvalide\n  Frontend --> Utilisateur : afficherErreur('non connecté')\nelse sessionValide\n  Frontend -> Frontend : afficherChargement()\n  Frontend -> APIHistorique : getCommandes() asynchrone\n  APIHistorique --> Frontend : listeCommandes (callback)\n  Frontend --> Utilisateur : afficherCommandes()\nend"
+      },
+      {
+        "numero": 2,
+        "texte": "Rédiger la description textuelle des cas d’utilisation ‘Consulter historique’ en reliant les étapes aux fragments UML (alt, loop, opt) que vous avez utilisés.",
+        "niveau": "hard",
+        "reponse": "Acteur : Utilisateur. Précondition : être sur la page profil. Déclenchement : clic sur 'Voir historique'. Flux nominal : 1. Frontend demande vérification session à ServiceAuth [synchrone]. 2. ServiceAuth retourne valide. 3. Frontend affiche chargement. 4. Frontend envoie requête asynchrone à APIHistorique. 5. APIHistorique retourne données. 6. Frontend affiche historique. Fragment 'alt' : si ServiceAuth retourne invalide, alors afficher erreur (fin).",
+        "niveau": "hard"
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquer pourquoi l’appel à l’API externe doit être asynchrone dans ce contexte, alors que l’authentification est synchrone.",
+        "niveau": "medium",
+        "reponse": "L’appel asynchrone à l’API externe évite de bloquer l’interface utilisateur (UI) pendant le temps de réponse réseau. L’utilisateur peut continuer à interagir ailleurs et un message de chargement améliore l’expérience. L’authentification est généralement très rapide (en mémoire ou token local) et peut être synchrone sans nuire à la fluidité."
+      }
+    ]
+  },
+  {
+    "intitule": "Améliorer un diagramme de séquence existant (refactoring collaboratif)",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Une équipe a produit ce diagramme de séquence pour un module de réservation :<br/>\n<code>Admin -> Planning : verifierDispo(date)<br/>\nPlanning -> Planning : calculerChevauchement()<br/>\nPlanning --> Admin : dispo (true/false)<br/>\nAdmin -> Reservation : creerReservation()<br/>\nReservation -> BDD : sauvegarder()<br/>\nBDD --> Reservation : ok<br/>\nReservation --> Admin : idReservation</code><br/>\nProblèmes connus : le calcul de chevauchement est coûteux, la création de réservation échoue parfois sans raison explicite.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Critiquer la conception actuelle en identifiant au moins deux violations de bonnes pratiques UML (ex: manque de gestion d’erreur, dépendance directe, absence d’alternative).",
+        "niveau": "hard",
+        "reponse": "1) Absence de fragment 'alt' pour gérer le cas où la disponibilité est fausse → on crée quand même la réservation. 2) L’appel 'verifierDispo' devrait être séparé de la création ; si la dispo est false, le message 'creerReservation' ne devrait pas être envoyé. 3) Pas de gestion d’échec BDD (fragment 'alt' avec réponse d'erreur)."
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer une version améliorée du diagramme en utilisant les fragments 'alt', 'opt' et en introduisant un message asynchrone pour le calcul coûteux (simulé par un traitement en arrière-plan avec notification).",
+        "niveau": "very hard",
+        "reponse": "Amélioration : Admin -> Planning : demanderDispo(date) [asynchrone]. Planning -> Planning : lancerCalculChevauchement() [auto-appel]. Puis Planning --> Admin : notifierDispo(resultat) [asynchrone]. Ensuite fragment 'alt' [si dispo=true] alors Admin -> Reservation : creerReservation() + fragment 'alt' [si BDD ok alors retour idReservation, sinon retour erreur]. Si dispo=false, Admin --> Utilisateur : afficher indisponibilité. Cela sépare les préoccupations et gère les erreurs."
+      },
+      {
+        "numero": 3,
+        "texte": "Défendre l’ajout d’un fragment 'loop' dans ce nouveau diagramme. Dans quel cas serait-il utile ?",
+        "niveau": "medium",
+        "reponse": "Un fragment 'loop' serait utile si on souhaite réessayer la sauvegarde BDD plusieurs fois en cas d'échec temporaire (connexion instable). On pourrait avoir loop (jusqu'à 3 fois) autour du message 'sauvegarder()' avec sortie dès succès."
+      }
+    ]
+  }
+]

@@ -1,0 +1,162 @@
+[
+  {
+    "intitule": "Comprendre le rôle des logs dans une application Node.js",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Dans une API backend développée avec Node.js et Express, on souhaite surveiller le bon fonctionnement et détecter rapidement les erreurs. Les logs (journaux) jouent un rôle essentiel. Réponds aux questions suivantes pour vérifier ta compréhension des logs et de leurs niveaux.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décris brièvement trois raisons principales pour lesquelles on utilise des logs dans une application backend en production.",
+        "niveau": "easy",
+        "reponse": "1. Surveiller l'état de l'application (ex: nombre de requêtes, temps de réponse). 2. Déboguer et comprendre les erreurs imprévues (stack trace, contexte). 3. Assurer la traçabilité des actions utilisateur et détecter des comportements suspects (sécurité).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Classe les niveaux de logs suivants du plus grave (critique) au moins grave (trivial) : debug, error, warn, info.",
+        "niveau": "easy",
+        "reponse": "error (le plus grave) → warn → info → debug (le moins grave). Certains ajoutent 'fatal' au-dessus d'error.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Installer et configurer Winston dans un projet Express",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Tu travailles sur une API de gestion de commandes. Tu dois mettre en place un système de logs avec le module <strong>Winston</strong>. Les logs doivent être écrits à la fois dans la console (développement) et dans un fichier <code>logs/error.log</code> pour toutes les erreurs. En production, seul le fichier doit être utilisé.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écris la commande npm permettant d'installer Winston dans le projet.",
+        "niveau": "easy",
+        "reponse": "npm install winston",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Crée une configuration Winston simple qui : <br> - Définit un niveau minimum 'info' en développement, 'warn' en production.<br> - Ajoute un transport console (format simple).<br> - Ajoute un transport fichier 'error.log' pour les logs de niveau error et supérieur (error, fatal).",
+        "niveau": "medium",
+        "reponse": "Exemple de code : \nconst winston = require('winston');\nconst logger = winston.createLogger({\n  level: process.env.NODE_ENV === 'production' ? 'warn' : 'info',\n  format: winston.format.json(),\n  transports: [\n    new winston.transports.File({ filename: 'error.log', level: 'error' }),\n    new winston.transports.Console({ format: winston.format.simple() })\n  ]\n});",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Explique pourquoi on utilise un niveau de log plus élevé (warn) en production plutôt qu'en développement (info).",
+            "niveau": "medium",
+            "reponse": "En production, on évite de journaliser trop d'informations (comme les logs 'info' ou 'debug') pour ne pas polluer les fichiers, économiser de l'espace disque et améliorer les performances. On se concentre sur les avertissements et erreurs critiques."
+          }
+        ]
+      },
+      {
+        "numero": 3,
+        "texte": "Ajoute un middleware Express qui enregistre (log) la méthode HTTP et l'URL de chaque requête entrante au niveau 'info'.",
+        "niveau": "medium",
+        "reponse": "app.use((req, res, next) => {\n  logger.info(`Requête ${req.method} ${req.url}`);\n  next();\n});",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyser des logs pour résoudre un incident",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Une plateforme e-commerce utilise Winston pour journaliser les événements. Voici un extrait du fichier <code>error.log</code> :</p>\n<pre><code>\n2025-06-15 10:23:45 error: Échec de connexion à MongoDB - Timeout dépassé\n2025-06-15 10:24:10 warn: Tentative de connexion avec token JWT expiré (user: alice@ex.com)\n2025-06-15 10:25:02 error: Erreur lors du paiement - impossible de décrémenter le stock du produit ID 9876\n2025-06-15 10:26:30 info: Facture générée pour la commande #4521\n</code></pre>\n<p>En t’aidant de ces logs et de tes connaissances, réponds aux questions.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Distingue deux problèmes techniques majeurs identifiables dans ces logs et propose une action corrective pour chacun.",
+        "niveau": "hard",
+        "reponse": "1. Problème de connexion à MongoDB (timeout) => vérifier la chaîne de connexion, la disponibilité du serveur BDD et les règles du pare-feu. 2. Erreur de paiement liée au stock (probablement stock insuffisant ou verrouillage) => revoir la logique de décrémentation, utiliser des transactions ou un système de réservation.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Justifie pourquoi l'événement 'Facture générée' est au niveau 'info' alors qu'une alerte 'warn' est déclenchée pour un token expiré.",
+        "niveau": "medium",
+        "reponse": "Le niveau 'info' sert à tracer un fonctionnement normal (facture générée). Le niveau 'warn' signale un comportement anormal mais non bloquant (token expiré – l'utilisateur peut se reconnecter). Cela permet aux équipes de surveiller des tendances (ex: augmentation des tokens expirés) sans interrompre le service.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Imagine que tu doives configurer un système d'alertes basé sur ces logs. Propose une règle (seuil, niveau) qui enverrait un email aux développeurs.",
+        "niveau": "hard",
+        "reponse": "On peut configurer un outil de supervision (ex: Sentry, Logstash) pour envoyer une alerte lorsqu'il y a plus de 5 logs de niveau 'error' en moins d'une minute, ou directement pour chaque 'error' critique lié à la base de données ou au paiement. Une alerte par email ou Slack serait appropriée pour les 'error' de type 'Échec de connexion' ou 'Erreur lors du paiement'.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Bonnes pratiques de logging : performances et sécurité",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Dans une API Node.js qui traite des données sensibles (coordonnées bancaires, mots de passe, jetons d'accès), un mauvais usage des logs peut entraîner des failles de sécurité. Les logs trop bavards peuvent aussi ralentir l'application. Réponds aux questions suivantes en mobilisant tes connaissances sur Winston/Pino.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Énumère deux exemples d'informations qui ne doivent jamais apparaître dans des logs, même en développement.",
+        "niveau": "easy",
+        "reponse": "Mots de passe en clair, numéros de carte bancaire, jetons JWT, clés API secrètes, données personnelles identifiantes (sauf hachées et anonymisées).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Compare l'impact sur les performances entre un log synchrone (winston avec fichier par défaut) et un log asynchrone. Quelle approche recommandes-tu pour une API à fort trafic ?",
+        "niveau": "hard",
+        "reponse": "Les logs synchrones bloquent l'exécution du code jusqu'à ce que l'écriture soit terminée (surtout pénalisant pour les fichiers). Les logs asynchrones (ex: Winston avec 'async' ou utilisation de transports comme 'winston-daily-rotate-file' asynchrone, ou Pino qui est très rapide) permettent de ne pas ralentir le thread principal. Pour une API à fort trafic, on recommande un logger asynchrone et éventuellement d'écrire dans un service externe (ex: Elasticsearch) via un buffer.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Crée une fonction utilitaire qui, avant de logguer un objet utilisateur, retire les champs 'motDePasse' et 'jwtToken'.",
+        "niveau": "hard",
+        "reponse": "function sanitizeUser(user) {\n  const { motDePasse, jwtToken, ...safeUser } = user;\n  return safeUser;\n}\n// Utilisation : logger.info('Utiliteur connecté', { user: sanitizeUser(userData) });",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Mettre en place une stratégie de logs pour une API de réservation",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Tu développes une API de réservation de vols (Node.js + Express). Le client exige :<br> - Conserver des logs structurés (JSON) pour 90 jours.<br> - Un fichier par jour (rotation automatique).<br> - Les logs doivent contenir : timestamp, niveau, un correlationId pour tracer une requête de bout en bout, et le message.<br> - En cas d'erreur critique (base de données injoignable), un email doit être envoyé aux admins.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Propose une configuration Winston avec 'winston-daily-rotate-file' qui réalise la rotation quotidienne dans un dossier 'logs/'. Les logs error doivent aller dans un fichier séparé 'error-%DATE%.log' et les logs info/warn dans 'combined-%DATE%.log'.",
+        "niveau": "very hard",
+        "reponse": "const winston = require('winston');\nrequire('winston-daily-rotate-file');\nconst errorRotate = new winston.transports.DailyRotateFile({\n  filename: 'logs/error-%DATE%.log',\n  datePattern: 'YYYY-MM-DD',\n  level: 'error',\n  maxFiles: '90d'\n});\nconst combinedRotate = new winston.transports.DailyRotateFile({\n  filename: 'logs/combined-%DATE%.log',\n  datePattern: 'YYYY-MM-DD',\n  maxFiles: '90d'\n});\nconst logger = winston.createLogger({\n  format: winston.format.json(),\n  transports: [errorRotate, combinedRotate]\n});",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Explique comment ajouter un correlationId unique par requête (en utilisant un middleware Express) pour qu'il apparaisse dans chaque log de cette requête.",
+            "niveau": "very hard",
+            "reponse": "On peut utiliser le module 'uuid' et un middleware qui génère ou récupère un correlationId dans les en-têtes (ex: X-Request-Id). Puis on utilise child logger (winston.child) ou on stocke l'ID dans AsyncLocalStorage pour l'inclure dans le format de log. Exemple : app.use((req, res, next) => { req.correlationId = req.headers['x-request-id'] || uuidv4(); next(); }); Et on adapte le format pour inclure correlationId."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Décris la procédure pour envoyer une alerte email lorsqu'un log de niveau 'error' survient avec le message 'Base de données injoignable'. (On suppose que tu as un service d'envoi d'email disponible).",
+        "niveau": "very hard",
+        "reponse": "1. Créer un transport personnalisé héritant de winston.Transport. 2. Dans la méthode log, vérifier si le niveau est 'error' et si le message contient 'Base de données injoignable'. 3. Si condition vraie, appeler le service d'email (ex: nodemailer) pour envoyer un email aux admins. 4. Ne pas bloquer le flux principal, gérer les erreurs d'envoi. On peut aussi utiliser un outil externe comme Sentry qui déclenche des alertes.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

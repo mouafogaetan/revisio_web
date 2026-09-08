@@ -1,0 +1,141 @@
+[
+  {
+    "intitule": "Structure de données et état local pour la gestion d'adresses",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Dans la page \"Mon compte\" d'un e-commerce, l'utilisateur peut gérer plusieurs adresses de livraison. Chaque adresse contient : un identifiant unique, un nom (ex: \"Maison\", \"Bureau\"), une rue, une ville, un code postal, un pays, et un booléen indiquant si c'est l'adresse par défaut.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire la structure TypeScript d'une interface Address et l'état initial du store Zustand pour gérer la liste des adresses.",
+        "niveau": "easy",
+        "reponse": "```typescript\ninterface Address {\n  id: string;\n  name: string;\n  street: string;\n  city: string;\n  postalCode: string;\n  country: string;\n  isDefault: boolean;\n}\n\nconst useAddressStore = create((set) => ({\n  addresses: [],\n  setAddresses: (addresses) => set({ addresses }),\n  addAddress: (address) => set((state) => ({ addresses: [...state.addresses, address] })),\n  updateAddress: (id, updated) => set((state) => ({\n    addresses: state.addresses.map(addr => addr.id === id ? { ...addr, ...updated } : addr)\n  })),\n  deleteAddress: (id) => set((state) => ({\n    addresses: state.addresses.filter(addr => addr.id !== id)\n  }))\n}));\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer comment garantir qu'une seule adresse peut être marquée comme par défaut lors de l'ajout ou de la modification.",
+        "niveau": "medium",
+        "reponse": "Lorsqu'on ajoute ou modifie une adresse avec `isDefault: true`, il faut parcourir toutes les autres adresses et passer leur propriété `isDefault` à `false`. On peut le faire dans l'action du store : `set((state) => ({ addresses: state.addresses.map(addr => addr.id === id ? { ...addr, isDefault: true } : { ...addr, isDefault: false }) }))`. Pour l'ajout, on vérifie si `isDefault` est true, alors on met d'abord toutes les existantes à false avant d'ajouter la nouvelle.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Validation des adresses avec Zod",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un formulaire d'ajout d'adresse doit valider les champs selon des règles métier. Le code postal doit être un nombre à 5 chiffres (format français). Le pays doit être une chaîne non vide. La rue et la ville sont obligatoires (minimum 3 caractères).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire le schéma Zod correspondant à la validation d'une adresse (sans l'id et isDefault).",
+        "niveau": "medium",
+        "reponse": "```typescript\nimport { z } from 'zod';\n\nconst addressSchema = z.object({\n  name: z.string().min(1, \"Le nom de l'adresse est requis\"),\n  street: z.string().min(3, \"La rue doit contenir au moins 3 caractères\"),\n  city: z.string().min(2, \"La ville est requise\"),\n  postalCode: z.string().regex(/^\\d{5}$/, \"Le code postal doit comporter 5 chiffres\"),\n  country: z.string().min(2, \"Le pays est requis\"),\n  isDefault: z.boolean().optional()\n});\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer comment intégrer ce schéma avec React Hook Form pour afficher les erreurs sous chaque champ.",
+        "niveau": "medium",
+        "reponse": "On utilise `zodResolver(addressSchema)` dans `useForm`. Ensuite, pour chaque champ, on utilise `{...register('fieldName')}`. L'erreur est accessible via `errors.fieldName?.message`. On peut conditionner une classe CSS `border-red-500` et afficher un paragraphe d'erreur en rouge sous le champ.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "CRUD complet des adresses avec API backend",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>L'application doit permettre à l'utilisateur connecté d'ajouter, modifier, supprimer et définir une adresse par défaut. Les opérations sont synchronisées avec une API REST. On utilise React Query pour les mutations.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevoir la fonction de mutation pour ajouter une adresse avec React Query, en incluant la gestion des états de chargement et l'invalidation du cache.",
+        "niveau": "hard",
+        "reponse": "```typescript\nconst addAddressMutation = useMutation({\n  mutationFn: (newAddress) => addressService.create(newAddress),\n  onSuccess: () => {\n    queryClient.invalidateQueries(['addresses']);\n    toast.success('Adresse ajoutée avec succès');\n    reset(); // réinitialiser le formulaire\n  },\n  onError: (error) => {\n    toast.error(error.response?.data?.message || 'Erreur lors de l\\'ajout');\n  }\n});\n```\nLe composant utilise `addAddressMutation.mutate(data)` et affiche un spinner quand `isLoading` est true.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer comment gérer le cas où l'utilisateur tente de supprimer l'adresse par défaut. Quelle validation doit être faite ?",
+            "niveau": "hard",
+            "reponse": "Avant d'appeler l'API de suppression, on vérifie si l'adresse est l'adresse par défaut. Si c'est le cas, on affiche un message d'erreur (ex: 'Vous ne pouvez pas supprimer votre adresse par défaut. Veuillez d'abord en définir une autre.') et on bloque la mutation. Sinon, on procède à la suppression."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer une stratégie pour optimiser les appels API lors de la définition d'une nouvelle adresse par défaut (éviter d'envoyer toutes les adresses).",
+        "niveau": "very hard",
+        "reponse": "Au lieu d'envoyer toute la liste des adresses, on peut envoyer un PATCH à un endpoint dédié : `PATCH /addresses/{id}/set-default`. Le backend se charge de mettre à jour la base de données (passer l'ancienne par défaut à false et la nouvelle à true). Ensuite, on invalide la query des adresses pour recharger la liste complète. Cela réduit le payload réseau et évite les conflits.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Synchronisation du panier avec l'adresse par défaut",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Lors du passage en caisse (checkout), on pré-remplit automatiquement le formulaire de livraison avec l'adresse par défaut de l'utilisateur. L'utilisateur peut changer cette adresse pendant la commande sans modifier son carnet d'adresses.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire comment récupérer l'adresse par défaut depuis le store des adresses et l'utiliser pour pré-remplir le formulaire de checkout.",
+        "niveau": "medium",
+        "reponse": "On utilise un sélecteur Zustand : `const defaultAddress = useAddressStore(state => state.addresses.find(addr => addr.isDefault))`. Ensuite, dans un `useEffect` qui dépend de `defaultAddress`, on appelle `setValue('street', defaultAddress?.street)` pour chaque champ du formulaire (React Hook Form). On peut aussi afficher un message 'Adresse par défaut : ...' avec un bouton 'Modifier'.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer comment gérer le cas où l'utilisateur modifie l'adresse de livraison dans le checkout, puis après validation de la commande, on lui propose d'enregistrer cette nouvelle adresse dans son carnet d'adresses.",
+        "niveau": "very hard",
+        "reponse": "À la fin du checkout, après la création de la commande, on affiche un modal ou une notification : 'Voulez-vous enregistrer cette adresse dans vos adresses enregistrées ?' Si l'utilisateur accepte, on appelle l'API `POST /addresses` avec les données du formulaire. On vérifie au préalable que cette adresse n'existe pas déjà (comparaison des champs) pour éviter les doublons. On peut aussi proposer de la définir comme adresse par défaut.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Affichage et sélection d'adresse dans le checkout",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans la page de checkout, l'utilisateur doit pouvoir sélectionner une adresse parmi ses adresses enregistrées, ou cliquer sur 'Ajouter une nouvelle adresse' pour afficher un formulaire.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevoir le composant d'affichage des adresses sous forme de cartes avec un indicateur 'Par défaut' et un bouton radio pour la sélection.",
+        "niveau": "medium",
+        "reponse": "On map sur `addresses`. Chaque carte affiche : nom de l'adresse, rue, code postal, ville, pays. Un badge 'Par défaut' si `isDefault` est true. Un bouton radio (ou une bordure colorée) permet de sélectionner l'adresse de livraison. Le changement de sélection déclenche `setSelectedAddress(address)` qui pré-remplit le formulaire.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposer une solution pour gérer l'affichage d'un message 'Aucune adresse enregistrée' et un lien direct vers le formulaire d'ajout d'adresse.",
+            "niveau": "easy",
+            "reponse": "On utilise un ternaire : `{addresses.length === 0 ? <div>Aucune adresse. <button onClick={openAddressForm}>Ajouter une adresse</button></div> : addresses.map(...)}`."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Décrire comment tester le basculement entre adresses existantes et formulaire d'ajout avec React Testing Library.",
+        "niveau": "hard",
+        "reponse": "On mock un jeu d'adresses. On render le composant. On simule un clic sur le bouton 'Ajouter une nouvelle adresse' : on vérifie que le formulaire d'ajout apparaît. On simule la soumission du formulaire avec `userEvent.type` et on vérifie que l'API a été appelée avec les bonnes données. On peut aussi vérifier que le message de succès s'affiche.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

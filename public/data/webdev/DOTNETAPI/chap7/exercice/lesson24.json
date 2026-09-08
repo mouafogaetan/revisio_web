@@ -1,0 +1,81 @@
+[
+  {
+    "intitule": "Mock et test unitaire d'un service métier",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans une API .NET, vous devez tester un service <code>ProductService</code> qui dépend d'un repository <code>IProductRepository</code>. Le repository a une méthode <code>Task&lt;Product&gt; GetByIdAsync(int id)</code>. Le service doit retourner le produit s'il existe, ou lancer une exception <code>NotFoundException</code> si le produit n'est pas trouvé.</p><p>En utilisant <strong>xUnit</strong> et <strong>Moq</strong>, écrivez un test unitaire qui vérifie que <code>GetProductByIdAsync</code> lance bien l'exception lorsque le repository retourne <code>null</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédigez le code du test unitaire complet (arrange, act, assert) en C# avec xUnit et Moq.",
+        "niveau": "medium",
+        "reponse": "```csharp\n[Fact]\npublic async Task GetProductByIdAsync_WhenProductNotFound_ThrowsNotFoundException()\n{\n    // Arrange\n    var mockRepo = new Mock<IProductRepository>();\n    mockRepo.Setup(repo => repo.GetByIdAsync(99))\n            .ReturnsAsync((Product)null);\n\n    var service = new ProductService(mockRepo.Object);\n\n    // Act & Assert\n    var exception = await Assert.ThrowsAsync<NotFoundException>(\n        () => service.GetProductByIdAsync(99)\n    );\n    \n    Assert.Equal(\"Product with id 99 not found\", exception.Message);\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Distinguer test unitaire et test d'intégration",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous travaillez sur une API .NET avec Entity Framework Core et un repository personnalisé.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez la différence fondamentale entre un test unitaire et un test d'intégration dans le contexte d'un service qui utilise un repository.",
+        "niveau": "easy",
+        "reponse": "Un test unitaire isole le service de ses dépendances réelles (ex : repository) en utilisant des mocks (Moq). Il ne touche pas la base de données. Un test d'intégration utilise les composants réels (ex : vrai DbContext avec une base InMemory ou réelle) et vérifie que le service et le repository fonctionnent ensemble correctement.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Citez un avantage d'utiliser Moq dans les tests unitaires.",
+            "niveau": "easy",
+            "reponse": "Moq permet de contrôler le comportement des dépendances (simuler des retours, exceptions) et d'isoler rapidement la logique métier sans configurer une vraie base de données."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Tester une méthode avec plusieurs dépendances mockées",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Soit un service <code>OrderService</code> avec deux dépendances : <code>IOrderRepository</code> et <code>IPaymentGateway</code>. La méthode <code>ProcessOrderAsync(Order order)</code> doit :</p><ul><li>Vérifier que la commande n'est pas déjà payée.</li><li>Appeler <code>IPaymentGateway.ChargeAsync(order.TotalAmount)</code>.</li><li>Si le paiement réussit, appeler <code>orderRepository.UpdateStatusAsync(order.Id, \"Paid\")</code>.</li><li>Retourner <code>true</code> si tout est OK, sinon <code>false</code>.</li></ul><p>En utilisant xUnit et Moq, rédigez un test qui vérifie que la méthode retourne <code>true</code> et que les deux méthodes des dépendances sont bien appelées une fois.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le test complet avec les <code>Verify</code> de Moq pour valider les appels.",
+        "niveau": "hard",
+        "reponse": "```csharp\n[Fact]\npublic async Task ProcessOrderAsync_WhenPaymentSucceeds_UpdatesStatusAndReturnsTrue()\n{\n    // Arrange\n    var order = new Order { Id = 1, TotalAmount = 100, Status = \"Pending\" };\n    \n    var mockOrderRepo = new Mock<IOrderRepository>();\n    mockOrderRepo.Setup(repo => repo.UpdateStatusAsync(1, \"Paid\"))\n                 .Returns(Task.CompletedTask);\n                 \n    var mockPayment = new Mock<IPaymentGateway>();\n    mockPayment.Setup(p => p.ChargeAsync(100))\n               .ReturnsAsync(true);\n    \n    var service = new OrderService(mockOrderRepo.Object, mockPayment.Object);\n    \n    // Act\n    var result = await service.ProcessOrderAsync(order);\n    \n    // Assert\n    Assert.True(result);\n    mockPayment.Verify(p => p.ChargeAsync(100), Times.Once);\n    mockOrderRepo.Verify(r => r.UpdateStatusAsync(1, \"Paid\"), Times.Once);\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Identifier les bonnes pratiques des tests unitaires",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un développeur a écrit le test suivant. Identifiez les problèmes et proposez des corrections.</p><pre><code>[Fact]\npublic void TestAdd()\n{\n    var calc = new Calculator();\n    var result = calc.Add(2, 3);\n    Assert.Equal(5, result);\n    var repoMock = new Mock<IRepository>();\n    repoMock.Setup(r => r.Save(It.IsAny<int>()));\n    var service = new Service(repoMock.Object);\n    service.DoSomething();\n    Assert.True(true);\n}</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Listez au moins 3 problèmes dans ce test et proposez un test corrigé, bien structuré (AAA).",
+        "niveau": "medium",
+        "reponse": "Problèmes : 1) Le test teste deux choses distinctes (Calculator et Service). 2) Le nom 'TestAdd' n'est pas explicite. 3) Assert.True(true) ne sert à rien. 4) Le mock est créé mais jamais utilisé pour vérifier des appels. 5) Mélange d'assertions sur Calculator et Service.\n\nTest corrigé (exemple pour Calculator uniquement) :\n```csharp\n[Fact]\npublic void Add_TwoPositiveNumbers_ReturnsSum()\n{\n    // Arrange\n    var calculator = new Calculator();\n    \n    // Act\n    var result = calculator.Add(2, 3);\n    \n    // Assert\n    Assert.Equal(5, result);\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

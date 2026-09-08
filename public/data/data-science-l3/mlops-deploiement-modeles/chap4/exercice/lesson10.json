@@ -1,0 +1,145 @@
+[
+  {
+    "intitule": "Containerisation d'un modèle de classification avec Docker",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous avez développé un modèle de classification de fruits en utilisant TensorFlow et Keras. Le modèle est sauvegardé au format <strong>.h5</strong>. Vous devez le containeriser avec Docker pour le déployer sur un serveur.</p><p><strong>Contexte :</strong></p><ul><li>Le modèle utilise TensorFlow 2.12.0.</li><li>Les dépendances sont : tensorflow, numpy, pillow.</li><li>Le fichier d'entrée est une image, et le modèle retourne une classe (pomme, banane, orange).</li><li>Vous voulez exposer l'API via FastAPI.</li></ul>",
+      "images": [
+        "Arborescence d'un projet Docker pour un modèle de classification : dossier 'app/' contenant 'main.py' (code FastAPI), 'model.h5' (fichier du modèle), 'requirements.txt' (liste des dépendances), et un fichier 'Dockerfile' à la racine."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez les concepts fondamentaux de Docker : <strong>image</strong>, <strong>conteneur</strong>, <strong>Dockerfile</strong> et <strong>docker-compose</strong>. En quoi sont-ils utiles pour le déploiement de modèles ML ?",
+        "niveau": "easy",
+        "reponse": "<p><strong>Image Docker</strong> : Un modèle (modèle) ou un paquet exécutable contenant tout le nécessaire (code, runtime, bibliothèques, variables d'environnement) pour exécuter une application.<br/><strong>Conteneur</strong> : Une instance en cours d'exécution d'une image Docker. C'est un processus isolé qui s'exécute dans son propre environnement.<br/><strong>Dockerfile</strong> : Un fichier texte qui contient les instructions pour construire une image Docker. Il définit l'image de base, copie les fichiers, installe les dépendances et configure l'application.<br/><strong>docker-compose</strong> : Un outil pour définir et exécuter des applications Docker multi-conteneurs. Il permet de gérer plusieurs services (ex: un service pour le modèle, un service pour la base de données, un service pour le monitoring).<br/><br/><strong>Utilité pour le ML :</strong><br/>- <strong>Reproductibilité</strong> : Garantit que le modèle s'exécute dans le même environnement en production qu'en développement.<br/>- <strong>Portabilité</strong> : Peut être déployé sur n'importe quel système supportant Docker (local, cloud, on-premise).<br/>- <strong>Isolation</strong> : Chaque modèle s'exécute dans son propre conteneur, évitant les conflits de versions de bibliothèques.<br/>- <strong>Scalabilité</strong> : Facilite le scaling horizontal en lançant plusieurs conteneurs derrière un load balancer.</p>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Rédigez un Dockerfile pour containeriser ce modèle de classification de fruits. Justifiez vos choix (image de base, instructions, exposé du port).",
+        "niveau": "hard",
+        "reponse": "<p><strong>Dockerfile proposé :</strong></p><pre style='background-color: #f5f5f5; padding: 15px; border-radius: 5px; font-family: monospace;'># Image de base légère avec Python 3.9\nFROM python:3.9-slim\n\n# Définir le répertoire de travail\nWORKDIR /app\n\n# Copier les fichiers de dépendances\nCOPY requirements.txt .\n\n# Installer les dépendances\nRUN pip install --no-cache-dir -r requirements.txt\n\n# Copier le code et le modèle\nCOPY app/ .\n\n# Exposer le port sur lequel l'API écoutera\nEXPOSE 8000\n\n# Commande pour démarrer l'API\nCMD [\"uvicorn\", \"main:app\", \"--host\", \"0.0.0.0\", \"--port\", \"8000\"]</pre><p><strong>Justification :</strong><br/>- <code>python:3.9-slim</code> : Image légère (slim) pour réduire la taille du conteneur. Python 3.9 est compatible avec TensorFlow.<br/>- <code>WORKDIR /app</code> : Définit le répertoire de travail où les commandes seront exécutées.<br/>- <code>COPY requirements.txt .</code> : Copie d'abord le fichier de dépendances pour optimiser le cache Docker.<br/>- <code>RUN pip install --no-cache-dir -r requirements.txt</code> : Installe les dépendances.<br/>- <code>COPY app/ .</code> : Copie le code source et le modèle.<br/>- <code>EXPOSE 8000</code> : Indique que le conteneur écoute sur le port 8000.<br/>- <code>CMD [\"uvicorn\", \"main:app\", \"--host\", \"0.0.0.0\", \"--port\", \"8000\"]</code> : Démarre le serveur Uvicorn pour l'API FastAPI, en écoutant sur toutes les interfaces (0.0.0.0) pour être accessible depuis l'extérieur.</p>",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Expliquez pourquoi nous copions d'abord le fichier requirements.txt avant le reste du code. Quel est l'avantage de cette approche ?",
+            "niveau": "medium",
+            "reponse": "<p>Copier d'abord le fichier <code>requirements.txt</code> permet d'exploiter le système de <strong>cache de Docker</strong>. Docker construit chaque instruction en couches. Si les dépendances n'ont pas changé (le fichier requirements.txt est le même), Docker réutilise la couche précédente déjà construite (contenant les dépendances installées). Cela accélère considérablement le temps de construction de l'image, surtout lorsque le code change fréquemment (car la couche de copie du code est exécutée après l'installation des dépendances).</p>"
+          }
+        ]
+      },
+      {
+        "numero": 3,
+        "texte": "Décrivez les étapes pour construire l'image Docker et exécuter un conteneur à partir de cette image en local, puis pour pousser l'image sur un registre (ex: Docker Hub) et la déployer sur un serveur.",
+        "niveau": "medium",
+        "reponse": "<p><strong>1. Construction de l'image :</strong><br/><code>docker build -t fruit-classifier:v1 .</code><br/>- <code>-t</code> : Tag de l'image (nom:version).<br/>- <code>.</code> : Chemin vers le Dockerfile (ici le répertoire courant).</p><p><strong>2. Exécution en local :</strong><br/><code>docker run -p 8080:8000 fruit-classifier:v1</code><br/>- <code>-p 8080:8000</code> : Mappe le port 8000 du conteneur vers le port 8080 de l'hôte.<br/>L'API sera accessible sur <code>http://localhost:8080</code>.</p><p><strong>3. Pousser sur Docker Hub :</strong><br/><code>docker tag fruit-classifier:v1 votre-compte/fruit-classifier:v1</code><br/><code>docker push votre-compte/fruit-classifier:v1</code></p><p><strong>4. Déploiement sur un serveur :</strong><br/>- Connexion au serveur via SSH.<br/>- Télécharger l'image : <code>docker pull votre-compte/fruit-classifier:v1</code><br/>- Exécuter le conteneur : <code>docker run -d -p 80:8000 votre-compte/fruit-classifier:v1</code><br/>- <code>-d</code> : Mode détaché (en arrière-plan).<br/>- Le serveur écoutera sur le port 80, accessible publiquement.</p>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Comparaison des images Docker pour le Machine Learning",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Votre équipe doit choisir une image de base Docker pour un projet de Machine Learning en production. Vous avez trois options :</p><ul><li><strong>A.</strong> <code>python:3.9-slim</code></li><li><strong>B.</strong> <code>tensorflow/tensorflow:2.12.0-gpu</code></li><li><strong>C.</strong> <code>ubuntu:20.04</code> avec installation manuelle des dépendances</li></ul>",
+      "images": [
+        "Tableau comparatif des trois images Docker avec des colonnes : Image, Taille (estimée), Contenu inclus, Cas d'usage recommandé. L'image Python est légère mais nécessite d'installer les bibliothèques ML. L'image TensorFlow est plus lourde mais inclut TensorFlow et CUDA pour GPU. L'image Ubuntu est personnalisable mais plus complexe à maintenir."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Distinguez les trois images de base. Comparez leurs avantages, inconvénients et cas d'usage respectifs.",
+        "niveau": "medium",
+        "reponse": "<p><strong>A. <code>python:3.9-slim</code></strong><br/><strong>Avantages :</strong> Très légère (taille réduite), temps de construction rapide, sécurisée (surface d'attaque minimale).<br/><strong>Inconvénients :</strong> Nécessite d'installer toutes les dépendances ML (TensorFlow, PyTorch, etc.).<br/><strong>Cas d'usage :</strong> Idéal pour des modèles légers (scikit-learn, XGBoost) ou pour des environnements où l'espace est limité (microservices).<br/><br/><strong>B. <code>tensorflow/tensorflow:2.12.0-gpu</code></strong><br/><strong>Avantages :</strong> Pré-configuré avec TensorFlow, CUDA et les bibliothèques nécessaires pour le GPU. Optimisé pour les performances.<br/><strong>Inconvénients :</strong> Très lourde (plusieurs Go), temps de construction plus long, peut contenir des dépendances inutiles.<br/><strong>Cas d'usage :</strong> Idéal pour les modèles TensorFlow nécessitant un GPU pour l'inférence ou l'entraînement (ex: modèles de deep learning).<br/><br/><strong>C. <code>ubuntu:20.04</code></strong><br/><strong>Avantages :</strong> Très flexible, permet un contrôle total sur les dépendances installées.<br/><strong>Inconvénients :</strong> Maintenance complexe, nécessite d'installer Python, pip, et les bibliothèques manuellement. Taille moyenne.<br/><strong>Cas d'usage :</strong> Cas spécifiques où une image personnalisée est nécessaire (ex: dépendances système non disponibles dans les images officielles).</p>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Évaluez ces trois options pour votre projet de classification d'images avec TensorFlow nécessitant un GPU. Quelle image choisiriez-vous et pourquoi ?",
+        "niveau": "hard",
+        "reponse": "<p><strong>Recommandation : B. <code>tensorflow/tensorflow:2.12.0-gpu</code></strong><br/><strong>Justification :</strong><br/>- Le projet utilise TensorFlow et nécessite un GPU (classification d'images).<br/>- L'image officielle TensorFlow avec GPU inclut :<br/>  - TensorFlow pré-installé avec le support CUDA et cuDNN.<br/>  - Les bibliothèques système optimisées pour les performances (ex: libcudnn).<br/>- Cela évite d'installer manuellement les drivers CUDA et de gérer les problèmes de compatibilité, ce qui peut être complexe et source d'erreurs.<br/>- Cette approche est donc la plus <strong>fiable</strong> et la plus <strong>performante</strong> pour ce cas d'usage.<br/><strong>Alternative :</strong> Si la taille de l'image est un problème, on pourrait utiliser <code>tensorflow/tensorflow:2.12.0-gpu-ubi</code> (basé sur Red Hat) ou construire une image personnalisée à partir de <code>nvidia/cuda:12.2.0-base-ubuntu20.04</code> avec TensorFlow installé, mais c'est plus complexe.</p>",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Proposez une stratégie pour réduire la taille de l'image Docker tout en conservant les performances GPU.",
+            "niveau": "hard",
+            "reponse": "<p><strong>Stratégies de réduction de taille :</strong><br/>1. <strong>Nettoyer les caches</strong> : Ajouter <code>RUN apt-get clean && rm -rf /var/lib/apt/lists/*</code> après l'installation de paquets système.<br/>2. <strong>Multi-stage builds</strong> : Utiliser une image intermédiaire pour la construction et une image finale plus légère. Par exemple, construire avec une image complète (qui contient tous les outils de build), puis copier uniquement les artefacts nécessaires dans l'image finale.<br/>3. <strong>Utiliser des images slim</strong> : Si le support GPU n'est pas nécessaire pour le build, utiliser une image slim pour la construction et copier les bibliothèques nécessaires.<br/>4. <strong>Supprimer les fichiers inutiles</strong> : Utiliser un <code>.dockerignore</code> pour exclure les fichiers non nécessaires (tests, fichiers de développement, etc.).<br/>5. <strong>Utiliser des outils comme Dive</strong> pour analyser la taille des couches de l'image et identifier les couches inutiles.<br/><strong>Exemple de multi-stage :</strong> Construire avec <code>tensorflow/tensorflow:2.12.0-gpu</code> pour le build, puis copier le dossier <code>/usr/local/lib/python3.9/dist-packages/tensorflow</code> et les dépendances CUDA vers une image plus légère comme <code>nvidia/cuda:12.2.0-runtime-ubuntu20.04</code>.</p>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation d'un Dockerfile pour un pipeline ML",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous avez un projet ML qui utilise un Dockerfile pour construire l'image de production. Le Dockerfile actuel est le suivant :</p><pre style='background-color: #f5f5f5; padding: 15px; border-radius: 5px; font-family: monospace;'>FROM python:3.9\n\nCOPY . /app\nWORKDIR /app\n\nRUN pip install -r requirements.txt\n\nCMD [\"python\", \"app.py\"]</pre><p>L'équipe se plaint que les builds sont lents (environ 5 minutes) et que l'image finale est très volumineuse (1.2 Go).</p>",
+      "images": [
+        "Graphique montrant le temps de build de l'image Docker en fonction du nombre de builds. Le temps est élevé et constant, indiquant que le cache Docker n'est pas optimisé."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analysez ce Dockerfile. Identifiez les problèmes d'optimisation (temps de build, taille de l'image) et proposez des améliorations.",
+        "niveau": "hard",
+        "reponse": "<p><strong>Problèmes identifiés :</strong><br/>1. <strong>Cache non optimisé</strong> : Le fichier <code>requirements.txt</code> est copié en même temps que le reste du code. Chaque modification du code invalide le cache et force la réinstallation de toutes les dépendances.<br/>2. <strong>Image de base lourde</strong> : <code>python:3.9</code> est une image complète, non optimisée en taille.<br/>3. <strong>Pas de nettoyage</strong> : Les caches pip et les fichiers temporaires persistent dans l'image finale.<br/>4. <strong>Pas de multi-stage</strong> : Le build et le runtime utilisent la même image, ce qui inclut des outils inutiles en production.</p><p><strong>Améliorations proposées :</strong></p><pre style='background-color: #f5f5f5; padding: 15px; border-radius: 5px; font-family: monospace;'># Étape 1 : Build (avec outils de compilation)\nFROM python:3.9-slim AS builder\n\nWORKDIR /app\n\n# Copier d'abord le fichier de dépendances\nCOPY requirements.txt .\n\n# Installer les dépendances\nRUN pip install --no-cache-dir -r requirements.txt\n\n# Étape 2 : Runtime (plus léger)\nFROM python:3.9-slim\n\nWORKDIR /app\n\n# Copier les dépendances depuis l'étape builder\nCOPY --from=builder /usr/local/lib/python3.9/site-packages /usr/local/lib/python3.9/site-packages\n\n# Copier le code\nCOPY . /app\n\n# Supprimer les fichiers inutiles (ex: .pyc, __pycache__)\nRUN find . -type d -name __pycache__ -exec rm -rf {} + \\\n    && find . -type f -name \"*.pyc\" -delete\n\nCMD [\"python\", \"app.py\"]</pre>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez l'impact de chaque amélioration sur le temps de build et la taille de l'image.",
+            "niveau": "hard",
+            "reponse": "<p><strong>Impact des améliorations :</strong><br/>1. <strong>Copier requirements.txt en premier</strong> : Permet de mettre en cache l'installation des dépendances. Les dépendances ne seront réinstallées que si le fichier <code>requirements.txt</code> change. Réduction du temps de build (de 5 min à environ 1-2 min pour la plupart des builds).<br/>2. <strong>Image de base slim</strong> : <code>python:3.9-slim</code> est plus légère (environ 100-150 Mo contre 800 Mo pour <code>python:3.9</code>).<br/>3. <strong>Nettoyage des caches pip</strong> : <code>--no-cache-dir</code> empêche pip de conserver les caches, réduisant la taille de l'image.<br/>4. <strong>Multi-stage build</strong> : L'image finale ne contient que les dépendances nécessaires, pas les outils de build (compilateurs, etc.), réduisant significativement la taille (de 1.2 Go à environ 400-500 Mo).<br/>5. <strong>Suppression des fichiers inutiles</strong> : <code>__pycache__</code> et <code>*.pyc</code> sont supprimés, réduisant légèrement la taille de l'image.</p>"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Proposez des bonnes pratiques supplémentaires pour ce Dockerfile (ex: gestion des utilisateurs, sécurité, .dockerignore).",
+        "niveau": "medium",
+        "reponse": "<p><strong>Bonnes pratiques supplémentaires :</strong><br/>1. <strong>Utiliser un fichier <code>.dockerignore</code></strong> : Exclure les fichiers inutiles (ex: tests, données, fichiers de configuration locaux, dossiers .git, .venv, etc.).<br/>2. <strong>Créer un utilisateur non-root</strong> : Pour améliorer la sécurité, éviter d'exécuter les applications en tant que root.<br/>   <code>RUN useradd -m -u 1000 appuser</code><br/>   <code>USER appuser</code><br/>3. <strong>Définir les variables d'environnement</strong> : Utiliser <code>ENV</code> pour définir des paramètres comme <code>PYTHONUNBUFFERED=1</code> pour éviter les buffering de logs.<br/>4. <strong>Utiliser <code>COPY</code> au lieu de <code>ADD</code></strong> : <code>COPY</code> est plus prévisible et ne décompresse pas automatiquement les archives.<br/>5. <strong>Limiter les couches</strong> : Regrouper les commandes <code>RUN</code> pour réduire le nombre de couches.<br/>6. <strong>Vérifier la santé du conteneur</strong> : Ajouter un <code>HEALTHCHECK</code> pour surveiller le bon fonctionnement du service.</p>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion des dépendances et des modèles dans les conteneurs",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous devez déployer un modèle de prédiction en production. Le modèle est volumineux (environ 500 Mo) et les dépendances sont nombreuses (TensorFlow, PyTorch, scikit-learn, etc.).</p>",
+      "images": [
+        "Schéma montrant un conteneur Docker avec plusieurs couches : couche système (Ubuntu), couche dépendances (Python, bibliothèques ML), couche modèle (fichier .pkl ou .h5). Les couches plus grandes (le modèle) sont en bas, ce qui facilite la mise à jour."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez une stratégie pour gérer efficacement les dépendances et le modèle dans le conteneur, en tenant compte de la taille et des mises à jour fréquentes.",
+        "niveau": "hard",
+        "reponse": "<p><strong>Stratégie de gestion :</strong><br/>1. <strong>Séparer les couches par ordre de stabilité</strong> :<br/>   - Couche système (OS) : Stable, rarement mise à jour.<br/>   - Couche dépendances : Moins stable, mise à jour occasionnelle (ex: nouvelles bibliothèques).<br/>   - Couche du modèle : La plus susceptible de changer (ré-entraînement fréquent).<br/>   - Couche du code : Changements fréquents.<br/><br/>2. <strong>Utiliser des volumes pour les données</strong> : Montez le modèle via un volume plutôt que de l'inclure dans l'image pour éviter de reconstruire l'image à chaque changement du modèle.<br/>   - Exemple : <code>docker run -v /chemin/vers/modele:/app/model model-serveur</code><br/>   - Avantage : Pas de reconstruction de l'image, plus rapide.<br/>   - Inconvénient : Nécessite de gérer l'accès au volume.<br/><br/>3. <strong>Utiliser un registre de modèles</strong> : Téléchargez le modèle au démarrage du conteneur depuis un registre (ex: AWS S3, MLflow).<br/>   - Avantage : Le modèle est versionné, et le conteneur n'a pas besoin d'être reconstruit.<br/>   - Inconvénient : Temps de démarrage plus long (téléchargement).<br/><br/>4. <strong>Construire l'image avec le modèle</strong> : Si le modèle change rarement, construire une nouvelle image avec le modèle intégré.<br/>   - Utiliser un <code>Dockerfile</code> qui copie le modèle après les dépendances.</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comparez les approches 'modèle intégré dans l'image' vs 'modèle monté via un volume'. Quels sont les avantages/inconvénients de chacune ?",
+            "niveau": "hard",
+            "reponse": "<p><strong>Modèle intégré dans l'image (Built-in) :</strong><br/><strong>Avantages :</strong><br/>- Déploiement simplifié (une seule image).<br/>- Pas de dépendance externe (volume).<br/>- Versionnement du modèle lié à l'image (rollback facile).<br/><strong>Inconvénients :</strong><br/>- Reconstruction de l'image à chaque changement du modèle (lourd et lent).<br/>- Taille de l'image plus grande (500 Mo supplémentaire).<br/>- Utilisation d'espace de stockage sur le registre d'images.<br/><br/><strong>Modèle monté via un volume :</strong><br/><strong>Avantages :</strong><br/>- Changement de modèle sans reconstruction d'image (rapide).<br/>- Taille de l'image réduite.<br/>- Facilité de mise à jour du modèle en production.<br/><strong>Inconvénients :</strong><br/>- Gestion des volumes (accès, sécurité, backup).<br/>- Versionnement du modèle plus complexe (dépend du système de fichiers).<br/>- Risque de version incohérente (modèle non compatible avec le code).<br/><br/><strong>Recommandation :</strong> Pour un système critique, il est préférable d'utiliser un registre de modèles avec téléchargement au démarrage, car cela combine les avantages des deux approches : versionnement, isolation, et mise à jour facile.</p>"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Proposez un <code>docker-compose.yml</code> pour orchestrer deux services : un service pour le modèle et un service pour l'API, avec le modèle monté via un volume.",
+        "niveau": "hard",
+        "reponse": "<p><strong>Fichier docker-compose.yml :</strong></p><pre style='background-color: #f5f5f5; padding: 15px; border-radius: 5px; font-family: monospace;'>version: '3.8'\n\nservices:\n  model-api:\n    build:\n      context: .\n      dockerfile: Dockerfile\n    image: model-api:latest\n    ports:\n      - \"8080:8000\"\n    volumes:\n      - ./models:/app/models\n    environment:\n      - MODEL_PATH=/app/models/classifier_v1.pkl\n    depends_on:\n      - model-monitoring\n    networks:\n      - ml-network\n\n  model-monitoring:\n    image: prom/prometheus:latest\n    ports:\n      - \"9090:9090\"\n    volumes:\n      - ./prometheus.yml:/etc/prometheus/prometheus.yml\n    networks:\n      - ml-network\n\nnetworks:\n  ml-network:\n    driver: bridge</pre><p><strong>Explication :</strong><br/>- Le service <code>model-api</code> construit l'image à partir du Dockerfile, expose le port 8000, et monte le répertoire local <code>./models</code> dans <code>/app/models</code> du conteneur.<br/>- La variable d'environnement <code>MODEL_PATH</code> indique au code où trouver le modèle.<br/>- Un second service <code>model-monitoring</code> est ajouté pour le monitoring avec Prometheus.<br/>- Les deux services sont connectés via un réseau <code>ml-network</code>.</p>",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

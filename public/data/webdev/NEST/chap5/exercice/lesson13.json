@@ -1,0 +1,182 @@
+[
+  {
+    "intitule": "Installation et configuration de base de JWT",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous devez ajouter l'authentification JWT à votre API NestJS. Listez les packages nécessaires et expliquez le rôle de chacun.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Donner les commandes d'installation des packages nécessaires pour JWT avec Passport dans NestJS.",
+        "niveau": "easy",
+        "reponse": "```bash\nnpm install @nestjs/jwt @nestjs/passport passport passport-jwt\nnpm install @types/passport-jwt -D\n```\n\nRôles :\n- @nestjs/jwt : module NestJS pour la génération et validation de tokens JWT\n- @nestjs/passport : module d'intégration de Passport avec NestJS\n- passport : middleware d'authentification pour Node.js\n- passport-jwt : stratégie Passport pour l'authentification JWT",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Création du module Auth et du service",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Créez un module Auth avec les dépendances nécessaires, un service AuthService avec une méthode login() qui génère un token JWT, et un contrôleur AuthController avec une route POST /auth/login.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire le code complet du AuthModule, AuthService et AuthController.",
+        "niveau": "medium",
+        "reponse": "```typescript\n// auth.module.ts\nimport { Module } from '@nestjs/common';\nimport { JwtModule } from '@nestjs/jwt';\nimport { PassportModule } from '@nestjs/passport';\nimport { AuthService } from './auth.service';\nimport { AuthController } from './auth.controller';\n\n@Module({\n  imports: [\n    PassportModule,\n    JwtModule.register({\n      secret: process.env.JWT_SECRET || 'defaultSecretKey',\n      signOptions: { expiresIn: '1h' },\n    }),\n  ],\n  providers: [AuthService],\n  controllers: [AuthController],\n  exports: [AuthService],\n})\nexport class AuthModule {}\n\n// auth.service.ts\nimport { Injectable, UnauthorizedException } from '@nestjs/common';\nimport { JwtService } from '@nestjs/jwt';\n\nexport interface LoginDto {\n  email: string;\n  password: string;\n}\n\n@Injectable()\nexport class AuthService {\n  constructor(private jwtService: JwtService) {}\n\n  async login(email: string, password: string): Promise<{ access_token: string }> {\n    // Simulation de validation (à remplacer par une vraie vérification en base)\n    if (email === 'user@example.com' && password === 'password123') {\n      const payload = { sub: 1, email: email };\n      return {\n        access_token: await this.jwtService.signAsync(payload),\n      };\n    }\n    throw new UnauthorizedException('Identifiants invalides');\n  }\n}\n\n// auth.controller.ts\nimport { Controller, Post, Body } from '@nestjs/common';\nimport { AuthService } from './auth.service';\n\n@Controller('auth')\nexport class AuthController {\n  constructor(private authService: AuthService) {}\n\n  @Post('login')\n  async login(@Body() loginDto: { email: string; password: string }) {\n    return this.authService.login(loginDto.email, loginDto.password);\n  }\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Configuration asynchrone de JwtModule",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Configurez JwtModule de manière asynchrone pour utiliser ConfigService et charger la clé secrète depuis les variables d'environnement.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Modifier le AuthModule pour que JwtModule soit configuré de façon asynchrone avec ConfigService.",
+        "niveau": "hard",
+        "reponse": "```typescript\n// auth.module.ts\nimport { Module } from '@nestjs/common';\nimport { JwtModule } from '@nestjs/jwt';\nimport { PassportModule } from '@nestjs/passport';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { AuthService } from './auth.service';\nimport { AuthController } from './auth.controller';\n\n@Module({\n  imports: [\n    PassportModule,\n    ConfigModule,\n    JwtModule.registerAsync({\n      imports: [ConfigModule],\n      useFactory: async (configService: ConfigService) => ({\n        secret: configService.get<string>('JWT_SECRET'),\n        signOptions: {\n          expiresIn: configService.get<string>('JWT_EXPIRES_IN', '1h'),\n        },\n      }),\n      inject: [ConfigService],\n    }),\n  ],\n  providers: [AuthService],\n  controllers: [AuthController],\n  exports: [AuthService],\n})\nexport class AuthModule {}\n\n// .env\nJWT_SECRET=supersecretkey123456789\nJWT_EXPIRES_IN=2h\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Création de JwtStrategy",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Implémentez une JwtStrategy pour valider les tokens JWT dans les requêtes protégées. Cette stratégie doit extraire le token du header Authorization et vérifier sa validité.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire le code complet de la JwtStrategy.",
+        "niveau": "medium",
+        "reponse": "```typescript\n// jwt.strategy.ts\nimport { Injectable, UnauthorizedException } from '@nestjs/common';\nimport { PassportStrategy } from '@nestjs/passport';\nimport { ExtractJwt, Strategy } from 'passport-jwt';\nimport { ConfigService } from '@nestjs/config';\n\nexport interface JwtPayload {\n  sub: number;\n  email: string;\n}\n\n@Injectable()\nexport class JwtStrategy extends PassportStrategy(Strategy) {\n  constructor(private configService: ConfigService) {\n    super({\n      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),\n      ignoreExpiration: false,\n      secretOrKey: configService.get<string>('JWT_SECRET'),\n    });\n  }\n\n  async validate(payload: JwtPayload) {\n    // Retourne les données qui seront attachées à req.user\n    return { userId: payload.sub, email: payload.email };\n  }\n}\n\n// auth.module.ts (ajouter JwtStrategy dans providers)\n@Module({\n  // ...\n  providers: [AuthService, JwtStrategy],\n  // ...\n})\nexport class AuthModule {}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Protection de routes avec AuthGuard",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Protégez une route GET /profile en utilisant AuthGuard('jwt') afin que seul un utilisateur authentifié puisse y accéder. Récupérez l'utilisateur connecté via @Req() ou un décorateur personnalisé @CurrentUser().</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créer un contrôleur ProfileController avec une route protégée et un décorateur @CurrentUser.",
+        "niveau": "medium",
+        "reponse": "```typescript\n// current-user.decorator.ts\nimport { createParamDecorator, ExecutionContext } from '@nestjs/common';\n\nexport const CurrentUser = createParamDecorator(\n  (data: unknown, ctx: ExecutionContext) => {\n    const request = ctx.switchToHttp().getRequest();\n    return request.user;\n  },\n);\n\n// profile.controller.ts\nimport { Controller, Get, UseGuards } from '@nestjs/common';\nimport { AuthGuard } from '@nestjs/passport';\nimport { CurrentUser } from './current-user.decorator';\n\n@Controller('profile')\nexport class ProfileController {\n  @Get()\n  @UseGuards(AuthGuard('jwt'))\n  getProfile(@CurrentUser() user: { userId: number; email: string }) {\n    return {\n      message: 'Accès autorisé',\n      user: user,\n    };\n  }\n}\n\n// profile.module.ts\nimport { Module } from '@nestjs/common';\nimport { ProfileController } from './profile.controller';\n\n@Module({\n  controllers: [ProfileController],\n})\nexport class ProfileModule {}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Guard global d'authentification",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Configurez un guard d'authentification global qui protège toutes les routes par défaut, sauf celles marquées avec un décorateur @Public().</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Implémenter un guard global JwtAuthGuard avec un décorateur @Public() pour les routes accessibles sans authentification.",
+        "niveau": "hard",
+        "reponse": "```typescript\n// public.decorator.ts\nimport { SetMetadata } from '@nestjs/common';\n\nexport const IS_PUBLIC_KEY = 'isPublic';\nexport const Public = () => SetMetadata(IS_PUBLIC_KEY, true);\n\n// jwt-auth.guard.ts\nimport { Injectable, ExecutionContext, UnauthorizedException } from '@nestjs/common';\nimport { Reflector } from '@nestjs/core';\nimport { AuthGuard } from '@nestjs/passport';\nimport { IS_PUBLIC_KEY } from './public.decorator';\n\n@Injectable()\nexport class JwtAuthGuard extends AuthGuard('jwt') {\n  constructor(private reflector: Reflector) {\n    super();\n  }\n\n  canActivate(context: ExecutionContext) {\n    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [\n      context.getHandler(),\n      context.getClass(),\n    ]);\n    \n    if (isPublic) {\n      return true;\n    }\n    \n    return super.canActivate(context);\n  }\n}\n\n// main.ts\nimport { NestFactory } from '@nestjs/core';\nimport { AppModule } from './app.module';\nimport { JwtAuthGuard } from './auth/jwt-auth.guard';\nimport { Reflector } from '@nestjs/core';\n\nasync function bootstrap() {\n  const app = await NestFactory.create(AppModule);\n  const reflector = app.get(Reflector);\n  app.useGlobalGuards(new JwtAuthGuard(reflector));\n  await app.listen(3000);\n}\nbootstrap();\n\n// Utilisation\n@Public()\n@Get('public')\npublicRoute() {\n  return 'Cette route est publique';\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Compréhension du flow JWT",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Décrivez le flux complet d'authentification JWT dans une API NestJS, de la connexion à la validation des requêtes protégées.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer les étapes du processus d'authentification JWT avec NestJS.",
+        "niveau": "easy",
+        "reponse": "1. **Connexion** : L'utilisateur envoie ses identifiants (email/mot de passe) à POST /auth/login.\n2. **Validation** : AuthService vérifie les identifiants en base de données.\n3. **Génération JWT** : Si valides, JwtService.signAsync() crée un token signé avec la clé secrète.\n4. **Réponse** : Le serveur renvoie le token au client.\n5. **Requête protégée** : Le client ajoute le token dans le header Authorization: Bearer <token>.\n6. **Validation du guard** : JwtStrategy extrait le token, vérifie sa signature et son expiration.\n7. **Extraction payload** : validate() retourne l'utilisateur qui est attaché à req.user.\n8. **Accès** : Le contrôleur peut accéder à l'utilisateur authentifié.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Refresh Token",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Implémentez un mécanisme de refresh token : un endpoint POST /auth/refresh qui prend un refresh token (stocké en base) et génère un nouveau token d'accès.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Compléter le AuthService avec les méthodes generateRefreshToken et refresh.",
+        "niveau": "very hard",
+        "reponse": "```typescript\n// auth.service.ts (ajouts)\nimport { Injectable, UnauthorizedException } from '@nestjs/common';\nimport { JwtService } from '@nestjs/jwt';\n\nexport interface RefreshTokenPayload {\n  userId: number;\n  tokenId: string;\n}\n\n@Injectable()\nexport class AuthService {\n  // Simuler un stockage de refresh tokens (en prod, utiliser Redis ou DB)\n  private refreshTokens = new Map<string, number>(); // token -> userId\n\n  constructor(private jwtService: JwtService) {}\n\n  async login(email: string, password: string) {\n    // Validation des identifiants...\n    const userId = 1;\n    \n    const accessToken = await this.jwtService.signAsync(\n      { sub: userId, email },\n      { expiresIn: '15m' }\n    );\n    \n    const refreshToken = await this.generateRefreshToken(userId);\n    \n    return { access_token: accessToken, refresh_token: refreshToken };\n  }\n\n  async generateRefreshToken(userId: number): Promise<string> {\n    const tokenId = crypto.randomUUID();\n    const refreshToken = await this.jwtService.signAsync(\n      { sub: userId, tokenId },\n      { secret: process.env.JWT_REFRESH_SECRET, expiresIn: '7d' }\n    );\n    \n    this.refreshTokens.set(refreshToken, userId);\n    return refreshToken;\n  }\n\n  async refresh(refreshToken: string): Promise<{ access_token: string }> {\n    try {\n      const payload = await this.jwtService.verifyAsync(refreshToken, {\n        secret: process.env.JWT_REFRESH_SECRET,\n      });\n      \n      const userId = this.refreshTokens.get(refreshToken);\n      if (!userId || userId !== payload.sub) {\n        throw new UnauthorizedException('Refresh token invalide');\n      }\n      \n      // Générer un nouveau access token\n      const newAccessToken = await this.jwtService.signAsync(\n        { sub: userId, email: payload.email },\n        { expiresIn: '15m' }\n      );\n      \n      return { access_token: newAccessToken };\n    } catch {\n      throw new UnauthorizedException('Refresh token invalide ou expiré');\n    }\n  }\n\n  async logout(refreshToken: string) {\n    this.refreshTokens.delete(refreshToken);\n  }\n}\n\n// auth.controller.ts (ajout)\n@Post('refresh')\nasync refresh(@Body() body: { refresh_token: string }) {\n  return this.authService.refresh(body.refresh_token);\n}\n\n@Post('logout')\nasync logout(@Body() body: { refresh_token: string }) {\n  return this.authService.logout(body.refresh_token);\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Variables d'environnement pour JWT",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Quelles sont les bonnes pratiques concernant la clé secrète JWT dans un projet NestJS ?</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Citer au moins 3 bonnes pratiques pour la gestion de la clé secrète JWT.",
+        "niveau": "easy",
+        "reponse": "1. Ne jamais coder en dur la clé secrète dans le code source.\n2. Utiliser des variables d'environnement (.env) avec une clé longue et complexe (minimum 32 caractères).\n3. Différencier les clés de développement et de production.\n4. Utiliser @nestjs/config pour charger et valider les variables.\n5. En production, utiliser un gestionnaire de secrets (AWS Secrets Manager, Vault, etc.).\n6. Changer régulièrement la clé secrète (rotation des clés).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Test unitaire du AuthService",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Écrivez un test unitaire pour la méthode login du AuthService en mockant JwtService.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire le test complet du AuthService avec Jest.",
+        "niveau": "hard",
+        "reponse": "```typescript\n// auth.service.spec.ts\nimport { Test, TestingModule } from '@nestjs/testing';\nimport { JwtService } from '@nestjs/jwt';\nimport { AuthService } from './auth.service';\nimport { UnauthorizedException } from '@nestjs/common';\n\ndescribe('AuthService', () => {\n  let service: AuthService;\n  let jwtService: JwtService;\n\n  const mockJwtService = {\n    signAsync: jest.fn(),\n  };\n\n  beforeEach(async () => {\n    const module: TestingModule = await Test.createTestingModule({\n      providers: [\n        AuthService,\n        { provide: JwtService, useValue: mockJwtService },\n      ],\n    }).compile();\n\n    service = module.get<AuthService>(AuthService);\n    jwtService = module.get<JwtService>(JwtService);\n  });\n\n  it('devrait retourner un token pour des identifiants valides', async () => {\n    mockJwtService.signAsync.mockResolvedValue('jwt_token_123');\n\n    const result = await service.login('user@example.com', 'password123');\n    \n    expect(result).toEqual({ access_token: 'jwt_token_123' });\n    expect(mockJwtService.signAsync).toHaveBeenCalledWith({\n      sub: 1,\n      email: 'user@example.com',\n    });\n  });\n\n  it('devrait lancer une exception pour des identifiants invalides', async () => {\n    await expect(\n      service.login('wrong@example.com', 'wrongpass')\n    ).rejects.toThrow(UnauthorizedException);\n    \n    expect(mockJwtService.signAsync).not.toHaveBeenCalled();\n  });\n});\n```",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

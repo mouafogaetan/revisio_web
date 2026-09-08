@@ -1,0 +1,123 @@
+[
+  {
+    "intitule": "Exercice 1 : Implémenter un CRUD complet pour un produit (Compétence)",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous développez un panneau d'administration pour un site e-commerce de vente de chaussures au Cameroun. Vous devez implémenter la page de gestion des produits. Le formulaire doit permettre d'ajouter un nouveau produit avec les champs : <strong>nom</strong>, <strong>description</strong>, <strong>prix</strong> (en FCFA), <strong>catégorie</strong> (sport, ville, randonnée), <strong>stock</strong> (nombre entier), <strong>image</strong> (upload d'un fichier).</p><p>Décrivez les étapes pour créer le composant React permettant d'ajouter un produit, en utilisant <code>React Hook Form</code> et <code>Zod</code> pour la validation côté client. Précisez la structure des données envoyées à l'API (multipart/form-data ou JSON). Expliquez comment gérer l'upload d'image (prévisualisation, envoi au backend).</p>",
+      "images": [
+        "interface de formulaire d'ajout de produit avec champ de téléchargement d'image et aperçu"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Élaborez le schéma de validation Zod pour le formulaire produit. Justifiez chaque règle.",
+        "niveau": "medium",
+        "reponse": "Le schéma Zod : z.object({ nom: z.string().min(3, 'Nom trop court'), description: z.string().min(10), prix: z.number().positive('Prix positif requis'), categorie: z.enum(['sport','ville','randonnee']), stock: z.number().int().min(0), image: z.instanceof(File).optional().refine(file => file?.size <= 2 * 1024 * 1024, 'Max 2Mo') }). Les règles garantissent l'intégrité : nom minimal, description complète, prix strictement positif, stock entier non négatif, taille d'image limitée.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez comment configurer React Hook Form pour soumettre un formulaire avec upload d'image (enctype). Quelle méthode utilisez-vous pour envoyer les données au backend ?",
+            "niveau": "medium",
+            "reponse": "On utilise <code>handleSubmit</code> de React Hook Form. Pour l'upload, on crée un objet <code>FormData</code> dans <code>onSubmit</code>, on y append chaque champ (nom, description, prix, etc.) et le fichier image. On envoie ensuite avec Axios en définissant <code>headers: { 'Content-Type': 'multipart/form-data' }</code>. Il ne faut pas oublier d'utiliser <code>event.preventDefault</code> et de ne pas mettre le body en JSON."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Proposez une stratégie pour afficher un aperçu de l'image sélectionnée avant l'envoi.",
+            "niveau": "easy",
+            "reponse": "On utilise <code>URL.createObjectURL(file)</code> dans un état local <code>previewUrl</code>. Lorsque l'utilisateur choisit un fichier via <code>&lt;input type='file'&gt;</code>, on déclenche un handler qui lit le fichier et génère l'URL d'aperçu. On affiche ensuite <code>&lt;img src={previewUrl} /&gt;</code>. Pour éviter les fuites mémoire, on appelle <code>URL.revokeObjectURL(previewUrl)</code> dans un cleanup (useEffect)."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Distinguez les avantages et inconvénients de gérer l'upload d'image directement dans le même formulaire produit versus un endpoint séparé pour les images.",
+        "niveau": "hard",
+        "reponse": "Formulaire unique : plus simple pour l'utilisateur, garantit que l'image est envoyée en même temps que les données, mais peut échouer si l'image est volumineuse (timeout). Endpoint séparé : permet de gérer l'upload progressif, de réutiliser l'image pour plusieurs produits, mais nécessite de gérer l'état de l'upload et d'associer l'ID de l'image après création du produit. Dans un contexte e-commerce, l'approche séparée est souvent préférée pour la flexibilité (édition des images sans resoumettre tout le produit).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 2 : Gérer les variations et stocks (Ressource - étude de cas)",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Un gérant de boutique en ligne vend des T-shirts personnalisables. Chaque produit peut avoir plusieurs <strong>variations</strong> : couleur (Rouge, Bleu, Vert) et taille (S, M, L, XL). La quantité en stock dépend de chaque combinaison (exemple : Rouge/S = 5 unités, Bleu/M = 12 unités).</p><p>Vous devez concevoir l'interface d'administration permettant de gérer ces variations et les stocks associés. Le backend expose une API REST : <code>GET /api/products/{id}/variations</code> qui retourne un tableau de variations, <code>PUT /api/products/{id}/variations</code> pour mettre à jour l'ensemble des stocks.</p>",
+      "images": [
+        "interface de gestion de variations avec tableau croisé couleurs vs tailles"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créez un état React (useState ou useReducer) pour représenter les variations d'un produit sous forme de tableau d'objets. Proposez une structure de données JavaScript pertinente.",
+        "niveau": "medium",
+        "reponse": "On peut utiliser un tableau d'objets : <code>[{ id: 1, couleur: 'Rouge', taille: 'S', stock: 5 }, { id: 2, couleur: 'Rouge', taille: 'M', stock: 8 }, ...]</code>. Ou bien une structure imbriquée : <code>{ 'Rouge': { 'S': 5, 'M': 8 }, 'Bleu': { 'S': 3 } }</code>. Le tableau est plus simple pour l'affichage et la manipulation via map().",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Développez une fonction qui calcule le stock total d'un produit à partir du tableau de variations.",
+            "niveau": "easy",
+            "reponse": "<code>const stockTotal = variations.reduce((acc, v) => acc + v.stock, 0);</code>",
+            "niveau": "easy"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Imaginez un formulaire dynamique qui permet d'ajouter une nouvelle combinaison (couleur, taille, stock). Expliquez comment vous mettez à jour l'état local avant l'envoi à l'API.",
+            "niveau": "medium",
+            "reponse": "On utilise un état local <code>variations</code> et une fonction <code>setVariations</code>. Lors de l'ajout, on vérifie si la combinaison existe déjà (pour éviter les doublons). Puis on crée un nouvel objet variation et on met à jour l'état : <code>setVariations([...variations, nouvelleVariation])</code>. Pour la modification d'un stock existant, on utilise <code>map</code> pour remplacer l'élément correspondant. Pour la suppression, <code>filter</code>."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Analysez les défis de validation côté client pour les variations : comment empêcher l'utilisateur de saisir des stocks négatifs ou des doublons de combinaisons ?",
+        "niveau": "hard",
+        "reponse": "On utilise Zod pour valider chaque variation : <code>z.object({ couleur: z.string().min(1), taille: z.enum(['S','M','L','XL']), stock: z.number().int().min(0) })</code>. Pour l'unicité, on implémente une validation personnalisée dans le formulaire : avant d'ajouter, on vérifie <code>variations.some(v => v.couleur === nouvelleCouleur && v.taille === nouvelleTaille)</code> et on affiche une erreur. On peut aussi désactiver le bouton d'ajout si la combinaison existe déjà. En soumission finale, on renvoie un tableau unique et on laisse le backend faire une dernière validation.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 3 : Implémenter le drag & drop pour l'upload d'images (Compétence avancée)",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Pour améliorer l'expérience d'administration, vous devez implémenter une zone de <strong>drag & drop</strong> pour téléverser plusieurs images d'un produit. Les images doivent être prévisualisées sous forme de miniatures, avec possibilité de suppression individuelle avant l'envoi final.</p><p>Vous utiliserez React et la gestion des événements <code>dragenter</code>, <code>dragleave</code>, <code>dragover</code>, <code>drop</code>. Écrivez le code du composant <code>ImageUploader</code> qui gère les fichiers et expose les fichiers via un callback <code>onFilesChange</code>.</p>",
+      "images": [
+        "zone de dépôt de fichiers avec plusieurs miniatures affichées"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédigez le code complet d'un composant fonctionnel React pour le drag & drop d'images, avec prévisualisation et suppression.",
+        "niveau": "very hard",
+        "reponse": "Le composant maintient un état <code>files</code> (tableau de { file, previewUrl }). Il implémente <code>handleDragOver</code> (preventDefault), <code>handleDrop</code> qui extrait les fichiers de <code>dataTransfer.files</code>, filtre les types image, génère les previews via URL.createObjectURL, et met à jour l'état. Il inclut également un input file classique comme fallback. Chaque miniature a un bouton 'supprimer' qui appelle <code>revokeObjectURL</code> avant de filtrer le tableau. Le composant utilise <code>useEffect</code> pour nettoyer les URLs au démontage.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Justifiez l'utilisation de <code>e.preventDefault()</code> dans les événements drag & drop.",
+            "niveau": "medium",
+            "reponse": "<code>preventDefault()</code> est nécessaire pour empêcher le comportement par défaut du navigateur (ouvrir le fichier ou l'afficher directement) et permettre au JavaScript de gérer le dépôt. Sans cela, le drop serait intercepté par le navigateur et l'upload ne fonctionnerait pas."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Proposez une optimisation pour éviter de recréer les previews à chaque rendu lorsque l'utilisateur n'ajoute/supprime pas d'image.",
+            "niveau": "hard",
+            "reponse": "On peut utiliser <code>useMemo</code> sur la liste des prévisualisations pour qu'elle ne se recalcule que lorsque le tableau <code>files</code> change. On peut aussi extraire la logique de génération de preview dans une fonction pure et appeler <code>setFiles</code> uniquement lors des drops ou suppressions. Le composant doit être mémoïsé avec <code>React.memo</code> si ses props ne changent pas souvent."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Évaluez les limites du drag & drop natif et proposez des alternatives ou améliorations (gestion des gros fichiers, barre de progression).",
+        "niveau": "very hard",
+        "reponse": "Limites : pas de gestion de la progression native, pas de reprise sur échec, validation limitée. Alternatives : utiliser des librairies comme react-dropzone qui simplifient la gestion des événements. Pour les gros fichiers, on peut implémenter un upload par chunks (slice) avec affichage d'une barre de progression via XMLHttpRequest ou fetch + ReadableStream. On pourrait également compresser les images côté client avant envoi (ex: browser-image-compression) pour réduire le temps d'upload. En environnement Cameroun avec connexion parfois limitée, ces optimisations sont cruciales.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

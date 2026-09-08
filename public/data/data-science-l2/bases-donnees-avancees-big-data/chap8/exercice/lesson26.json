@@ -1,0 +1,167 @@
+[
+  {
+    "intitule": "Exercice 1 : Organisation des DAGs et Tâches",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous travaillez sur un pipeline de données qui traite des ventes quotidiennes d'une entreprise de e-commerce. Le pipeline comprend les étapes suivantes :</p><ol><li>Extraction des données depuis une API externe</li><li>Nettoyage des données (suppression des doublons, gestion des valeurs manquantes)</li><li>Transformation des données (agrégation par produit et par région)</li><li>Chargement des données transformées dans un Data Warehouse</li><li>Envoi d'un rapport par email à l'équipe commerciale</li></ol>",
+      "images": [
+        "Schéma de pipeline de données avec les différentes étapes d'ETL"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposer une structure d'organisation pour ce DAG (dossiers, nom des tâches, découpage) en respectant les bonnes pratiques d'organisation.",
+        "niveau": "easy",
+        "reponse": "Organisation recommandée :<br><br><strong>Structure de dossiers :</strong><br><br>dags/<br>├── sales_pipeline/<br>│   ├── __init__.py<br>│   ├── extract_tasks.py<br>│   ├── transform_tasks.py<br>│   ├── load_tasks.py<br>│   └── notification_tasks.py<br>└── sales_daily_pipeline.py<br><br><strong>Nom des tâches (convention) :</strong><br>- extract_sales_data<br>- clean_sales_data<br>- aggregate_by_product<br>- aggregate_by_region<br>- load_to_warehouse<br>- send_report_email<br><br><strong>Découpage logique :</strong><br>Grouper les tâches par fonction (extraction, transformation, chargement, notification).<br>Utiliser des noms explicites et cohérents.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Justifier votre choix d'organisation en expliquant les avantages de cette approche.",
+        "niveau": "easy",
+        "reponse": "Cette organisation présente plusieurs avantages :<br>1. Modularité : chaque étape est indépendante, facilitant la maintenance.<br>2. Réutilisabilité : les tâches peuvent être réutilisées dans d'autres DAGs.<br>3. Lisibilité : la structure est claire et intuitive.<br>4. Tests facilités : on peut tester chaque module séparément.<br>5. Évolutivité : facile d'ajouter de nouvelles fonctionnalités sans casser l'existant.<br>6. Gestion des versions : chaque module peut être versionné indépendamment.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 2 : Gestion des Erreurs et Retries",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un DAG Airflow exécute un pipeline critique qui doit être robuste. Les tâches suivantes sont définies :</p><ul><li>task_extract : Extraction depuis une API externe (peut échouer en cas de timeout)</li><li>task_transform : Transformation des données (rarement en échec)</li><li>task_load : Chargement vers la base de données (peut échouer en cas de connexion instable)</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Définir une stratégie de retry pour chaque tâche en fonction de sa criticité et de son comportement.",
+        "niveau": "medium",
+        "reponse": "Stratégie de retry :<br><br><strong>task_extract :</strong><br>- retries: 5<br>- retry_delay: timedelta(minutes=2)<br>- raison : L'API externe peut être instable, il faut plusieurs tentatives espacées<br><br><strong>task_transform :</strong><br>- retries: 2<br>- retry_delay: timedelta(minutes=1)<br>- raison : Les erreurs sont rares, 2 tentatives suffisent<br><br><strong>task_load :</strong><br>- retries: 3<br>- retry_delay: timedelta(minutes=3)<br>- raison : La base peut être en maintenance ou avoir des problèmes de connexion",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrire le code Python pour définir ces tâches avec leur politique de retry dans Airflow.",
+        "niveau": "medium",
+        "reponse": "from datetime import timedelta<br>from airflow import DAG<br>from airflow.operators.python import PythonOperator<br>from airflow.operators.bash import BashOperator<br><br>default_args = {<br>    'owner': 'data_team',<br>    'depends_on_past': False,<br>    'retries': 3,<br>    'retry_delay': timedelta(minutes=2),<br>}<br><br>dag = DAG(...)<br><br># Tâche avec politique spécifique<br>task_extract = PythonOperator(<br>    task_id='extract_data',<br>    python_callable=extract_function,<br>    retries=5,<br>    retry_delay=timedelta(minutes=2),<br>    dag=dag<br>)<br><br>task_transform = PythonOperator(<br>    task_id='transform_data',<br>    python_callable=transform_function,<br>    retries=2,<br>    retry_delay=timedelta(minutes=1),<br>    dag=dag<br>)<br><br>task_load = PythonOperator(<br>    task_id='load_data',<br>    python_callable=load_function,<br>    retries=3,<br>    retry_delay=timedelta(minutes=3),<br>    dag=dag<br>)",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 3 : Utilisation des Variables et Connexions",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un projet Airflow doit se connecter à différentes bases de données pour des environnements de développement, de test et de production. Les informations de connexion sont sensibles et varient selon l'environnement.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer comment utiliser les variables et les connexions Airflow pour gérer ces informations de manière sécurisée.",
+        "niveau": "medium",
+        "reponse": "Utilisation des variables et connexions Airflow :<br><br><strong>Connexions :</strong><br>- Créer une connexion par environnement : 'dev_db', 'test_db', 'prod_db'<br>- Stocker les informations : host, port, login, password, schema<br>- Utiliser 'airflow connections' CLI ou l'interface web<br><br><strong>Variables :</strong><br>- Définir une variable 'ENV' = 'dev' ou 'test' ou 'prod'<br>- Utiliser pour sélectionner dynamiquement la connexion appropriée<br><br><strong>Avantages :</strong><br>1. Sécurité : les mots de passe ne sont pas en clair dans le code<br>2. Centralisation : les infos sont modifiables sans redéployer le code<br>3. Séparation des environnements : facilité de déploiement<br>4. Audit : traçabilité des modifications",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrire une fonction Python dans un DAG qui utilise la connexion appropriée selon la variable ENV.",
+        "niveau": "hard",
+        "reponse": "from airflow import DAG<br>from airflow.hooks.base import BaseHook<br>from airflow.models import Variable<br>from airflow.operators.python import PythonOperator<br><br>def get_db_connection():<br>    env = Variable.get('ENV', default_var='dev')<br>    conn_id = f'{env}_db'<br>    conn = BaseHook.get_connection(conn_id)<br>    return conn<br><br>def extract_from_db(**context):<br>    conn = get_db_connection()<br>    # Utiliser conn.host, conn.port, conn.login, conn.password<br>    # pour se connecter à la base<br>    return 'success'<br><br>with DAG(...) as dag:<br>    task_extract = PythonOperator(<br>        task_id='extract_from_db',<br>        python_callable=extract_from_db<br>    )<br>    <br># Pour utiliser dans des tâches SQL :<br>from airflow.providers.postgres.operators.postgres import PostgresOperator<br><br>env = Variable.get('ENV', default_var='dev')<br>conn_id = f'{env}_db'<br><br>task_sql = PostgresOperator(<br>    task_id='run_sql',<br>    postgres_conn_id=conn_id,<br>    sql='SELECT * FROM sales',<br>    dag=dag<br>)",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 4 : Monitoring des Pipelines",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous devez mettre en place un système de monitoring pour un pipeline de données critique qui s'exécute toutes les heures. Les tâches du pipeline incluent :</p><ul><li>l'extraction de données depuis 5 sources différentes</li><li>le nettoyage et la transformation</li><li>l'agrégation</li><li>le chargement dans un Data Warehouse</li><li>l'envoi de rapports</li></ul>",
+      "images": [
+        "Dashboard de monitoring Airflow montrant les métriques de performance des DAGs"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier les métriques clés à monitorer pour chaque tâche et pour le DAG global.",
+        "niveau": "hard",
+        "reponse": "Métriques clés :<br><br><strong>Pour chaque tâche :</strong><br>1. Durée d'exécution (execution time)<br>2. Statut (success/failure)<br>3. Nombre de retries<br>4. Temps de queue (waiting time)<br>5. Volume de données traitées (nombre de lignes)<br><br><strong>Pour le DAG global :</strong><br>1. Durée totale du pipeline<br>2. Taux de succès (success rate)<br>3. Temps de latence (fin du pipeline - début)<br>4. Nombre de runs échoués par jour<br>5. SLA violations (délais dépassés)<br><br><strong>Métriques métier :</strong><br>1. Fraîcheur des données (data freshness)<br>2. Taux de coverage des données<br>3. Qualité des données (tests de validation)",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer un plan d'implémentation des alertes (quand déclencher, comment, à qui).",
+        "niveau": "hard",
+        "reponse": "Plan d'implémentation des alertes :<br><br><strong>Types d'alertes :</strong><br>1. Échec de tâche : email immédiat à l'équipe<br>2. Délai dépassé (SLA) : email avec escalade après 2h<br>3. Performance dégradée : alerte si durée > 150% de la moyenne<br>4. Aucune nouvelle donnée : alerte si pas de run depuis 24h<br>5. Anomalies de volume : alerte si volume de données anormal<br><br><strong>Mécanismes :</strong><br>- SLA de tâche : `sla` paramètre dans les tâches<br>- Callbacks : `on_failure_callback`, `on_success_callback`<br>- Alertes métier : vérification après chaque run<br><br><strong>Destinataires :</strong><br>- Équipe de développement : erreurs techniques<br>- Équipe métier : erreurs de données/délais<br>- Manager : problèmes critiques<br><br><strong>Outils recommandés :</strong><br>- EmailOperator pour les notifications simples<br>- SlackOperator pour les notifications en temps réel<br>- Webhook pour intégration avec d'autres outils<br>- PagerDuty pour les alertes critiques",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 5 : Cas d'Usage - Pipeline de Données Financières",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Une banque camerounaise souhaite automatiser son pipeline de données financières. Les données proviennent de plusieurs sources :</p><ul><li>Transactions bancaires (flux en temps réel)</li><li>Comptes clients (mis à jour quotidiennement)</li><li>Agences (données mises à jour hebdomadairement)</li><li>Taux de change (mise à jour toutes les heures)</li></ul><p>Les données doivent être nettoyées, transformées, puis chargées dans un Data Warehouse pour les rapports journaliers et mensuels. Les rapports doivent être disponibles à 8h chaque jour ouvrable. En cas d'échec, un opérateur doit être notifié dans les 15 minutes.</p>",
+      "images": [
+        "Architecture de pipeline de données financières avec les différentes sources et destinations"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevoir une stratégie d'orchestration complète incluant la récupération en cas d'échec et les délais (SLAs).",
+        "niveau": "very hard",
+        "reponse": "Stratégie d'orchestration :<br><br><strong>Structure des DAGs :</strong><br>1. DAG principal : orchestre l'ensemble du pipeline<br>2. Sous-DAGs : pour chaque source de données<br>3. DAG de monitoring : vérifie la santé du système<br><br><strong>Planification :</strong><br>- Transactions : streaming avec TriggerDagRunOperator<br>- Comptes : schedule='0 2 * * *' (2h du matin)<br>- Agences : schedule='0 3 * * 0' (3h du dimanche)<br>- Taux de change : schedule='0 * * * *' (chaque heure)<br><br><strong>SLAs :</strong><br>- Temps total < 6h (terminé à 8h)<br>- SLA de 30 min pour les tâches critiques<br>- SLA de 2h pour les tâches non critiques<br><br><strong>Récupération d'erreur :</strong><br>1. Retries : 3 tentatives avec delay exponentiel<br>2. Fallback : si erreur persistante, utiliser les données du jour précédent<br>3. Notification : email + Slack en cas d'échec<br>4. Création d'un DAG de 'repair' pour les échecs",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Décrire les mécanismes de surveillance et de notification à mettre en place pour ce pipeline.",
+        "niveau": "hard",
+        "reponse": "Mécanismes de surveillance et notification :<br><br><strong>Surveillance :</strong><br>1. Dashboard Airflow : pour visualisation des DAGs<br>2. Métriques de performance : durée, taux de succès, etc.<br>3. Alertes sur les métriques : si performances dégradées<br>4. Logs centralisés : pour analyse des erreurs<br>5. Health checks : vérification de la disponibilité des sources<br><br><strong>Notifications :</strong><br>1. Échec de tâche : email à l'équipe technique dans 15 minutes<br>2. SLA dépassé : email + Slack au responsable<br>3. DAG global en échec : appel + email (PagerDuty)<br>4. Problème de qualité de données : email à l'équipe métier<br>5. Pipeline terminé avec succès : rapport quotidien par email<br><br><strong>Outils :</strong><br>- Airflow Alerting : on_failure_callback, on_success_callback<br>- SlackOperator : notifications en temps réel<br>- EmailOperator : rapports quotidiens<br>- Webhook : intégration avec des outils externes<br>- Prometheus + Grafana : monitoring avancé<br><br><strong>Escalade :</strong><br>- Niveau 1 : équipe technique immédiate<br>- Niveau 2 : responsable technique dans l'heure<br>- Niveau 3 : responsable de service dans 3 heures",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 6 : Optimisation et Performance",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Un pipeline Airflow actuel est lent et consomme beaucoup de ressources. Les temps d'exécution sont les suivants :</p><ul><li>Task A (extract) : 45 min</li><li>Task B (clean) : 30 min</li><li>Task C (transform) : 60 min</li><li>Task D (load) : 45 min</li><li>Task E (report) : 15 min</li></ul><p>Les tâches A, B, C, D sont séquentielles. La tâche E ne dépend que de D.</p><p>Le pipeline s'exécute en moyenne en 3h15. L'objectif est de réduire à moins de 2h.</p>",
+      "images": [
+        "Diagramme de Gantt montrant le pipeline actuel avec ses temps d'exécution"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposer des optimisations pour réduire le temps total du pipeline.",
+        "niveau": "very hard",
+        "reponse": "Optimisations proposées :<br><br>1. <strong>Parallélisation :</strong><br>- Diviser Task C en 3 sous-tâches C1, C2, C3 qui s'exécutent en parallèle<br>- Chaque sous-tâche traite un sous-ensemble des données<br>- Nouveau temps : 60 min → 20 min<br><br>2. <strong>Optimisation des ressources :</strong><br>- Augmenter le nombre de workers<br>- Utiliser des machines plus puissantes<br>- Optimiser les requêtes SQL dans Task D<br><br>3. <strong>Cache et incrément :</strong><br>- Task A : ne traiter que les nouvelles données (mode incrémental)<br>- Task B : ne nettoyer que les données changées<br>- Task C : n'agréger que les nouvelles données<br><br>4. <strong>Réorganisation :</strong><br>- Déplacer Task E pour qu'elle commence dès que D est terminée<br>- Implémenter un DAG différent pour les rapports urgents<br><br>5. <strong>Réduction du temps de Task A :</strong><br>- Utiliser l'API en streaming (parallèle)<br>- Augmenter le timeout et le nombre de retries<br><br><strong>Nouveau temps estimé :</strong><br>Task A : 30 min<br>Task B : 20 min<br>Task C1, C2, C3 : 20 min (parallèle)<br>Task D : 30 min<br>Task E : 10 min<br>Total : 1h50 min",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrire un DAG optimisé qui implémente ces améliorations, en utilisant les dépendances appropriées.",
+        "niveau": "very hard",
+        "reponse": "from airflow import DAG<br>from airflow.operators.python import PythonOperator<br>from airflow.operators.dummy import DummyOperator<br><br>default_args = {<br>    'owner': 'data_team',<br>    'depends_on_past': False,<br>    'retries': 3,<br>    'retry_delay': timedelta(minutes=5),<br>}<br><br>with DAG(...) as dag:<br>    start = DummyOperator(task_id='start')<br><br>    task_extract = PythonOperator(<br>        task_id='extract_incremental',<br>        python_callable=extract_incremental<br>    )<br><br>    task_clean = PythonOperator(<br>        task_id='clean_incremental',<br>        python_callable=clean_incremental<br>    )<br><br>    # Parallélisation de la transformation<br>    task_transform_1 = PythonOperator(<br>        task_id='transform_part1',<br>        python_callable=transform_part1<br>    )<br>    task_transform_2 = PythonOperator(<br>        task_id='transform_part2',<br>        python_callable=transform_part2<br>    )<br>    task_transform_3 = PythonOperator(<br>        task_id='transform_part3',<br>        python_callable=transform_part3<br>    )<br><br>    task_combine = PythonOperator(<br>        task_id='combine_transform',<br>        python_callable=combine_parts<br>    )<br><br>    task_load = PythonOperator(<br>        task_id='load_optimized',<br>        python_callable=load_optimized<br>    )<br><br>    task_report = PythonOperator(<br>        task_id='generate_report',<br>        python_callable=generate_report<br>    )<br><br>    # Définir les dépendances<br>    start >> task_extract >> task_clean<br>    task_clean >> [task_transform_1, task_transform_2, task_transform_3]<br>    [task_transform_1, task_transform_2, task_transform_3] >> task_combine<br>    task_combine >> task_load >> task_report",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposer des métriques de performance pour mesurer l'impact des optimisations.",
+        "niveau": "hard",
+        "reponse": "Métriques de performance :<br><br><strong>Métriques temporelles :</strong><br>1. Durée totale du pipeline (objectif < 2h)<br>2. Durée par tâche (pour identifier les goulots)<br>3. Temps d'attente des tâches (waiting time)<br>4. Temps de latence (data freshness)<br>5. Temps de réponse des sources externes<br><br><strong>Métriques de ressources :</strong><br>1. Utilisation CPU par tâche<br>2. Consommation mémoire par tâche<br>3. Nombre de workers utilisés<br>4. Taille des données traitées par tâche<br>5. Taux de parallélisme effectif<br><br><strong>Métriques de fiabilité :</strong><br>1. Taux de succès des runs<br>2. Nombre de retries par tâche<br>3. Nombre d'échecs critiques<br>4. Temps moyen de récupération<br>5. Durabilité des données (intégrité)<br><br><strong>Métriques métier :</strong><br>1. Fraîcheur des données (time since last update)<br>2. Complétude des données (data coverage)<br>3. Qualité des données (taux de validation)<br>4. Disponibilité des rapports (SLA compliance)<br>5. Satisfaction des utilisateurs",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

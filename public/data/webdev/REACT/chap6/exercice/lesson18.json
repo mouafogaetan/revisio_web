@@ -1,0 +1,152 @@
+[
+  {
+    "intitule": "Comprendre l'utilité de useMemo pour les calculs coûteux",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Dans une application React, certains calculs (filtrage de grandes listes, opérations mathématiques complexes) peuvent ralentir l'interface. Le hook <code>useMemo</code> permet de mémoriser le résultat d'un calcul et de ne le recalculer que lorsque ses dépendances changent.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Explique la différence fondamentale entre une variable calculée directement dans le corps du composant et une valeur mémorisée avec useMemo.",
+        "niveau": "easy",
+        "reponse": "Une variable calculée directement dans le corps du composant est recalculée à chaque rendu, même si ses dépendances n'ont pas changé. useMemo ne recalcule la valeur que lorsqu'une de ses dépendances change, ce qui évite des calculs inutiles et améliore les performances.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Dans le code ci-dessous, quel problème de performance peut survenir ? Propose une correction avec useMemo.<br><pre><code>function ProductList({ products, filterTerm }) {\n  const filteredProducts = products.filter(p =>\n    p.name.toLowerCase().includes(filterTerm.toLowerCase())\n  );\n  return &lt;ul&gt;{filteredProducts.map(p => &lt;li key={p.id}&gt;{p.name}&lt;/li&gt;)}&lt;/ul&gt;\n}</code></pre>",
+        "niveau": "medium",
+        "reponse": "Le filtrage est recalculé à chaque rendu, même si products ou filterTerm n'ont pas changé. Avec useMemo : const filteredProducts = useMemo(() => products.filter(p => p.name.toLowerCase().includes(filterTerm.toLowerCase())), [products, filterTerm]);",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Identifier quand utiliser useCallback pour stabiliser des fonctions",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>useCallback retourne une version mémorisée d'une fonction. Cela empêche la fonction d'être recréée à chaque rendu, ce qui est utile lorsqu'on passe cette fonction à des composants enfants optimisés avec React.memo.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Pourquoi une fonction définie directement dans un composant est-elle recréée à chaque rendu ? Quel est l'impact si cette fonction est passée en prop à un composant enfant mémoïsé ?",
+        "niveau": "medium",
+        "reponse": "À chaque rendu, une nouvelle référence de fonction est créée. Même si le contenu est identique, la référence change. Si un composant enfant utilise React.memo, il se re-rendra à chaque fois car la prop fonction a changé (référence différente), annulant l'optimisation.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Corrige le code suivant en utilisant useCallback pour éviter des re-rendus inutiles du composant <code>Button</code> (qui utilise React.memo).<br><pre><code>function Parent() {\n  const [count, setCount] = useState(0);\n  const handleClick = () => console.log('Clicked');\n  return &lt;Button onClick={handleClick} /&gt;;\n}</code></pre>",
+        "niveau": "easy",
+        "reponse": "const handleClick = useCallback(() => console.log('Clicked'), []);. Le tableau de dépendances vide signifie que la fonction ne sera recréée qu'une seule fois au montage du composant.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Optimiser une recherche en temps réel dans une grande liste",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Tu développes un annuaire d'employés avec 10 000 entrées. L'utilisateur peut filtrer les employés par nom via un champ de recherche. Actuellement, l'application est lente : à chaque frappe, le filtrage est recalculé et l'interface saccade. Utilise useMemo et useCallback pour optimiser les performances.</p>",
+      "images": [
+        "Interface d'annuaire avec une barre de recherche et une longue liste d'employés"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écris le composant <code>EmployeeDirectory</code> qui utilise <code>useState</code> pour le terme de recherche et <code>useMemo</code> pour mémoriser la liste filtrée. La liste initiale des employés est passée en prop.",
+        "niveau": "hard",
+        "reponse": "function EmployeeDirectory({ employees }) {\n  const [searchTerm, setSearchTerm] = useState('');\n  \n  const filteredEmployees = useMemo(() => {\n    console.log('Filtrage exécuté');\n    return employees.filter(emp =>\n      emp.name.toLowerCase().includes(searchTerm.toLowerCase())\n    );\n  }, [employees, searchTerm]);\n  \n  return (\n    &lt;div&gt;\n      &lt;input\n        type=\"text\"\n        value={searchTerm}\n        onChange={e => setSearchTerm(e.target.value)}\n        placeholder=\"Rechercher...\"\n      /&gt;\n      &lt;ul&gt;\n        {filteredEmployees.map(emp => &lt;li key={emp.id}&gt;{emp.name}&lt;/li&gt;)}\n      &lt;/ul&gt;\n    &lt;/div&gt;\n  );\n}",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Que se passerait-il si on supprimait useMemo ? Explique l'impact sur les performances.",
+            "niveau": "medium",
+            "reponse": "Sans useMemo, le filtrage serait exécuté à chaque rendu (y compris lors de changements d'état non liés, comme un compteur ailleurs). Avec 10 000 éléments, cela causerait des ralentissements visibles, surtout si l'utilisateur tape rapidement."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Ajoute un bouton \"Trier par nom\" qui trie la liste affichée. La fonction de tri doit être mémorisée avec useCallback pour éviter qu'elle ne soit recréée à chaque rendu.",
+        "niveau": "very hard",
+        "reponse": "const [sortOrder, setSortOrder] = useState('asc');\n\nconst sortedAndFiltered = useMemo(() => {\n  const filtered = employees.filter(emp =>\n    emp.name.toLowerCase().includes(searchTerm.toLowerCase())\n  );\n  return filtered.sort((a, b) => {\n    if (sortOrder === 'asc') return a.name.localeCompare(b.name);\n    return b.name.localeCompare(a.name);\n  });\n}, [employees, searchTerm, sortOrder]);\n\nconst handleSort = useCallback(() => {\n  setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');\n}, []);",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Déboguer des dépendances manquantes avec useCallback",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Dans le composant suivant, le développeur a utilisé useCallback mais la fonction <code>handleSave</code> ne fonctionne pas correctement : elle utilise toujours l'ancienne valeur de <code>userId</code> après que celle-ci a changé.</p><pre><code>function UserProfile({ userId, onSave }) {\n  const handleSave = useCallback(() => {\n    console.log('Saving for user:', userId);\n    onSave(userId);\n  }, []);\n  \n  return &lt;button onClick={handleSave}&gt;Enregistrer&lt;/button&gt;;\n}</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifie l'erreur dans ce code. Pourquoi handleSave n'utilise-t-elle pas la valeur la plus récente de userId ?",
+        "niveau": "medium",
+        "reponse": "Le tableau de dépendances de useCallback est vide ([]). Ainsi, la fonction est créée une seule fois au montage et capture la valeur initiale de userId. Même si userId change plus tard, la fonction continue d'utiliser l'ancienne valeur (fermeture périmée).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Corrige le code en ajoutant les dépendances nécessaires. Explique pourquoi il est important d'inclure userId et onSave.",
+        "niveau": "hard",
+        "reponse": "const handleSave = useCallback(() => {\n  console.log('Saving for user:', userId);\n  onSave(userId);\n}, [userId, onSave]);. On inclut userId car la fonction l'utilise. On inclut onSave car elle pourrait aussi changer (si onSave est recréée dans le parent, cela recréera handleSave, mais c'est nécessaire pour avoir la bonne version).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Si onSave est une fonction passée par le parent qui change à chaque rendu (car non mémoïsée), comment cela affecte-t-il notre composant ? Propose une solution côté parent.",
+        "niveau": "very hard",
+        "reponse": "Si onSave change à chaque rendu du parent, alors handleSave sera recréée à chaque rendu (car dépend de onSave), ce qui annule l'intérêt de useCallback. La solution côté parent est d'utiliser useCallback pour mémoïser onSave également, ou de revoir la structure pour ne pas dépendre de fonctions instables.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Optimiser un tableau de bord avec des calculs statistiques lourds",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Un tableau de bord affiche des statistiques sur des millions de ventes. Les opérations coûteuses sont : calcul de la moyenne, de la médiane et de l'écart-type. L'utilisateur peut filtrer les données par année et par catégorie. Actuellement, chaque filtre déclenche un recalcul complet de toutes les statistiques, même celles qui ne dépendent pas du filtre modifié.</p>",
+      "images": [
+        "Dashboard avec des cartes de statistiques (moyenne, médiane, écart-type) et des filtres (année, catégorie)"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Propose une stratégie d'optimisation avec useMemo pour que chaque statistique ne soit recalculée que lorsque ses dépendances spécifiques changent. Par exemple, la moyenne dépend des filtres, mais on pourrait avoir d'autres valeurs indépendantes.",
+        "niveau": "very hard",
+        "reponse": "On peut découper les calculs : const average = useMemo(() => computeAverage(filteredData), [filteredData]); const median = useMemo(() => computeMedian(filteredData), [filteredData]); const stdDev = useMemo(() => computeStdDev(filteredData), [filteredData]);. Si filteredData est lui-même mémoïsé, les trois calculs ne se relancent que lorsque filteredData change. On pourrait aussi séparer les dépendances si certaines stats ne dépendent que d'une partie des filtres.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Que se passe-t-il si on met tous ces calculs dans un seul useMemo ? Avantages et inconvénients.",
+            "niveau": "medium",
+            "reponse": "Avantage : un seul appel de useMemo. Inconvénient : si une seule statistique est nécessaire après un changement, les trois sont recalculées. Il faut trouver un équilibre entre granularité et nombre de hooks."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Le composant parent passe une fonction <code>onFilterChange</code> qui est recréée à chaque rendu. Cela provoque des re-rendus inutiles des composants enfants mémoïsés. Utilise useCallback pour stabiliser cette fonction et explique la correction.",
+        "niveau": "hard",
+        "reponse": "Dans le parent : const onFilterChange = useCallback((newFilters) => { setFilters(newFilters); }, []);. Comme setFilters est stable, le tableau de dépendances peut être vide. Cela évite que la fonction change à chaque rendu du parent, préservant ainsi l'optimisation des enfants mémoïsés.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

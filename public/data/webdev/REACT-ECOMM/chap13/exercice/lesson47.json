@@ -1,0 +1,106 @@
+[
+  {
+    "intitule": "Configuration de Vitest et premier test de composant",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Dans un projet React + Vite, vous devez configurer Vitest avec React Testing Library. Ensuite, vous devez écrire un test simple pour un composant <code>Button</code> qui affiche le texte passé en prop et déclenche une fonction <code>onClick</code> lors du clic.</p><p>Le composant <code>Button</code> reçoit : <code>children</code> (texte) et <code>onClick</code> (fonction).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez les étapes d’installation de Vitest et écrivez le code du test qui vérifie que le bouton s’affiche correctement et que la fonction onClick est appelée lors du clic.",
+        "niveau": "easy",
+        "reponse": "Installation : `npm install -D vitest @vitest/ui jsdom @testing-library/react @testing-library/jest-dom`. Configuration dans `vite.config.ts` : ajouter `test: { globals: true, environment: 'jsdom' }`. Code du test :\n```tsx\nimport { render, screen, fireEvent } from '@testing-library/react';\nimport { Button } from './Button';\n\ntest('affiche le texte et appelle onClick', () => {\n  const handleClick = vi.fn();\n  render(<Button onClick={handleClick}>Cliquez</Button>);\n  const button = screen.getByText('Cliquez');\n  expect(button).toBeInTheDocument();\n  fireEvent.click(button);\n  expect(handleClick).toHaveBeenCalledTimes(1);\n});\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Test d’un composant ProductCard avec simulation d’événements",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Le composant <code>ProductCard</code> affiche le nom, le prix et un bouton \"Ajouter au panier\". Il reçoit les props <code>product</code> (objet avec name et price) et <code>onAddToCart</code> (callback). Vous devez tester son rendu et l’interaction utilisateur.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez un test qui vérifie l’affichage du nom et du prix, puis simule un clic sur le bouton et s’assure que <code>onAddToCart</code> est appelé avec le bon produit.",
+        "niveau": "medium",
+        "reponse": "```tsx\nimport { render, screen, fireEvent } from '@testing-library/react';\nimport { ProductCard } from './ProductCard';\n\nconst mockProduct = { id: 1, name: 'Smartphone', price: 299.99 };\n\ntest('affiche les infos produit et appelle onAddToCart avec le bon produit', () => {\n  const mockAddToCart = vi.fn();\n  render(<ProductCard product={mockProduct} onAddToCart={mockAddToCart} />);\n  \n  expect(screen.getByText('Smartphone')).toBeInTheDocument();\n  expect(screen.getByText('299.99 FCFA')).toBeInTheDocument();\n  \n  const button = screen.getByRole('button', { name: /ajouter au panier/i });\n  fireEvent.click(button);\n  \n  expect(mockAddToCart).toHaveBeenCalledTimes(1);\n  expect(mockAddToCart).toHaveBeenCalledWith(mockProduct);\n});\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment tester que le prix est correctement formaté (ex: avec séparateur de milliers) ?",
+            "niveau": "medium",
+            "reponse": "On peut utiliser `screen.getByText('299,99 FCFA')` ou `toHaveTextContent` avec une expression régulière : `expect(screen.getByTestId('price')).toHaveTextContent(/299\\s?FCFA/i)`."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Mock des appels API avec MSW (Mock Service Worker)",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous testez un composant <code>ProductsList</code> qui utilise <code>useQuery</code> de React Query pour récupérer la liste des produits depuis <code>/api/products</code>. Vous devez mocker l’API pour ne pas faire de vrai appel réseau.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Configurez MSW dans l’environnement de test, puis écrivez un test qui simule une réponse réussie avec deux produits et vérifie qu’ils sont affichés.",
+        "niveau": "hard",
+        "reponse": "Installation : `npm install -D msw`. Créer `src/mocks/handlers.js` avec `http.get('/api/products', () => HttpResponse.json([{ id:1, name:'Prod1' }, { id:2, name:'Prod2' }]))`. Dans `vitest.setup.js` : `server.listen()` / `afterEach(() => server.resetHandlers())` / `afterAll(() => server.close())`. Test : render le composant, attendre que les produits apparaissent via `waitFor`, puis vérifier `screen.getByText('Prod1')`.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment tester le cas d’erreur (ex: 500) avec MSW ?",
+            "niveau": "hard",
+            "reponse": "On utilise `server.use()` pour remplacer le handler par un handler qui retourne `HttpResponse.error()` ou un status 500. Ensuite on teste l’affichage d’un message d’erreur."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Test d’un hook personnalisé useLocalStorage",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous avez créé un hook personnalisé <code>useLocalStorage(key, initialValue)</code> qui lit et écrit dans <code>localStorage</code>. Vous devez tester ce hook en isolation avec <code>renderHook</code> de React Testing Library.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez un test qui vérifie que la valeur initiale est retournée quand aucune donnée n’est stockée, que la valeur peut être mise à jour via la fonction setter, et que localStorage est synchronisé.",
+        "niveau": "hard",
+        "reponse": "```tsx\nimport { renderHook, act } from '@testing-library/react';\nimport { useLocalStorage } from './useLocalStorage';\n\ntest('utilise localStorage correctement', () => {\n  const { result } = renderHook(() => useLocalStorage('test-key', 'initial'));\n  expect(result.current[0]).toBe('initial');\n  \n  act(() => { result.current[1]('updated'); });\n  expect(result.current[0]).toBe('updated');\n  expect(localStorage.getItem('test-key')).toBe(JSON.stringify('updated'));\n});\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Test d’intégration du flux d’ajout au panier",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Dans une page produit, l’utilisateur peut sélectionner une quantité, choisir une variation (taille/couleur) et cliquer sur \"Ajouter au panier\". Le store Zustand du panier doit être mis à jour. Vous devez tester ce flux complet avec React Testing Library.</p><p>Le store Zustand est persistant (localStorage) mais vous pouvez le réinitialiser pour chaque test.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez un test d’intégration qui sélectionne une taille, change la quantité, clique sur le bouton d’ajout, et vérifie que le store contient le bon article (quantité, variation). Gérez la réinitialisation du store entre les tests.",
+        "niveau": "very hard",
+        "reponse": "On utilise `beforeEach` pour réinitialiser le store : `useCartStore.setState({ items: [] })`. Puis on render la page produit avec les providers nécessaires (Zustand, React Query). On sélectionne la taille via `fireEvent.change` du select, on modifie la quantité via des clics sur les boutons +/-, on clique sur ajouter. Enfin on vérifie `useCartStore.getState().items[0]` correspond aux attentes (quantité, variation). On peut aussi tester que le toast de confirmation a été affiché.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

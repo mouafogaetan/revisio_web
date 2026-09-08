@@ -1,0 +1,181 @@
+[
+  {
+    "intitule": "Structure de l'écran de chat",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous devez créer l'écran de chat (<code>ChatScreen</code>) pour l'application Sawamart. Cet écran permet aux utilisateurs d'échanger des messages en temps réel.</p><p><strong>Questions :</strong></p>",
+      "images": [
+        "Maquette d'un écran de chat mobile montrant la liste des messages avec des bulles de différentes couleurs, un champ de saisie en bas, et un en-tête avec le nom du vendeur."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifiez les trois composants principaux de l'écran ChatScreen.",
+        "niveau": "easy",
+        "reponse": "<p>Les trois composants principaux sont :</p><ol><li><strong>Header</strong> : Affiche le nom du vendeur, l'image de profil et un bouton de retour</li><li><strong>Liste des messages</strong> : Affiche les messages avec des bulles (<code>MessageBubble</code>) différenciant les messages envoyés et reçus</li><li><strong>Input bar</strong> : Champ de saisie avec un bouton d'envoi et un bouton pour joindre des images</li></ol>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez le rôle du composant <code>MessageBubble</code> dans l'écran de chat.",
+        "niveau": "easy",
+        "reponse": "<p>Le composant <code>MessageBubble</code> est responsable de l'affichage d'un message individuel. Il gère :</p><ul><li>L'affichage du texte ou de l'image du message</li><li>La différenciation visuelle entre les messages envoyés (alignés à droite, couleur différente) et reçus (alignés à gauche)</li><li>L'affichage de l'heure d'envoi</li><li>L'affichage des indicateurs de statut (envoyé, lu, en attente)</li></ul>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion des messages en temps réel",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>L'écran de chat doit permettre l'envoi et la réception de messages en temps réel via WebSocket. Les données sont également synchronisées avec le backend.</p><p><strong>Questions :</strong></p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez le flot de données pour l'envoi d'un message avec une mise à jour optimiste.",
+        "niveau": "medium",
+        "reponse": "<p><strong>Flot de données optimiste :</strong></p><ol><li><strong>UI</strong> : L'utilisateur saisit un message et appuie sur le bouton d'envoi</li><li><strong>Mise à jour optimiste</strong> : Le message est ajouté immédiatement à la liste des messages dans le <code>chatStore</code> avec un statut <code>sending</code></li><li><strong>Envoi</strong> : Le message est envoyé au backend via WebSocket (<code>socket.emit('send_message', data)</code>)</li><li><strong>Réponse du serveur</strong> : Le serveur confirme la réception du message (émet un événement <code>message_sent</code> ou <code>new_message</code>)</li><li><strong>Mise à jour finale</strong> : Le message est mis à jour avec son ID et son statut <code>sent</code> ou <code>delivered</code></li><li><strong>En cas d'erreur</strong> : Le message est marqué comme <code>failed</code> et l'utilisateur peut réessayer</li></ol>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quelle est l'utilité de la mise à jour optimiste ?",
+            "niveau": "easy",
+            "reponse": "<p>La mise à jour optimiste améliore l'expérience utilisateur en affichant le message immédiatement, sans attendre la réponse du serveur. Cela donne l'impression que l'application est plus rapide et réactive, même sur des connexions lentes.</p>"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez comment gérer les messages en attente d'envoi (statut <code>sending</code>).",
+        "niveau": "medium",
+        "reponse": "<p><strong>Gestion des messages en attente :</strong></p><ul><li>Afficher un indicateur de chargement (spinner ou pointillé) sur le message</li><li>Dans le <code>chatStore</code>, avoir un champ <code>status</code> pour chaque message (<code>sending</code>, <code>sent</code>, <code>delivered</code>, <code>read</code>, <code>failed</code>)</li><li>Utiliser un système de file d'attente (<code>offlineQueue</code>) pour les messages qui échouent</li><li>Permettre à l'utilisateur de réessayer un message en échec</li></ul>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Indicateur de frappe (typing)",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Pour améliorer l'expérience utilisateur, vous devez implémenter l'indicateur de frappe en temps réel.</p><p><strong>Questions :</strong></p>",
+      "images": [
+        "Animation montrant un indicateur de frappe (trois points qui s'animent) dans un écran de chat."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez le mécanisme de l'indicateur de frappe dans un chat en temps réel.",
+        "niveau": "medium",
+        "reponse": "<p><strong>Mécanisme de l'indicateur de frappe :</strong></p><ol><li><strong>Détection</strong> : Lorsque l'utilisateur commence à taper, on écoute l'événement <code>onChangeText</code> du champ de saisie</li><li><strong>Émission</strong> : On émet un événement WebSocket <code>typing</code> avec l'ID du chat et l'ID de l'utilisateur</li><li><strong>Réception</strong> : Les autres participants reçoivent l'événement et affichent l'indicateur de frappe</li><li><strong>Fin de frappe</strong> : Soit l'utilisateur arrête de taper (on émet <code>stop_typing</code>), soit un timer (ex: 3 secondes) arrête automatiquement l'indicateur</li></ol><p><strong>Code exemple :</strong></p><pre style='background-color: #1e293b; color: #e2e8f0; padding: 0.75rem; border-radius: 6px;'>const [isTyping, setIsTyping] = useState(false);\nlet typingTimeout: NodeJS.Timeout;\n\nconst handleTyping = (text: string) => {\n  if (!isTyping) {\n    setIsTyping(true);\n    socket.emit('typing', { chatId, userId });\n  }\n  \n  clearTimeout(typingTimeout);\n  typingTimeout = setTimeout(() => {\n    setIsTyping(false);\n    socket.emit('stop_typing', { chatId, userId });\n  }, 2000);\n};</pre>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi utiliser un timer pour arrêter l'indicateur de frappe ?",
+            "niveau": "easy",
+            "reponse": "<p>Le timer permet de gérer les cas où l'utilisateur arrête de taper sans envoyer de message. Sans timer, l'indicateur de frappe resterait affiché indéfiniment, ce qui serait déroutant pour les autres participants.</p>"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Proposez une implémentation de l'indicateur de frappe dans le composant <code>ChatScreen</code>.",
+        "niveau": "hard",
+        "reponse": "<p><strong>Implémentation dans ChatScreen :</strong></p><pre style='background-color: #1e293b; color: #e2e8f0; padding: 0.75rem; border-radius: 6px;'>// Dans le ChatScreen\nconst [typingUsers, setTypingUsers] = useState&lt;string[]&gt;([]);\n\n// Écouter les événements WebSocket\nuseEffect(() => {\n  const socket = websocketService.getSocket();\n  \n  socket.on('typing', (data: { userId: string }) => {\n    setTypingUsers(prev => {\n      if (!prev.includes(data.userId)) {\n        return [...prev, data.userId];\n      }\n      return prev;\n    });\n  });\n  \n  socket.on('stop_typing', (data: { userId: string }) => {\n    setTypingUsers(prev => prev.filter(id => id !== data.userId));\n  });\n  \n  return () => {\n    socket.off('typing');\n    socket.off('stop_typing');\n  };\n}, []);\n\n// Afficher l'indicateur\n{typingUsers.length > 0 && (\n  &lt;View style={styles.typingIndicator}&gt;\n    &lt;Text&gt;{typingUsers.length === 1 ? 'L\\'utilisateur est en train d\\'écrire...' : 'Plusieurs utilisateurs écrivent...'}&lt;/Text&gt;\n    &lt;TypingAnimation /&gt;\n  &lt;/View&gt;\n)}</pre>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Affichage du résumé du produit",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans l'écran de chat, il est important d'afficher un résumé du produit en cours de discussion.</p><p><strong>Questions :</strong></p>",
+      "images": [
+        "Un écran de chat avec un header affichant un résumé du produit (image miniature, nom, prix) et un bouton pour voir le produit."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifiez les informations à afficher dans le résumé du produit sur l'écran de chat.",
+        "niveau": "easy",
+        "reponse": "<p>Le résumé du produit doit contenir :</p><ul><li>Une image miniature du produit</li><li>Le nom du produit</li><li>Le prix en FCFA</li><li>Un badge indiquant le statut (disponible, en attente, vendu)</li><li>Un bouton pour accéder au <code>ProductDetailScreen</code></li></ul><p>Ces informations permettent à l'utilisateur d'avoir un contexte rapide sans quitter la conversation.</p>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez comment récupérer les données du produit dans le <code>ChatScreen</code>.",
+        "niveau": "medium",
+        "reponse": "<p><strong>Méthodes de récupération :</strong></p><ol><li><strong>Via les paramètres de navigation</strong> : On peut passer un objet <code>product</code> complet lors de la navigation vers le <code>ChatScreen</code></li><li><strong>Via le chatStore</strong> : Si le chat est déjà chargé, on peut récupérer le produit associé depuis le store</li><li><strong>Via l'API</strong> : On peut récupérer les détails du produit à partir de son ID passé en paramètre</li></ol><p><strong>Approche recommandée :</strong></p><pre style='background-color: #1e293b; color: #e2e8f0; padding: 0.75rem; border-radius: 6px;'>// Dans ChatScreen\nconst route = useRoute();\nconst { chatId, productId } = route.params;\n\nconst { currentChat } = useChatStore();\nconst { fetchProductDetail } = useProductStore();\n\nuseEffect(() => {\n  const loadProduct = async () => {\n    if (productId) {\n      const product = await fetchProductDetail(productId);\n      setProduct(product);\n    } else if (currentChat?.product) {\n      setProduct(currentChat.product);\n    }\n  };\n  loadProduct();\n}, [productId, currentChat]);</pre>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion des actions de commande",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Dans l'écran de chat, les utilisateurs peuvent effectuer des actions liées à une commande : séquestre des fonds, annulation, confirmation de livraison, ouverture d'un litige.</p><p><strong>Questions :</strong></p>",
+      "images": [
+        "Un panneau de paramètres dans un chat affichant les actions possibles : Séquestrer les fonds, Annuler la commande, Confirmer la livraison, Ouvrir un litige."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez le fonctionnement du séquestre (escrow) des fonds dans le contexte du chat.",
+        "niveau": "hard",
+        "reponse": "<p><strong>Fonctionnement du séquestre :</strong></p><ol><li>L'acheteur initie le séquestre en cliquant sur le bouton dans le panneau de paramètres</li><li>Le montant est bloqué sur le compte de l'acheteur</li><li>L'acheteur confirme la réception du produit</li><li>Les fonds sont libérés au vendeur</li><li>En cas de litige, un administrateur peut trancher</li></ol><p><strong>États possibles :</strong></p><ul><li><code>INITIATED</code> : Séquestre initié, fonds bloqués</li><li><code>SHIPPED</code> : Produit expédié par le vendeur</li><li><code>DELIVERED</code> : Produit livré, fonds en attente de libération</li><li><code>COMPLETED</code> : Fonds libérés au vendeur</li><li><code>DISPUTED</code> : Litige en cours</li><li><code>CANCELLED</code> : Séquestre annulé, fonds restitués</li></ul>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quel est le rôle du <code>chatStore</code> dans la gestion des séquestres ?",
+            "niveau": "medium",
+            "reponse": "<p>Le <code>chatStore</code> gère l'état du séquestre :</p><ul><li>Stocke le statut du séquestre pour chaque chat</li><li>Gère les actions (initier, annuler, confirmer)</li><li>Met à jour l'UI en temps réel lors des changements de statut</li><li>Gère l'affichage des boutons en fonction du statut</li></ul>"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Concevez le panneau de paramètres (paramètres de commande) dans l'écran de chat.",
+        "niveau": "very hard",
+        "reponse": "<p><strong>Structure du panneau de paramètres :</strong></p><ul><li><strong>Quantité</strong> : Nombre d'articles commandés</li><li><strong>Prix unitaire</strong> : Prix du produit</li><li><strong>Frais de transport</strong> : Montant des frais de livraison</li><li><strong>Total</strong> : Prix total de la commande</li></ul><p><strong>Actions disponibles (selon le rôle) :</strong></p><ul><li><strong>Acheteur</strong> :<ul><li>🟢 Initier le séquestre</li><li>🔴 Confirmer la livraison (après réception)</li><li>⚠️ Ouvrir un litige</li></ul></li><li><strong>Vendeur</strong> :<ul><li>🟢 Marquer comme expédié</li><li>🔴 Annuler le séquestre (avec raison)</li><li>⚠️ Répondre au litige</li></ul></li></ul><p><strong>Code exemple :</strong></p><pre style='background-color: #1e293b; color: #e2e8f0; padding: 0.75rem; border-radius: 6px;'>const OrderPanel = ({ chat, role }) => {\n  const { escrowStatus, initiateEscrow, confirmDelivery } = useChatStore();\n\n  return (\n    &lt;View&gt;\n      &lt;Text&gt;Quantité : {chat.quantity}&lt;/Text&gt;\n      &lt;Text&gt;Prix : {chat.product.price} FCFA&lt;/Text&gt;\n      &lt;Text&gt;Total : {chat.quantity * chat.product.price} FCFA&lt;/Text&gt;\n      \n      {role === 'buyer' && escrowStatus === 'none' && (\n        &lt;Button title=\"Initier le séquestre\" onPress={initiateEscrow} /&gt;\n      )}\n      \n      {role === 'buyer' && escrowStatus === 'shipped' && (\n        &lt;Button title=\"Confirmer la livraison\" onPress={confirmDelivery} /&gt;\n      )}\n      \n      {(role === 'buyer' || role === 'seller') && escrowStatus === 'delivered' && (\n        &lt;Button title=\"Ouvrir un litige\" onPress={openDispute} /&gt;\n      )}\n    &lt;/View&gt;\n  );\n};</pre>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Envoi de messages avec images",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Dans l'écran de chat, les utilisateurs doivent pouvoir envoyer des images en plus des messages texte. L'upload doit être géré efficacement.</p><p><strong>Questions :</strong></p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez le flot de données pour l'envoi d'un message avec image.",
+        "niveau": "hard",
+        "reponse": "<p><strong>Flot de données pour l'envoi d'image :</strong></p><ol><li><strong>Sélection</strong> : L'utilisateur sélectionne une image depuis la galerie (ou prend une photo)</li><li><strong>Compression</strong> : L'image est compressée pour optimiser la taille (ex: qualité 0.7, max width 1024)</li><li><strong>Upload</strong> : L'image est uploadée vers le serveur (via <code>uploadService</code> ou directement en multipart/form-data)</li><li><strong>Réponse</strong> : Le serveur renvoie l'URL de l'image hébergée</li><li><strong>Message</strong> : Le message est envoyé avec l'URL de l'image dans le contenu</li><li><strong>Affichage</strong> : Le message s'affiche avec une vignette de l'image</li></ol><p><strong>Code exemple :</strong></p><pre style='background-color: #1e293b; color: #e2e8f0; padding: 0.75rem; border-radius: 6px;'>const sendImage = async () => {\n  const result = await ImagePicker.launchImageLibraryAsync({\n    mediaTypes: ImagePicker.MediaTypeOptions.Images,\n    allowsEditing: true,\n    quality: 0.7,\n    base64: false,\n  });\n\n  if (!result.canceled) {\n    setLoading(true);\n    try {\n      const formData = new FormData();\n      formData.append('image', {\n        uri: result.assets[0].uri,\n        type: 'image/jpeg',\n        name: 'chat_image.jpg',\n      });\n      \n      const response = await uploadService.uploadChatImage(formData);\n      const message = {\n        chatId,\n        content: response.url,\n        type: 'image',\n        senderId: user.id,\n      };\n      \n      // Envoyer le message via WebSocket\n      socket.emit('send_message', message);\n      \n      // Mise à jour optimiste\n      chatStore.addMessage({\n        ...message,\n        id: `temp-${Date.now()}`,\n        status: 'sending',\n        createdAt: new Date(),\n      });\n    } catch (error) {\n      Alert.alert('Erreur', \"Impossible d'uploader l'image\");\n    } finally {\n      setLoading(false);\n    }\n  }\n};</pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposez des optimisations pour l'upload des images dans le chat.",
+        "niveau": "hard",
+        "reponse": "<p><strong>Optimisations pour l'upload des images :</strong></p><ul><li><strong>Compression avant upload</strong> : Réduire la taille des images pour accélérer l'upload et économiser la bande passante</li><li><strong>Upload en arrière-plan</strong> : Ne pas bloquer l'interface utilisateur pendant l'upload</li><li><strong>File d'attente</strong> : Gérer plusieurs uploads en file d'attente</li><li><strong>Gestion hors ligne</strong> : Mettre en file d'attente les images si la connexion est coupée</li><li><strong>Aperçu local</strong> : Afficher l'image localement avant la confirmation de l'upload</li><li><strong>Progression</strong> : Afficher une barre de progression pour les gros fichiers</li></ul>",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

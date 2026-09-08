@@ -1,0 +1,114 @@
+[
+  {
+    "intitule": "Fondamentaux des entités TypeORM",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous devez créer les entités de base pour votre plateforme e-commerce 'SawaMart'. Les utilisateurs auront un profil associé. Répondez aux questions suivantes concernant la création d'entités avec TypeORM.</p>",
+      "images": [
+        "Diagramme de classe UML montrant la relation OneToOne entre User et UserProfile.",
+        "Schéma de la base de données avec les tables 'users' et 'user_profiles' et leurs colonnes."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifiez les décorateurs TypeORM nécessaires pour définir une entité, sa clé primaire et ses colonnes. Expliquez le rôle de chacun.",
+        "niveau": "easy",
+        "reponse": "Les décorateurs principaux sont : `@Entity()` qui définit la classe comme une entité de base de données ; `@PrimaryGeneratedColumn()` qui crée une clé primaire auto-incrémentée (ou UUID avec `uuid` en paramètre) ; et `@Column()` qui définit une colonne dans la table. D'autres décorateurs comme `@OneToOne()`, `@ManyToOne()`, `@JoinColumn()` sont utilisés pour définir les relations entre les entités.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comparez l'utilisation de `@PrimaryGeneratedColumn()` avec et sans paramètre ('uuid'). Dans quel cas utiliseriez-vous l'un plutôt que l'autre ?",
+            "niveau": "medium",
+            "reponse": "`@PrimaryGeneratedColumn()` sans paramètre génère un identifiant auto-incrémenté de type entier (SERIAL en PostgreSQL). `@PrimaryGeneratedColumn('uuid')` génère un identifiant universel unique (UUID) de type string. L'UUID est préférable pour les systèmes distribués ou lorsque l'on ne veut pas exposer des identifiants séquentiels (plus sécurisé), tandis que l'auto-incrément est plus simple et performant pour des bases de données centralisées."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Définissez la relation OneToOne entre les entités `User` et `UserProfile`. Expliquez où doit se trouver le décorateur `@JoinColumn()`.",
+        "niveau": "medium",
+        "reponse": "La relation `OneToOne` est définie avec `@OneToOne()` sur les deux entités. Dans l'entité propriétaire de la relation (celle qui possède la clé étrangère), on ajoute `@JoinColumn()`. Généralement, on place le `@JoinColumn()` dans l'entité qui est la plus dépendante (ex: `UserProfile` possède une référence vers `User`).\n```typescript\n// user.entity.ts\n@OneToOne(() => UserProfile, (profile) => profile.user)\nprofile: UserProfile;\n\n// user-profile.entity.ts\n@OneToOne(() => User, (user) => user.profile)\n@JoinColumn() // La clé étrangère est dans la table user_profile\nuser: User;\n```",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Quelle est la différence entre `cascade: true` et `eager: true` dans le contexte d'une relation OneToOne ?",
+            "niveau": "hard",
+            "reponse": "`cascade: true` permet de propager automatiquement les opérations de persistance (save, update, delete) de l'entité parente à l'entité enfant. Par exemple, lors de la sauvegarde d'un `User`, son `UserProfile` sera également sauvegardé automatiquement. `eager: true` quant à lui, charge automatiquement l'entité associée à chaque requête (comme un `JOIN` implicite), ce qui évite d'avoir à faire un `leftJoinAndSelect()` manuellement. Attention, `eager: true` peut impacter les performances."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Migration du schéma pour SawaMart",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous travaillez sur le projet 'SawaMart' et devez créer les entités `User` et `UserProfile`. Vous utiliserez des UUID pour les identifiants et des timestamps automatiques. La base de données est déjà en place et vous devez gérer les migrations.</p>",
+      "images": [
+        "Structure de la table 'users' avec les colonnes id (UUID), email, password_hash, created_at, updated_at.",
+        "Structure de la table 'user_profiles' avec les colonnes id (UUID), first_name, last_name, phone, address, user_id (clé étrangère vers users)."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créez l'entité `User` complète. Elle doit contenir un identifiant UUID, un email unique, un mot de passe hashé, des timestamps `created_at` et `updated_at` automatiques, et une relation OneToOne vers `UserProfile`.",
+        "niveau": "hard",
+        "reponse": "```typescript\n// src/database/entities/user.entity.ts\nimport { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToOne, JoinColumn } from 'typeorm';\nimport { UserProfile } from './user-profile.entity';\n\n@Entity('users')\nexport class User {\n  @PrimaryGeneratedColumn('uuid')\n  id: string;\n\n  @Column({ unique: true })\n  email: string;\n\n  @Column({ name: 'password_hash' })\n  passwordHash: string;\n\n  @CreateDateColumn({ name: 'created_at' })\n  createdAt: Date;\n\n  @UpdateDateColumn({ name: 'updated_at' })\n  updatedAt: Date;\n\n  @OneToOne(() => UserProfile, (profile) => profile.user, { cascade: true })\n  profile: UserProfile;\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Écrivez la commande pour générer une migration à partir de cette entité et expliquez ce que fait la commande `migration:run`.",
+            "niveau": "medium",
+            "reponse": "La commande pour générer la migration est : `npx typeorm migration:generate -d ./ormconfig.ts ./src/migrations/CreateUserAndUserProfile`.\nCette commande compare l'état actuel du schéma de la base de données avec la définition des entités et génère un fichier de migration contenant les requêtes SQL `CREATE TABLE` pour les tables `users` et `user_profiles` ainsi que les contraintes de clé étrangère.\nLa commande `migration:run` exécute ensuite les migrations non encore appliquées, modifiant ainsi le schéma de la base de données de manière contrôlée et versionnée."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Ajoutez une colonne `status` de type enum à l'entité `User`. Les valeurs possibles sont 'active', 'inactive', 'suspended'. Expliquez comment TypeORM gère les enums en PostgreSQL.",
+        "niveau": "hard",
+        "reponse": "```typescript\n// Dans user.entity.ts\nexport enum UserStatus {\n  ACTIVE = 'active',\n  INACTIVE = 'inactive',\n  SUSPENDED = 'suspended',\n}\n\n@Entity('users')\nexport class User {\n  // ... autres colonnes\n  @Column({ \n    type: 'enum', \n    enum: UserStatus,\n    default: UserStatus.ACTIVE \n  })\n  status: UserStatus;\n}\n```\nTypeORM gère les enums en PostgreSQL en créant un type `enum` personnalisé dans la base de données. Il va générer une requête `CREATE TYPE users_status_enum AS ENUM('active', 'inactive', 'suspended')`, puis utiliser ce type pour la colonne. Cela assure l'intégrité des données au niveau de la base de données.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion des profils pour une application de livraison",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous développez l'API backend pour une application de livraison de repas à Douala, 'QuickDeliver'. Chaque utilisateur (livreur ou client) a un profil. Les livreurs ont des informations supplémentaires comme leur véhicule et leur zone de livraison. Vous devez modéliser cette hiérarchie de profils.</p>",
+      "images": [
+        "Diagramme de classes montrant une hiérarchie avec User comme classe parente, et CustomerProfile et DeliveryDriverProfile comme classes enfants.",
+        "Schéma de base de données avec une table 'users' et une table 'profiles' avec une colonne 'type' pour discriminer les profils."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez deux stratégies de modélisation pour gérer différents types de profils (Client et Livreur) en base de données avec TypeORM. Comparez les avantages et inconvénients de chaque approche.",
+        "niveau": "very hard",
+        "reponse": "**Stratégie 1: Tables séparées (Joined Table Inheritance)**\n- On crée une table `users` (commune), puis `customer_profiles` et `delivery_driver_profiles` avec leurs propres colonnes spécifiques, liées à `users` par une clé étrangère.\n- **Avantages**: Modélisation propre, pas de colonnes NULL, facile à étendre.\n- **Inconvénients**: Complexité des requêtes (jointures), plus difficile à gérer en code.\n\n**Stratégie 2: Table unique avec colonne de type (Single Table Inheritance)**\n- On crée une seule table `profiles` avec toutes les colonnes possibles et une colonne `type` ('customer', 'driver').\n- **Avantages**: Requêtes simples, performances.\n- **Inconvénients**: Colonnes NULL pour les champs non utilisés, moins scalable, peut devenir difficile à maintenir.\n\n**Recommandation**: Pour une application comme QuickDeliver, la stratégie des tables séparées est plus propre et scalable, surtout si les profils évoluent différemment.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Implémentez avec TypeORM la stratégie de votre choix pour l'entité `User` et les deux profils. Utilisez les décorateurs appropriés.",
+            "niveau": "very hard",
+            "reponse": "```typescript\n// user.entity.ts\nimport { Entity, PrimaryGeneratedColumn, Column, OneToOne } from 'typeorm';\nimport { CustomerProfile } from './customer-profile.entity';\nimport { DeliveryDriverProfile } from './delivery-driver-profile.entity';\n\n@Entity('users')\nexport class User {\n  @PrimaryGeneratedColumn('uuid')\n  id: string;\n\n  @Column({ unique: true })\n  email: string;\n\n  @Column()\n  passwordHash: string;\n\n  @OneToOne(() => CustomerProfile, (profile) => profile.user)\n  customerProfile?: CustomerProfile;\n\n  @OneToOne(() => DeliveryDriverProfile, (profile) => profile.user)\n  driverProfile?: DeliveryDriverProfile;\n}\n\n// customer-profile.entity.ts\n@Entity('customer_profiles')\nexport class CustomerProfile {\n  @PrimaryGeneratedColumn('uuid')\n  id: string;\n\n  @OneToOne(() => User)\n  @JoinColumn()\n  user: User;\n\n  @Column()\n  firstName: string;\n\n  @Column()\n  lastName: string;\n\n  @Column({ nullable: true })\n  deliveryAddress: string;\n}\n\n// delivery-driver-profile.entity.ts\n@Entity('delivery_driver_profiles')\nexport class DeliveryDriverProfile {\n  @PrimaryGeneratedColumn('uuid')\n  id: string;\n\n  @OneToOne(() => User)\n  @JoinColumn()\n  user: User;\n\n  @Column()\n  firstName: string;\n\n  @Column()\n  lastName: string;\n\n  @Column()\n  vehicleType: string;\n\n  @Column()\n  licensePlate: string;\n\n  @Column({ type: 'jsonb', nullable: true })\n  deliveryZones: string[]; // Liste des zones de livraison\n}\n```"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Comment garantir qu'un utilisateur ne peut avoir qu'un seul type de profil (soit client, soit livreur, mais pas les deux) au niveau de la base de données ? Proposez une solution.",
+        "niveau": "hard",
+        "reponse": "Plusieurs approches sont possibles :\n1. **Contrainte d'unicité** : Ajouter une colonne `user_id` dans chaque table de profil avec une contrainte `UNIQUE`. Cela empêche d'avoir deux profils du même type pour un utilisateur, mais pas d'avoir un profil client ET un profil livreur.\n2. **Table de profilage unique** : Utiliser l'approche Single Table Inheritance avec une colonne `type` et une colonne `user_id`. Ajouter une contrainte d'unicité sur `(user_id, type)` pour garantir qu'un utilisateur n'a qu'un seul profil de chaque type.\n3. **Contrainte de déclencheur (Trigger)** : Créer un trigger dans PostgreSQL qui vérifie lors de l'insertion qu'un utilisateur n'a pas déjà un autre type de profil.\nLa solution la plus propre est la troisième, mais elle est plus complexe à mettre en œuvre. En pratique, on peut combiner la première et la deuxième, ou gérer cette logique au niveau de l'application (service).",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

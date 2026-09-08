@@ -1,0 +1,99 @@
+[
+  {
+    "intitule": "Configuration des scripts de build et variables d’environnement",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Dans un projet Vite + React, vous devez configurer trois modes de build : <code>development</code>, <code>staging</code> et <code>production</code>. Chaque mode doit utiliser son propre fichier <code>.env</code> (<code>.env.development</code>, <code>.env.staging</code>, <code>.env.production</code>) avec une variable <code>VITE_API_URL</code> différente.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez les commandes npm pour lancer l’application en mode staging et pour builder en mode production. Expliquez comment Vite détermine quel fichier .env charger.",
+        "niveau": "easy",
+        "reponse": "Pour lancer en staging : `npm run dev -- --mode staging` (ou `vite --mode staging`). Pour builder en production : `npm run build` (par défaut mode production) ou `vite build --mode production`. Vite charge `.env` puis `.env.local`, puis `.env.[mode]` et `.env.[mode].local`. La variable `MODE` est utilisée pour déterminer le mode actif.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation du build (minification, tree-shaking, chunk splitting)",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Le bundle de votre application e-commerce est trop volumineux (2.5 Mo). Vous devez analyser la taille des chunks et appliquer des optimisations : activation du <strong>tree-shaking</strong>, découpage manuel des dépendances (React, UI, utils), et minification du code.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez comment configurer Vite pour : 1) visualiser la taille des chunks avec <code>rollup-plugin-visualizer</code>, 2) séparer les dépendances tierces (React, Shadcn/ui) dans des chunks distincts, 3) activer la minification Terser (ou esbuild) en production.",
+        "niveau": "medium",
+        "reponse": "Installation : `npm install -D rollup-plugin-visualizer`. Dans `vite.config.js` : `import { visualizer } from 'rollup-plugin-visualizer';`. Ajouter `plugins: [visualizer()]` et dans `build.rollupOptions.output.manualChunks` : `manualChunks: { react: ['react', 'react-dom'], ui: ['@shadcn/ui'], vendor: ['axios', 'zustand'] }`. La minification esbuild est activée par défaut en production (`build.minify: true`).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quelle est la différence entre tree-shaking et code-splitting ?",
+            "niveau": "medium",
+            "reponse": "Tree-shaking élimine le code mort (exports non utilisés) au moment du build. Code-splitting divise le bundle en plusieurs fichiers (chunks) chargés à la demande. Les deux améliorent les performances."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion des variables d’environnement pour les URL d’API",
+    "type": "competence",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Votre application React communique avec une API backend dont l’URL change selon l’environnement :<ul><li>Développement : <code>http://localhost:3000/api</code></li><li>Staging : <code>https://staging.api.example.com</code></li><li>Production : <code>https://api.example.com</code></li></ul>Vous devez configurer Axios pour utiliser la bonne URL selon le mode.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez les fichiers <code>.env.development</code>, <code>.env.staging</code> et <code>.env.production</code> ainsi que le code d’initialisation d’Axios qui lit la variable <code>VITE_API_URL</code>. Expliquez comment garantir que l’URL staging ne soit pas utilisée en production.",
+        "niveau": "easy",
+        "reponse": "Fichiers : `.env.development` : `VITE_API_URL=http://localhost:3000/api`. `.env.staging` : `VITE_API_URL=https://staging.api.example.com`. `.env.production` : `VITE_API_URL=https://api.example.com`. Dans `axios.js` : `const api = axios.create({ baseURL: import.meta.env.VITE_API_URL });`. La variable `import.meta.env.MODE` permet de savoir quel fichier a été chargé. En production, on ne doit jamais builder avec `--mode staging`.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Mise en place de CI/CD avec analyse du bundle",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous souhaitez intégrer dans votre pipeline GitHub Actions une étape qui analyse la taille du bundle après chaque build et échoue si la taille dépasse un seuil (ex: 1 Mo pour le chunk principal).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez un workflow GitHub Actions qui : installe les dépendances, build l’application, génère un rapport de taille avec <code>vite-bundle-visualizer</code> (ou <code>rollup-plugin-visualizer</code>), puis vérifie que la taille de <code>assets/index-*.js</code> est inférieure à 1 Mo. En cas de dépassement, faites échouer le workflow.",
+        "niveau": "hard",
+        "reponse": "```yaml\nname: Bundle Size Check\non: [push, pull_request]\njobs:\n  check-size:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/setup-node@v4\n        with: { node-version: 18 }\n      - run: npm ci\n      - run: npm run build\n      - run: npm install -D vite-bundle-visualizer\n      - run: npx vite-bundle-visualizer\n      - name: Check main bundle size\n        run: |\n          SIZE=$(stat -c%s dist/assets/index-*.js | sort -n | tail -1)\n          MAX_SIZE=1048576\n          if [ $SIZE -gt $MAX_SIZE ]; then\n            echo \"Bundle size $SIZE bytes exceeds limit $MAX_SIZE bytes\"\n            exit 1\n          fi\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Débogage d’un problème de variable d’environnement non chargée",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un développeur se plaint que sa variable <code>VITE_API_URL</code> n’est pas accessible dans l’application après avoir lancé <code>npm run dev</code>. Il a bien créé un fichier <code>.env</code> à la racine avec la ligne <code>VITE_API_URL=http://localhost:4000</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifiez les causes possibles de ce problème et proposez une procédure de diagnostic (vérifications à faire).",
+        "niveau": "medium",
+        "reponse": "Causes possibles : 1) Le fichier est nommé `.env.local` ou `.env.development` mais pas `.env`. 2) La variable n’est pas préfixée par `VITE_` (nécessaire pour Vite). 3) Le serveur de développement n’a pas été redémarré après création du fichier. 4) Accès incorrect via `process.env` au lieu de `import.meta.env`. 5) Le fichier `.env` est dans un sous-dossier ignoré. Diagnostic : vérifier le nom et l’emplacement, redémarrer Vite, logger `import.meta.env`, et s’assurer du préfixe.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

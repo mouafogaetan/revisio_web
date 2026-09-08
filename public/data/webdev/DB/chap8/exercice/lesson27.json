@@ -1,0 +1,120 @@
+[
+  {
+    "intitule": "Identifier le rôle d'un trigger",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Lisez la situation suivante :<br>Une application de gestion de stock doit enregistrer dans une table <code>historique_stock</code> chaque modification de la quantité d'un produit dans la table <code>produits</code>.</p><p>Répondez aux questions ci-dessous.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Définissez ce qu’est un trigger (déclencheur) dans une base de données.",
+        "niveau": "easy",
+        "reponse": "Un trigger est un ensemble d’instructions SQL qui s’exécute automatiquement avant ou après un événement (INSERT, UPDATE, DELETE) sur une table.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Quel type de trigger utiliseriez-vous pour cette situation ? Justifiez.",
+        "niveau": "medium",
+        "reponse": "Un trigger AFTER UPDATE sur la table produits, car on veut enregistrer l’historique après que la quantité ait été modifiée.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyser un trigger existant",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Voici un trigger SQL :</p><pre>CREATE TRIGGER maj_date_modif<br>BEFORE UPDATE ON clients<br>FOR EACH ROW<br>SET NEW.date_derniere_modif = NOW();</pre><p>Analysez ce code et répondez aux questions.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "À quel moment ce trigger s’exécute-t-il (BEFORE ou AFTER) et sur quelle table ?",
+        "niveau": "easy",
+        "reponse": "Il s’exécute BEFORE UPDATE sur la table clients.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez le rôle des mots-clés FOR EACH ROW et NEW.",
+        "niveau": "medium",
+        "reponse": "FOR EACH ROW signifie que le trigger s’exécute pour chaque ligne modifiée. NEW représente la nouvelle valeur de la ligne après la mise à jour.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposez une amélioration pour qu’il n’exécute la mise à jour que si certaines colonnes importantes (exemple : email) sont modifiées.",
+        "niveau": "hard",
+        "reponse": "On peut ajouter une condition : IF OLD.email != NEW.email THEN SET NEW.date_derniere_modif = NOW(); END IF;",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Créer un trigger pour l’audit des suppressions",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous gérez une base de données d’une bibliothèque.<br>La table <code>emprunts</code> contient : <code>id_emprunt, id_lecteur, id_livre, date_emprunt, date_retour</code>.<br>On souhaite conserver dans une table <code>archive_suppressions</code> (id_emprunt, id_lecteur, id_livre, date_suppression, action) chaque suppression d’un emprunt.</p><p>Créez le trigger correspondant.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédigez la commande SQL complète pour créer le trigger appelé <code>audit_suppression_emprunt</code>.",
+        "niveau": "hard",
+        "reponse": "CREATE TRIGGER audit_suppression_emprunt\nAFTER DELETE ON emprunts\nFOR EACH ROW\nBEGIN\n  INSERT INTO archive_suppressions (id_emprunt, id_lecteur, id_livre, date_suppression, action)\n  VALUES (OLD.id_emprunt, OLD.id_lecteur, OLD.id_livre, NOW(), 'SUPPRESSION');\nEND;",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Justifiez l’utilisation de OLD plutôt que NEW dans ce trigger.",
+        "niveau": "medium",
+        "reponse": "OLD contient les valeurs avant suppression. NEW n’existe pas dans un trigger AFTER DELETE car la ligne n’existe plus après l’événement.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Éviter les incohérences avec un trigger BEFORE INSERT",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Dans une boutique en ligne, un article ne peut pas être commandé s’il n’est pas en stock.<br>Tables : <code>commandes(id_commande, id_article, quantite)</code> et <code>articles(id_article, stock)</code>.</p><p>Créez un trigger BEFORE INSERT sur <code>commandes</code> pour empêcher l’ajout si <code>stock < quantite</code>. En cas d’échec, affichez un message d’erreur personnalisé.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez le code SQL du trigger <code>verifier_stock_avant_commande</code>.",
+        "niveau": "very hard",
+        "reponse": "DELIMITER $$\nCREATE TRIGGER verifier_stock_avant_commande\nBEFORE INSERT ON commandes\nFOR EACH ROW\nBEGIN\n  DECLARE stock_disponible INT;\n  SELECT stock INTO stock_disponible FROM articles WHERE id_article = NEW.id_article;\n  IF stock_disponible < NEW.quantite THEN\n    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Stock insuffisant pour cette commande';\n  END IF;\nEND$$\nDELIMITER ;",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Comparer trigger, procédure stockée et contrainte CHECK",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>On souhaite qu’une table <code>employes</code> n’accepte pas les salaires négatifs ni les augmentations de plus de 20% en une seule mise à jour.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Comparez l’utilisation d’un trigger, d’une procédure stockée et d’une contrainte CHECK pour ce besoin.",
+        "niveau": "very hard",
+        "reponse": "- CHECK : simple pour salaire >=0 mais ne peut pas comparer OLD et NEW.\n- Trigger : peut comparer OLD.salaire et NEW.salaire, idéal pour la règle des 20%.\n- Procédure stockée : ne s’exécute pas automatiquement, nécessite un appel explicite → moins fiable pour l’intégrité.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

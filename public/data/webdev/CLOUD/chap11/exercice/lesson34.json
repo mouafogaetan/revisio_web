@@ -1,0 +1,131 @@
+[
+  {
+    "intitule": "Déploiement d'une infrastructure scalable avec Terraform",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous êtes consultant Cloud pour une start-up camerounaise (Douala) qui développe une application e-commerce. L’application doit supporter des pics de charge (Black Friday, fin d’année). L’équipe technique souhaite automatiser le déploiement de son infrastructure sur AWS en utilisant Terraform. L’architecture cible comprend :</p><ul><li>Un VPC avec 2 sous-réseaux publics et 2 privés</li><li>Un load balancer (ALB)</li><li>Un cluster ECS (Elastic Container Service) avec service auto-scalable</li><li>Une base de données RDS (PostgreSQL) dans les sous-réseaux privés</li></ul><p>On vous demande de concevoir les fichiers Terraform correspondants et d’expliquer le workflow.</p>",
+      "images": [
+        "Diagramme architecture AWS ECS avec VPC, ALB, RDS, Auto Scaling",
+        "Workflow Terraform init plan apply destroy"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez le contenu minimal du fichier `main.tf` pour les ressources listées. Justifiez chaque bloc de ressource.",
+        "niveau": "hard",
+        "reponse": "Le fichier `main.tf` doit contenir :\n- Provider AWS avec région (ex: `eu-west-3` Paris).\n- Ressource `aws_vpc` avec CIDR `10.0.0.0/16`.\n- Ressources `aws_subnet` (2 publics, 2 privés) avec tags `Tier` = `public`/`private`.\n- Ressource `aws_internet_gateway` attachée au VPC.\n- Ressources `aws_route_table` et `aws_route_table_association` pour les sous-réseaux publics (route `0.0.0.0/0` → IGW).\n- Ressource `aws_security_group` pour ALB (ports 80/443) et pour ECS (port 3000) et pour RDS (port 5432).\n- Ressource `aws_lb` (Application Load Balancer) avec sous-réseaux publics.\n- Ressource `aws_lb_listener` et `aws_lb_target_group`.\n- Ressource `aws_ecs_cluster`.\n- Ressource `aws_ecs_task_definition` (image Docker, port mapping, variables d’env pour RDS).\n- Ressource `aws_ecs_service` avec `load_balancer` et `desired_count` + `autoscaling_target`.\n- Ressource `aws_db_subnet_group` avec les sous-réseaux privés.\n- Ressource `aws_db_instance` (PostgreSQL, `db.t3.micro`, `multi_az` en prod).\n- Ressource `aws_appautoscaling_target` et `aws_appautoscaling_policy` (scaling basé sur CPU).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez à quoi sert la commande `terraform plan` et quel est son intérêt avant un déploiement.",
+            "niveau": "medium",
+            "reponse": "`terraform plan` calcule les actions nécessaires pour atteindre l’état désiré (création, modification, destruction de ressources). Il affiche un diff sans appliquer les changements. Son intérêt est de valider l’impact du code Terraform avant toute modification réelle de l’infrastructure, évitant ainsi des erreurs coûteuses."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Proposez une commande pour formater automatiquement tous les fichiers `.tf` du projet.",
+            "niveau": "easy",
+            "reponse": "`terraform fmt -recursive`"
+          },
+          {
+            "numero": "1.c",
+            "texte": "Sous quel format sont stockées les données sensibles (mots de passe, clés API) dans Terraform ? Quelle alternative sécurisée recommandez-vous ?",
+            "niveau": "medium",
+            "reponse": "Par défaut, les secrets apparaissent en clair dans le fichier `terraform.tfstate` et les logs. L’alternative sécurisée est d’utiliser un gestionnaire de secrets comme AWS Secrets Manager, Azure Key Vault ou HashiCorp Vault, et d’y faire référence via `data` source ou variables `sensitive`."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Comparaison des services de conteneurs managés",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un élève hésite entre utiliser AWS ECS (Elastic Container Service) avec AWS Fargate, ou bien Azure Container Instances (ACI), ou encore Google Cloud Run, pour déployer une API Node.js qui reçoit des requêtes sporadiques (quelques centaines par heure).</p><p><strong>Consigne :</strong> Comparez ces trois services selon les critères : modèle de tarification, limite de timeout, facilité d’intégration CI/CD, et gestion du scaling à zéro.</p>",
+      "images": [
+        "Logo AWS ECS Fargate, Azure Container Instances, Google Cloud Run",
+        "Tableau comparatif serverless containers"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Distinguez le modèle de paiement entre ECS Fargate, Azure Container Instances et Cloud Run.",
+        "niveau": "medium",
+        "reponse": "- AWS Fargate : paiement à la seconde pour la vCPU et la mémoire allouées, avec un minimum d’une minute.\n- Azure Container Instances : paiement à la seconde pour les ressources allouées, facturation au démarrage jusqu’à l’arrêt.\n- Google Cloud Run : paiement à la milliseconde pour la vCPU et mémoire consommées, avec une tranche gratuite mensuelle (2 millions de requêtes).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Identifiez le service qui scale à zéro automatiquement et décrivez l’avantage pour une API sporadique.",
+            "niveau": "easy",
+            "reponse": "Google Cloud Run scale à zéro (aucune instance quand aucune requête). Azure Container Instances ne scale pas automatiquement à zéro (il faut arrêter le conteneur). AWS Fargate peut scale à zéro si on utilise des services de type « scaling to zero » (non natif sur ECS, mais possible avec certaines configurations ECS Service connecté à des règles). L’avantage est de ne payer aucune ressource quand l’API n’est pas sollicitée."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Déterminez quel service impose un timeout maximum de requête le plus long pour une tâche de traitement de 25 minutes.",
+            "niveau": "hard",
+            "reponse": "- AWS Fargate : pas de timeout HTTP imposé par le service, mais le load balancer a un timeout par défaut de 60s (configurable jusqu’à 4000s). Une tâche peut tourner indéfiniment.\n- Azure Container Instances : pas de timeout sur la durée de vie du conteneur, mais les requêtes HTTP via un frontend (comme Application Gateway) ont des limites.\n- Google Cloud Run : timeout maximum de 60 minutes (3600s).\nDonc pour 25 minutes, les trois peuvent fonctionner, mais Cloud Run est limité à 60 minutes maximum."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation des coûts Terraform dans un projet étudiant",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Un groupe d’élèves de l’école 241Tech (Cameroun) utilise Terraform pour déployer des ressources AWS dans le cadre d’un projet de déploiement continu. Ils laissent souvent leur infrastructure allumée la nuit et le week-end, ce qui génère des coûts inutiles. Leur stack comprend : 3 instances EC2 t2.micro, 1 RDS db.t3.micro, 1 load balancer, 1 bucket S3.</p>",
+      "images": [
+        "Graphique coût horaire EC2 t2.micro vs RDS db.t3.micro",
+        "Exemple de script cron pour Terraform destroy"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez comment automatiser la destruction de l’infrastructure hors des heures de travail (20h - 8h) et les week-ends en utilisant GitHub Actions et Terraform.",
+        "niveau": "hard",
+        "reponse": "On peut créer un workflow GitHub Actions avec deux jobs :\n- Un job planifié (cron) à 20h qui exécute `terraform destroy -auto-approve`.\n- Un job planifié à 8h qui exécute `terraform apply -auto-approve`.\nIl faut stocker l’état Terraform dans un backend distant (S3 + DynamoDB) pour éviter les conflits. Les secrets AWS sont stockés dans GitHub Secrets.\nExemple de cron : `schedule: - cron: '0 20 * * 1-5'` pour 20h en semaine, et `cron: '0 8 * * 1-5'` pour 8h.\nLe week-end : on peut prévoir une destruction le vendredi 20h et reconstruction le lundi 8h.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Listez deux risques principaux de cette automatisation et proposez une mitigation.",
+            "niveau": "medium",
+            "reponse": "Risque 1 : Destruction accidentelle d’une base de données contenant des données non sauvegardées. Mitigation : créer un snapshot automatique du RDS avant destruction (via `aws_db_instance` avec `final_snapshot_identifier`).\nRisque 2 : Un élève applique des changements pendant la nuit, l’état local est désynchronisé. Mitigation : forcer l’utilisation du backend distant et ajouter un verrouillage (DynamoDB) pour empêcher deux modifications simultanées."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Quelle commande Terraform permet de détruire uniquement les instances EC2 mais pas la base de données ?",
+            "niveau": "medium",
+            "reponse": "`terraform destroy -target aws_instance.example` (plusieurs fois) ou bien `terraform plan -destroy -target=aws_instance.example` puis `terraform apply` avec un fichier de plan. Cependant, il est plus propre d’utiliser `terraform state rm` pour retirer la ressource du state avant destruction, mais cela peut casser les dépendances."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Conception d’un pipeline CI/CD avec Terraform et GitHub Actions",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous devez implémenter un pipeline CI/CD complet pour une application React + Node.js déployée sur AWS ECS (Fargate). Le pipeline doit :</p><ul><li>Build et push de l’image Docker (frontend et backend) sur ECR (Amazon Elastic Container Registry)</li><li>Exécuter `terraform plan` sur chaque Pull Request et commenter le résultat sur GitHub</li><li>Exécuter `terraform apply` automatiquement lorsqu’on push sur la branche `main`</li><li>Gérer les environnements `dev` (gratuit, détruit la nuit) et `prod` (non détruit)</li></ul><p>Fournissez un extrait du fichier YAML de GitHub Actions et expliquez chaque étape.</p>",
+      "images": [
+        "Schéma pipeline CI/CD GitHub Actions vers AWS ECS",
+        "Exemple de commentaire Terraform plan sur GitHub PR"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédigez le workflow YAML pour l’environnement `dev` uniquement, incluant les jobs de build Docker, terraform plan sur PR et terraform apply sur main.",
+        "niveau": "very hard",
+        "reponse": "```yaml\nname: Terraform CI/CD Dev\n\non:\n  pull_request:\n    paths:\n      - 'terraform/dev/**'\n      - 'src/**'\n  push:\n    branches: [ main ]\n    paths:\n      - 'terraform/dev/**'\n      - 'src/**'\n\njobs:\n  build-and-push:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v3\n      - name: Configure AWS credentials\n        uses: aws-actions/configure-aws-credentials@v2\n        with:\n          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}\n          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}\n          aws-region: eu-west-3\n      - name: Login to Amazon ECR\n        id: login-ecr\n        uses: aws-actions/amazon-ecr-login@v1\n      - name: Build, tag, and push image\n        env:\n          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}\n          ECR_REPOSITORY: my-app\n          IMAGE_TAG: ${{ github.sha }}\n        run: |\n          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .\n          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG\n  terraform-plan:\n    if: github.event_name == 'pull_request'\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v3\n      - name: Setup Terraform\n        uses: hashicorp/setup-terraform@v2\n      - name: Terraform Init\n        run: terraform -chdir=terraform/dev init\n      - name: Terraform Plan\n        id: plan\n        run: terraform -chdir=terraform/dev plan -var=\"image_tag=${{ github.sha }}\"\n      - name: Comment PR\n        uses: actions/github-script@v6\n        with:\n          script: |\n            const output = `## Terraform Plan\n            \\`\\`\\`\n            ${{ steps.plan.outputs.stdout }}\n            \\`\\`\\`\n            `;\n            github.rest.issues.createComment({\n              issue_number: context.issue.number,\n              owner: context.repo.owner,\n              repo: context.repo.repo,\n              body: output\n            });\n  terraform-apply:\n    if: github.event_name == 'push' && github.ref == 'refs/heads/main'\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v3\n      - name: Setup Terraform\n        uses: hashicorp/setup-terraform@v2\n      - name: Terraform Init\n        run: terraform -chdir=terraform/dev init\n      - name: Terraform Apply\n        run: terraform -chdir=terraform/dev apply -auto-approve -var=\"image_tag=${{ github.sha }}\"\n```",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

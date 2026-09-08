@@ -1,0 +1,92 @@
+[
+  {
+    "intitule": "Comparaison des approches : Déclarative vs Impérative",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous êtes consultant DevOps pour une entreprise camerounaise (Digital Services SA). L'équipe infrastructure actuelle utilise des scripts shell et des commandes manuelles pour configurer les serveurs (approche impérative). Ils souhaitent passer à une approche plus moderne. Comparez les deux approches en vous basant sur : la reproductibilité, la gestion de l'état, et l'idempotence. Justifiez pourquoi l'approche déclarative (comme Terraform) est souvent préférée pour le cloud.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Comparez les approches impérative et déclarative en utilisant des exemples concrets pour chacun des trois critères (reproductibilité, gestion d'état, idempotence).",
+        "niveau": "medium",
+        "reponse": "**Approche Impérative (Scripts)** :\n- **Reproductibilité** : Faible. Dépend de l'état actuel du système (ex: `apt install nginx` échoue si déja installé).\n- **Gestion d'état** : Manuelle ou inexistante. Aucun fichier ne décrit l'état souhaité.\n- **Idempotence** : Non garantie. Exécuter deux fois le même script peut causer des erreurs.\n\n**Approche Déclarative (Terraform)** :\n- **Reproductibilité** : Élevée. Le fichier .tf décrit l'état cible.\n- **Gestion d'état** : Automatique via le fichier terraform.tfstate.\n- **Idempotence** : Oui. `terraform apply` ne fait rien si l'état correspond déjà au code.\n\n**Justification** : L'approche déclarative est préférée sur le cloud car elle permet le versionnage, la collaboration, et réduit les erreurs humaines.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Application pratique avec Terraform",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>En tant qu'enseignant à l'Université de Yaoundé I, vous devez provisionner des ressources pour former 30 étudiants à DevOps. Vous disposez d'un budget limité. Utilisez Terraform pour créer un bucket S3 (stockage) et une instance EC2 t2.micro (calcul). Rédigez le fichier <code>main.tf</code> correspondant (provider AWS, ressources, variables pour la région et le nom du bucket). Incluez les commentaires expliquant le rôle de chaque bloc. Expliquez la commande à exécuter pour visualiser les changements avant application.</p>",
+      "images": [
+        "Diagramme simple d'une architecture AWS avec EC2 et S3"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le code Terraform (HCL) complet pour provisionner un bucket S3 et une instance EC2. Utilisez une variable pour la région AWS et une autre pour le nom du bucket (qui doit être unique globalement).",
+        "niveau": "hard",
+        "reponse": "```hcl\n# Variables\nvariable \"aws_region\" {\n  description = \"Région AWS\"\n  default     = \"eu-west-3\" # Paris\n}\n\nvariable \"bucket_name\" {\n  description = \"Nom unique du bucket S3\"\n  type        = string\n}\n\n# Provider\nprovider \"aws\" {\n  region = var.aws_region\n}\n\n# Ressource S3\nresource \"aws_s3_bucket\" \"student_bucket\" {\n  bucket = var.bucket_name\n  acl    = \"private\"\n  tags = {\n    Name        = \"Formation DevOps\"\n    Environment = \"Training\"\n  }\n}\n\n# Ressource EC2\nresource \"aws_instance\" \"student_server\" {\n  ami           = \"ami-0c55b159cbfafe1f0\" # Amazon Linux 2 (us-east-1)\n  instance_type = \"t2.micro\"\n  tags = {\n    Name = \"Student-DevOps-Server\"\n  }\n}\n```\n\nCommande pour visualiser les changements :\n```bash\nterraform plan\n```\nCela montre les ajouts, modifications ou suppressions sans les appliquer.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez ce qu'est l'idempotence dans ce contexte et comment Terraform l'assure grâce au fichier d'état (terraform.tfstate).",
+            "niveau": "medium",
+            "reponse": "L'idempotence signifie qu'appliquer plusieurs fois la même configuration ne change pas le résultat après la première exécution. Terraform compare l'état réel (dans .tfstate) avec le code souhaité. Si l'état correspond déjà, `apply` ne fait rien. Si un développeur supprime l'instance EC2 manuellement, Terraform la recréera lors du prochain `apply` pour rétablir l'état souhaité."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion des fichiers d'état et backend distant",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous travaillez en équipe de 4 personnes sur le même projet d'infrastructure. Le fichier <code>terraform.tfstate</code> est actuellement stocké en local. Cela pose des problèmes de conflits et de verrouillage. Proposez une solution en utilisant un backend distant (AWS S3 + DynamoDB). Rédigez la configuration Terraform correspondante et expliquez comment cela résout les problèmes de collaboration.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédigez le bloc `backend` Terraform pour stocker l'état dans un bucket S3 (nom : `mon-formation-tfstate`) avec verrouillage via DynamoDB (table `terraform-locks`).",
+        "niveau": "hard",
+        "reponse": "```hcl\nterraform {\n  backend \"s3\" {\n    bucket         = \"mon-formation-tfstate\"\n    key            = \"projet/terraform.tfstate\"\n    region         = \"eu-west-3\"\n    dynamodb_table = \"terraform-locks\"\n    encrypt        = true\n  }\n}\n```\n**Explication** :\n- **S3** : stockage centralisé, versionné, accessible à toute l'équipe.\n- **DynamoDB** : assure le verrouillage (lock) pour éviter que deux personnes exécutent `apply` en même temps.\n- Plus de conflits locaux, meilleure sécurité (chiffrement).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comparez le workflow `terraform plan` et `terraform apply` avec un backend distant versus local. Quelles précautions supplémentaires doit prendre l'équipe ?",
+            "niveau": "medium",
+            "reponse": "Avec backend distant :\n- `plan` lit l'état distant (plus lent mais cohérent).\n- `apply` verrouille automatiquement la table DynamoDB.\n- Précautions :\n  1. Toujours exécuter `plan` avant `apply`.\n  2. Utiliser des branches Git différentes par feature.\n  3. Configurer des droits IAM stricts pour le bucket et la table."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Évaluer l'impact financier d'une infrastructure non optimisée",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Une startup camerounaise utilise Terraform pour déployer 10 instances EC2 <code>t2.large</code> (0.0928 $/h) en continu, 24h/24, 7j/7. En analysant les métriques, vous constatez que l'utilisation CPU ne dépasse jamais 10%. Proposez une optimisation en modifiant le code Terraform (utilisation de <code>t2.micro</code> + auto-scaling group + instance spot). Calculez les économies mensuelles (sur 30 jours) et réécrivez la ressource modifiée.</p>",
+      "images": [
+        "Graphique montrant une faible utilisation CPU sur 24 heures"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Calculez le coût actuel mensuel des 10 instances t2.large. Ensuite, proposez une configuration Terraform utilisant un auto-scaling group avec des instances spot t2.micro (prix spot moyen = 0,004 $/h) et un maximum de 10 instances, mais un desired capacity de 3 la nuit et 8 le jour. Calculez le nouveau coût estimé (moyenne 5 instances actives sur 24h).",
+        "niveau": "very hard",
+        "reponse": "**Coût actuel** :\n10 instances * 0.0928 $/h * 24h * 30j = 10 * 0.0928 * 720 = 668,16 $/mois.\n\n**Optimisation proposée** :\n- Prix spot t2.micro = 0,004 $/h (économies ~95%).\n- Moyenne 5 instances actives sur 24h.\nNouveau coût = 5 * 0.004 * 720 = 14,40 $/mois.\n\n**Code Terraform (extrait)** :\n```hcl\nresource \"aws_autoscaling_group\" \"optimized\" {\n  desired_capacity     = 5\n  max_size             = 10\n  min_size             = 2\n  vpc_zone_identifier  = [\"subnet-abc123\"]\n  \n  mixed_instances_policy {\n    instances_distribution {\n      on_demand_percentage_above_base_capacity = 0 # 100% spot\n    }\n    launch_template {\n      launch_template_specification {\n        launch_template_id = aws_launch_template.app.id\n      }\n    }\n  }\n}\n\nresource \"aws_autoscaling_schedule\" \"night\" {\n  scheduled_action_name  = \"reduce-at-night\"\n  min_size               = 2\n  max_size               = 5\n  desired_capacity       = 3\n  recurrence             = \"0 22 * * *\"  # 22h chaque jour\n}\n\nresource \"aws_autoscaling_schedule\" \"day\" {\n  scheduled_action_name  = \"increase-day\"\n  min_size               = 5\n  max_size               = 10\n  desired_capacity       = 8\n  recurrence             = \"0 8 * * *\"   # 8h chaque jour\n}\n```\n**Économie** = 668,16 - 14,40 = 653,76 $/mois (réduction de 98%).",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

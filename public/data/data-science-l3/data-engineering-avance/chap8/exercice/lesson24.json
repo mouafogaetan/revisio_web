@@ -1,0 +1,131 @@
+[
+  {
+    "intitule": "Architecture d'un Pipeline de Streaming avec Kafka et Flink",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Le traitement de flux (stream processing) est au cœur des architectures data modernes. Apache Kafka et Apache Flink sont deux technologies complémentaires : Kafka pour la messagerie et la persistance des événements, Flink pour le traitement en temps réel.</p><p>L'objectif de cet exercice est de vérifier votre compréhension des rôles respectifs de ces deux outils et de la manière dont ils interagissent dans un pipeline de streaming.</p>",
+      "images": [
+        "Diagramme d'architecture d'un pipeline de streaming avec des flèches indiquant le flux de données : une source de données (ex: application mobile) envoie des événements à un broker Kafka (Topic: 'transactions'). Kafka est connecté à un job Apache Flink qui traite les données (ex: fenêtrage, agrégations). Flink écrit ensuite les résultats dans un sink (ex: base de données, Data Warehouse)."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez le rôle d'Apache Kafka dans un pipeline de traitement de flux et ses composants principaux.",
+        "niveau": "medium",
+        "reponse": "Apache Kafka est un système de messagerie distribué conçu pour la gestion de flux de données à haut débit. Ses composants principaux sont :\n- **Producer** : Une application qui publie des messages (événements) dans un topic Kafka.\n- **Consumer** : Une application qui s'abonne à un ou plusieurs topics pour lire les messages.\n- **Topic** : Une catégorie logique où les messages sont publiés. Chaque topic est divisé en plusieurs **partitions** pour permettre le parallélisme.\n- **Broker** : Un serveur Kafka qui stocke les données et gère les requêtes des producers et consumers.\n- **ZooKeeper/KRaft** : Service de coordination qui gère les métadonnées du cluster (désormais remplacé par KRaft dans les versions récentes).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quel est le rôle des partitions dans un topic Kafka ?",
+            "niveau": "easy",
+            "reponse": "Les partitions permettent de distribuer la charge des données sur plusieurs brokers et de garantir l'ordre des messages au sein d'une partition. Elles permettent également une consommation parallèle, ce qui augmente le débit global du système."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez en quoi Apache Flink est différent d'un simple consumer Kafka dans le contexte d'un pipeline de données.",
+        "niveau": "hard",
+        "reponse": "Un simple consumer Kafka lit les messages d'un topic et peut les traiter un par un, mais ne gère pas les concepts avancés comme :\n- **Le traitement par fenêtres (windows)** : Flink permet de regrouper les événements par fenêtres temporelles (ex: toutes les 5 minutes) pour effectuer des agrégations.\n- **La gestion d'état (stateful processing)** : Flink conserve un état entre les événements, ce qui est essentiel pour les calculs complexes (ex: compteurs, moyenne glissante).\n- **Le temps d'événement (event-time)** : Flink peut traiter les données en fonction de l'horodatage de l'événement (plutôt que de l'heure de réception), ce qui est crucial pour les données asynchrones.\n- **Les garanties de traitement (exactly-once semantics)** : Flink assure que chaque événement est traité exactement une fois, même en cas de panne.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Traitement de Flux pour la Détection de Fraude Bancaire",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous êtes Data Engineer dans une banque camerounaise, <strong>AfriBank</strong>. La banque souhaite mettre en place un système de détection de fraude en temps réel sur les transactions par carte bancaire.</p><p>Actuellement, les transactions sont enregistrées dans une base de données relationnelle, et des rapports de fraude sont générés quotidiennement par un batch (traitement par lots). Cette approche est trop lente : des transactions frauduleuses sont validées avant que le système ne les détecte.</p><p>Votre mission est de concevoir un pipeline de streaming qui permettra de détecter et d'alerter en temps réel les transactions suspectes.</p>",
+      "images": [
+        "Schéma d'un pipeline de streaming pour la détection de fraude : un téléphone mobile ou une carte bancaire envoie une transaction au topic Kafka 'fraud-transactions'. Un job Flink lit ce topic, applique des règles de détection (ex: montant > 1000€, localisation inhabituelle) et écrit les transactions suspectes dans un topic Kafka 'fraud-alerts'. Un consumer (ex: application de notification) lit ce topic et envoie une alerte à l'équipe de sécurité."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Justifiez l'utilisation d'un pipeline de streaming (Kafka + Flink) plutôt qu'un traitement par lots (batch) pour ce cas d'usage.",
+        "niveau": "medium",
+        "reponse": "L'utilisation d'un pipeline de streaming est justifiée par les besoins de latence et de réactivité de la détection de fraude :\n- **Latence ultra-faible** : Les transactions doivent être analysées en quelques millisecondes après leur réception pour bloquer une fraude potentielle avant qu'elle ne soit validée.\n- **Réactivité immédiate** : Le streaming permet de déclencher des alertes instantanément, contrairement au batch qui a un délai (daily).\n- **Flux continu de données** : Les transactions bancaires arrivent en continu, il est plus naturel de les traiter en streaming plutôt que de les grouper par lots.\n- **Détection de motifs complexes** : Le streaming permet de détecter des motifs temporels (ex: plusieurs transactions de montants anormaux en quelques secondes) qui sont difficiles à capturer en batch.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Décrivez l'architecture que vous mettriez en place, en détaillant les composants suivants : source de données, ingestion, traitement, et sink. Justifiez vos choix.",
+        "niveau": "hard",
+        "reponse": "**Architecture proposée :**\n1.  **Source de données** : L'API de paiement de la banque envoie chaque transaction (JSON) à un producer Kafka dès qu'elle est initiée.\n2.  **Ingestion (Kafka)** :\n    - **Topic** : `transactions-raw` avec 3 partitions pour permettre le parallélisme.\n    - **Config** : Le broker Kafka est configuré avec une rétention de 7 jours pour permettre un rejeu en cas de problème.\n    - **Producer** : L'API de paiement utilise un producer Kafka avec `acks=all` pour garantir qu'aucune transaction n'est perdue.\n3.  **Traitement (Apache Flink)** :\n    - **Source** : Le job Flink s'abonne au topic `transactions-raw` et lit les transactions en tant que `DataStream`.\n    - **Fenêtrage** : Utilisation de fenêtres glissantes (sliding windows) de 1 minute pour détecter les pics d'activité.\n    - **Règles de détection** : Plusieurs règles sont appliquées :\n        - Montant > 1 000 000 FCFA (seuil élevé).\n        - Transaction dans un pays différent du pays habituel du client (géolocalisation).\n        - Plus de 5 transactions dans un intervalle de 5 minutes (volume anormal).\n        - Une requête à une base de données Redis (cache) pour vérifier la liste noire des commerçants.\n    - **Sortie** : Les transactions suspectes sont envoyées dans un topic Kafka `fraud-alerts`. Un log est également écrit dans un Data Lake (S3) pour audit.\n4.  **Sink (Action)** :\n    - Un consumer Kafka (service de notification) lit le topic `fraud-alerts` et envoie un SMS ou email à l'équipe de sécurité.\n    - Un autre sink charge les alertes dans une base de données PostgreSQL pour le suivi.\n\n**Justification :**\n- **Kafka** : Choix pour sa haute disponibilité, sa durabilité (persistance) et sa capacité à gérer le rejeu des données.\n- **Flink** : Choix pour sa gestion avancée du temps d'événement, son support du processing stateful, et sa capacité à traiter des volumes importants avec des garanties exactly-once.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Une des règles de détection consiste à identifier les transactions dont le montant est anormalement élevé par rapport à l'historique des 30 derniers jours du client. Expliquez comment vous implémenteriez cette règle avec Flink.",
+        "niveau": "very hard",
+        "reponse": "Pour implémenter cette règle, il faut maintenir un état historique pour chaque client, ce qui est une tâche stateful typique de Flink. Voici une approche :\n\n1.  **KeyBy** : On regroupe les transactions par `client_id` avec `stream.keyBy(transaction -> transaction.getClientId())`.\n\n2.  **Gestion d'état** : On utilise un `ValueState` ou un `MapState` qui stocke la liste (ou un résumé) des transactions des 30 derniers jours. Concrètement :\n    -   **State** : `MapState<LocalDateTime, Double>` (ou une structure optimisée comme une table de hachage) pour stocker l'historique des montants par date. On peut aussi stocker la moyenne et l'écart-type mis à jour de manière incrémentale pour éviter de stocker toutes les données.\n    -   **Fenêtres** : Au lieu d'une fenêtre fixe de 30 jours (qui pourrait être lourde), on peut utiliser un `ProcessFunction` qui reçoit chaque événement et gère la purge de l'état.\n\n3.  **Processus dans un ProcessFunction** :\n    -   À l'arrivée d'une transaction, on ajoute son montant à l'état.\n    -   On calcule la moyenne et l'écart-type des 30 derniers jours. On peut stocker ces métriques dans un état séparé (`ValueState<Statistics>`) pour éviter de recalculer à chaque fois.\n    -   On purge les données de l'état qui sont plus vieilles que 30 jours (en utilisant un timestamp ou un `Timer`).\n    -   On compare le montant de la transaction à la moyenne + 3 * écart-type (méthode des outliers). Si le montant est supérieur, on émet une alerte.\n    -   On met à jour les métriques statistiques avec la nouvelle transaction (moyenne glissante).\n\n4.  **Checkpoints** : On configure des checkpoints dans Flink pour sauvegarder l'état régulièrement (ex: toutes les 10 secondes). En cas de panne, Flink peut restaurer l'état et reprendre le traitement sans perte de données.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Comparaison des Moteurs de Streaming",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Apache Flink et Apache Spark Structured Streaming sont deux moteurs populaires pour le traitement de flux (stream processing). Bien qu'ils partagent des objectifs communs, ils présentent des différences fondamentales qui les rendent plus ou moins adaptés selon le cas d'usage.</p><p>Cet exercice vous permet de vérifier votre capacité à comparer ces technologies.</p>",
+      "images": [
+        "Tableau comparatif en deux colonnes : Apache Flink et Apache Spark Streaming. Des lignes avec des icônes pour les critères de comparaison : Modèle de traitement (Natifs vs Micro-batch), Latence (Très faible vs Moyenne), Gestion d'état (Native vs Limitée)."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analyser les différences fondamentales entre Apache Flink et Apache Spark Structured Streaming en termes de : (a) modèle de traitement, (b) latence, (c) gestion d'état.",
+        "niveau": "medium",
+        "reponse": "a. **Modèle de traitement** :\n   - **Flink** : Est un moteur de traitement de flux <strong>natif</strong>. Il traite les données événement par événement, ce qui permet un traitement continu et réactif.\n   - **Spark Structured Streaming** : Est basé sur le modèle <strong>micro-batch</strong>. Il découpe le flux de données en petites séries de données (micro-batches) et les traite comme de petits batchs. Spark 3+ propose aussi le mode 'continuous processing' (expérimental) pour une latence plus faible, mais le mode micro-batch reste le plus utilisé.\n\nb. **Latence** :\n   - **Flink** : Offre une latence <strong>très faible</strong> (sub-second), de l'ordre de quelques millisecondes, ce qui le rend adapté aux cas d'usage nécessitant une réactivité immédiate (ex: trading financier, détection de fraude).\n   - **Spark Structured Streaming** : A une latence <strong>plus élevée</strong> (généralement de l'ordre de quelques centaines de millisecondes à quelques secondes) en mode micro-batch, car il doit attendre que le batch soit complet avant de le traiter.\n\nc. **Gestion d'état (State management)** :\n   - **Flink** : La gestion d'état est <strong>native</strong> et intégrée. Flink offre des primitives d'état (ex: `ValueState`, `MapState`) avec des garanties exactly-once. L'état peut être sauvegardé (checkpoint) et restauré en cas de panne.\n   - **Spark Structured Streaming** : La gestion d'état est <strong>limitée</strong> et se fait principalement via les `mapGroupsWithState` et `flatMapGroupsWithState`. Elle est moins mature et plus complexe à gérer que dans Flink.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Pour un cas d'usage nécessitant une détection d'anomalie en temps réel sur des données à haut débit (plus de 1 million d'événements par seconde) avec des calculs complexes et une gestion d'état avancée, quel moteur recommanderez-vous ? Justifiez.",
+        "niveau": "hard",
+        "reponse": "Je recommanderais <strong>Apache Flink</strong> pour les raisons suivantes :\n\n1.  **Latence ultra-faible** : À 1 million d'événements par seconde, la latence est critique. Flink, avec son modèle de traitement événement par événement, peut maintenir une latence sub-second, ce qui est crucial pour la détection d'anomalies (ex: un pic d'activité peut durer quelques secondes).\n2.  **Gestion d'état avancée** : Les calculs complexes (ex: moyenne glissante, top-K, machine learning en ligne) nécessitent une gestion d'état fine et robuste. Flink offre des primitives d'état et des garanties exactly-once, ce qui simplifie le développement et assure la fiabilité des résultats.\n3.  **Résilience et performance** : Flink est conçu pour le traitement à haut débit et offre des mécanismes de checkpoint et de sauvegarde de l'état qui permettent une reprise rapide en cas de panne, même avec des données à 1M/s.\n\nSpark Structured Streaming, bien qu'il puisse gérer des débits élevés, introduirait une latence plus importante (quelques secondes) et la gestion d'état y est plus complexe. Pour un cas d'usage aussi exigeant, Flink est le choix le plus adapté.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse d'Impact de l'Ordre des Événements",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Dans le traitement de flux de données, il est fréquent que les événements arrivent dans le désordre (out-of-order events). Cela peut se produire en raison de latences réseau, de pannes, ou de décalages dans les horloges des systèmes producteurs.</p><p>Apache Flink gère ce problème en utilisant le concept de <strong>temps d'événement (event-time)</strong> et de <strong>watermarks</strong>.</p>",
+      "images": [
+        "Schéma illustrant des événements avec des horodatages (t1, t2, t3, t4) arrivant dans le désordre au système de streaming (ex: l'événement t3 arrive avant t2). Une ligne de watermark est dessinée pour montrer le progrès du temps d'événement, et les événements en retard (late events) sont indiqués."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez le concept de 'temps d'événement' (event-time) et pourquoi il est crucial dans le traitement de flux. En quoi est-il différent du 'temps de traitement' (processing-time) ?",
+        "niveau": "medium",
+        "reponse": "Le <strong>temps d'événement</strong> est l'horodatage qui est attaché à l'événement par le système producteur (source). Il représente le moment où l'événement s'est réellement produit. Par exemple, une transaction bancaire est horodatée au moment du paiement.\n\nLe <strong>temps de traitement</strong> est l'horodatage du système de traitement (comme Flink). Il correspond au moment où l'événement est reçu et traité par le moteur de streaming.\n\n**Pourquoi le temps d'événement est crucial ?**\n- Il permet de calculer des résultats qui reflètent la réalité, indépendamment des délais de transmission ou des pannes. Si une transaction est en retard de 5 minutes à cause d'un problème réseau, le temps d'événement permet de la placer dans la bonne fenêtre temporelle.\n- Il garantit la cohérence des résultats, surtout lors de rejeux (reprocessing) de données historiques. Les résultats basés sur le temps d'événement seront toujours les mêmes, quel que soit le moment où le traitement est exécuté.\n- Il est essentiel pour les applications où l'ordre temporel est important (ex: analyse de parcours client, logs d'application).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Qu'est-ce qu'un <strong>watermark</strong> dans Apache Flink ? À quoi sert-il dans la gestion des événements en retard (late events) ?",
+        "niveau": "hard",
+        "reponse": "Un <strong>watermark</strong> est un indicateur de progression temporelle dans Flink. Il s'agit d'un horodatage qui signale au système que Flink a traité tous les événements avec un horodatage inférieur à cette valeur. En d'autres termes, c'est la garantie que Flink n'attendra plus d'événements avec un horodatage antérieur à ce watermark.\n\n**Rôle dans la gestion des late events :**\n- Le watermark est utilisé pour déclencher les calculs de fenêtres (ex: une fenêtre de 5 minutes se termine). Quand le watermark passe la fin de la fenêtre, Flink déclenche le calcul de la fenêtre.\n- Il permet de gérer les événements en retard : un événement qui arrive après que le watermark a dépassé son horodatage est considéré comme 'en retard' (late event).\n- Le 'tolerance' de retard est paramétrable : on peut décider de jeter les late events, ou de les traiter en mettant à jour les résultats de la fenêtre (ex: avec une stratégie de traitement des late events).\n\n**Exemple** : Avec un watermark de 1 minute, Flink déclenchera le calcul d'une fenêtre de 5 minutes à `t=6 minutes` (fin de fenêtre + 1 min). Ainsi, les événements qui arrivent avec un retard allant jusqu'à 1 minute seront pris en compte. Les événements avec un retard supérieur seront ignorés ou traités par une logique spéciale.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Supposons que vous traitiez des données de logs IoT où les capteurs peuvent envoyer des données avec un retard important (jusqu'à 10 minutes). Proposez une stratégie de gestion des late events dans Flink pour éviter de perdre ces données. Vous pouvez évoquer les paramètres de fenêtre et les politiques de traitement.",
+        "niveau": "very hard",
+        "reponse": "Pour gérer des données IoT avec des retards allant jusqu'à 10 minutes, je propose la stratégie suivante dans Flink :\n\n1.  **Utiliser le temps d'événement (Event Time)** : Configurer l'environnement pour utiliser `TimeCharacteristic.EventTime`.\n\n2.  **Paramétrer une fenêtre avec un délai de tolérance généreux** :\n    -   Au lieu de définir un watermark fixe, je vais utiliser une stratégie de watermark basée sur les événements eux-mêmes. Par exemple, un `PeriodicWatermark` qui observe l'horodatage des événements et définit `watermark = max_timestamp - tolerance`.\n    -   Ici, la tolérance doit être d'au moins 10 minutes (ex: 11 minutes pour être sûr).\n\n3.  **Utiliser des fenêtres (window) qui acceptent les late events** :\n    -   Pour une fenêtre de type `TumblingEventTimeWindow` ou `SlidingEventTimeWindow`, on peut spécifier un temps de flou (allowed lateness).\n    -   Par exemple : `window(TumblingEventTimeWindows.of(Time.minutes(5)))\n          .allowedLateness(Time.minutes(10))`\n    -   Cela signifie que la fenêtre restera ouverte pour traiter les late events jusqu'à 10 minutes après la fin de la fenêtre. Les événements arrivant pendant cette période seront intégrés dans les résultats de la fenêtre (mise à jour incrémentale des résultats).\n\n4.  **Gestion des late events trop tardifs** :\n    -   Pour les événements qui arrivent après 10 minutes (donc trop tardifs pour la fenêtre), on peut les rediriger vers un `side output` (flux secondaire) pour les stocker dans un système de fichiers (ex: S3) pour une analyse ultérieure.\n    -   On peut aussi envoyer un warning dans un log pour indiquer qu'un événement a été perdu.\n\nCette stratégie permet de maximiser la capture des données tout en limitant l'impact sur la mémoire et le temps de traitement. Le choix d'une allowed lateness de 10 minutes est un compromis entre la perte de données et l'utilisation des ressources.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

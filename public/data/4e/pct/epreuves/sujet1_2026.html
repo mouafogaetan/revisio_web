@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+  "matiere": "Physique-Chimie-Technologie",
+  "classe": "Quatrième",
+  "sequence": "Séquence 1",
+  "anneeScolaire": "2025-2026",
+  "exercices": [
+    {
+      "titre": "Exercice 1 : Les états de la matière et les changements d'état",
+      "points": "4 pts",
+      "enonce": "<p style='font-size: 1.1em; line-height: 1.6;'>On considère un bloc de glace à -10°C que l'on chauffe progressivement jusqu'à obtenir de la vapeur d'eau à 120°C.</p>",
+      "questions": [
+        {
+          "question": "1) Nommer les trois états physiques de la matière.",
+          "reponse": "Les trois états physiques de la matière sont : solide, liquide et gaz (ou vapeur)."
+        },
+        {
+          "question": "2) Indiquer à quelle température se produit la fusion de la glace.",
+          "reponse": "La fusion de la glace se produit à 0°C (température de fusion de l'eau)."
+        },
+        {
+          "question": "3) Indiquer à quelle température se produit la vaporisation (ébullition) de l'eau.",
+          "reponse": "La vaporisation (ébullition) de l'eau se produit à 100°C (température d'ébullition de l'eau)."
+        },
+        {
+          "question": "4) Nommer le changement d'état qui se produit lorsque la glace devient de l'eau liquide.",
+          "reponse": "Le changement d'état est la fusion."
+        },
+        {
+          "question": "5) Nommer le changement d'état qui se produit lorsque l'eau liquide devient de la vapeur d'eau.",
+          "reponse": "Le changement d'état est la vaporisation (ou ébullition)."
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 2 : Conductibilité électrique et dureté des matériaux",
+      "points": "3 pts",
+      "enonce": "<p style='font-size: 1.1em; line-height: 1.6;'>Le tableau suivant donne quelques propriétés de quatre matériaux : le cuivre, le verre, le plastique et l'acier.</p>",
+      "questions": [
+        {
+          "question": "1) Quels sont les matériaux conducteurs de l'électricité ?",
+          "reponse": "Les matériaux conducteurs de l'électricité sont le cuivre et l'acier."
+        },
+        {
+          "question": "2) Quels sont les matériaux isolants ?",
+          "reponse": "Les matériaux isolants sont le verre et le plastique."
+        },
+        {
+          "question": "3) Parmi ces matériaux, quel est celui qui est le plus dur ? Justifier.",
+          "reponse": "L'acier est le plus dur car il résiste le mieux à la rayure et à l'abrasion."
+        },
+        {
+          "question": "4) Classer ces matériaux en familles.",
+          "reponse": "Cuivre et acier : métaux. Verre : céramique. Plastique : matière plastique."
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 3 : Magnétisme et matériaux magnétiques",
+      "points": "3 pts",
+      "enonce": "<p style='font-size: 1.1em; line-height: 1.6;'>On dispose de plusieurs objets : une clé en fer, une pièce de monnaie en cuivre, un trombone en acier et un bouchon en plastique.</p>",
+      "questions": [
+        {
+          "question": "1) Quels sont les objets ferromagnétiques ?",
+          "reponse": "Les objets ferromagnétiques sont la clé en fer et le trombone en acier."
+        },
+        {
+          "question": "2) Quels sont les objets non ferromagnétiques ?",
+          "reponse": "Les objets non ferromagnétiques sont la pièce de monnaie en cuivre et le bouchon en plastique."
+        },
+        {
+          "question": "3) Que se passe-t-il lorsqu'on approche un aimant de la clé en fer ?",
+          "reponse": "La clé en fer est attirée par l'aimant car le fer est un matériau ferromagnétique."
+        },
+        {
+          "question": "4) Que se passe-t-il lorsqu'on approche un aimant du bouchon en plastique ?",
+          "reponse": "Le bouchon en plastique n'est pas attiré par l'aimant car le plastique n'est pas ferromagnétique."
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 4 : Aimants et champ magnétique",
+      "points": "4 pts",
+      "enonce": "<p style='font-size: 1.1em; line-height: 1.6;'>On considère un aimant droit ayant un pôle Nord (N) et un pôle Sud (S).</p>",
+      "questions": [
+        {
+          "question": "1) Que se passe-t-il si on approche le pôle Nord d'un autre aimant du pôle Nord du premier aimant ?",
+          "reponse": "Les deux pôles Nord se repoussent (deux pôles de même nom se repoussent)."
+        },
+        {
+          "question": "2) Que se passe-t-il si on approche le pôle Sud d'un autre aimant du pôle Nord du premier aimant ?",
+          "reponse": "Les deux pôles s'attirent (deux pôles de noms différents s'attirent)."
+        },
+        {
+          "question": "3) Définir le champ magnétique.",
+          "reponse": "Le champ magnétique est l'espace qui entoure un aimant et dans lequel s'exercent des forces magnétiques."
+        },
+        {
+          "question": "4) Indiquer comment sont orientées les lignes de champ magnétique.",
+          "reponse": "Les lignes de champ magnétique sortent par le pôle Nord et entrent par le pôle Sud."
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 5 : Champ magnétique terrestre et boussole",
+      "points": "3 pts",
+      "enonce": "<p style='font-size: 1.1em; line-height: 1.6;'>La boussole est un instrument utilisé pour s'orienter.</p>",
+      "questions": [
+        {
+          "question": "1) Expliquer pourquoi la boussole peut s'orienter.",
+          "reponse": "La boussole s'oriente car son aiguille aimantée s'aligne sur le champ magnétique terrestre, indiquant la direction du Nord magnétique."
+        },
+        {
+          "question": "2) La Terre se comporte-t-elle comme un aimant ? Justifier.",
+          "reponse": "Oui, la Terre se comporte comme un aimant géant car elle possède un champ magnétique qui agit sur les aimants et les boussoles."
+        },
+        {
+          "question": "3) Définir la déclinaison magnétique.",
+          "reponse": "La déclinaison magnétique est l'angle entre le Nord magnétique (indiqué par la boussole) et le Nord géographique (pôle Nord vrai)."
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 6 : Réaction chimique et combustion",
+      "points": "5 pts",
+      "enonce": "<p style='font-size: 1.1em; line-height: 1.6;'>On réalise la combustion du butane (\(C_4H_{10}\)) dans le dioxygène (\(O_2\)).</p>",
+      "questions": [
+        {
+          "question": "1) Quels sont les réactifs de cette combustion ?",
+          "reponse": "Les réactifs sont le butane (\(C_4H_{10}\)) et le dioxygène (\(O_2\))."
+        },
+        {
+          "question": "2) Quels sont les produits de cette combustion ?",
+          "reponse": "Les produits sont le dioxyde de carbone (\(CO_2\)) et l'eau (\(H_2O\))."
+        },
+        {
+          "question": "3) Écrire l'équation-bilan de la combustion complète du butane.",
+          "reponse": "\(2 C_4H_{10} + 13 O_2 \\rightarrow 8 CO_2 + 10 H_2O\)."
+        },
+        {
+          "question": "4) Quelle est la différence entre une combustion complète et une combustion incomplète ?",
+          "reponse": "Une combustion complète produit du dioxyde de carbone et de l'eau (flamme bleue). Une combustion incomplète produit du monoxyde de carbone et du carbone (fumée noire)."
+        },
+        {
+          "question": "5) La combustion est-elle une réaction exothermique ou endothermique ?",
+          "reponse": "La combustion est une réaction exothermique car elle dégage de la chaleur."
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 7 : Éléments chimiques et symboles",
+      "points": "3 pts",
+      "enonce": "<p style='font-size: 1.1em; line-height: 1.6;'>On donne les symboles chimiques suivants : H, C, O, N, Cl, Ca, Na, K.</p>",
+      "questions": [
+        {
+          "question": "1) Donner le nom de chaque élément chimique correspondant.",
+          "reponse": "H : Hydrogène, C : Carbone, O : Oxygène, N : Azote, Cl : Chlore, Ca : Calcium, Na : Sodium, K : Potassium."
+        },
+        {
+          "question": "2) Citer deux corps purs simples et deux corps purs composés.",
+          "reponse": "Corps purs simples : \(H_2\) (dihydrogène), \(O_2\) (dioxygène). Corps purs composés : \(H_2O\) (eau), \(CO_2\) (dioxyde de carbone)."
+        },
+        {
+          "question": "3) Que signifie le numéro atomique Z dans la classification périodique ?",
+          "reponse": "Le numéro atomique Z est le nombre de protons dans le noyau d'un atome de l'élément. C'est l'identifiant de l'élément."
+        }
+      ]
+    }
+  ]
+};
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

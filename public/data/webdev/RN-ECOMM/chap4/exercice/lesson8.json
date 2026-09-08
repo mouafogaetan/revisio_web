@@ -1,0 +1,193 @@
+[
+  {
+    "intitule": "Conception de l'écran de profil utilisateur",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Dans le cadre du développement de l'application Sawamart, vous devez concevoir l'écran de profil utilisateur (<code>ProfileScreen</code>). Cet écran doit afficher les informations de l'utilisateur, son solde de portefeuille, et fournir des accès rapides à différentes sections.</p><p>L'application utilise Zustand pour la gestion d'état. Le store d'authentification (<code>authStore</code>) contient les données de l'utilisateur connecté.</p>",
+      "images": [
+        "Maquette d'écran de profil montrant : en-tête avec avatar et nom, carte de solde avec montant, liste d'options (Modifier profil, KYC, Historique, Paramètres, Déconnexion)"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez la structure des données utilisateur stockées dans <code>authStore</code> et expliquez comment vous les utiliseriez pour afficher le profil.",
+        "niveau": "easy",
+        "reponse": "Le <code>authStore</code> contient généralement les champs suivants : <code>user</code> (objet avec id, name, phone, email, avatar, role, isVerified, isKycVerified), <code>token</code>, <code>isAuthenticated</code>. Dans <code>ProfileScreen</code>, on utilise <code>useAuthStore(state => state.user)</code> pour récupérer l'utilisateur et afficher ses informations (nom, téléphone, avatar).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Identifiez comment vous géreriez l'affichage d'un avatar par défaut si l'utilisateur n'a pas encore téléchargé de photo.",
+            "niveau": "easy",
+            "reponse": "On peut utiliser une condition ternaire : <code>avatar ? { uri: avatar } : require('../assets/default-avatar.png')</code>. On peut aussi utiliser une bibliothèque comme <code>react-native-avatar</code> pour générer un avatar avec les initiales du nom."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez comment vous implémenteriez le bouton de déconnexion pour nettoyer correctement l'état de l'application et rediriger l'utilisateur vers l'écran de connexion.",
+        "niveau": "medium",
+        "reponse": "La déconnexion doit : 1) appeler la méthode <code>logout</code> du <code>authStore</code> qui supprime le token et l'utilisateur de la persistance (AsyncStorage), 2) réinitialiser les autres stores (productStore, walletStore, etc.) si nécessaire, 3) utiliser la navigation pour rediriger vers <code>LoginScreen</code> via <code>navigation.reset({ index: 0, routes: [{ name: 'Login' }] })</code>.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Mise en place de la modification du profil",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>L'écran <code>EditProfileScreen</code> permet à l'utilisateur de modifier ses informations personnelles (nom, email, téléphone) et de changer sa photo de profil. Les modifications sont envoyées au backend via l'API.</p><p>Le service <code>updateProfile</code> est disponible dans <code>authService</code>.</p>",
+      "images": [
+        "Formulaire d'édition de profil avec champs : Nom, Email, Téléphone, un bouton pour changer la photo, et des boutons Enregistrer et Annuler."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevez le formulaire de modification de profil en utilisant React Native et expliquez comment vous validez les champs avant l'envoi.",
+        "niveau": "medium",
+        "reponse": "Utiliser <code>TextInput</code> avec <code>onChangeText</code> pour chaque champ. Gérer l'état local avec <code>useState</code> ou un store dédié. Valider avec des conditions : nom non vide (min 2 caractères), email valide (regex), téléphone valide (format camerounais). Afficher des messages d'erreur sous chaque champ en cas d'invalidité. Désactiver le bouton Enregistrer si le formulaire est invalide.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Décrivez comment vous implémenteriez le chargement de la photo de profil (sélection et upload).",
+            "niveau": "hard",
+            "reponse": "Utiliser <code>expo-image-picker</code> pour ouvrir la galerie ou l'appareil photo. Après sélection, afficher un aperçu de la photo. Pour l'upload, utiliser <code>FormData</code> : <code>const formData = new FormData(); formData.append('avatar', { uri: imageUri, type: 'image/jpeg', name: 'avatar.jpg' });</code> puis appeler le service d'upload avec <code>api.post('/users/me/avatar', formData)</code>."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez comment vous mettez à jour le <code>authStore</code> après une modification réussie du profil pour refléter les changements dans toute l'application.",
+        "niveau": "medium",
+        "reponse": "Après la réponse positive du backend, appeler <code>authStore.setState({ user: updatedUser })</code> (ou utiliser une méthode dédiée comme <code>updateUser</code> dans le store). Cela mettra à jour l'état global et tous les composants qui utilisent <code>authStore</code> seront automatiquement mis à jour. Si les données sont persistées, la nouvelle version sera aussi sauvegardée dans AsyncStorage.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Intégration du processus KYC",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Pour vendre sur Sawamart, les utilisateurs doivent compléter une vérification d'identité (KYC). L'écran <code>KycScreen</code> permet de soumettre une photo de selfie et une photo de la carte d'identité (CNI).</p><p>Le backend fournit les endpoints :</p><ul><li><code>POST /kyc/submit</code> : soumettre les documents</li><li><code>GET /kyc/status</code> : vérifier le statut de la demande</li></ul>",
+      "images": [
+        "Écran de soumission KYC avec deux zones de dépôt d'images (selfie et CNI), des instructions, et un bouton de soumission."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevez la logique de soumission des documents KYC avec gestion des erreurs et des états de chargement.",
+        "niveau": "hard",
+        "reponse": "Créer un état local <code>loading</code> et <code>error</code>. Utiliser <code>react-native-image-picker</code> pour sélectionner les images. Construire un <code>FormData</code> avec les deux images. Appeler <code>api.post('/kyc/submit', formData)</code> avec <code>headers: { 'Content-Type': 'multipart/form-data' }</code>. En cas de succès, afficher un message de confirmation et rediriger vers <code>KycStatusScreen</code>. En cas d'erreur, afficher un message approprié (ex: \"Documents invalides\").",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez comment vous gérez le cas où l'utilisateur ferme l'application pendant l'upload.",
+            "niveau": "hard",
+            "reponse": "Utiliser un mécanisme de reprise ou de notification. Idéalement, le backend devrait être capable de reprendre les uploads interrompus. Une solution simplifiée : si l'upload échoue, sauvegarder les données localement et proposer à l'utilisateur de réessayer. On peut aussi utiliser un store pour garder l'état de la soumission.",
+            "reponse": "On peut sauvegarder l'état de la soumission dans le <code>kycStore</code> avec un statut 'pending'. Lorsque l'application est relancée, on vérifie ce statut et on propose de continuer ou de recommencer la soumission."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez comment vous implémenteriez le composant <code>RequireKyc</code> pour protéger les fonctionnalités réservées aux vendeurs (ex: création de produit).",
+        "niveau": "medium",
+        "reponse": "<code>RequireKyc</code> est un composant qui vérifie le statut KYC de l'utilisateur depuis <code>authStore</code> (ou <code>kycStore</code>). Si l'utilisateur n'est pas vérifié (<code>!user.isKycVerified</code>), il affiche un écran bloquant avec un message et un bouton pour aller vers <code>KycScreen</code>. Sinon, il affiche les enfants (children) passés en props. Utiliser ce composant autour des routes ou des composants sensibles.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Affichage du solde et intégration du wallet",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>L'écran <code>ProfileScreen</code> doit afficher le solde du portefeuille de l'utilisateur. Les données du wallet sont gérées par <code>walletStore</code>.</p><p>Le solde est affiché dans une carte avec un design attractif et un bouton pour recharger.</p>",
+      "images": [
+        "Carte de solde avec un fond dégradé, affichant le montant en FCFA, un libellé 'Solde disponible', et un bouton 'Recharger'."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez comment vous récupérez et affichez le solde du portefeuille dans <code>ProfileScreen</code> en utilisant <code>walletStore</code>.",
+        "niveau": "easy",
+        "reponse": "Dans <code>ProfileScreen</code>, utiliser <code>useWalletStore(state => state.balance)</code> pour récupérer le solde. Appeler <code>walletStore.getBalance()</code> dans <code>useEffect</code> ou <code>useFocusEffect</code> pour charger le solde à l'affichage. Afficher le montant formaté avec <code>new Intl.NumberFormat('fr-FR').format(balance)</code>.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposez une solution pour rafraîchir le solde après une opération de dépôt ou de retrait effectuée depuis un autre écran.",
+        "niveau": "medium",
+        "reponse": "Utiliser <code>useFocusEffect</code> de React Navigation pour recharger le solde à chaque fois que l'écran de profil est affiché. Alternativement, on peut utiliser un événement via un store (ex: <code>walletStore.refreshBalance()</code>) qui sera appelé après toute transaction. On peut aussi utiliser <code>zustand</code> avec <code>subscribe</code> pour écouter les changements.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion des états de chargement et des erreurs sur le profil",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>L'écran de profil doit afficher des indicateurs de chargement pendant la récupération des données et des messages d'erreur en cas de problème réseau.</p>",
+      "images": [
+        "Spinner de chargement affiché au centre de l'écran pendant le chargement des données du profil, puis un message d'erreur 'Impossible de charger le profil. Vérifiez votre connexion.' avec un bouton 'Réessayer'."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevez un système de gestion d'états (loading, error, data) pour l'écran de profil et expliquez comment vous l'implémentez.",
+        "niveau": "medium",
+        "reponse": "Utiliser un état local : <code>const [state, setState] = useState<'idle'|'loading'|'success'|'error'>('idle')</code>. Dans <code>useEffect</code>, appeler la fonction de chargement qui passe l'état à 'loading', puis en cas de succès à 'success', en cas d'erreur à 'error'. Afficher un <code>ActivityIndicator</code> si 'loading', un message d'erreur avec bouton 'Réessayer' si 'error', et le contenu du profil si 'success'. Cette approche est simple et robuste.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez comment vous gérez les erreurs de réseau spécifiques (ex: 401, 403, 500) et les messages utilisateur correspondants.",
+        "niveau": "hard",
+        "reponse": "Dans le bloc catch de l'appel API, analyser l'erreur : si <code>error.response.status === 401</code>, appeler le refresh token ou rediriger vers la connexion. Si <code>403</code>, afficher 'Accès non autorisé'. Si <code>500</code>, afficher 'Erreur serveur, veuillez réessayer plus tard'. Sinon, afficher un message générique. Utiliser une fonction utilitaire <code>handleApiError</code> pour standardiser la gestion des erreurs.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation des performances du profil",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>L'écran de profil utilise plusieurs sources de données : informations utilisateur (authStore), solde (walletStore), et statistiques (ex: nombre de produits, nombre de commandes). L'affichage doit être rapide même sur des connexions lentes.</p>",
+      "images": [
+        "Schéma montrant le composant ProfileScreen avec trois sections (Informations, Statistiques, Actions) et des données chargées à partir de sources différentes."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposez une stratégie de cache pour les données du profil afin de réduire les appels API et améliorer le temps de chargement.",
+        "niveau": "hard",
+        "reponse": "Utiliser les stores Zustand avec persistance (<code>persist</code> middleware) pour les données qui changent rarement (ex: informations utilisateur). Pour les données dynamiques (solde), utiliser un cache avec TTL (Time To Live) de 1 minute. On peut aussi utiliser <code>react-query</code> pour une gestion plus avancée du cache. Afficher les données en cache immédiatement pendant le rafraîchissement en arrière-plan.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Décrivez comment vous implémenteriez un mécanisme de rafraîchissement en arrière-plan (background refresh) pour le solde.",
+            "niveau": "hard",
+            "reponse": "Dans <code>useFocusEffect</code>, appeler <code>walletStore.getBalance()</code> sans afficher d'indicateur de chargement si les données sont déjà en cache. Cela permet de rafraîchir les données en arrière-plan tout en affichant immédiatement les anciennes données. Si les données sont absentes, afficher un spinner de chargement."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquez comment vous utilisez React.memo et useCallback pour optimiser le re-rendu des composants de l'écran de profil.",
+        "niveau": "hard",
+        "reponse": "Envelopper les composants enfants (ex: <code>ProfileHeader</code>, <code>BalanceCard</code>, <code>ProfileMenu</code>) avec <code>React.memo</code> pour éviter les re-rendus inutiles lorsque les props ne changent pas. Utiliser <code>useCallback</code> pour les fonctions passées en props (ex: <code>handleLogout</code>, <code>handleEditProfile</code>) pour qu'elles aient une référence stable entre les rendus. Cela est particulièrement important si l'écran est complexe.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

@@ -1,0 +1,116 @@
+[
+  {
+    "intitule": "Identifier le rôle du pattern Repository",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous travaillez sur une API .NET Core qui gère des produits. Actuellement, la logique d’accès aux données (requêtes SQL via Entity Framework) est écrite directement dans les contrôleurs. Un collègue vous suggère d’utiliser le <strong>pattern Repository</strong>. À partir de la leçon 10, répondez aux questions suivantes.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrivez en une phrase quel est le principal objectif du pattern Repository dans une architecture d’API.",
+        "niveau": "easy",
+        "reponse": "Le pattern Repository vise à séparer la logique d’accès aux données de la logique métier en centralisant les opérations de persistance dans une classe dédiée.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Citez deux avantages à utiliser ce pattern plutôt que d’écrire du code EF Core directement dans un contrôleur.",
+        "niveau": "medium",
+        "reponse": "1. Meilleure testabilité (on peut mocker le repository). 2. Réduction du couplage entre la couche API et la source de données.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Créer et utiliser un Repository pour la gestion d’articles",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous devez construire une API de blog. On vous fournit une entité <code>Article</code> :</p>\n<pre>\npublic class Article\n{\n    public int Id { get; set; }\n    public string Titre { get; set; }\n    public string Contenu { get; set; }\n    public DateTime DatePublication { get; set; }\n}\n</pre>\n<p>Implémentez un pattern Repository pour gérer <code>Article</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire l’interface <code>IArticleRepository</code> contenant les méthodes asynchrones suivantes : <br/> - <code>GetAllAsync()</code> qui retourne tous les articles, <br/> - <code>GetByIdAsync(int id)</code> qui retourne un article ou <code>null</code>, <br/> - <code>AddAsync(Article article)</code>, <br/> - <code>UpdateAsync(Article article)</code>, <br/> - <code>DeleteAsync(int id)</code>.",
+        "niveau": "hard",
+        "reponse": "```csharp\npublic interface IArticleRepository\n{\n    Task<IEnumerable<Article>> GetAllAsync();\n    Task<Article?> GetByIdAsync(int id);\n    Task AddAsync(Article article);\n    Task UpdateAsync(Article article);\n    Task DeleteAsync(int id);\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Justifier pourquoi les méthodes sont asynchrones.",
+            "niveau": "easy",
+            "reponse": "Pour ne pas bloquer le thread pendant les opérations d’accès à la base de données (meilleure scalabilité)."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Implémenter cette interface dans une classe <code>ArticleRepository</code> en utilisant <code>ApplicationDbContext</code> (héritant de <code>DbContext</code>) et en respectant l’injection de dépendances.",
+        "niveau": "hard",
+        "reponse": "```csharp\npublic class ArticleRepository : IArticleRepository\n{\n    private readonly ApplicationDbContext _context;\n    public ArticleRepository(ApplicationDbContext context)\n    {\n        _context = context;\n    }\n\n    public async Task<IEnumerable<Article>> GetAllAsync() => await _context.Articles.ToListAsync();\n\n    public async Task<Article?> GetByIdAsync(int id) => await _context.Articles.FindAsync(id);\n\n    public async Task AddAsync(Article article)\n    {\n        await _context.Articles.AddAsync(article);\n        await _context.SaveChangesAsync();\n    }\n\n    public async Task UpdateAsync(Article article)\n    {\n        _context.Articles.Update(article);\n        await _context.SaveChangesAsync();\n    }\n\n    public async Task DeleteAsync(int id)\n    {\n        var article = await GetByIdAsync(id);\n        if (article != null)\n        {\n            _context.Articles.Remove(article);\n            await _context.SaveChangesAsync();\n        }\n    }\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Intégrer un Repository dans un contrôleur API",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>On reprend l’entité <code>Article</code> et le repository <code>IArticleRepository</code> de l’exercice précédent.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Injecter le repository dans un contrôleur <code>ArticlesController</code> via le constructeur. Écrire le constructeur et la déclaration du champ privé.",
+        "niveau": "medium",
+        "reponse": "```csharp\n[ApiController]\n[Route(\"api/[controller]\")]\npublic class ArticlesController : ControllerBase\n{\n    private readonly IArticleRepository _articleRepository;\n\n    public ArticlesController(IArticleRepository articleRepository)\n    {\n        _articleRepository = articleRepository;\n    }\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Implémenter l’action <code>GET /api/articles</code> qui utilise le repository pour retourner tous les articles avec un code HTTP 200.",
+        "niveau": "medium",
+        "reponse": "```csharp\n[HttpGet]\npublic async Task<ActionResult<IEnumerable<Article>>> GetArticles()\n{\n    var articles = await _articleRepository.GetAllAsync();\n    return Ok(articles);\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Ajouter l’action <code>POST /api/articles</code> qui reçoit un <code>Article</code> dans le corps de la requête, l’ajoute via le repository et retourne un code 201 avec la localisation.",
+        "niveau": "hard",
+        "reponse": "```csharp\n[HttpPost]\npublic async Task<ActionResult<Article>> CreateArticle(Article article)\n{\n    await _articleRepository.AddAsync(article);\n    return CreatedAtAction(nameof(GetArticles), new { id = article.Id }, article);\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Tester unitairement un contrôleur avec un Repository mocké",
+    "type": "ressource",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous êtes responsable de la qualité du code. Pour valider que <code>ArticlesController</code> est bien découplé de la base de données, vous devez écrire un test unitaire.</p>\n<p>On suppose que <code>ArticlesController</code> expose : <code>GET /api/articles</code> et <code>POST /api/articles</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "À l’aide de <strong>Moq</strong>, créer un mock de <code>IArticleRepository</code> qui retourne une liste factice de deux articles lorsque <code>GetAllAsync()</code> est appelé.",
+        "niveau": "hard",
+        "reponse": "```csharp\nvar mockRepo = new Mock<IArticleRepository>();\nvar articlesFactices = new List<Article>\n{\n    new Article { Id = 1, Titre = \"Test 1\", Contenu = \"...\" },\n    new Article { Id = 2, Titre = \"Test 2\", Contenu = \"...\" }\n};\nmockRepo.Setup(repo => repo.GetAllAsync()).ReturnsAsync(articlesFactices);\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Rédiger le test unitaire complet (en xUnit) qui vérifie que <code>GetArticles()</code> retourne un <code>OkObjectResult</code> contenant exactement les deux articles mockés.",
+        "niveau": "very hard",
+        "reponse": "```csharp\n[Fact]\npublic async Task GetArticles_ReturnsOk_WithListOfArticles()\n{\n    // Arrange\n    var mockRepo = new Mock<IArticleRepository>();\n    var articles = new List<Article>\n    {\n        new Article { Id = 1, Titre = \"A\" },\n        new Article { Id = 2, Titre = \"B\" }\n    };\n    mockRepo.Setup(r => r.GetAllAsync()).ReturnsAsync(articles);\n    var controller = new ArticlesController(mockRepo.Object);\n\n    // Act\n    var result = await controller.GetArticles();\n\n    // Assert\n    var okResult = Assert.IsType<OkObjectResult>(result.Result);\n    var returnedArticles = Assert.IsType<List<Article>>(okResult.Value);\n    Assert.Equal(2, returnedArticles.Count);\n}\n```",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

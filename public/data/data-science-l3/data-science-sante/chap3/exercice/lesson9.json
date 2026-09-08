@@ -1,0 +1,136 @@
+[
+  {
+    "intitule": "Architecture U-Net pour la segmentation d'images médicales",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>L'architecture U-Net est une référence en segmentation d'images médicales. Elle a été initialement développée pour la segmentation de cellules en microscopie, puis largement adoptée pour l'imagerie médicale (IRM, scanner, etc.).</p><p><strong>Partie 1 : Architecture et principes</strong></p>",
+      "images": [
+        "Schéma complet de l'architecture U-Net montrant la partie contractante (encodeur) à gauche, la partie expansive (décodeur) à droite, et les connexions de saut (skip connections) reliant les niveaux correspondants, avec les dimensions des feature maps indiquées"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire les deux principales parties de l'architecture U-Net et expliquer leurs rôles respectifs.",
+        "niveau": "easy",
+        "reponse": "<p>L'U-Net est constituée de deux voies principales :</p><ul><li><strong>Voie contractante (encodeur) :</strong> située à gauche du U. Elle suit une architecture CNN classique avec des couches de convolution suivies de max-pooling pour réduire la résolution spatiale des images. Son rôle est d'extraire des caractéristiques sémantiques de haut niveau de l'image et de capturer le contexte global.</li><li><strong>Voie expansive (décodeur) :</strong> située à droite du U. Elle utilise des couches de transposée de convolution (ou up-convolution) pour augmenter progressivement la résolution. Son rôle est de localiser avec précision les contours des objets à segmenter en utilisant les caractéristiques extraites par l'encodeur.</li></ul>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Quel est le rôle des connexions de saut (skip connections) dans l'architecture U-Net ? Pourquoi sont-elles essentielles pour la segmentation médicale ?",
+        "niveau": "medium",
+        "reponse": "<p>Les connexions de saut (skip connections) relient les couches de l'encodeur aux couches correspondantes du décodeur de même résolution. Leur rôle est de :</p><ul><li>Fusionner les informations spatiales (localisation) de l'encodeur avec les informations sémantiques (context) du décodeur.</li><li>Permettre au réseau de récupérer les détails fins perdus lors des étapes de pooling (réduction de résolution).</li><li>Faciliter la convergence du réseau en atténuant le problème du gradient vanishing.</li></ul><p>Elles sont essentielles en segmentation médicale car elles permettent de localiser précisément les structures anatomiques tout en conservant une bonne compréhension du contexte global.</p>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Comparer brièvement l'approche U-Net avec une approche de segmentation par patch (découpage de l'image en petits morceaux). Quels sont les avantages de U-Net ?",
+        "niveau": "hard",
+        "reponse": "<p>L'approche par patch consiste à découper l'image en petits carrés, à classer chaque pixel du patch comme appartenant ou non à l'objet, puis à reconstruire la segmentation complète. Les avantages de U-Net par rapport à cette approche sont :</p><ul><li><strong>Context global :</strong> U-Net traite l'image entière et capture le contexte global, contrairement aux patchs qui ne voient qu'une petite région.</li><li><strong>Efficacité :</strong> U-Net nécessite un seul passage pour segmenter toute l'image, alors que l'approche par patch nécessite de nombreux passages (un par patch).</li><li><strong>Préservation des informations spatiales :</strong> Les skip connections permettent de préserver les informations de localisation, ce qui améliore la précision aux bords.</li><li><strong>Généralisation :</strong> U-Net généralise mieux sur des images de tailles variables.</li></ul>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Fonction de perte pour la segmentation d'images médicales",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Pour entraîner un modèle de segmentation comme U-Net, le choix de la fonction de perte est crucial. Deux fonctions sont couramment utilisées : la perte par entropie croisée et l'indice de Dice (ou le coefficient de Dice).</p><p>Soit une image segmentée de taille $N$ pixels, où $p_i$ est la prédiction du modèle pour le pixel $i$ (probabilité d'appartenir à la classe d'intérêt) et $y_i$ est la vérité terrain (1 si le pixel appartient à la classe d'intérêt, 0 sinon).</p><p><strong>Formules :</strong></p><ul><li>Entropie croisée binaire : $L_{CE} = -\\frac{1}{N} \\sum_{i=1}^{N} [y_i \\log(p_i) + (1-y_i) \\log(1-p_i)]$</li><li>Indice de Dice (ou F1-score) : $D = \\frac{2 \\sum_{i=1}^{N} p_i y_i + \\epsilon}{\\sum_{i=1}^{N} p_i + \\sum_{i=1}^{N} y_i + \\epsilon}$ où $\\epsilon$ est un petit terme pour éviter la division par zéro. La perte correspond à $L_{Dice} = 1 - D$.</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer pourquoi l'utilisation de la seule entropie croisée peut être insuffisante pour des problèmes de segmentation médicale, en particulier lorsque les classes sont déséquilibrées (par exemple, une petite tumeur par rapport au fond).",
+        "niveau": "medium",
+        "reponse": "<p>L'entropie croisée traite chaque pixel indépendamment. Si la classe d'intérêt (la tumeur) est très minoritaire par rapport au fond, le modèle peut facilement prédire le fond pour la majorité des pixels et obtenir une perte relativement faible, sans jamais segmenter la tumeur. Le modèle peut donc converger vers un minimum local où il ignore la classe minoritaire. De plus, l'entropie croisée ne pénalise pas les erreurs de localisation de la même manière que l'indice de Dice.</p>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Analyser les avantages de l'indice de Dice comme fonction de perte pour ce type de problème.",
+        "niveau": "hard",
+        "reponse": "<p>L'indice de Dice est particulièrement adapté à la segmentation médicale car :</p><ul><li>Il mesure directement le chevauchement entre la prédiction et la vérité terrain, ce qui est l'objectif final en segmentation (plus le chevauchement est grand, meilleure est la segmentation).</li><li>Il est robuste au déséquilibre des classes : la perte sera élevée si la tumeur n'est pas segmentée, même si les pixels de fond sont bien classifiés.</li><li>Il pénalise les faux positifs et les faux négatifs de manière plus équilibrée, ce qui est crucial en médecine où les deux types d'erreurs peuvent avoir des conséquences graves.</li></ul>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposer une combinaison de ces deux fonctions de perte pour améliorer l'entraînement et expliquer votre choix.",
+        "niveau": "very hard",
+        "reponse": "<p>Une approche efficace consiste à utiliser la somme ou la moyenne pondérée des deux pertes : $L = L_{CE} + L_{Dice}$ ou $L = \\alpha L_{CE} + (1-\\alpha) L_{Dice}$.</p><p><strong>Justification :</strong></p><ul><li>L'entropie croisée aide à stabiliser l'entraînement en fournissant des gradients plus lisses, ce qui facilite la convergence, surtout en début d'entraînement.</li><li>L'indice de Dice affine la segmentation en se concentrant sur le chevauchement spatial.</li><li>Cette combinaison est souvent appelée perte hybride et est très utilisée en imagerie médicale car elle combine les avantages des deux approches.</li><li>Le paramètre $\\alpha$ permet de contrôler l'importance relative des deux pertes (ex: $\\alpha=0.5$).</li></ul>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Segmentation de tumeurs cérébrales sur IRM",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous êtes data scientist dans un hôpital universitaire. Votre mission est de développer un outil d'aide au diagnostic pour la segmentation automatique des tumeurs cérébrales sur des séquences IRM (T1, T1-Gd, T2, FLAIR). Vous disposez d'un dataset de 1000 patients.</p><p><strong>Contexte clinique :</strong> La segmentation des tumeurs cérébrales est une tâche cruciale pour la planification de la radiothérapie et le suivi de l'évolution de la maladie. La tumeur est souvent composée de plusieurs sous-régions : le rehaussement (contraste), le noyau nécrotique, l'œdème.</p>",
+      "images": [
+        "Image IRM cérébrale en coupe axiale avec une tumeur visible, montrant les différentes sous-régions (rehaussement, nécrose, œdème) sur les quatre séquences (T1, T1-Gd, T2, FLAIR)"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposer une architecture de réseau de neurones adaptée à ce problème et justifier votre choix.",
+        "niveau": "medium",
+        "reponse": "<p>L'architecture U-Net est particulièrement adaptée à ce problème. Elle peut être adaptée pour prendre en entrée les 4 séquences IRM (4 canaux d'entrée).</p><p><strong>Justification :</strong></p><ul><li>U-Net est conçue pour la segmentation d'images et donne d'excellents résultats en imagerie médicale.</li><li>Les skip connections permettent de préserver les détails spatiaux, ce qui est crucial pour la segmentation de précision des tumeurs.</li><li>Elle peut être entraînée avec un nombre limité de données (1000 patients est raisonnable).</li><li>Elle est adaptée à la segmentation de structures de taille variable (les tumeurs peuvent être petites ou grandes).</li></ul><p>Des variantes comme la 3D U-Net peuvent être envisagées si les données sont volumétriques.</p>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Quelles métriques d'évaluation proposez-vous pour ce projet ? Expliquer leur pertinence clinique.",
+        "niveau": "medium",
+        "reponse": "<p>Les principales métriques pour évaluer un modèle de segmentation sont :</p><ul><li><strong>Indice de Dice (ou F1-score) :</strong> Mesure le chevauchement entre la segmentation prédite et la vérité terrain. Il est très utilisé en imagerie médicale car il donne une bonne indication de la qualité globale de la segmentation.</li><li><strong>Sensibilité (Recall) :</strong> Proportion de pixels tumoraux correctement identifiés. Elle mesure la capacité du modèle à ne pas manquer de tumeur.</li><li><strong>Précision (Precision) :</strong> Proportion de pixels prédits comme tumoraux qui le sont réellement. Elle mesure la capacité du modèle à ne pas générer de faux positifs.</li><li><strong>Distance de Hausdorff :</strong> Mesure la distance maximale entre les contours des deux segmentations. Elle est importante pour évaluer la précision des bords.</li></ul><p><strong>Pertinence clinique :</strong> Un bon indice de Dice assure une bonne couverture de la tumeur. Une bonne sensibilité garantit que la tumeur est bien détectée. Une bonne précision évite de traiter des zones saines. La distance de Hausdorff est cruciale pour la radiothérapie où la précision du contour est essentielle pour éviter d'irradier des tissus sains.</p>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Le modèle est entraîné sur des données d'un hôpital. Discuter des problèmes de généralisation qui pourraient survenir lors de son déploiement dans d'autres établissements. Proposer des solutions.",
+        "niveau": "hard",
+        "reponse": "<p><strong>Problèmes de généralisation :</strong></p><ul><li><strong>Variabilité des machines IRM :</strong> Les intensités, les résolutions, les paramètres d'acquisition varient d'un hôpital à l'autre, ce qui peut dégrader la performance du modèle.</li><li><strong>Variabilité des protocoles :</strong> Les séquences utilisées peuvent différer.</li><li><strong>Variabilité des populations :</strong> La distribution des tumeurs (type, taille, localisation) peut varier.</li></ul><p><strong>Solutions :</strong></p><ul><li><strong>Augmentation de données :</strong> Simuler des variations d'intensité, de bruit, de résolution pour rendre le modèle plus robuste.</li><li><strong>Normalisation des images :</strong> Utiliser des méthodes de normalisation robustes (comme le Z-score sur les tissus de référence) pour réduire les variations inter-machines.</li><li><strong>Transfert learning :</strong> Ré-entraîner le modèle sur une petite quantité de données du nouvel hôpital (fine-tuning).</li><li><strong>Adversarial training :</strong> Entraîner un classifieur pour distinguer les hôpitaux et pénaliser le modèle principal s'il est capable de les distinguer, ce qui l'encourage à apprendre des caractéristiques invariantes.</li></ul>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Segmentation de lésions cutanées pour le dépistage du mélanome",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Le mélanome est un cancer de la peau agressif. Le dépistage précoce est essentiel. Vous développez un système de télémédecine pour analyser les images de lésions cutanées prises par un smartphone.</p><p>Le système doit segmenter la lésion (la délimiter) pour ensuite permettre une classification (bénigne/maligne) basée sur des critères comme la forme, la couleur, l'asymétrie (règle ABCDE).</p>",
+      "images": [
+        "Image dermoscopique d'une lésion cutanée avec une segmentation annotée (masque binaire de la lésion), montrant les contours irréguliers et les variations de couleur"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Quelles adaptations de U-Net pourriez-vous proposer pour traiter des images de lésions cutanées, sachant que : les lésions sont de tailles variables, les images peuvent être de mauvaise qualité (artefacts, lumière), et les données sont parfois limitées ?",
+        "niveau": "hard",
+        "reponse": "<p>Pour l'analyse de lésions cutanées, plusieurs adaptations de U-Net sont possibles :</p><ul><li><strong>U-Net avec attention :</strong> Intégrer des mécanismes d'attention pour aider le réseau à se concentrer sur la lésion et ignorer le fond et les artefacts.</li><li><strong>U-Net multi-échelle :</strong> Traiter l'image à plusieurs résolutions pour mieux capturer les lésions de tailles variables.</li><li><strong>Prétraitement adapté :</strong> Normaliser la couleur (réduction des variations de lumière), supprimer les poils et les reflets.</li><li><strong>Transfert learning :</strong> Utiliser des poids pré-entraînés sur ImageNet (en adaptant le réseau) pour compenser le manque de données.</li></ul>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Vous disposez de 500 images annotées par des dermatologues. Proposer une stratégie de validation robuste pour évaluer la performance du modèle avant son déploiement.",
+        "niveau": "medium",
+        "reponse": "<p>Une stratégie de validation robuste doit prendre en compte les spécificités du domaine médical :</p><ul><li><strong>Validation croisée (K-fold) :</strong> Diviser les données en 5 ou 10 plis pour avoir une estimation stable de la performance. Important dans les petits datasets.</li><li><strong>Validation par patient :</strong> S'assurer que les images d'un même patient ne se retrouvent pas à la fois dans l'entraînement et le test, pour éviter le data leakage et évaluer la généralisation à de nouveaux patients.</li><li><strong>Validation externe :</strong> Si possible, évaluer le modèle sur un dataset externe provenant d'un autre hôpital ou d'une autre base de données pour tester la généralisation.</li><li><strong>Métriques adaptées :</strong> Calculer l'indice de Dice, la sensibilité, la précision et des métriques spécifiques aux bords (distance de Hausdorff).</li></ul>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Discuter des limitations cliniques potentielles de votre système (biais, fausses confiances, etc.) et proposer des stratégies pour les atténuer.",
+        "niveau": "very hard",
+        "reponse": "<p><strong>Limitations cliniques :</strong></p><ul><li><strong>Biais de représentation :</strong> Le modèle peut être moins performant sur certaines peaux (peaux foncées, lésions particulières) ou sur certaines tranches d'âge.</li><li><strong>Fausses confiances :</strong> Le modèle peut être très confiant dans ses prédictions même en cas d'erreur, ce qui peut conduire à des décisions cliniques erronées.</li><li><strong>Variabilité inter-opérateur :</strong> Les annotations des dermatologues peuvent varier, ce qui introduit un bruit dans les données d'entraînement.</li></ul><p><strong>Stratégies d'atténuation :</strong></p><ul><li><strong>Évaluation de la calibration :</strong> Utiliser des techniques de calibration (comme le Platt scaling) pour que les probabilités de sortie reflètent bien la fiabilité du modèle.</li><li><strong>Audit des biais :</strong> Évaluer la performance du modèle sur des sous-groupes (type de peau, âge, sexe) pour identifier et corriger les biais.</li><li><strong>Utilisation comme aide et non comme remplacement :</strong> Le système doit être présenté comme un outil d'aide à la décision, et non comme un diagnostic automatique. Les dermatologues doivent toujours valider les résultats.</li><li><strong>Mise à jour continue :</strong> Collecter de nouvelles données et ré-entraîner le modèle régulièrement pour améliorer sa performance.</li></ul>",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

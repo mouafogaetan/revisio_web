@@ -1,0 +1,130 @@
+[
+  {
+    "intitule": "Manipulation des permissions de base sur fichier",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Un fichier nommé <code>index.html</code> appartient à l'utilisateur <code>alice</code> et au groupe <code>webdev</code>. La commande <code>ls -l index.html</code> affiche : <code>-rw-r--r--</code>.</p><p>Répondez aux questions suivantes en justifiant avec la notation octale ou symbolique.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier les droits actuels du propriétaire, du groupe et des autres utilisateurs sur ce fichier.",
+        "niveau": "easy",
+        "reponse": "Propriétaire : lecture et écriture (rw-) ; Groupe : lecture seule (r--) ; Autres : lecture seule (r--).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Convertir ces droits en notation octale (chmod numérique).",
+        "niveau": "medium",
+        "reponse": "644 (car rw- = 4+2+0 = 6, r-- = 4+0+0 = 4, r-- = 4+0+0 = 4).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposer la commande `chmod` (en notation symbolique) pour ajouter le droit d'exécution pour le groupe uniquement, sans modifier les autres droits.",
+        "niveau": "medium",
+        "reponse": "`chmod g+x index.html`",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse d'un problème de partage de fichier",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans une entreprise, un stagiaire nommé <code>paul</code> (groupe par défaut : <code>stagiaire</code>) doit modifier un script de déploiement nommé <code>deploy.sh</code>. Ce fichier a les permissions suivantes : <code>-rwxr-x---</code> et appartient à l'utilisateur <code>root</code> et au groupe <code>admin</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer pourquoi Paul ne peut actuellement ni lire, ni exécuter, ni modifier le fichier.",
+        "niveau": "easy",
+        "reponse": "Les permissions 'Autres' sont '---' (aucun droit). Comme Paul n'est ni 'root' (propriétaire) ni membre du groupe 'admin', il est considéré comme 'Autre' et n'a donc aucun accès.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Décrire deux commandes différentes (une utilisant `chown` et une utilisant `chgrp`) permettant à Paul d'exécuter le script, sans donner de droits excessifs.",
+        "niveau": "hard",
+        "reponse": "1) `sudo chown paul deploy.sh` (changement du propriétaire). 2) `sudo chgrp stagiaire deploy.sh` puis `chmod g+rx deploy.sh` (changement de groupe et ajout des droits).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Évaluer la sécurité : Si l'administrateur exécute `chmod 777 deploy.sh`, quels sont les risques pour le système ?",
+        "niveau": "hard",
+        "reponse": "777 donne tous les droits (lecture, écriture, exécution) à tout le monde. Tout utilisateur de la machine pourrait alors modifier le script (risque d’injection de code malveillant) ou l’exécuter pour élever ses privilèges.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Gestion des permissions avancées et du sticky bit",
+    "type": "ressource",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Un administrateur crée un dossier partagé <code>/partage</code> avec les permissions <code>drwxrwxrwt</code>. L’utilisateur <code>bob</code> (groupe <code>bob</code>) et l’utilisateur <code>alice</code> (groupe <code>alice</code>) y travaillent.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Interpréter la lettre `t` à la fin des permissions. Quel est son nom et quel est son effet spécifique ?",
+        "niveau": "medium",
+        "reponse": "Il s'agit du 'sticky bit'. Sur un répertoire, il empêche les utilisateurs de supprimer les fichiers des autres utilisateurs, même s'ils ont les droits d'écriture sur le répertoire.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Convertir la permission `drwxrwxrwt` en notation octale complète (incluant le bit spécial).",
+        "niveau": "very hard",
+        "reponse": "La valeur est 1777. Le '1' devant (pour le sticky bit) + 777 pour rwxrwxrwx.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Si Bob crée un fichier `bob.txt` avec les droits `rw-------` dans ce dossier, Alice peut-elle lire ce fichier ? Peut-elle le supprimer ? Justifier.",
+        "niveau": "hard",
+        "reponse": "Alice ne peut pas lire `bob.txt` (permissions fichier trop restrictives), mais elle peut le supprimer. Le sticky bit protège uniquement la suppression par 'autres' des fichiers ne leur appartenant pas, mais Alice est ici 'autre'. Cependant, comme le sticky bit est actif, Alice ne peut pas supprimer `bob.txt` car elle n'en est pas propriétaire.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Application des permissions dans un projet collaboratif",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous êtes administrateur système. Trois développeurs (<code>dev1</code>, <code>dev2</code>, <code>dev3</code>) appartiennent tous au groupe <code>projetX</code>. Ils doivent avoir la possibilité de créer, modifier et supprimer leurs propres fichiers dans <code>/var/www/projetX</code>, mais aucun fichier ne doit être accessible en lecture aux autres utilisateurs du serveur.</p><p>Contrainte supplémentaire : Un fichier créé par <code>dev1</code> doit pouvoir être modifié par <code>dev2</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposer une commande `chmod` (en notation octale) pour configurer le dossier <code>/var/www/projetX</code> avec les droits appropriés (pas de droits autres, droits complets pour le groupe).",
+        "niveau": "medium",
+        "reponse": "`chmod 770 /var/www/projetX` (donne rwx au propriétaire et au groupe, aucun droit aux autres).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Quel est le principal problème avec la configuration actuelle concernant la modification des fichiers entre développeurs ? Comment le résoudre via le SGID ?",
+        "niveau": "very hard",
+        "reponse": "Problème : Si dev1 crée un fichier, son groupe par défaut est 'dev1', pas 'projetX'. dev2 ne pourra pas le modifier. Solution : Activer le bit SGID sur le dossier `chmod g+s /var/www/projetX`. Ainsi, tout nouveau fichier héritera du groupe 'projetX'.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Rédiger la série complète de commandes (création, changement de propriétaire, permissions, SGID) pour mettre en place cette configuration idéale.",
+        "niveau": "very hard",
+        "reponse": "```bash\nmkdir -p /var/www/projetX\nchown root:projetX /var/www/projetX\nchmod 2770 /var/www/projetX\n```",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

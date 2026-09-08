@@ -1,0 +1,163 @@
+[
+  {
+    "intitule": "Exercice 1 : Comprendre les Propriétés ACID",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Les propriétés <strong>ACID</strong> (Atomicité, Cohérence, Isolation, Durabilité) sont fondamentales pour garantir la fiabilité des transactions dans une base de données.</p><p>Pour chaque propriété, identifiez sa signification et son rôle dans une transaction.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Associer chaque propriété ACID à sa définition correcte.",
+        "niveau": "easy",
+        "reponse": "<strong>Atomicité (A) :</strong> Une transaction est une unité indivisible : soit toutes les opérations sont exécutées, soit aucune (rollback en cas d'échec).<br/><br/><strong>Cohérence (C) :</strong> Une transaction doit laisser la base de données dans un état valide, en respectant toutes les contraintes d'intégrité.<br/><br/><strong>Isolation (I) :</strong> Les transactions concurrentes ne doivent pas interférer entre elles. Chaque transaction s'exécute comme si elle était seule.<br/><br/><strong>Durabilité (D) :</strong> Une fois qu'une transaction est validée (COMMIT), ses modifications sont persistantes et survivent aux pannes.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer pourquoi l'Atomicité est essentielle dans un système bancaire lors d'un virement entre deux comptes.",
+            "niveau": "medium",
+            "reponse": "L'Atomicité est essentielle car un virement est composé de deux opérations : un débit sur le compte A et un crédit sur le compte B. Si une panne survient après le débit mais avant le crédit, l'Atomicité garantit que le débit est annulé (rollback). Sans Atomicité, de l'argent pourrait disparaître (débit sans crédit) ou être créé (crédit sans débit). L'Atomicité assure que soit les deux opérations sont effectuées, soit aucune."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer la différence entre <code>COMMIT</code> et <code>ROLLBACK</code> dans une transaction.",
+        "niveau": "easy",
+        "reponse": "<strong>COMMIT :</strong> Valide la transaction et rend les modifications permanentes dans la base de données. Une fois le COMMIT effectué, les changements sont visibles par les autres utilisateurs (selon le niveau d'isolation) et sont durables.<br/><br/><strong>ROLLBACK :</strong> Annule la transaction et restaure la base de données à l'état où elle était avant le début de la transaction. Toutes les modifications effectuées depuis le BEGIN sont annulées."
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 2 : Transaction et SAVEPOINT",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Une entreprise gère les commandes de ses clients avec la table <code>commandes</code> :</p><ul><li><code>id_commande</code> (INT, clé primaire)</li><li><code>id_client</code> (INT)</li><li><code>id_produit</code> (INT)</li><li><code>quantite</code> (INT)</li><li><code>montant</code> (DECIMAL)</li><li><code>statut</code> (VARCHAR)</li></ul><p>Le processus de validation d'une commande est :</p><ol><li>Vérifier que le client existe</li><li>Vérifier que le produit est en stock</li><li>Insérer la commande</li><li>Mettre à jour le stock</li></ol>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire une transaction SQL qui réalise ce processus. La transaction doit être annulée en cas d'échec.",
+        "niveau": "medium",
+        "reponse": "```sql\nBEGIN TRANSACTION;\n\n-- 1. Vérifier que le client existe\nSELECT id FROM clients WHERE id = @id_client;\n-- Si pas trouvé, faire ROLLBACK\n\n-- 2. Vérifier que le produit est en stock\nSELECT stock FROM produits WHERE id = @id_produit;\n-- Si stock < @quantite, faire ROLLBACK\n\n-- 3. Insérer la commande\nINSERT INTO commandes (id_client, id_produit, quantite, montant, statut)\nVALUES (@id_client, @id_produit, @quantite, @montant, 'EN_ATTENTE');\n\n-- 4. Mettre à jour le stock\nUPDATE produits SET stock = stock - @quantite\nWHERE id = @id_produit;\n\n-- Valider la transaction\nCOMMIT;\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer comment utiliser un SAVEPOINT pour gérer une erreur partielle et permettre la reprise.",
+            "niveau": "hard",
+            "reponse": "```sql\nBEGIN TRANSACTION;\n\nSAVEPOINT avant_commande;\n\n-- Tenter d'insérer la commande\nINSERT INTO commandes ...;\n\n-- Si erreur sur l'insertion\nROLLBACK TO SAVEPOINT avant_commande;\n-- Corriger l'erreur (ex: ajuster la quantité) et réessayer\n\n-- Si tout est ok\nCOMMIT;\n```<br/><br/>Le SAVEPOINT permet de revenir à un point intermédiaire sans annuler toute la transaction. C'est utile pour gérer des erreurs spécifiques sans tout recommencer, surtout dans des procédures complexes avec plusieurs étapes."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Quelle propriété ACID est directement implémentée par le mécanisme de <code>COMMIT</code> ?",
+        "niveau": "easy",
+        "reponse": "Le <code>COMMIT</code> est directement lié à la propriété de <strong>Durabilité (D)</strong>. Une fois le <code>COMMIT</code> effectué, les modifications sont définitives et persistent même en cas de panne système. La <strong>Durabilité</strong> garantit que les données ne seront pas perdues après un redémarrage du serveur."
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 3 : Atomicité - Application Bancaire",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Une banque effectue des virements entre comptes. Le système doit garantir l'<strong>Atomicité</strong> de chaque virement.</p><p>La table <code>comptes</code> contient :</p><ul><li><code>id_compte</code> (INT, clé primaire)</li><li><code>solde</code> (DECIMAL)</li></ul><p>Un virement consiste à :</p><ol><li>Débiter le compte source (solde -= montant)</li><li>Créditer le compte destination (solde += montant)</li></ol>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire une transaction SQL qui réalise un virement de 1000 FCFA du compte 1 vers le compte 2. La transaction doit échouer si le compte source n'a pas assez de fonds.",
+        "niveau": "medium",
+        "reponse": "```sql\nBEGIN TRANSACTION;\n\n-- Vérifier le solde du compte source\nSELECT solde FROM comptes WHERE id_compte = 1;\n-- Si solde < 1000, faire ROLLBACK\n\n-- Débiter le compte source\nUPDATE comptes SET solde = solde - 1000 WHERE id_compte = 1;\n\n-- Créditer le compte destination\nUPDATE comptes SET solde = solde + 1000 WHERE id_compte = 2;\n\n-- Valider\nCOMMIT;\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Que se passerait-il si une panne survient après le débit mais avant le crédit, sans l'Atomicité ?",
+            "niveau": "medium",
+            "reponse": "Sans Atomicité, si une panne survient après le débit du compte source (1000 FCFA retirés) mais avant le crédit du compte destination, l'argent serait perdu : 1000 FCFA disparaîtraient du système. Le compte source serait débité, le compte destination ne serait pas crédité, et le total de l'argent dans le système aurait diminué de 1000 FCFA. L'Atomicité garantit que cette situation ne peut pas arriver car la transaction serait annulée (ROLLBACK) et le compte source serait restauré."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Comment le SGBD garantit-il l'Atomicité de cette transaction ?",
+            "niveau": "hard",
+            "reponse": "Le SGBD garantit l'Atomicité via le <strong>journal des transactions</strong> (transaction log) et le mécanisme de <strong>write-ahead logging</strong>. Toutes les modifications sont d'abord écrites dans le journal avant d'être appliquées aux données. En cas de panne :<br/>- Si le COMMIT n'a pas été enregistré, le SGBD annule (undo) toutes les modifications lors du redémarrage (ROLLBACK automatique).<br/>- Si le COMMIT a été enregistré, le SGBD rejoue (redo) les modifications pour garantir la Durabilité.<br/><br/>Ainsi, la transaction est soit entièrement effectuée, soit totalement annulée."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer une procédure stockée qui réalise ce virement avec gestion d'erreur.",
+        "niveau": "hard",
+        "reponse": "```sql\nCREATE PROCEDURE faire_virement(\n    IN p_source INT,\n    IN p_destination INT,\n    IN p_montant DECIMAL\n)\nLANGUAGE plpgsql\nAS $$\nBEGIN\n    -- Démarrer la transaction\n    BEGIN;\n    \n    -- Vérifier que le compte source existe\n    IF NOT EXISTS (SELECT 1 FROM comptes WHERE id_compte = p_source) THEN\n        RAISE EXCEPTION 'Compte source inexistant';\n    END IF;\n    \n    -- Vérifier que le compte destination existe\n    IF NOT EXISTS (SELECT 1 FROM comptes WHERE id_compte = p_destination) THEN\n        RAISE EXCEPTION 'Compte destination inexistant';\n    END IF;\n    \n    -- Vérifier le solde\n    IF (SELECT solde FROM comptes WHERE id_compte = p_source) < p_montant THEN\n        RAISE EXCEPTION 'Solde insuffisant';\n    END IF;\n    \n    -- Effectuer le virement\n    UPDATE comptes SET solde = solde - p_montant WHERE id_compte = p_source;\n    UPDATE comptes SET solde = solde + p_montant WHERE id_compte = p_destination;\n    \n    COMMIT;\nEXCEPTION\n    WHEN OTHERS THEN\n        ROLLBACK;\n        RAISE;\nEND;\n$$;\n```"
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 4 : Cohérence et Contraintes",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>La <strong>Cohérence</strong> garantit qu'une transaction laisse la base de données dans un état valide, en respectant toutes les contraintes définies.</p><p>On considère la table <code>employes</code> avec les contraintes suivantes :</p><ul><li><code>id</code> clé primaire</li><li><code>salaire</code> > 0 (check constraint)</li><li><code>email</code> unique</li><li><code>id_departement</code> référence la table <code>departements</code> (clé étrangère)</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer pourquoi chaque transaction doit garantir la Cohérence, en donnant des exemples de violations.",
+        "niveau": "medium",
+        "reponse": "Chaque transaction doit garantir la Cohérence pour ne pas laisser la base dans un état invalide. Exemples de violations :<br/><br/>1. <strong>Salaire négatif</strong> : Une transaction qui mettrait un salaire négatif viole la contrainte CHECK (salaire > 0).<br/><br/>2. <strong>Email en double</strong> : Une transaction qui insérerait un email déjà utilisé viole la contrainte UNIQUE.<br/><br/>3. <strong>Employé sans département</strong> : Une transaction qui insérerait un employé avec un id_departement inexistant viole la clé étrangère.<br/><br/>Le SGBD rejette automatiquement ces transactions si les contraintes sont définies.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Écrire une transaction qui serait rejetée par violation de contrainte, et expliquer pourquoi.",
+            "niveau": "medium",
+            "reponse": "```sql\nBEGIN TRANSACTION;\n\n-- Essaye d'insérer un employé avec un salaire négatif\nINSERT INTO employes (id, nom, salaire, email, id_departement)\nVALUES (1, 'DUPONT', -1000, 'dupont@email.com', 1);\n\nCOMMIT;\n```<br/><br/>Cette transaction serait rejetée car la contrainte <code>CHECK (salaire > 0)</code> est violée. Le SGBD annulerait la transaction (ROLLBACK automatique) car l'état de la base après l'insertion serait invalide."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Quelle est la différence entre une contrainte déclarative (CHECK, UNIQUE, FOREIGN KEY) et une logique de validation dans l'application ?",
+        "niveau": "hard",
+        "reponse": "<strong>Contrainte déclarative :</strong><br/>- Définie au niveau de la base de données<br/>- Appliquée automatiquement par le SGBD<br/>- Garantie indépendante de l'application<br/>- Impossible de la contourner<br/><br/><strong>Logique de validation dans l'application :</strong><br/>- Définie dans le code de l'application<br/>- Peut être contournée (en modifiant le code, en accédant directement à la base)<br/>- Ne s'applique pas aux autres applications qui accèdent à la base<br/>- Peut être plus flexible (validation métier complexe)<br/><br/><strong>Recommandation :</strong> Toujours utiliser des contraintes déclaratives pour les règles d'intégrité fondamentales, et la logique applicative pour les règles métier complexes."
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice 5 : Durabilité et Journalisation",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>La <strong>Durabilité</strong> garantit que les modifications d'une transaction validée (COMMIT) persistent même en cas de panne.</p><p>Cette propriété est assurée par le <strong>journal des transactions</strong> (WAL - Write-Ahead Logging) et les mécanismes de sauvegarde.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer le principe du Write-Ahead Logging (WAL) et son rôle dans la Durabilité.",
+        "niveau": "hard",
+        "reponse": "Le <strong>Write-Ahead Logging (WAL)</strong> est un mécanisme qui garantit la Durabilité :<br/><br/>1. <strong>Principe :</strong> Toute modification de données est d'abord écrite dans un journal (transaction log) avant d'être appliquée aux données réelles sur le disque.<br/><br/>2. <strong>Fonctionnement :</strong> <br/>   - La modification est enregistrée dans le journal (sur disque)<br/>   - Puis la modification est appliquée aux données<br/>   - Le COMMIT n'est validé que lorsque le journal est écrit sur disque<br/><br/>3. <strong>En cas de panne :</strong><br/>   - Au redémarrage, le SGBD lit le journal<br/>   - Les transactions COMMIT non appliquées sont rejouées (REDO)<br/>   - Les transactions non COMMIT sont annulées (UNDO)<br/><br/>Ainsi, aucune transaction validée n'est perdue.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Que se passerait-il si le journal des transactions était corrompu ?",
+            "niveau": "hard",
+            "reponse": "Si le journal des transactions est corrompu, la Durabilité est compromise :<br/>- Le SGBD ne peut pas rejouer les transactions validées en cas de panne<br/>- Les données peuvent être perdues<br/>- La récupération après panne est impossible ou incomplète<br/><br/><strong>Prévention :</strong><br/>- Utiliser des disques redondants (RAID)<br/>- Sauvegarder régulièrement le journal<br/>- Utiliser une réplication du journal sur plusieurs serveurs<br/>- Tester régulièrement les procédures de récupération"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer pourquoi l'ordre des écritures est important : journal d'abord, données ensuite.",
+        "niveau": "medium",
+        "reponse": "L'ordre journal → données est crucial car :<br/>1. Si on écrit d'abord les données et que la panne survient avant l'écriture du journal, la modification est perdue (pas de Durabilité).<br/>2. Si on écrit d'abord le journal et que la panne survient avant l'écriture des données, au redémarrage, le SGBD rejoue la modification à partir du journal (REDO).<br/><br/>Cet ordre garantit que toute modification validée peut être restaurée, même si les données n'ont pas encore été écrites sur le disque au moment de la panne."
+      }
+    ]
+  }
+]

@@ -1,0 +1,95 @@
+[
+  {
+    "intitule": "Configuration des variables d'environnement pour le déploiement",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous déployez une application React e-commerce sur Vercel. L'application utilise une API backend dont l'URL varie selon l'environnement (développement, staging, production).</p><ul><li>En développement : <code>http://localhost:3000/api</code></li><li>En staging : <code>https://staging-api.ma-boutique.com/api</code></li><li>En production : <code>https://api.ma-boutique.com/api</code></li></ul><p><strong>Question :</strong> Configurez les fichiers <code>.env</code> et modifiez le code pour utiliser la bonne URL selon l'environnement.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédiger les fichiers .env (développement, staging, production) et le code JavaScript/TypeScript qui charge la configuration.",
+        "niveau": "medium",
+        "reponse": "Fichiers .env :\n- `.env.development` : `VITE_API_URL=http://localhost:3000/api`\n- `.env.staging` : `VITE_API_URL=https://staging-api.ma-boutique.com/api`\n- `.env.production` : `VITE_API_URL=https://api.ma-boutique.com/api`\n\nCode pour charger l'URL :\n```typescript\n// config.ts\nexport const API_URL = import.meta.env.VITE_API_URL;\n\n// utilisation dans axios\nconst api = axios.create({ baseURL: API_URL });\n```\nAvec Vite, les variables d'environnement doivent être préfixées par `VITE_`. Le fichier `.env.staging` n'est pas automatiquement reconnu par défaut ; il faut passer par `mode` : `vite build --mode staging`.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer pourquoi les variables d'environnement ne doivent pas contenir de secrets (clés API, tokens) côté frontend.",
+            "niveau": "easy",
+            "reponse": "Tout ce qui est inclus dans le bundle frontend est accessible par l'utilisateur via les DevTools. Les secrets (clés API, tokens d'accès) peuvent être extraits et utilisés de manière malveillante. Les variables d'environnement frontend ne doivent contenir que des informations non sensibles (URLs, identifiants publics). Pour les secrets, utilisez des variables d'environnement côté serveur (backend) ou des services comme les variables d'environnement des plateformes d'hébergement (Vercel, Netlify) qui restent confidentielles."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Déploiement automatique depuis GitHub vers Vercel",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous devez configurer un déploiement automatique pour votre application React e-commerce. Le projet est hébergé sur GitHub, et vous souhaitez :</p><ul><li>Déployer automatiquement la branche <code>main</code> sur l'environnement de production</li><li>Déployer automatiquement la branche <code>develop</code> sur un environnement de staging</li><li>Générer une preview pour chaque pull request</li><li>Configurer les variables d'environnement spécifiques à chaque environnement</li></ul><p><strong>Question :</strong> Décrivez la procédure à suivre sur Vercel (ou Netlify) et expliquez comment les variables d'environnement sont gérées.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Détailler les étapes de configuration du déploiement continu avec Vercel, ainsi que la gestion des variables d'environnement par environnement.",
+        "niveau": "hard",
+        "reponse": "Procédure Vercel :\n1. Connecter le compte GitHub à Vercel (Settings → Git Integrations).\n2. Importer le projet : 'Add New Project' → sélectionner le dépôt GitHub.\n3. Vercel détecte automatiquement le framework (React/Vite).\n4. Configurer les branches :\n   - Production branch : `main`\n   - Staging branch : `develop`\n5. Pour chaque environnement, ajouter les variables d'environnement dans l'interface Vercel (Settings → Environment Variables). On peut affecter une variable à 'Production', 'Preview', 'Development' (branches spécifiques).\n6. Preview deployments : automatiquement créés pour chaque pull request (avec leur propre URL).\n7. Vercel fournit des URLs uniques : `projet.vercel.app` (prod), `develop--projet.vercel.app` (staging), `pr-42--projet.vercel.app` (preview).\n\nAlternative Netlify : procédure similaire avec 'Deploy with GitHub' et gestion des branches dans 'Build settings'.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comparer l'approche de Vercel avec celle de GitHub Actions pour le déploiement continu.",
+            "niveau": "medium",
+            "reponse": "Vercel/Netlify offrent une intégration native avec Git : chaque push déclenche automatiquement un build et un déploiement sans configuration supplémentaire de pipeline. L'interface web permet de gérer facilement les variables d'environnement et les domaines personnalisés. GitHub Actions nécessite d'écrire un workflow YAML (ex: `deploy.yml`) avec des étapes manuelles (`npm ci`, `npm run build`) et l'utilisation d'outils tiers comme `vercel deploy`. Vercel est plus simple pour les projets frontend simples ; GitHub Actions offre plus de flexibilité et d'intégration avec d'autres services (tests, notifications)."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Configuration du routage SPA sur un serveur statique (fallback)",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Après le déploiement de votre application React en production sur un serveur statique (Nginx, Apache, ou hébergement comme Netlify), les utilisateurs qui tentent d'accéder directement à une route interne (ex: <code>/account/orders</code>) obtiennent une erreur 404.</p><p><strong>Question :</strong> Expliquer pourquoi ce problème survient et proposer une solution de configuration selon la plateforme d'hébergement.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire la cause du problème et fournir les configurations pour Nginx, Netlify et Vercel.",
+        "niveau": "medium",
+        "reponse": "Cause : React est une Single Page Application (SPA). Le routage est géré côté client (react-router-dom). Le serveur ne connaît pas les routes virtuelles comme `/account/orders`. Il cherche un fichier ou dossier correspondant et renvoie 404.\n\nSolutions :\n- **Netlify** : créer un fichier `_redirects` à la racine du dossier de build avec : `/* /index.html 200`\n- **Vercel** : configurer automatiquement le fallback. Sinon, fichier `vercel.json` : `{ \"routes\": [{ \"src\": \"/[^.]+\", \"dest\": \"/index.html\" }] }`\n- **Nginx** : dans la configuration, ajouter :\n```nginx\nlocation / {\n  try_files $uri $uri/ /index.html;\n}\n```\nCela redirige toutes les requêtes sans extension vers `index.html`.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Automatisation du déploiement avec GitHub Actions",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Votre équipe souhaite utiliser GitHub Actions pour automatiser le déploiement sur un VPS (DigitalOcean). Le workflow doit :</p><ul><li>S'exécuter lors d'un push sur la branche <code>main</code></li><li>Construire l'application (npm run build)</li><li>Transférer les fichiers build via rsync sur le serveur distant</li><li>Envoyer une notification Slack en cas de succès ou d'échec</li></ul><p><strong>Question :</strong> Rédigez le fichier YAML du workflow GitHub Actions.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créer le fichier `.github/workflows/deploy.yml` complet.",
+        "niveau": "hard",
+        "reponse": "```yaml\nname: Deploy to VPS\n\non:\n  push:\n    branches: [ main ]\n\njobs:\n  deploy:\n    runs-on: ubuntu-latest\n    steps:\n      - name: Checkout code\n        uses: actions/checkout@v3\n\n      - name: Setup Node.js\n        uses: actions/setup-node@v3\n        with:\n          node-version: '18'\n          cache: 'npm'\n\n      - name: Install dependencies\n        run: npm ci\n\n      - name: Build application\n        run: npm run build\n        env:\n          VITE_API_URL: ${{ secrets.VITE_API_URL }}\n\n      - name: Deploy via rsync\n        run: |\n          rsync -avz --delete dist/ ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/var/www/html/\n        env:\n          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}\n          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}\n\n      - name: Slack Notification Success\n        if: success()\n        uses: rtCamp/action-slack-notify@v2\n        env:\n          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}\n          SLACK_TITLE: '✅ Déploiement réussi'\n          SLACK_MESSAGE: 'La branche main a été déployée avec succès'\n\n      - name: Slack Notification Failure\n        if: failure()\n        uses: rtCamp/action-slack-notify@v2\n        env:\n          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}\n          SLACK_TITLE: '❌ Échec du déploiement'\n          SLACK_MESSAGE: 'Le déploiement de main a échoué. Vérifiez les logs.'\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Justifier l'utilisation de `secrets` pour certaines variables et expliquer comment les configurer sur GitHub.",
+            "niveau": "easy",
+            "reponse": "Les secrets (clé SSH, utilisateur, hôte, webhook Slack) ne doivent pas être écrits en clair dans le fichier YAML car le dépôt est généralement public. GitHub permet de stocker des secrets chiffrés dans Settings → Secrets and variables → Actions. Ils sont accessibles via `${{ secrets.NOM }}`. On y trouve aussi le token d'accès personnel ou les clés SSH. Cela garantit la sécurité des informations sensibles."
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -1,0 +1,153 @@
+[
+  {
+    "intitule": "Installation et configuration de Jenkins sur un serveur Ubuntu",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous êtes administrateur DevOps dans une entreprise camerounaise de services numériques à Douala. Votre équipe doit automatiser les tests et le déploiement d’une application web. Vous décidez d’installer Jenkins sur un serveur Ubuntu 22.04 LTS.</p>",
+      "images": [
+        "Diagramme d'architecture Jenkins avec un master et un agent Node",
+        "Capture d'écran de l'interface Jenkins après installation"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire les étapes d’installation de Jenkins sur Ubuntu en utilisant le dépôt officiel.",
+        "niveau": "medium",
+        "reponse": "1. Mettre à jour les paquets : sudo apt update\n2. Installer Java (Jenkins nécessite Java 11 ou 17) : sudo apt install openjdk-11-jdk\n3. Ajouter la clé GPG et le dépôt Jenkins :\n   wget -q -O - https://pkg.jenkins.io/debian-stable/jenkins.io.key | sudo apt-key add -\n   sudo sh -c 'echo deb https://pkg.jenkins.io/debian-stable binary/ > /etc/apt/sources.list.d/jenkins.list'\n4. Mettre à jour et installer Jenkins : sudo apt update && sudo apt install jenkins\n5. Démarrer Jenkins : sudo systemctl start jenkins\n6. Activer au démarrage : sudo systemctl enable jenkins",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer pourquoi Jenkins nécessite Java.",
+            "niveau": "easy",
+            "reponse": "Jenkins est une application Java (un fichier WAR) qui s'exécute dans une machine virtuelle Java (JVM). Sans Java, le service Jenkins ne peut pas démarrer."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Proposer une méthode pour récupérer le mot de passe initial administrateur.",
+            "niveau": "easy",
+            "reponse": "Utiliser la commande : sudo cat /var/lib/jenkins/secrets/initialAdminPassword"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Après installation, vous devez sécuriser l’accès à Jenkins. Lister les plugins recommandés à installer pour l’authentification et la gestion des utilisateurs.",
+        "niveau": "medium",
+        "reponse": "Plugin 'Matrix Authorization Strategy', plugin 'Role-based Strategy', plugin 'LDAP' (si intégration annuaire), plugin 'GitHub Authentication' ou 'Google OAuth' selon les besoins.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Création d’un pipeline déclaratif pour une application Node.js",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Votre équipe développe une API REST avec Node.js et Express. Vous devez créer un pipeline Jenkins déclaratif (Jenkinsfile) qui :</p>\n<ul>\n  <li>Clone le code depuis GitHub</li>\n  <li>Installe les dépendances avec <code>npm install</code></li>\n  <li>Exécute les tests unitaires avec <code>npm test</code></li>\n  <li>Construit une image Docker</li>\n  <li>Pousse l’image sur Docker Hub</li>\n</ul>",
+      "images": [
+        "Exemple de structure d'un Jenkinsfile déclaratif",
+        "Schéma d'un pipeline CI/CD avec Jenkins et Docker"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Rédiger le code complet du Jenkinsfile déclaratif répondant aux exigences.",
+        "niveau": "hard",
+        "reponse": "pipeline {\n    agent any\n    stages {\n        stage('Checkout') {\n            steps {\n                git url: 'https://github.com/votre-repo/api-node.git', branch: 'main'\n            }\n        }\n        stage('Install Dependencies') {\n            steps {\n                sh 'npm install'\n            }\n        }\n        stage('Run Tests') {\n            steps {\n                sh 'npm test'\n            }\n        }\n        stage('Build Docker Image') {\n            steps {\n                script {\n                    docker.build(\"monuser/api-node:${env.BUILD_ID}\")\n                }\n            }\n        }\n        stage('Push to Docker Hub') {\n            steps {\n                script {\n                    docker.withRegistry('https://registry.hub.docker.com', 'docker-hub-credentials') {\n                        docker.image(\"monuser/api-node:${env.BUILD_ID}\").push()\n                    }\n                }\n            }\n        }\n    }\n}",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer le rôle de l’instruction <code>agent any</code> dans ce pipeline.",
+            "niveau": "easy",
+            "reponse": "Elle indique que le pipeline peut s’exécuter sur n’importe quel agent Jenkins disponible (master ou agent)."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Justifier l’utilisation de <code>docker.withRegistry</code>.",
+            "niveau": "medium",
+            "reponse": "Cette méthode permet de s’authentifier auprès d’un registre Docker (ici Docker Hub) en utilisant des identifiants stockés en sécurité dans Jenkins, sans les écrire en clair dans le Jenkinsfile."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Intégration de Jenkins avec Git et Docker – Problème concret",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Dans une entreprise à Yaoundé, le pipeline Jenkins échoue lors de l’étape <strong>‘Build Docker Image’</strong>. Le message d’erreur indique : <code>docker: command not found</code>.</p>",
+      "images": [
+        "Capture d’erreur Jenkins 'docker: command not found'",
+        "Log d’exécution d’un pipeline montrant l’échec"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier la cause probable de cette erreur.",
+        "niveau": "easy",
+        "reponse": "Docker n’est pas installé sur le nœud Jenkins (agent) qui exécute le pipeline, ou l’utilisateur Jenkins n’a pas les permissions pour exécuter Docker.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer deux solutions pour résoudre ce problème durablement.",
+        "niveau": "hard",
+        "reponse": "Solution 1 : Installer Docker sur le nœud Jenkins et ajouter l’utilisateur 'jenkins' au groupe 'docker' (sudo usermod -aG docker jenkins).\nSolution 2 : Utiliser un agent Docker dans le pipeline en déclarant : agent { docker { image 'docker:latest' args '-v /var/run/docker.sock:/var/run/docker.sock' } }",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Expliquer les risques de sécurité liés à l’ajout de l’utilisateur jenkins au groupe docker.",
+            "niveau": "medium",
+            "reponse": "Cela équivaut à donner un accès root à l’utilisateur jenkins, car Docker peut monter des volumes sensibles et exécuter des commandes privilégiées. Cela peut compromettre l’hôte Jenkins."
+          },
+          {
+            "numero": "2.b",
+            "texte": "Décrire comment implémenter la solution 2 (agent Docker) dans un Jenkinsfile.",
+            "niveau": "hard",
+            "reponse": "pipeline {\n    agent {\n        docker {\n            image 'docker:latest'\n            args '-v /var/run/docker.sock:/var/run/docker.sock'\n        }\n    }\n    stages {\n        stage('Build') {\n            steps {\n                sh 'docker build -t monapp .'\n            }\n        }\n    }\n}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Planification et installation de Jenkins dans un contexte à faibles ressources",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous encadrez un projet DevOps dans une école d’ingénieurs de Buea. Les ordinateurs disponibles ont seulement 4 Go de RAM et un processeur double cœur. Vous devez installer Jenkins pour former 20 étudiants.</p>",
+      "images": [
+        "Interface d’administration Jenkins – gestion des nœuds",
+        "Schéma d’un master Jenkins avec plusieurs agents légers"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Comparer l’installation monolithique (master seul) versus l’architecture master + agents dans ce contexte.",
+        "niveau": "medium",
+        "reponse": "Monolithique : facile à installer mais peut saturer le master si plusieurs jobs tournent en parallèle. Master + agents : plus complexe mais permet de répartir la charge sur des machines légères (Raspberry Pi, anciens PC). Recommandé pour 20 étudiants : un master central (2 Go RAM) et plusieurs agents (1 Go chacun).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Énumérer les prérequis matériels et logiciels pour l’installation d’un agent Jenkins sur une machine Linux.",
+        "niveau": "easy",
+        "reponse": "Matériel : 512 Mo à 1 Go RAM, connexion réseau. Logiciels : Java (JRE 11+), un compte utilisateur dédié, accès SSH au master, agent.jar ou service systemd.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Rédiger la commande pour lancer un agent Jenkins via SSH à partir du master.",
+        "niveau": "medium",
+        "reponse": "Sur le master, aller dans 'Manage Jenkins' > 'Manage Nodes' > 'New Node' > choisir 'Permanent Agent'. Renseigner l’hôte, les identifiants SSH, puis lancer. La commande équivalente manuelle :\njava -jar agent.jar -url http://jenkins-master:8080/ -secret <secret> -workDir \"/home/jenkins/agent\"",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

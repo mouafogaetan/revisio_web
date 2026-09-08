@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+ "matiere": "Mathématiques 1ère A",
+ "classe": "Première",
+ "sequence": "Séquence 2",
+ "anneeScolaire": "2025-2026",
+ "exercices": [
+   {
+     "titre": "Exercice 1 : Équations et inéquations du second degré (3 pts)",
+     "points": "3 pts",
+     "enonce": "<div style='background-color: #f8f9fa; padding: 12px; border-radius: 8px;'><p style='margin: 0; color: #2c3e50;'>Cet exercice porte sur la résolution d'équations et d'inéquations du second degré.</p></div>",
+     "questions": [
+       {
+         "question": "<p><strong>1. Résolution d'équations (1.5 pts)</strong></p><p>Résoudre dans \\(\\mathbb{R}\\) les équations suivantes :</p><p>a) (0.75 pt) \\(x^2 - 5x + 6 = 0\\)</p><p>b) (0.75 pt) \\(2x^2 + 3x - 2 = 0\\)</p>",
+         "reponse": "<p><strong>a) (0.75 pt)</strong> \\(x^2 - 5x + 6 = 0\\)</p><p>\\(\\Delta = (-5)^2 - 4 \\times 1 \\times 6 = 25 - 24 = 1\\)</p><p>\\(x_1 = \\dfrac{5 - 1}{2} = 2\\), \\(x_2 = \\dfrac{5 + 1}{2} = 3\\)</p><p>\\(S = \\{2; 3\\}\\)</p><p><strong>b) (0.75 pt)</strong> \\(2x^2 + 3x - 2 = 0\\)</p><p>\\(\\Delta = 3^2 - 4 \\times 2 \\times (-2) = 9 + 16 = 25\\)</p><p>\\(x_1 = \\dfrac{-3 - 5}{4} = -2\\), \\(x_2 = \\dfrac{-3 + 5}{4} = \\dfrac{1}{2}\\)</p><p>\\(S = \\{-2; \\dfrac{1}{2}\\}\\)</p>"
+       },
+       {
+         "question": "<p><strong>2. Résolution d'inéquations (1.5 pts)</strong></p><p>Résoudre dans \\(\\mathbb{R}\\) les inéquations suivantes :</p><p>a) (0.75 pt) \\(x^2 - 4x + 3 \\geq 0\\)</p><p>b) (0.75 pt) \\(-x^2 + 2x + 3 < 0\\)</p>",
+         "reponse": "<p><strong>a) (0.75 pt)</strong> \\(x^2 - 4x + 3 \\geq 0\\)</p><p>\\(\\Delta = 16 - 12 = 4\\), racines : \\(x_1 = 1\\), \\(x_2 = 3\\)</p><p>Tableau de signes :</p><p>\[
+\\begin{array}{c|ccccc}
+x & -\\infty & & 1 & & 3 & & +\\infty \\\\
+\\hline
+x^2-4x+3 & + & & 0 & - & 0 & +
+\\end{array}
+\]</p><p>\\(S = ]-\\infty; 1] \\cup [3; +\\infty[\\)</p><p><strong>b) (0.75 pt)</strong> \\(-x^2 + 2x + 3 < 0\\)</p><p>On multiplie par -1 en inversant le sens : \\(x^2 - 2x - 3 > 0\\)</p><p>\\(\\Delta = 4 + 12 = 16\\), racines : \\(x_1 = -1\\), \\(x_2 = 3\\)</p><p>\\(S = ]-\\infty; -1[ \\cup ]3; +\\infty[\\)</p>"
+       }
+     ]
+   },
+   {
+     "titre": "Exercice 2 : Systèmes linéaires et problèmes concrets (5 pts)",
+     "points": "5 pts",
+     "enonce": "<div style='background-color: #f8f9fa; padding: 12px; border-radius: 8px;'><p style='margin: 0; color: #2c3e50;'>Cet exercice porte sur la résolution de systèmes linéaires et leur application à des problèmes concrets.</p></div>",
+     "questions": [
+       {
+         "question": "<p><strong>1. Résolution de systèmes (2 pts)</strong></p><p>Résoudre les systèmes suivants :</p><p>a) (1 pt) \\(\\begin{cases} 2x + 3y = 8 \\\\ x - y = -1 \\end{cases}\\)</p><p>b) (1 pt) \\(\\begin{cases} 3x - 2y = 7 \\\\ 5x + 3y = -1 \\end{cases}\\)</p>",
+         "reponse": "<p><strong>a) (1 pt)</strong> \\(\\begin{cases} 2x + 3y = 8 \\\\ x - y = -1 \\end{cases}\\)</p><p>De la deuxième équation, \\(x = y - 1\\).</p><p>Substitution : \\(2(y - 1) + 3y = 8 \\Rightarrow 2y - 2 + 3y = 8 \\Rightarrow 5y = 10 \\Rightarrow y = 2\\)</p><p>\\(x = 2 - 1 = 1\\). \\(S = \\{(1; 2)\\}\\)</p><p><strong>b) (1 pt)</strong> \\(\\begin{cases} 3x - 2y = 7 \\\\ 5x + 3y = -1 \\end{cases}\\)</p><p>Par combinaison : multiplions la 1ère par 3 et la 2ème par 2 :</p><p>\\(\\begin{cases} 9x - 6y = 21 \\\\ 10x + 6y = -2 \\end{cases}\\)</p><p>Addition : \\(19x = 19 \\Rightarrow x = 1\\)</p><p>\\(3(1) - 2y = 7 \\Rightarrow 3 - 2y = 7 \\Rightarrow -2y = 4 \\Rightarrow y = -2\\)</p><p>\\(S = \\{(1; -2)\\}\\)</p>"
+       },
+       {
+         "question": "<p><strong>2. Problème concret (3 pts)</strong></p><p>Un commerçant vend des pommes à 250 FCFA le kg et des oranges à 150 FCFA le kg. Aujourd'hui, il a vendu 40 kg de fruits pour un total de 8000 FCFA.</p><p>a) (1.5 pts) En posant \\(x\\) la quantité de pommes et \\(y\\) la quantité d'oranges, écrire le système d'équations correspondant.</p><p>b) (1.5 pts) Résoudre ce système pour déterminer les quantités vendues de chaque fruit.</p>",
+         "reponse": "<p><strong>a) (1.5 pts)</strong></p><p>Soit \\(x\\) la quantité de pommes (en kg) et \\(y\\) la quantité d'oranges (en kg).</p><p>Le système est :</p><p>\\(\\begin{cases} x + y = 40 \\\\ 250x + 150y = 8000 \\end{cases}\\)</p><p><strong>b) (1.5 pts)</strong></p><p>De la première équation, \\(y = 40 - x\\).</p><p>Substitution dans la deuxième :</p><p>\\(250x + 150(40 - x) = 8000\\)</p><p>\\(250x + 6000 - 150x = 8000\\)</p><p>\\(100x = 2000 \\Rightarrow x = 20\\)</p><p>\\(y = 40 - 20 = 20\\)</p><p>Il a vendu <strong>20 kg de pommes</strong> et <strong>20 kg d'oranges</strong>.</p>"
+       }
+     ]
+   },
+   {
+     "titre": "Exercice 3 : Dénombrement (4 pts)",
+     "points": "4 pts",
+     "enonce": "<div style='background-color: #f8f9fa; padding: 12px; border-radius: 8px;'><p style='margin: 0; color: #2c3e50;'>Cet exercice porte sur le dénombrement : arrangements, combinaisons et choix de groupes.</p></div>",
+     "questions": [
+       {
+         "question": "<p><strong>1. Arrangements et combinaisons (2 pts)</strong></p><p>a) (1 pt) Calculer \\(A_7^3\\) et \\(C_7^3\\).</p><p>b) (1 pt) Dans une classe de 10 élèves, on veut former un bureau de 3 élèves (président, secrétaire, trésorier). Combien de bureaux différents peut-on former ?</p>",
+         "reponse": "<p><strong>a) (1 pt)</strong></p><p>\\(A_7^3 = 7 \\times 6 \\times 5 = 210\\)</p><p>\\(C_7^3 = \\dfrac{7 \\times 6 \\times 5}{3 \\times 2 \\times 1} = 35\\)</p><p><strong>b) (1 pt)</strong></p><p>Il s'agit d'un tirage successif sans remise avec ordre (les fonctions sont distinctes).</p><p>Nombre de bureaux : \\(A_{10}^3 = 10 \\times 9 \\times 8 = 720\\)</p>"
+       },
+       {
+         "question": "<p><strong>2. Choix de groupes (2 pts)</strong></p><p>Un club de sport compte 15 membres. On veut constituer une équipe de 5 membres pour une compétition.</p><p>a) (1 pt) Combien d'équipes différentes peut-on former ?</p><p>b) (1 pt) Si l'équipe doit comporter au moins 2 filles sachant qu'il y a 6 filles dans le club, combien d'équipes peut-on former ?</p>",
+         "reponse": "<p><strong>a) (1 pt)</strong></p><p>Il s'agit d'un tirage simultané sans ordre : \\(C_{15}^5 = \\dfrac{15 \\times 14 \\times 13 \\times 12 \\times 11}{5 \\times 4 \\times 3 \\times 2 \\times 1} = 3003\\)</p><p><strong>b) (1 pt)</strong></p><p>Cas 1 : 2 filles et 3 garçons : \\(C_6^2 \\times C_9^3 = 15 \\times 84 = 1260\\)</p><p>Cas 2 : 3 filles et 2 garçons : \\(C_6^3 \\times C_9^2 = 20 \\times 36 = 720\\)</p><p>Cas 3 : 4 filles et 1 garçon : \\(C_6^4 \\times C_9^1 = 15 \\times 9 = 135\\)</p><p>Cas 4 : 5 filles et 0 garçon : \\(C_6^5 \\times C_9^0 = 6 \\times 1 = 6\\)</p><p>Total : \\(1260 + 720 + 135 + 6 = 2121\\)</p>"
+       }
+     ]
+   },
+   {
+     "titre": "Exercice 4 : Lecture graphique et analyse de fonctions (3 pts)",
+     "points": "3 pts",
+     "enonce": "<div style='background-color: #f8f9fa; padding: 12px; border-radius: 8px;'><p style='margin: 0; color: #2c3e50;'>Cet exercice porte sur l'analyse graphique d'une fonction.</p></div>",
+     "questions": [
+       {
+         "question": "<p><strong>1. Lecture graphique (3 pts)</strong></p><p>On considère la fonction \\(f\\) dont la courbe est donnée ci-dessous.</p><div style='background-color: #e8f4f8; padding: 15px; border-radius: 8px; margin: 10px 0; text-align: center;'><p><em>(Graphique d'une parabole représentant une fonction du second degré avec sommet en (2; -1), coupant l'axe des abscisses en x=1 et x=3)</em></p></div><p>a) (0.75 pt) Déterminer graphiquement l'ensemble de définition de \\(f\\).</p><p>b) (0.75 pt) Déterminer graphiquement le tableau de signes de \\(f\\).</p><p>c) (0.75 pt) Déterminer graphiquement le sens de variation de \\(f\\).</p><p>d) (0.75 pt) Résoudre graphiquement l'inéquation \\(f(x) \\geq 0\\).</p>",
+         "reponse": "<p><strong>a) (0.75 pt)</strong> \\(D_f = \\mathbb{R}\\) (la parabole est définie sur tout l'ensemble des réels).</p><p><strong>b) (0.75 pt)</strong> Tableau de signes :</p><p>\[
+\\begin{array}{c|ccccc}
+x & -\\infty & & 1 & & 3 & & +\\infty \\\\
+\\hline
+f(x) & + & & 0 & - & 0 & +
+\\end{array}
+\]</p><p><strong>c) (0.75 pt)</strong> \\(f\\) est décroissante sur \\(]-\\infty; 2]\\) et croissante sur \\([2; +\\infty[\\).</p><p><strong>d) (0.75 pt)</strong> \\(f(x) \\geq 0 \\Rightarrow S = ]-\\infty; 1] \\cup [3; +\\infty[\\)</p>"
+       }
+     ]
+   },
+   {
+     "titre": "Exercice 5 : Limites, continuité et asymptotes (3 pts)",
+     "points": "3 pts",
+     "enonce": "<div style='background-color: #f8f9fa; padding: 12px; border-radius: 8px;'><p style='margin: 0; color: #2c3e50;'>Cet exercice porte sur le calcul de limites et la recherche d'asymptotes.</p></div>",
+     "questions": [
+       {
+         "question": "<p><strong>1. Calcul de limites (2 pts)</strong></p><p>Calculer les limites suivantes :</p><p>a) (0.5 pt) \\(\\lim\\limits_{x \\to +\\infty} (2x^2 - 3x + 1)\\)</p><p>b) (0.5 pt) \\(\\lim\\limits_{x \\to 2} \\dfrac{x^2 - 4}{x - 2}\\)</p><p>c) (1 pt) \\(\\lim\\limits_{x \\to 1} \\dfrac{3x^2 - 2x - 1}{x - 1}\\)</p>",
+         "reponse": "<p><strong>a) (0.5 pt)</strong> \\(\\lim\\limits_{x \\to +\\infty} (2x^2 - 3x + 1) = +\\infty\\)</p><p><strong>b) (0.5 pt)</strong> \\(\\lim\\limits_{x \\to 2} \\dfrac{x^2 - 4}{x - 2} = \\lim\\limits_{x \\to 2} \\dfrac{(x - 2)(x + 2)}{x - 2} = \\lim\\limits_{x \\to 2} (x + 2) = 4\\)</p><p><strong>c) (1 pt)</strong> \\(\\lim\\limits_{x \\to 1} \\dfrac{3x^2 - 2x - 1}{x - 1}\\)</p><p>\\(3x^2 - 2x - 1 = (x - 1)(3x + 1)\\)</p><p>\\(\\lim\\limits_{x \\to 1} \\dfrac{(x - 1)(3x + 1)}{x - 1} = \\lim\\limits_{x \\to 1} (3x + 1) = 4\\)</p>"
+       },
+       {
+         "question": "<p><strong>2. Asymptotes (1 pt)</strong></p><p>Soit \\(f(x) = \\dfrac{1}{x - 2}\\).</p><p>Déterminer l'équation de l'asymptote verticale de \\(f\\).</p>",
+         "reponse": "<p><strong>2. (1 pt)</strong></p><p>\\(\\lim\\limits_{x \\to 2^+} \\dfrac{1}{x - 2} = +\\infty\\) et \\(\\lim\\limits_{x \\to 2^-} \\dfrac{1}{x - 2} = -\\infty\\)</p><p>La droite d'équation \\(x = 2\\) est une <strong>asymptote verticale</strong>.</p>"
+       }
+     ]
+   },
+   {
+     "titre": "Exercice 6 : Dérivées et applications (5 pts)",
+     "points": "5 pts",
+     "enonce": "<div style='background-color: #f8f9fa; padding: 12px; border-radius: 8px;'><p style='margin: 0; color: #2c3e50;'>Cet exercice porte sur le calcul de dérivées et l'étude des variations d'une fonction.</p></div>",
+     "questions": [
+       {
+         "question": "<p><strong>1. Calcul de dérivées (2 pts)</strong></p><p>Calculer la dérivée des fonctions suivantes :</p><p>a) (0.5 pt) \\(f(x) = 3x^2 - 5x + 2\\)</p><p>b) (0.5 pt) \\(f(x) = (x^2 + 1)(2x - 3)\\)</p><p>c) (1 pt) \\(f(x) = \\dfrac{2x + 1}{x - 1}\\)</p>",
+         "reponse": "<p><strong>a) (0.5 pt)</strong> \\(f'(x) = 6x - 5\\)</p><p><strong>b) (0.5 pt)</strong> \\(f'(x) = 2x(2x - 3) + (x^2 + 1) \\times 2 = 4x^2 - 6x + 2x^2 + 2 = 6x^2 - 6x + 2\\)</p><p><strong>c) (1 pt)</strong> \\(f'(x) = \\dfrac{2(x - 1) - (2x + 1)(1)}{(x - 1)^2} = \\dfrac{2x - 2 - 2x - 1}{(x - 1)^2} = \\dfrac{-3}{(x - 1)^2}\\)</p>"
+       },
+       {
+         "question": "<p><strong>2. Étude de fonction (3 pts)</strong></p><p>Soit \\(f(x) = x^2 - 4x + 3\\).</p><p>a) (1 pt) Calculer \\(f'(x)\\).</p><p>b) (1 pt) Déterminer le signe de \\(f'(x)\\) et dresser le tableau de variations de \\(f\\).</p><p>c) (1 pt) Déterminer l'équation de la tangente à la courbe de \\(f\\) au point d'abscisse \\(x_0 = 2\\).</p>",
+         "reponse": "<p><strong>a) (1 pt)</strong> \\(f'(x) = 2x - 4\\)</p><p><strong>b) (1 pt)</strong> \\(f'(x) = 0 \\Rightarrow 2x - 4 = 0 \\Rightarrow x = 2\\)</p><p>\[
+\\begin{array}{c|ccccc}
+x & -\\infty & & 2 & & +\\infty \\\\
+\\hline
+f'(x) & - & & 0 & & + \\\\
+\\hline
+f(x) & \\searrow & & -1 & & \\nearrow
+\\end{array}
+\]</p><p><strong>c) (1 pt)</strong></p><p>\\(f(2) = 4 - 8 + 3 = -1\\)</p><p>\\(f'(2) = 2(2) - 4 = 0\\)</p><p>\\(y = f'(2)(x - 2) + f(2) = 0(x - 2) - 1 = -1\\)</p><p>La tangente est \\(y = -1\\).</p>"
+       }
+     ]
+   },
+   {
+     "titre": "Exercice 7 : Statistique (5 pts)",
+     "points": "5 pts",
+     "enonce": "<div style='background-color: #f8f9fa; padding: 12px; border-radius: 8px;'><p style='margin: 0; color: #2c3e50;'>Cet exercice porte sur le calcul des paramètres de position et de dispersion d'une série statistique groupée en classes.</p></div>",
+     "questions": [
+       {
+         "question": "<p><strong>1. Paramètres de position (3 pts)</strong></p><p>On donne la série statistique suivante :</p><div style='background-color: #e8f4f8; padding: 12px; border-radius: 8px; margin: 10px 0;'><table style='width: 100%; border-collapse: collapse; text-align: center;'><tr style='background-color: #d4e6f1;'><th style='padding: 8px; border: 1px solid #bdc3c7;'>Classe</th><th style='padding: 8px; border: 1px solid #bdc3c7;'>[0; 10[</th><th style='padding: 8px; border: 1px solid #bdc3c7;'>[10; 20[</th><th style='padding: 8px; border: 1px solid #bdc3c7;'>[20; 30[</th><th style='padding: 8px; border: 1px solid #bdc3c7;'>[30; 40[</th><th style='padding: 8px; border: 1px solid #bdc3c7;'>[40; 50[</th></tr><tr><td style='padding: 8px; border: 1px solid #bdc3c7;'>Effectif</td><td style='padding: 8px; border: 1px solid #bdc3c7;'>5</td><td style='padding: 8px; border: 1px solid #bdc3c7;'>10</td><td style='padding: 8px; border: 1px solid #bdc3c7;'>15</td><td style='padding: 8px; border: 1px solid #bdc3c7;'>12</td><td style='padding: 8px; border: 1px solid #bdc3c7;'>8</td></tr></table></div><p>a) (1.5 pts) Calculer la moyenne de cette série.</p><p>b) (1.5 pts) Calculer les effectifs cumulés croissants et déterminer la classe médiane.</p>",
+         "reponse": "<p><strong>a) (1.5 pts)</strong></p><p>Centres des classes : 5, 15, 25, 35, 45</p><p>\\(\\bar{x} = \\dfrac{5 \\times 5 + 10 \\times 15 + 15 \\times 25 + 12 \\times 35 + 8 \\times 45}{5 + 10 + 15 + 12 + 8}\\)</p><p>\\(\\bar{x} = \\dfrac{25 + 150 + 375 + 420 + 360}{50} = \\dfrac{1330}{50} = 26,6\\)</p><p><strong>b) (1.5 pts)</strong></p><p>Effectifs cumulés croissants :</p><p>[0; 10[ : 5</p><p>[10; 20[ : 5 + 10 = 15</p><p>[20; 30[ : 15 + 15 = 30</p><p>[30; 40[ : 30 + 12 = 42</p><p>[40; 50[ : 42 + 8 = 50</p><p>Effectif total \\(N = 50\\), la médiane est la 25ème et 26ème valeur.</p><p>La classe médiane est donc <strong>[20; 30[</strong>.</p>"
+       },
+       {
+         "question": "<p><strong>2. Paramètres de dispersion (2 pts)</strong></p><p>En utilisant les données du tableau précédent :</p><p>a) (1 pt) Calculer la variance de cette série.</p><p>b) (1 pt) Calculer l'écart-type.</p>",
+         "reponse": "<p><strong>a) (1 pt)</strong></p><p>\\(V = \\dfrac{1}{50} \\times \\sum n_i (x_i - \\bar{x})^2\\)</p><p>\\(V = \\dfrac{1}{50} \\times [5(5-26,6)^2 + 10(15-26,6)^2 + 15(25-26,6)^2 + 12(35-26,6)^2 + 8(45-26,6)^2]\\)</p><p>\\(V = \\dfrac{1}{50} \\times [5(-21,6)^2 + 10(-11,6)^2 + 15(-1,6)^2 + 12(8,4)^2 + 8(18,4)^2]\\)</p><p>\\(V = \\dfrac{1}{50} \\times [5(466,56) + 10(134,56) + 15(2,56) + 12(70,56) + 8(338,56)]\\)</p><p>\\(V = \\dfrac{1}{50} \\times [2332,8 + 1345,6 + 38,4 + 846,72 + 2708,48] = \\dfrac{7272}{50} = 145,44\\)</p><p><strong>b) (1 pt)</strong></p><p>\\(\\sigma = \\sqrt{V} = \\sqrt{145,44} \\approx 12,06\\)</p>"
+       }
+     ]
+   }
+ ]
+};
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

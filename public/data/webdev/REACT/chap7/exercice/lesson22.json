@@ -1,0 +1,172 @@
+[
+  {
+    "intitule": "Analyse d'un reducer simple",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Un élève a écrit le reducer suivant pour gérer une liste de tâches. Analysez ce code et répondez aux questions.</p>\n<pre><code>\nconst initialState = { tasks: [], filter: 'all' };\n\nfunction taskReducer(state, action) {\n  switch (action.type) {\n    case 'ADD_TASK':\n      return { ...state, tasks: [...state.tasks, action.payload] };\n    case 'REMOVE_TASK':\n      return { ...state, tasks: state.tasks.filter((_, i) => i !== action.payload) };\n    case 'SET_FILTER':\n      return { ...state, filter: action.payload };\n    default:\n      return state;\n  }\n}\n</code></pre>",
+      "images": [
+        "schéma du flux d'actions dans un reducer React",
+        "diagramme comparant useState et useReducer"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer le rôle de chaque action ('ADD_TASK', 'REMOVE_TASK', 'SET_FILTER') et décrire l'effet de chacune sur l'état.",
+        "niveau": "easy",
+        "reponse": "ADD_TASK : ajoute une nouvelle tâche (action.payload) au tableau tasks. Utilise le spread operator pour conserver l'immutabilité. REMOVE_TASK : supprime la tâche à l'index action.payload du tableau tasks. SET_FILTER : modifie la valeur du filtre (ex: 'all', 'completed', 'pending').",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi utilise-t-on '...state' dans chaque cas avant de modifier les propriétés ?",
+            "niveau": "easy",
+            "reponse": "Le spread operator '...state' permet de copier toutes les propriétés existantes de l'état (comme 'filter' quand on modifie 'tasks', et vice versa). Cela garantit l'immutabilité et évite d'écraser accidentellement d'autres propriétés de l'état."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Que se passe-t-il si une action avec un type non reconnu est dispatchée ?",
+            "niveau": "easy",
+            "reponse": "Le reducer retourne l'état inchangé (state) grâce au cas 'default'. C'est une bonne pratique pour éviter de casser l'application lorsqu'une action inattendue est dispatchée."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Migration de useState vers useReducer",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous avez un composant qui gère l'état d'un formulaire d'inscription avec plusieurs champs (nom, email, telephone, ville, abonnementNewsletter) et des règles de validation. Le code actuel utilise plusieurs useState.</p>\n<pre><code>\nconst [nom, setNom] = useState('');\nconst [email, setEmail] = useState('');\nconst [telephone, setTelephone] = useState('');\nconst [ville, setVille] = useState('Douala');\nconst [newsletter, setNewsletter] = useState(false);\nconst [errors, setErrors] = useState({});\n</code></pre>",
+      "images": [
+        "schéma de migration d'états multiples vers un reducer unique",
+        "exemple de structure d'action pour formulaire"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Réécrire la gestion d'état de ce formulaire en utilisant useReducer. Définir l'état initial, les types d'actions et le reducer.",
+        "niveau": "medium",
+        "reponse": "```jsx\n// État initial\nconst initialState = {\n  nom: '',\n  email: '',\n  telephone: '',\n  ville: 'Douala',\n  newsletter: false,\n  errors: {}\n};\n\n// Types d'actions\nconst ACTIONS = {\n  UPDATE_FIELD: 'UPDATE_FIELD',\n  SET_ERRORS: 'SET_ERRORS',\n  RESET_FORM: 'RESET_FORM'\n};\n\n// Reducer\nfunction formReducer(state, action) {\n  switch (action.type) {\n    case ACTIONS.UPDATE_FIELD:\n      return {\n        ...state,\n        [action.field]: action.value,\n        errors: { ...state.errors, [action.field]: '' } // Efface l'erreur du champ\n      };\n    case ACTIONS.SET_ERRORS:\n      return { ...state, errors: action.payload };\n    case ACTIONS.RESET_FORM:\n      return initialState;\n    default:\n      return state;\n  }\n}\n\n// Utilisation dans le composant\nconst [state, dispatch] = useReducer(formReducer, initialState);\n\nconst handleChange = (e) => {\n  const { name, value, type, checked } = e.target;\n  dispatch({\n    type: ACTIONS.UPDATE_FIELD,\n    field: name,\n    value: type === 'checkbox' ? checked : value\n  });\n};\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quels sont les avantages de cette approche par rapport aux useState multiples ?",
+            "niveau": "medium",
+            "reponse": "Avantages : 1) Centralisation de toute la logique de mise à jour dans un seul reducer, plus facile à tester. 2) Réduction du code boilerplate (plusieurs setters). 3) Facilité d'ajout de nouvelles actions (ex: reset, validation batch). 4) Meilleure lisibilité des transitions d'état. 5) Plus facile à déboguer (chaque action est tracée)."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Ajouter une action 'VALIDATE_FORM' qui vérifie que tous les champs obligatoires sont remplis et met à jour l'état errors en conséquence.",
+            "niveau": "hard",
+            "reponse": "```jsx\ncase ACTIONS.VALIDATE_FORM:\n  const newErrors = {};\n  if (!state.nom.trim()) newErrors.nom = 'Nom requis';\n  if (!state.email.trim()) newErrors.email = 'Email requis';\n  else if (!/\\S+@\\S+\\.\\S+/.test(state.email)) newErrors.email = 'Email invalide';\n  if (!state.telephone.trim()) newErrors.telephone = 'Téléphone requis';\n  return { ...state, errors: newErrors };\n```"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Combinaison de Context et useReducer pour un panier d'achat",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous développez une boutique e-commerce pour des artisans camerounais. Le panier d'achat doit être accessible depuis n'importe quel composant de l'application (en-tête, page produit, page panier, checkout). Le panier doit supporter :</p>\n<ul>\n  <li>Ajout d'un produit (avec quantité)</li>\n  <li>Retrait d'un produit</li>\n  <li>Modification de la quantité d'un produit</li>\n  <li>Vidage complet du panier</li>\n  <li>Calcul du nombre total d'articles et du prix total</li>\n</ul>\n<p>Chaque produit a : id, nom, prix, quantité.</p>",
+      "images": [
+        "schéma d'architecture Context + Reducer",
+        "diagramme de flux des actions du panier"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créer un système complet de gestion de panier utilisant Context et useReducer. Fournir : le reducer, le contexte, le provider, et un hook personnalisé useCart.",
+        "niveau": "very hard",
+        "reponse": "```jsx\n// cartReducer.js\nconst initialState = {\n  items: [],\n  totalItems: 0,\n  totalPrice: 0\n};\n\nfunction calculateTotals(items) {\n  return items.reduce((acc, item) => ({\n    totalItems: acc.totalItems + item.quantity,\n    totalPrice: acc.totalPrice + (item.price * item.quantity)\n  }), { totalItems: 0, totalPrice: 0 });\n}\n\nfunction cartReducer(state, action) {\n  let newItems;\n  let existingItem;\n\n  switch (action.type) {\n    case 'ADD_ITEM':\n      existingItem = state.items.find(item => item.id === action.payload.id);\n      if (existingItem) {\n        newItems = state.items.map(item =>\n          item.id === action.payload.id\n            ? { ...item, quantity: item.quantity + (action.payload.quantity || 1) }\n            : item\n        );\n      } else {\n        newItems = [...state.items, { ...action.payload, quantity: action.payload.quantity || 1 }];\n      }\n      return { ...state, items: newItems, ...calculateTotals(newItems) };\n\n    case 'REMOVE_ITEM':\n      newItems = state.items.filter(item => item.id !== action.payload);\n      return { ...state, items: newItems, ...calculateTotals(newItems) };\n\n    case 'UPDATE_QUANTITY':\n      newItems = state.items.map(item =>\n        item.id === action.payload.id\n          ? { ...item, quantity: Math.max(0, action.payload.quantity) }\n          : item\n      ).filter(item => item.quantity > 0);\n      return { ...state, items: newItems, ...calculateTotals(newItems) };\n\n    case 'CLEAR_CART':\n      return initialState;\n\n    default:\n      return state;\n  }\n}\n\n// CartContext.jsx\nimport { createContext, useContext, useReducer } from 'react';\n\nconst CartContext = createContext(null);\n\nexport function CartProvider({ children }) {\n  const [state, dispatch] = useReducer(cartReducer, initialState);\n\n  const addItem = (product, quantity = 1) => {\n    dispatch({ type: 'ADD_ITEM', payload: { ...product, quantity } });\n  };\n\n  const removeItem = (id) => {\n    dispatch({ type: 'REMOVE_ITEM', payload: id });\n  };\n\n  const updateQuantity = (id, quantity) => {\n    dispatch({ type: 'UPDATE_QUANTITY', payload: { id, quantity } });\n  };\n\n  const clearCart = () => {\n    dispatch({ type: 'CLEAR_CART' });\n  };\n\n  return (\n    &lt;CartContext.Provider value={{\n      cart: state,\n      addItem,\n      removeItem,\n      updateQuantity,\n      clearCart\n    }}&gt;\n      {children}\n    &lt;/CartContext.Provider&gt;\n  );\n}\n\nexport function useCart() {\n  const context = useContext(CartContext);\n  if (!context) {\n    throw new Error('useCart must be used within a CartProvider');\n  }\n  return context;\n}\n\n// Utilisation dans App.jsx\n&lt;CartProvider&gt;\n  &lt;App /&gt;\n&lt;/CartProvider&gt;\n\n// Utilisation dans un composant\nfunction AddToCartButton({ product }) {\n  const { addItem } = useCart();\n  return &lt;button onClick={() => addItem(product)}&gt;Ajouter au panier&lt;/button&gt;;\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Justifier la présence de la fonction 'calculateTotals' et pourquoi elle est appelée après chaque modification du panier.",
+            "niveau": "medium",
+            "reponse": "calculateTotals évite de stocker des données dérivées (totalItems, totalPrice) qui pourraient devenir incohérentes avec le contenu du panier. En recalculant ces totaux après chaque action, on garantit leur exactitude. C'est une application du principe 'Single Source of Truth' : l'état source est le tableau 'items', les totaux en sont dérivés."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Comment modifier le reducer pour ajouter une fonctionnalité 'sauvegarde du panier dans localStorage' ?",
+            "niveau": "hard",
+            "reponse": "On peut ajouter un useEffect dans le CartProvider qui se déclenche à chaque changement du panier :\nuseEffect(() => {\n  localStorage.setItem('cart', JSON.stringify(state));\n}, [state]);\n\nEt au chargement initial, récupérer l'état depuis localStorage :\nconst savedCart = localStorage.getItem('cart');\nconst [state, dispatch] = useReducer(cartReducer, savedCart ? JSON.parse(savedCart) : initialState);"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Reducer pour une liste de tâches avec filtres",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous créez une application de gestion de tâches pour des étudiants camerounais. Chaque tâche a : un id (généré automatiquement), un titre, une description, un statut ('pending', 'in-progress', 'completed'), une priorité ('low', 'medium', 'high').</p>\n<p>Fonctionnalités :</p>\n<ul>\n  <li>Ajouter une tâche</li>\n  <li>Modifier le statut d'une tâche</li>\n  <li>Modifier la priorité d'une tâche</li>\n  <li>Supprimer une tâche</li>\n  <li>Filtrer les tâches par statut</li>\n  <li>Trier les tâches par priorité (high &gt; medium &gt; low)</li>\n  <li>Marquer toutes les tâches comme complétées (action groupée)</li>\n</ul>",
+      "images": [
+        "maquette d'application Todo avec filtres",
+        "schéma des actions du reducer pour les tâches"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire le reducer complet pour gérer toutes ces fonctionnalités, ainsi que les actions correspondantes.",
+        "niveau": "very hard",
+        "reponse": "```jsx\nconst initialState = {\n  tasks: [],\n  filter: 'all', // 'all', 'pending', 'in-progress', 'completed'\n  sortBy: 'priority' // 'priority' ou 'date'\n};\n\nfunction taskReducer(state, action) {\n  switch (action.type) {\n    case 'ADD_TASK':\n      const newTask = {\n        id: Date.now(),\n        ...action.payload,\n        status: 'pending',\n        createdAt: new Date().toISOString()\n      };\n      return { ...state, tasks: [...state.tasks, newTask] };\n\n    case 'UPDATE_STATUS':\n      return {\n        ...state,\n        tasks: state.tasks.map(task =>\n          task.id === action.payload.id\n            ? { ...task, status: action.payload.status }\n            : task\n        )\n      };\n\n    case 'UPDATE_PRIORITY':\n      return {\n        ...state,\n        tasks: state.tasks.map(task =>\n          task.id === action.payload.id\n            ? { ...task, priority: action.payload.priority }\n            : task\n        )\n      };\n\n    case 'DELETE_TASK':\n      return {\n        ...state,\n        tasks: state.tasks.filter(task => task.id !== action.payload)\n      };\n\n    case 'SET_FILTER':\n      return { ...state, filter: action.payload };\n\n    case 'SET_SORT':\n      return { ...state, sortBy: action.payload };\n\n    case 'COMPLETE_ALL':\n      return {\n        ...state,\n        tasks: state.tasks.map(task =>\n          task.status !== 'completed'\n            ? { ...task, status: 'completed' }\n            : task\n        )\n      };\n\n    case 'DELETE_COMPLETED':\n      return {\n        ...state,\n        tasks: state.tasks.filter(task => task.status !== 'completed')\n      };\n\n    default:\n      return state;\n  }\n}\n\n// Selecteurs pour filtrer et trier (à utiliser dans le composant)\nfunction getFilteredAndSortedTasks(state) {\n  let filtered = state.tasks;\n  \n  if (state.filter !== 'all') {\n    filtered = filtered.filter(task => task.status === state.filter);\n  }\n  \n  const priorityOrder = { high: 3, medium: 2, low: 1 };\n  if (state.sortBy === 'priority') {\n    filtered = [...filtered].sort((a, b) => priorityOrder[b.priority] - priorityOrder[a.priority]);\n  }\n  \n  return filtered;\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer pourquoi la fonction de tri est placée dans un sélecteur plutôt que dans le reducer.",
+            "niveau": "hard",
+            "reponse": "Le tri et le filtrage sont des opérations de présentation qui dépendent de l'état de l'UI (filtre sélectionné, type de tri). Les placer dans le reducer serait inapproprié car cela modifierait l'état source. Les sélecteurs (getFilteredAndSortedTasks) permettent de dériver des données présentables sans altérer l'état source, respectant ainsi le principe d'immutabilité et de séparation des préoccupations."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Comment ajouter une action 'BULK_UPDATE' qui permet de modifier plusieurs tâches à la fois (ex: changer la priorité de toutes les tâches 'pending' en 'high') ?",
+            "niveau": "very hard",
+            "reponse": "```jsx\ncase 'BULK_UPDATE':\n  const { condition, updates } = action.payload;\n  // condition: (task) => boolean, updates: objet partiel\n  return {\n    ...state,\n    tasks: state.tasks.map(task =>\n      condition(task) ? { ...task, ...updates } : task\n    )\n  };\n\n// Utilisation : dispatch({ type: 'BULK_UPDATE', payload: { condition: t => t.status === 'pending', updates: { priority: 'high' } } });\n```"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Debugging et bonnes pratiques des reducers",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Voici un reducer qui contient plusieurs erreurs ou anti-patterns. Identifiez-les et corrigez-les.</p>\n<pre><code>\nfunction counterReducer(state, action) {\n  if (action.type === 'INCREMENT') {\n    state.count = state.count + 1;\n    return state;\n  }\n  if (action.type === 'DECREMENT') {\n    return { count: state.count - 1 };\n  }\n  if (action.type === 'RESET') {\n    return initialState;\n  }\n}\n</code></pre>",
+      "images": [
+        "erreurs courantes dans les reducers React",
+        "bonnes pratiques pour écrire des reducers purs"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier et corriger toutes les erreurs dans ce reducer.",
+        "niveau": "medium",
+        "reponse": "Erreurs et corrections :\n1) Mutation directe de l'état : 'state.count = state.count + 1' modifie l'objet existant. Correction : return { ...state, count: state.count + 1 }\n2) Cas DECREMENT : retourne un objet avec uniquement 'count', perdant potentiellement d'autres propriétés de state. Correction : return { ...state, count: state.count - 1 }\n3) Absence de cas 'default' : si un action.type non reconnu est dispatché, le reducer retourne undefined. Correction : ajouter 'default: return state'\n4) Structure de contrôle : utiliser switch/case est plus lisible que des if/else en cascade.\nVersion corrigée :\n```jsx\nfunction counterReducer(state, action) {\n  switch (action.type) {\n    case 'INCREMENT':\n      return { ...state, count: state.count + 1 };\n    case 'DECREMENT':\n      return { ...state, count: state.count - 1 };\n    case 'RESET':\n      return initialState;\n    default:\n      return state;\n  }\n}\n```",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi est-il dangereux de muter directement l'état dans un reducer ?",
+            "niveau": "medium",
+            "reponse": "La mutation directe brise le principe d'immutabilité de React. React compare les références des objets pour détecter les changements. Si on mute l'état, la référence reste la même et React ne détecte pas le changement, ce qui empêche le re-rendu des composants. De plus, cela rend le debugging impossible car l'historique des modifications est perdu."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Ajouter une action 'ADD' qui incrémente de n'importe quelle valeur (action.payload), avec validation pour n'accepter que des nombres positifs.",
+            "niveau": "medium",
+            "reponse": "```jsx\ncase 'ADD':\n  const increment = typeof action.payload === 'number' && action.payload > 0 ? action.payload : 0;\n  return { ...state, count: state.count + increment };\n```"
+          }
+        ]
+      }
+    ]
+  }
+]

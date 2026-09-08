@@ -1,0 +1,170 @@
+[
+  {
+    "intitule": "Manipulation de Données Géospatiales avec GeoPandas",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<div style='font-size:1.05rem;'><p>Vous travaillez sur un projet de cartographie des infrastructures scolaires au Cameroun. Vous disposez de deux jeux de données :</p><ul><li><strong>Un fichier shapefile</strong> contenant les limites administratives des 10 régions du Cameroun</li><li><strong>Un fichier CSV</strong> contenant la liste des établissements scolaires avec leurs coordonnées géographiques (latitude, longitude), le nombre d'élèves, et le type d'établissement (public/privé)</li></ul><p>Vous devez utiliser GeoPandas pour analyser et visualiser ces données.</p></div>",
+      "images": [
+        "Carte du Cameroun avec les 10 régions en différentes couleurs",
+        "Exemple de fichier shapefile avec les attributs des régions"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez comment charger le fichier shapefile des régions du Cameroun dans GeoPandas et afficher les 5 premières lignes du GeoDataFrame.",
+        "niveau": "easy",
+        "reponse": "<p>Pour charger un fichier shapefile avec GeoPandas, on utilise la fonction <code>gpd.read_file()</code> :</p><pre style='background:#2c3e50; color:#ecf0f1; padding:12px; border-radius:6px; font-family:monospace; font-size:0.85rem;'>import geopandas as gpd<br><br># Charger le shapefile<br>regions = gpd.read_file('cameroun_regions.shp')<br><br># Afficher les 5 premières lignes<br>regions.head()</pre><p>Le résultat affiche les colonnes attributaires et la colonne <code>geometry</code> contenant les polygones des régions.</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez ce qu'est un shapefile et quels fichiers le composent.",
+            "niveau": "easy",
+            "reponse": "<p>Un shapefile est un format de fichier vectoriel pour les données géospatiales développé par ESRI. Il est composé d'au moins 3 fichiers :</p><ul><li><strong>.shp</strong> : Contient la géométrie (points, lignes, polygones)</li><li><strong>.shx</strong> : Fichier d'index positionnel</li><li><strong>.dbf</strong> : Contient les données attributaires (tableau des attributs)</li></ul><p>D'autres fichiers optionnels peuvent exister : .prj (système de coordonnées), .cpg (encodage), etc.</p>"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Décrivez comment convertir le fichier CSV des écoles en un GeoDataFrame et le joindre spatialement avec les régions pour compter le nombre d'écoles par région.",
+        "niveau": "hard",
+        "reponse": "<p><strong>Étapes pour convertir le CSV en GeoDataFrame :</strong></p><pre style='background:#2c3e50; color:#ecf0f1; padding:12px; border-radius:6px; font-family:monospace; font-size:0.8rem;'>import pandas as pd<br><br># Charger le CSV<br>ecoles_df = pd.read_csv('ecoles_cameroun.csv')<br><br># Créer un GeoDataFrame à partir des coordonnées<br>ecoles_gdf = gpd.GeoDataFrame(<br>&nbsp;&nbsp;&nbsp;&nbsp;ecoles_df,<br>&nbsp;&nbsp;&nbsp;&nbsp;geometry=gpd.points_from_xy(ecoles_df.longitude, ecoles_df.latitude),<br>&nbsp;&nbsp;&nbsp;&nbsp;crs='EPSG:4326'<br>)</pre><p><strong>Jointure spatiale :</strong></p><pre style='background:#2c3e50; color:#ecf0f1; padding:12px; border-radius:6px; font-family:monospace; font-size:0.8rem;'># Jointure spatiale : trouver pour chaque école sa région<br>jointure = gpd.sjoin(ecoles_gdf, regions, how='left', predicate='within')<br><br># Compter le nombre d'écoles par région<br>nb_ecoles_par_region = jointure.groupby('nom_region').size()</pre>",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Expliquez la différence entre une jointure spatiale 'within' et 'intersects'.",
+            "niveau": "medium",
+            "reponse": "<p><strong>'within' :</strong> Vérifie si un point est complètement à l'intérieur d'un polygone. Utile pour des points comme des écoles qui sont dans une région.</p><p><strong>'intersects' :</strong> Vérifie si deux géométries se croisent ou se touchent. Plus large que 'within', car il capture les points sur les frontières.</p><p>Pour notre exemple, 'within' est approprié car une école est entièrement contenue dans une région (sauf cas exceptionnels sur les frontières).</p>"
+          }
+        ]
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquez comment visualiser les régions du Cameroun avec GeoPandas en différenciant les régions selon le nombre d'écoles qu'elles contiennent.",
+        "niveau": "medium",
+        "reponse": "<p>Après avoir compté le nombre d'écoles par région, on peut fusionner cette information avec le GeoDataFrame des régions pour créer une carte choroplèthe :</p><pre style='background:#2c3e50; color:#ecf0f1; padding:12px; border-radius:6px; font-family:monospace; font-size:0.8rem;'>import matplotlib.pyplot as plt<br><br># Fusionner les données<br>regions_avec_ecoles = regions.merge(nb_ecoles_par_region, on='nom_region')<br><br># Créer la carte<br>fig, ax = plt.subplots(1, 1, figsize=(12, 10))<br>regions_avec_ecoles.plot(<br>&nbsp;&nbsp;&nbsp;&nbsp;column='nb_ecoles',<br>&nbsp;&nbsp;&nbsp;&nbsp;cmap='YlOrRd',<br>&nbsp;&nbsp;&nbsp;&nbsp;legend=True,<br>&nbsp;&nbsp;&nbsp;&nbsp;legend_kwds={'label': 'Nombre d\\'écoles par région'},<br>&nbsp;&nbsp;&nbsp;&nbsp;edgecolor='black',<br>&nbsp;&nbsp;&nbsp;&nbsp;linewidth=0.5,<br>&nbsp;&nbsp;&nbsp;&nbsp;ax=ax<br>)<br>ax.set_title('Nombre d\\'écoles par région au Cameroun')<br>plt.show()</pre><p>On utilise la colormap 'YlOrRd' (jaune-orange-rouge) pour représenter la densité : plus une région a d'écoles, plus elle apparaît en rouge.</p>",
+        "sousQuestions": [
+          {
+            "numero": "3.a",
+            "texte": "Justifiez le choix de la colormap YlOrRd pour cette visualisation.",
+            "niveau": "easy",
+            "reponse": "<p>La colormap 'YlOrRd' est un dégradé de couleurs allant du jaune (valeurs faibles) au rouge (valeurs élevées). Elle est appropriée car :</p><ul><li>Elle est intuitive : le rouge attire l'attention sur les zones à forte densité</li><li>Elle est perceptible par les personnes ayant des déficiences visuelles (couleurs contrastées)</li><li>Elle suit une progression naturelle de l'intensité : plus la couleur est chaude, plus la valeur est élevée</li></ul>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse des Données de Déforestation au Cameroun",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<div style='font-size:1.05rem;'><p>Vous êtes consultant en environnement et vous devez analyser les données de déforestation au Cameroun pour le ministère des Forêts. Vous disposez de :</p><ul><li><strong>Un fichier GeoJSON</strong> des aires protégées du Cameroun (parcs nationaux, réserves)</li><li><strong>Un fichier shapefile</strong> des forêts classées</li><li><strong>Un fichier CSV</strong> des points de déforestation détectés par satellite entre 2018 et 2023 (coordonnées, année, surface en hectares)</li></ul><p>Votre mission est d'identifier les zones les plus touchées et de proposer des recommandations.</p></div>",
+      "images": [
+        "Carte du Cameroun avec les aires protégées et les points de déforestation",
+        "Graphique temporel de l'évolution de la déforestation par région"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez comment charger les fichiers GeoJSON et shapefile dans GeoPandas et expliquez les différences entre ces deux formats.",
+        "niveau": "medium",
+        "reponse": "<p><strong>Chargement des données :</strong></p><pre style='background:#2c3e50; color:#ecf0f1; padding:12px; border-radius:6px; font-family:monospace; font-size:0.8rem;'>import geopandas as gpd<br><br># Charger le GeoJSON des aires protégées<br>aires_protegees = gpd.read_file('aires_protegees.geojson')<br><br># Charger le shapefile des forêts classées<br>forets_classees = gpd.read_file('forets_classees.shp')</pre><p><strong>Différences entre GeoJSON et Shapefile :</strong></p><ul><li><strong>GeoJSON :</strong> Format basé sur JSON, lisible par les humains, interopérable sur le web, supporte les géométries et les attributs. Pas de limite de taille de colonnes.</li><li><strong>Shapefile :</strong> Format propriétaire ESRI, composé de plusieurs fichiers (.shp, .shx, .dbf), plus ancien, limité à 10 caractères pour les noms de colonnes et 255 caractères pour les chaînes de caractères.</li></ul>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquez comment convertir un fichier shapefile en GeoJSON avec GeoPandas.",
+            "niveau": "easy",
+            "reponse": "<p>La conversion est très simple avec GeoPandas :</p><pre style='background:#2c3e50; color:#ecf0f1; padding:12px; border-radius:6px; font-family:monospace; font-size:0.8rem;'># Lire le shapefile<br>data = gpd.read_file('forets_classees.shp')<br><br># Exporter en GeoJSON<br>data.to_file('forets_classees.geojson', driver='GeoJSON')</pre><p>Cette opération peut être utile pour partager des données géospatiales sur des plateformes web qui préfèrent le format GeoJSON.</p>"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Concevez une méthode pour identifier les aires protégées qui ont subi le plus de déforestation. Définissez comment associer les points de déforestation aux aires protégées.",
+        "niveau": "hard",
+        "reponse": "<p><strong>Méthode proposée :</strong></p><ol><li><strong>Charger les données :</strong> Points de déforestation, aires protégées.</li><li><strong>Jointure spatiale :</strong> Associer chaque point de déforestation à l'aire protégée dans laquelle il se trouve.</li><li><strong>Agrégation :</strong> Regrouper par aire protégée pour calculer les métriques suivantes :<ul><li>Nombre total de points de déforestation</li><li>Surface totale déforestée (somme des surfaces)</li><li>Surface déforestée moyenne par point</li></ul></li><li><strong>Identifier les zones critiques :</strong> Classifier les aires protégées par niveau de déforestation.</li></ol><p><strong>Code illustratif :</strong></p><pre style='background:#2c3e50; color:#ecf0f1; padding:12px; border-radius:6px; font-family:monospace; font-size:0.8rem;'># Charger les points de déforestation<br>deforestation = gpd.read_file('points_deforestation.csv')<br>deforestation_gdf = gpd.GeoDataFrame(<br>&nbsp;&nbsp;&nbsp;&nbsp;deforestation,<br>&nbsp;&nbsp;&nbsp;&nbsp;geometry=gpd.points_from_xy(deforestation.longitude, deforestation.latitude)<br>)<br><br># Jointure spatiale<br>jointure = gpd.sjoin(deforestation_gdf, aires_protegees, how='inner', predicate='within')<br><br># Agrégation par aire protégée<br>stats_aires = jointure.groupby('nom_aire').agg({<br>&nbsp;&nbsp;&nbsp;&nbsp;'geometry': 'count',<br>&nbsp;&nbsp;&nbsp;&nbsp;'surface_ha': 'sum'<br>}).rename(columns={'geometry': 'nb_points', 'surface_ha': 'surface_totale'})</pre>",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Justifiez l'utilisation de la jointure spatiale 'within' plutôt qu'un simple regroupement par région administrative.",
+            "niveau": "hard",
+            "reponse": "<p>Une jointure spatiale 'within' est plus précise car :</p><ul><li>Elle utilise les limites géographiques exactes des aires protégées plutôt que des limites administratives qui ne correspondent pas forcément aux zones écologiques</li><li>Les aires protégées peuvent chevaucher plusieurs régions administratives</li><li>Permet d'identifier précisément les points à l'intérieur des aires protégées, y compris ceux qui sont près des frontières</li><li>Évite les erreurs d'attribution dues aux découpages administratifs</li></ul>"
+          }
+        ]
+      },
+      {
+        "numero": 3,
+        "texte": "Analysez l'évolution temporelle de la déforestation entre 2018 et 2023. Identifiez les années les plus critiques et les régions les plus touchées.",
+        "niveau": "hard",
+        "reponse": "<p><strong>Méthode d'analyse temporelle :</strong></p><ol><li><strong>Agrégation temporelle :</strong> Regrouper les points de déforestation par année pour visualiser la tendance générale.</li><li><strong>Analyse par région :</strong> Calculer la surface déforestée par année et par région.</li><li><strong>Identifier les pics :</strong> Déterminer les années et les régions où la déforestation est la plus intense.</li></ol><p><strong>Résultats attendus :</strong></p><ul><li>Identification des années critiques (ex: 2020-2021 avec une augmentation de 30%)</li><li>Identification des régions les plus touchées (ex: région du Sud-Ouest, Est)</li><li>Corrélation avec des événements (feux de brousse, expansion agricole, etc.)</li></ul><p><strong>Visualisation proposée :</strong></p><pre style='background:#2c3e50; color:#ecf0f1; padding:12px; border-radius:6px; font-family:monospace; font-size:0.8rem;'>import matplotlib.pyplot as plt<br><br># Données agrégées par année<br>deforestation_par_an = jointure.groupby('annee').agg({'surface_ha': 'sum'})<br><br># Graphique d'évolution<br>plt.figure(figsize=(10, 6))<br>plt.plot(deforestation_par_an.index, deforestation_par_an['surface_ha'], marker='o')<br>plt.title('Évolution de la déforestation au Cameroun (2018-2023)')<br>plt.xlabel('Année')<br>plt.ylabel('Surface déforestée (ha)')<br>plt.grid(True)<br>plt.show()</pre>",
+        "sousQuestions": [
+          {
+            "numero": "3.a",
+            "texte": "Formulez des recommandations pour le ministère des Forêts sur la base de ces analyses.",
+            "niveau": "very hard",
+            "reponse": "<p><strong>Recommandations pour le ministère :</strong></p><ol><li><strong>Renforcement des contrôles :</strong> Augmenter la surveillance dans les régions identifiées comme les plus touchées (Sud-Ouest, Est).</li><li><strong>Programmes de reforestation :</strong> Cibler les aires protégées les plus dégradées pour des projets de reboisement.</li><li><strong>Collaboration avec les communautés locales :</strong> Impliquer les populations riveraines dans la protection des forêts.</li><li><strong>Utilisation de la technologie :</strong> Mettre en place un système de surveillance par satellite en temps réel.</li><li><strong>Cadre légal :</strong> Renforcer les lois contre la déforestation illégale et augmenter les sanctions.</li><li><strong>Formation :</strong> Former les agents des eaux et forêts à l'utilisation des outils géospatiaux.</li></ol>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Exercice Pratique : Visualisation de Données Géospatiales",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<div style='font-size:1.05rem;'><p>Vous êtes data scientist dans une ONG qui suit l'accès à l'eau potable au Cameroun. Vous disposez d'un jeu de données contenant :</p><ul><li><strong>Les coordonnées (lat, lon)</strong> des points d'eau (forages, puits, sources) avec leur statut (fonctionnel, non fonctionnel)</li><li><strong>La population</strong> de chaque village</li><li><strong>La distance</strong> entre chaque village et son point d'eau le plus proche</li><li><strong>Un shapefile</strong> des limites communales</li></ul><p>Vous devez créer un rapport de visualisation pour présenter ces informations aux bailleurs de fonds.</p></div>",
+      "images": [
+        "Carte des points d'eau avec distinction fonctionnel/non fonctionnel",
+        "Graphique de distribution des distances aux points d'eau"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez comment vérifier que les coordonnées des points d'eau sont dans le bon système de coordonnées (CRS) et comment le corriger si nécessaire.",
+        "niveau": "medium",
+        "reponse": "<p><strong>Vérification du CRS :</strong></p><pre style='background:#2c3e50; color:#ecf0f1; padding:12px; border-radius:6px; font-family:monospace; font-size:0.8rem;'># Vérifier le CRS des données<br>print(points_eau.crs)  # Affiche le CRS actuel</pre><p><strong>Correction du CRS :</strong></p><ul><li>Les coordonnées WGS84 (latitude/longitude) utilisent généralement le CRS 'EPSG:4326'.</li><li>Si vos données sont dans un autre CRS, utilisez :<pre style='background:#2c3e50; color:#ecf0f1; padding:12px; border-radius:6px; font-family:monospace; font-size:0.8rem;'># Reprojeter les données en WGS84<br>points_eau_wgs84 = points_eau.to_crs('EPSG:4326')</pre></li><li>Pour les calculs de distances (en mètres), il est préférable d'utiliser un CRS projeté comme UTM (ex: EPSG:32632 pour la zone 32N).</li></ul>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Pourquoi est-il important de connaître le CRS de vos données géospatiales ?",
+            "niveau": "easy",
+            "reponse": "<p>Le CRS (Coordinate Reference System) est essentiel car :</p><ul><li>Il permet d'interpréter correctement les coordonnées (latitude/longitude vs mètres)</li><li>Les calculs de distances et de surfaces dépendent du CRS</li><li>Les données de différentes sources doivent être dans le même CRS pour être superposées correctement</li><li>Un mauvais CRS peut entraîner des erreurs d'analyse importantes</li></ul>"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Proposez une stratégie pour créer une carte interactive avec Folium montrant les points d'eau en distinguant les fonctionnels des non fonctionnels.",
+        "niveau": "hard",
+        "reponse": "<p><strong>Stratégie avec Folium :</strong></p><ol><li><strong>Créer une carte de base :</strong> Centrée sur le Cameroun avec le niveau de zoom approprié.</li><li><strong>Ajouter des marqueurs personnalisés :</strong> <ul><li>Points d'eau fonctionnels : icône verte (✓)</li><li>Points d'eau non fonctionnels : icône rouge (✗)</li></ul></li><li><strong>Ajouter des popups :</strong> Informations détaillées (nom du village, population, distance).</li><li><strong>Utiliser des clusters :</strong> Pour éviter la surcharge visuelle dans les zones denses.</li><li><strong>Ajouter un calque de fond :</strong> OpenStreetMap ou Stamen Terrain.</li><li><strong>Ajouter un LayerControl :</strong> Pour permettre de basculer entre les vues.</li></ol><p><strong>Extrait de code :</strong></p><pre style='background:#2c3e50; color:#ecf0f1; padding:12px; border-radius:6px; font-family:monospace; font-size:0.8rem;'>import folium<br>from folium.plugins import MarkerCluster<br><br># Créer la carte<br>carte = folium.Map(location=[4.0, 12.0], zoom_start=6)<br><br># Créer un cluster pour les points<br>cluster = MarkerCluster().add_to(carte)<br><br>for _, point in points_eau.iterrows():<br>&nbsp;&nbsp;&nbsp;&nbsp;couleur = 'green' if point['statut'] == 'fonctionnel' else 'red'<br>&nbsp;&nbsp;&nbsp;&nbsp;icone = folium.Icon(color=couleur, icon='ok' if point['statut'] == 'fonctionnel' else 'remove')<br>&nbsp;&nbsp;&nbsp;&nbsp;folium.Marker(<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;location=[point['latitude'], point['longitude']],<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;popup=f\"{point['village']} - {point['statut']}\",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;icon=icone<br>&nbsp;&nbsp;&nbsp;&nbsp;).add_to(cluster)</pre>",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Expliquez l'utilité des clusters dans les cartes interactives avec Folium.",
+            "niveau": "medium",
+            "reponse": "<p>Les clusters (MarkerCluster) sont utiles pour :</p><ul><li>Gérer un grand nombre de points sur une carte</li><li>Éviter la surcharge visuelle</li><li>Améliorer les performances (moins de marqueurs rendus à la fois)</li><li>Permettre à l'utilisateur de zoomer pour voir les détails</li><li>Offrir une expérience utilisateur plus fluide</li></ul><p>Les clusters regroupent automatiquement les points proches et les affichent sous forme de cercle avec le nombre de points qu'ils contiennent.</p>"
+          }
+        ]
+      },
+      {
+        "numero": 3,
+        "texte": "Concevez une analyse spatiale pour identifier les zones où la distance moyenne aux points d'eau est la plus élevée et proposez des recommandations.",
+        "niveau": "very hard",
+        "reponse": "<p><strong>Méthode d'analyse :</strong></p><ol><li><strong>Calculer la distance moyenne :</strong> Pour chaque commune, calculer la distance moyenne des villages au point d'eau le plus proche.</li><li><strong>Visualiser sur une carte :</strong> Utiliser une carte choroplèthe avec Folium pour montrer les distances par commune.</li><li><strong>Identifier les zones critiques :</strong> Les communes avec des distances > 5 km (recommandation OMS).</li></ol><p><strong>Recommandations :</strong></p><ul><li>Prioriser les zones avec les distances les plus élevées pour la construction de nouveaux points d'eau.</li><li>Utiliser l'analyse pour orienter les financements des bailleurs.</li><li>Proposer des solutions adaptées : forages, puits, systèmes de captage d'eau de pluie.</li><li>Impliquer les communautés locales dans la gestion des points d'eau.</li></ul><p><strong>Code pour la carte choroplèthe :</strong></p><pre style='background:#2c3e50; color:#ecf0f1; padding:12px; border-radius:6px; font-family:monospace; font-size:0.8rem;'>import folium<br><br># Créer une carte<br>carte_communes = folium.Map(location=[4.0, 12.0], zoom_start=6)<br><br># Ajouter les communes avec la couleur basée sur la distance<br>folium.Choropleth(<br>&nbsp;&nbsp;&nbsp;&nbsp;geo_data=communes_geojson,<br>&nbsp;&nbsp;&nbsp;&nbsp;data=communes_distances,<br>&nbsp;&nbsp;&nbsp;&nbsp;columns=['commune', 'distance_moyenne'],<br>&nbsp;&nbsp;&nbsp;&nbsp;key_on='feature.properties.nom',<br>&nbsp;&nbsp;&nbsp;&nbsp;fill_color='YlOrRd',<br>&nbsp;&nbsp;&nbsp;&nbsp;fill_opacity=0.7,<br>&nbsp;&nbsp;&nbsp;&nbsp;line_opacity=0.2,<br>&nbsp;&nbsp;&nbsp;&nbsp;legend_name='Distance moyenne au point d\\'eau (km)'<br>).add_to(carte_communes)</pre>",
+        "sousQuestions": [
+          {
+            "numero": "3.a",
+            "texte": "Justifiez l'utilisation de la norme OMS (5 km) comme seuil pour identifier les zones prioritaires.",
+            "niveau": "medium",
+            "reponse": "<p>L'OMS recommande qu'une personne ne devrait pas parcourir plus de 5 km pour accéder à une source d'eau potable, pour plusieurs raisons :</p><ul><li>Au-delà de cette distance, les populations (notamment les femmes et les enfants) consacrent trop de temps à la corvée d'eau</li><li>Réduit le temps disponible pour l'éducation et les activités productives</li><li>Augmente les risques sanitaires liés à l'eau non potable en cas d'éloignement</li><li>C'est un indicateur standard utilisé par les organisations internationales pour évaluer l'accès à l'eau</li></ul><p>Utiliser ce seuil permet d'aligner les recommandations sur les standards internationaux et de faciliter la comparaison avec d'autres régions.</p>"
+          }
+        ]
+      }
+    ]
+  }
+]

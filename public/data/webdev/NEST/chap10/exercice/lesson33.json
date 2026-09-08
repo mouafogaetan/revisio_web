@@ -1,0 +1,110 @@
+[
+  {
+    "intitule": "Documentation d'une API de gestion de commandes avec relations imbriquées",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous développez une API e-commerce avec NestJS. Vous devez documenter les endpoints de création de commandes avec Swagger. Une commande contient plusieurs produits, une adresse de livraison (objet imbriqué) et un statut qui ne peut prendre que trois valeurs. En utilisant <code>@nestjs/swagger</code>, réalisez les tâches suivantes.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analyser la structure des DTO et implémenter la documentation avec @ApiProperty pour les modèles imbriqués et les enums.",
+        "niveau": "hard",
+        "reponse": "Créer des classes DTO avec décorateurs @ApiProperty, utiliser type pour les propriétés imbriquées et enum pour les statuts.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Définir une classe `AddressDto` avec les propriétés : `street` (string), `city` (string), `zipCode` (string). Documenter chaque propriété avec `@ApiProperty` en précisant l'exemple et la description.",
+            "niveau": "medium",
+            "reponse": "```typescript\nimport { ApiProperty } from '@nestjs/swagger';\n\nexport class AddressDto {\n  @ApiProperty({ description: 'Nom de la rue', example: '123 Avenue de la Liberté' })\n  street: string;\n\n  @ApiProperty({ description: 'Ville', example: 'Douala' })\n  city: string;\n\n  @ApiProperty({ description: 'Code postal', example: '00237' })\n  zipCode: string;\n}\n```"
+          },
+          {
+            "numero": "1.b",
+            "texte": "Créer un enum `OrderStatus` avec les valeurs `PENDING`, `PAID`, `SHIPPED`. Puis créer un DTO `CreateOrderDto` contenant : `customerName` (string), `items` (tableau d'objets avec `productId` et `quantity`), `shippingAddress` (objet AddressDto), `status` (OrderStatus). Documenter correctement les propriétés imbriquées et l'enum.",
+            "niveau": "hard",
+            "reponse": "```typescript\nimport { ApiProperty } from '@nestjs/swagger';\nimport { Type } from 'class-transformer';\nimport { ValidateNested, IsEnum, IsArray, IsString, IsNumber } from 'class-validator';\n\nexport enum OrderStatus {\n  PENDING = 'pending',\n  PAID = 'paid',\n  SHIPPED = 'shipped',\n}\n\nexport class OrderItemDto {\n  @ApiProperty({ example: 'prod_123' })\n  @IsString()\n  productId: string;\n\n  @ApiProperty({ example: 2 })\n  @IsNumber()\n  quantity: number;\n}\n\nexport class CreateOrderDto {\n  @ApiProperty({ description: 'Nom complet du client', example: 'Jean Ndiaye' })\n  @IsString()\n  customerName: string;\n\n  @ApiProperty({ type: [OrderItemDto], description: 'Liste des produits commandés' })\n  @IsArray()\n  @ValidateNested({ each: true })\n  @Type(() => OrderItemDto)\n  items: OrderItemDto[];\n\n  @ApiProperty({ type: AddressDto, description: 'Adresse de livraison' })\n  @ValidateNested()\n  @Type(() => AddressDto)\n  shippingAddress: AddressDto;\n\n  @ApiProperty({ enum: OrderStatus, example: OrderStatus.PENDING, description: 'Statut initial de la commande' })\n  @IsEnum(OrderStatus)\n  status: OrderStatus;\n}\n```"
+          },
+          {
+            "numero": "1.c",
+            "texte": "Expliquer pourquoi on utilise `@Type(() => AddressDto)` et `@ValidateNested()` en combinaison avec `@ApiProperty({ type: () => AddressDto })` dans le cadre de la validation et de la documentation Swagger.",
+            "niveau": "medium",
+            "reponse": "`@ApiProperty({ type: () => AddressDto })` permet à Swagger de générer correctement le schéma imbriqué. `@Type(() => AddressDto)` de class-transformer indique à NestJS le type à instancier lors de la transformation. `@ValidateNested()` active la validation des propriétés internes (grâce à class-validator). Sans ces décorateurs, les objets imbriqués ne seraient ni validés ni correctement documentés."
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Documenter le contrôleur et gérer les réponses avec Swagger.",
+        "niveau": "medium",
+        "reponse": "Utiliser @ApiCreatedResponse, @ApiBadRequestResponse et @ApiBearerAuth selon les besoins.",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Écrire le contrôleur `OrdersController` avec une méthode `create(@Body() createOrderDto: CreateOrderDto)` qui retourne un objet `{ id: string, ... }`. Ajouter les décorateurs Swagger : `@ApiTags`, `@ApiOperation`, `@ApiCreatedResponse` et `@ApiBadRequestResponse`.",
+            "niveau": "medium",
+            "reponse": "```typescript\nimport { Controller, Post, Body, HttpStatus } from '@nestjs/common';\nimport { ApiTags, ApiOperation, ApiCreatedResponse, ApiBadRequestResponse } from '@nestjs/swagger';\nimport { CreateOrderDto, OrderResponseDto } from './dto';\n\n@ApiTags('orders')\n@Controller('orders')\nexport class OrdersController {\n  @Post()\n  @ApiOperation({ summary: 'Créer une nouvelle commande' })\n  @ApiCreatedResponse({ description: 'Commande créée avec succès', type: OrderResponseDto })\n  @ApiBadRequestResponse({ description: 'Données invalides (ex: produit inconnu, quantité négative)' })\n  async create(@Body() createOrderDto: CreateOrderDto): Promise<OrderResponseDto> {\n    // logique métier\n    return { id: 'order_456', ...createOrderDto };\n  }\n}\n```"
+          },
+          {
+            "numero": "2.b",
+            "texte": "Créer un DTO de réponse `OrderResponseDto` qui hérite de `CreateOrderDto` et ajoute une propriété `id` (string) ainsi qu'une date `createdAt`. Utiliser `@ApiProperty` et `@ApiPropertyOptional` pour documenter les champs obligatoires et optionnels.",
+            "niveau": "easy",
+            "reponse": "```typescript\nimport { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';\nimport { CreateOrderDto } from './create-order.dto';\n\nexport class OrderResponseDto extends CreateOrderDto {\n  @ApiProperty({ description: 'Identifiant unique de la commande', example: 'order_789abc' })\n  id: string;\n\n  @ApiPropertyOptional({ description: 'Date de création (format ISO)', example: '2025-06-15T10:30:00Z' })\n  createdAt?: string;\n}\n```"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Refactorisation d'une API existante pour ajouter une documentation OpenAPI complète",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Une start-up a développé une API NestJS de gestion d'articles de blog. Les DTO actuels n'utilisent pas les décorateurs Swagger. Votre mission est d'ajouter la documentation OpenAPI pour faciliter l'intégration avec les clients front-end. Les entités principales sont `Article`, `Author` et `Category` avec des relations imbriquées.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Documenter les DTO existants avec les décorateurs @nestjs/swagger.",
+        "niveau": "medium",
+        "reponse": "Ajouter @ApiProperty sur chaque propriété des classes AuthorDto, CategoryDto et ArticleDto, en gérant les types imbriqués avec `type: () => ...`.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Créer un DTO `AuthorDto` avec les propriétés `id` (number), `name` (string), `email` (string). Ajouter les décorateurs `@ApiProperty` avec des exemples pertinents. Décrire brièvement l'intérêt de l'exemple dans la documentation.",
+            "niveau": "easy",
+            "reponse": "```typescript\nexport class AuthorDto {\n  @ApiProperty({ example: 1, description: 'Identifiant unique de l\\'auteur' })\n  id: number;\n\n  @ApiProperty({ example: 'Marie Claire', description: 'Nom complet de l\\'auteur' })\n  name: string;\n\n  @ApiProperty({ example: 'marie@blog.com', description: 'Adresse email professionnelle' })\n  email: string;\n}\n```\nL'exemple permet à Swagger UI de pré-remplir la documentation avec des valeurs réalistes, aidant les consommateurs de l'API à comprendre le format attendu."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Créer un DTO `ArticleDto` qui contient : `id` (number), `title` (string), `content` (string), `author` (AuthorDto), `categories` (tableau de CategoryDto avec `name` et `slug`). Utiliser `@ApiProperty` avec `type` approprié pour les relations imbriquées.",
+            "niveau": "hard",
+            "reponse": "```typescript\nimport { ApiProperty } from '@nestjs/swagger';\nimport { AuthorDto } from './author.dto';\n\nexport class CategoryDto {\n  @ApiProperty({ example: 'tech' })\n  slug: string;\n\n  @ApiProperty({ example: 'Technologie' })\n  name: string;\n}\n\nexport class ArticleDto {\n  @ApiProperty({ example: 42 })\n  id: number;\n\n  @ApiProperty({ example: 'Découverte de NestJS' })\n  title: string;\n\n  @ApiProperty({ example: 'NestJS est un framework Node.js progressif...' })\n  content: string;\n\n  @ApiProperty({ type: () => AuthorDto, description: 'Auteur de l\\'article' })\n  author: AuthorDto;\n\n  @ApiProperty({ type: [CategoryDto], description: 'Liste des catégories associées' })\n  categories: CategoryDto[];\n}\n```"
+          }
+        ]
+      },
+      {
+        "numero": 2,
+        "texte": "Configurer globalement Swagger et ajouter des tags pour organiser les endpoints.",
+        "niveau": "easy",
+        "reponse": "Dans main.ts, appeler SwaggerModule.createDocument() et SwaggerModule.setup(). Utiliser @ApiTags dans les contrôleurs.",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Écrire la configuration de base de Swagger dans `main.ts` : titre \"Blog API\", version \"1.0\", et configurer le endpoint `/api/docs`.",
+            "niveau": "easy",
+            "reponse": "```typescript\nimport { NestFactory } from '@nestjs/core';\nimport { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';\nimport { AppModule } from './app.module';\n\nasync function bootstrap() {\n  const app = await NestFactory.create(AppModule);\n\n  const config = new DocumentBuilder()\n    .setTitle('Blog API')\n    .setDescription('API de gestion d\\'articles de blog')\n    .setVersion('1.0')\n    .addTag('articles')\n    .addTag('authors')\n    .build();\n\n  const document = SwaggerModule.createDocument(app, config);\n  SwaggerModule.setup('api/docs', app, document);\n\n  await app.listen(3000);\n}\nbootstrap();\n```"
+          },
+          {
+            "numero": "2.b",
+            "texte": "Expliquer comment les `@ApiPropertyOptional` et `@ApiProperty({ required: false })` améliorent la génération du schéma OpenAPI. Donner un exemple concret avec un DTO de mise à jour partielle.",
+            "niveau": "medium",
+            "reponse": "`@ApiPropertyOptional` indique à Swagger que la propriété n'est pas obligatoire dans le schéma (équivalent à `required: false`). Exemple pour un DTO `UpdateArticleDto` où tous les champs sont optionnels :\n```typescript\nexport class UpdateArticleDto {\n  @ApiPropertyOptional({ example: 'Nouveau titre' })\n  title?: string;\n\n  @ApiPropertyOptional({ example: 'Contenu mis à jour...' })\n  content?: string;\n}\n```\nCela permet aux clients de l'API de savoir qu'ils peuvent envoyer uniquement les champs à modifier (requête PATCH)."
+          }
+        ]
+      }
+    ]
+  }
+]

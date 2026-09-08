@@ -1,0 +1,164 @@
+[
+  {
+    "intitule": "Comprendre le Principe de la Maximisation de l'Entropie",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Soft Actor-Critic (SAC) est un algorithme d'apprentissage par renforcement qui maximise l'entropie en plus de la récompense cumulée. L'objectif de SAC est de trouver une politique qui maximise :</p><div class='math-block'><div class='math'>$$J(\\pi) = \\sum_{t=0}^T \\mathbb{E}_{(s_t, a_t) \\sim \\rho_\\pi} \\left[ r(s_t, a_t) + \\alpha \\mathcal{H}(\\pi(\\cdot|s_t)) \\right]$$</div></div><p>où \\(\\mathcal{H}(\\pi(\\cdot|s_t))\\) est l'entropie de la politique et \\(\\alpha\\) est un coefficient de température.</p>",
+      "images": [
+        "Un schéma illustrant la différence entre une politique déterministe (entropie faible) et une politique stochastique (entropie élevée)."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez le concept de maximisation de l'entropie dans SAC. Quels sont les avantages de cette approche par rapport aux algorithmes qui maximisent uniquement la récompense ?",
+        "niveau": "easy",
+        "reponse": "La maximisation de l'entropie consiste à encourager la politique à être aussi stochastique que possible (entropie élevée) tout en maximisant la récompense. L'objectif est d'équilibrer l'exploration (actions variées) et l'exploitation (actions qui donnent de bonnes récompenses).\n\n**Avantages :**\n1. **Exploration naturelle** : La politique est intrinsèquement exploratoire.\n2. **Robustesse** : La politique est plus robuste aux changements de l'environnement.\n3. **Convergence stable** : L'ajout de l'entropie stabilise l'apprentissage.\n4. **Capturer plusieurs modes** : La politique peut apprendre plusieurs stratégies optimales.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Que représente le coefficient \\(\\alpha\\) dans l'objectif de SAC ? Comment son choix influence-t-il la politique ?",
+            "niveau": "easy",
+            "reponse": "Le coefficient \\(\\alpha\\) (température) contrôle le trade-off entre l'exploration et l'exploitation :\n- **\\(\\alpha\\) élevé** : La politique favorise l'entropie (exploration élevée).\n- **\\(\\alpha\\) faible** : La politique favorise la récompense (exploitation élevée).\n- **\\(\\alpha = 0\\)** : SAC se comporte comme un algorithme standard qui maximise seulement la récompense (équivalent à DDPG).\n\nEn pratique, \\(\\alpha\\) peut être fixe ou appris automatiquement pendant l'entraînement."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Architecture de SAC",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>SAC utilise une architecture avec plusieurs réseaux de neurones. L'architecture comprend :</p><ul><li>Un réseau acteur (policy network) \\(\\pi_\\theta(a|s)\\) qui produit une distribution sur les actions.</li><li>Deux réseaux critiques (Q-networks) \\(Q_{\\phi_1}(s,a)\\) et \\(Q_{\\phi_2}(s,a)\\).</li><li>Deux réseaux cibles (target networks) \\(Q_{\\phi_1^-}(s,a)\\) et \\(Q_{\\phi_2^-}(s,a)\\).</li><li>Un réseau de température \\(\\alpha\\) (optionnel).</li></ul>",
+      "images": [
+        "Un diagramme de l'architecture de SAC avec l'acteur, les deux critiques, les cibles et la température."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Pourquoi SAC utilise-t-il deux Q-networks (critiques jumelles) ? Quel est l'avantage de cette approche par rapport à un seul Q-network ?",
+        "niveau": "medium",
+        "reponse": "SAC utilise deux Q-networks pour réduire le biais de surestimation (overestimation bias) qui est courant dans les méthodes de type Q-learning. L'idée est de prendre le minimum des deux Q-valeurs pour les mises à jour :\n\n<div class='math-block'><div class='math'>$$y = r + \\gamma \\, \\min( Q_{\\phi_1^-}(s', a'), Q_{\\phi_2^-}(s', a') )$$</div></div>\n\n**Avantages :**\n1. **Réduction de la surestimation** : Le minimum des deux valeurs est plus conservateur.\n2. **Stabilité** : L'apprentissage est plus stable.\n3. **Amélioration des performances** : Surtout dans les environnements avec actions continues.\n\nCette approche est similaire à celle utilisée dans TD3, mais SAC l'applique différemment car il utilise aussi l'entropie.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Quelle est la différence entre l'utilisation des deux Q-networks dans SAC et dans TD3 ?",
+            "niveau": "medium",
+            "reponse": "Dans TD3, le minimum des deux Q-valeurs est utilisé pour la cible, mais il y a aussi une mise à jour retardée de l'acteur et du bruit cible. Dans SAC, l'utilisation des deux Q-networks est intégrée dans la maximisation de l'entropie, et la mise à jour de l'acteur est différente car elle utilise la Q-valeur minimale pour le gradient de la politique. SAC met également à jour l'acteur à chaque étape (pas de delay), ce qui est plus efficace en termes d'échantillonnage."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Fonctions de Perte et Mise à Jour dans SAC",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Les fonctions de perte de SAC sont définies comme suit :</p><p><strong>Critique (Q-networks) :</strong></p><div class='math-block'><div class='math'>$$L_Q(\\phi_i) = \\mathbb{E}_{(s,a,r,s') \\sim \\mathcal{D}} \\left[ \\frac{1}{2} \\left( Q_{\\phi_i}(s,a) - y \\right)^2 \\right]$$</div></div><p>avec \\(y = r + \\gamma \\left( \\min_i Q_{\\phi_i^-}(s', a') - \\alpha \\log \\pi_\\theta(a'|s') \\right)\\).</p><p><strong>Acteur :</strong></p><div class='math-block'><div class='math'>$$L_\\pi(\\theta) = \\mathbb{E}_{s \\sim \\mathcal{D}} \\left[ \\alpha \\log \\pi_\\theta(a|s) - \\min_i Q_{\\phi_i}(s, a) \\right]$$</div></div>",
+      "images": [
+        "Un schéma illustrant les flux de données dans les mises à jour de SAC."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquez la fonction de perte du critique et la fonction de perte de l'acteur dans SAC. Justifiez l'utilisation du terme \\(-\\alpha \\log \\pi_\\theta(a'|s')\\) dans la cible du critique.",
+        "niveau": "hard",
+        "reponse": "<p><strong>Fonction de perte du critique :</strong></p><p>Elle utilise l'erreur quadratique moyenne (MSE) entre la Q-valeur prédite et la cible \\(y\\). La cible inclut la récompense immédiate, la Q-valeur minimale (pour réduire la surestimation) et le terme d'entropie \\(-\\alpha \\log \\pi_\\theta(a'|s')\\) qui encourage l'exploration.</p><p><strong>Fonction de perte de l'acteur :</strong></p><p>Elle minimise l'écart entre la politique et la Q-valeur. On cherche à minimiser \\(\\alpha \\log \\pi_\\theta(a|s) - \\min_i Q_{\\phi_i}(s, a)\\). Le terme \\(\\alpha \\log \\pi_\\theta\\) pénalise les politiques trop déterministes, tandis que \\(-\\min_i Q_{\\phi_i}\\) encourage les actions avec des Q-valeurs élevées.</p><p><strong>Justification du terme d'entropie :</strong></p><p>Le terme \\(-\\alpha \\log \\pi_\\theta(a'|s')\\) dans la cible du critique encourage la politique à être stochastique. Il rend l'objectif de l'apprentissage cohérent avec la maximisation de l'entropie.</p>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment SAC gère-t-il la température \\(\\alpha\\) de manière automatique ?",
+            "niveau": "hard",
+            "reponse": "Dans SAC, la température \\(\\alpha\\) peut être apprise automatiquement en minimisant la fonction de perte suivante :\n\n<div class='math-block'><div class='math'>$$L(\\alpha) = \\mathbb{E}_{s \\sim \\mathcal{D}} \\left[ -\\alpha \\log \\pi_\\theta(a|s) - \\alpha \\bar{\\mathcal{H}} \\right]$$</div></div>\n\nOù \\(\\bar{\\mathcal{H}}\\) est l'entropie cible (un hyperparamètre). Cela permet à l'algorithme d'ajuster automatiquement le trade-off entre exploration et exploitation en fonction de l'environnement, ce qui élimine le besoin de régler \\(\\alpha\\) manuellement."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Comparaison entre SAC, DDPG et TD3",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>On compare les performances de SAC, DDPG et TD3 sur l'environnement HalfCheetah-v2 de MuJoCo. Voici les résultats obtenus :</p><ul><li><strong>SAC</strong> : Atteint une récompense moyenne de 12 000 après 500 000 pas.</li><li><strong>TD3</strong> : Atteint 10 500 après 500 000 pas.</li><li><strong>DDPG</strong> : Atteint 8 000 après 500 000 pas.</li></ul>",
+      "images": [
+        "Un graphique comparant les courbes d'apprentissage de SAC, TD3 et DDPG."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analysez les performances des trois algorithmes. Pourquoi SAC est-il plus performant que DDPG et TD3 sur cet environnement ?",
+        "niveau": "hard",
+        "reponse": "Les résultats montrent que SAC est le plus performant, suivi de TD3, puis DDPG.\n\n**Pourquoi SAC est-il meilleur ?**\n1. **Exploration efficace** : La maximisation de l'entropie encourage une exploration plus systématique, ce qui permet de découvrir de meilleures politiques.\n2. **Stabilité** : L'utilisation de deux Q-networks réduit la surestimation, et l'ajout de l'entropie stabilise l'apprentissage.\n3. **Adaptabilité** : La température \\(\\alpha\\) s'ajuste automatiquement, éliminant le besoin de régler manuellement un hyperparamètre critique.\n4. **Échantillonnage efficace** : SAC est plus efficace en termes d'utilisation des données.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Dans quels cas DDPG ou TD3 pourraient-ils être préférables à SAC ?",
+            "niveau": "hard",
+            "reponse": "DDPG ou TD3 pourraient être préférables dans les cas suivants :\n1. **Simplicité** : DDPG est plus simple à implémenter et à comprendre.\n2. **Ressources limitées** : SAC nécessite plus de calcul (deux Q-networks, apprentissage de \\(\\alpha\\)).\n3. **Environnements déterministes** : Dans des environnements peu stochastiques, l'exploration supplémentaire de SAC peut être moins nécessaire.\n4. **Stabilité déjà suffisante** : Si TD3 est déjà stable et performant, on peut préférer sa simplicité."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Implémentation de SAC avec Stable-Baselines3",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous utilisez la bibliothèque Stable-Baselines3 pour entraîner SAC sur un environnement personnalisé. L'environnement a un espace d'états continu de dimension 10 et un espace d'actions continu de dimension 3.</p>",
+      "images": [
+        "Un extrait de code montrant l'utilisation de SAC dans Stable-Baselines3."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrivez le code Python pour entraîner SAC sur cet environnement. Détaillez les étapes : création de l'environnement, configuration du modèle, entraînement, et évaluation.",
+        "niveau": "hard",
+        "reponse": "<p>Code complet avec Stable-Baselines3 :</p><pre style='background: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 8px; overflow-x: auto; font-size: 0.9em;'><code>import gym\nfrom stable_baselines3 import SAC\nfrom stable_baselines3.common.env_util import make_vec_env\nfrom stable_baselines3.common.evaluation import evaluate_policy\n\n# 1. Création de l'environnement\nenv = make_vec_env('CustomEnv-v0', n_envs=4)  # 4 environnements parallèles\n\n# 2. Configuration du modèle SAC\nmodel = SAC(\n    'MlpPolicy',\n    env,\n    learning_rate=0.0003,\n    buffer_size=1000000,\n    learning_starts=1000,\n    batch_size=256,\n    tau=0.005,\n    gamma=0.99,\n    train_freq=1,\n    gradient_steps=1,\n    action_noise=None,  # SAC gère l'exploration via l'entropie\n    policy_kwargs=dict(net_arch=[256, 256]),\n    verbose=1,\n    tensorboard_log=\"./sac_tensorboard/\"\n)\n\n# 3. Entraînement\nmodel.learn(total_timesteps=1000000)\n\n# 4. Sauvegarde du modèle\nmodel.save(\"sac_custom_env\")\n\n# 5. Évaluation\neval_env = gym.make('CustomEnv-v0')\nmean_reward, std_reward = evaluate_policy(model, eval_env, n_eval_episodes=10)\nprint(f\"Récompense moyenne : {mean_reward:.2f} ± {std_reward:.2f}\")</code></pre>",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment ajuster le paramètre \\(\\alpha\\) (température) dans Stable-Baselines3 ?",
+            "niveau": "hard",
+            "reponse": "Dans Stable-Baselines3, le paramètre \\(\\alpha\\) peut être :\n1. **Fixe** : Défini via le paramètre `ent_coef`.\n2. **Appris automatiquement** : En utilisant `ent_coef='auto'`, SAC apprend \\(\\alpha\\) automatiquement. On peut également définir une valeur initiale avec `ent_coef=0.1` et `target_entropy` pour contrôler l'entropie cible.\n\nExemple :\n<pre style='background: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 8px; overflow-x: auto; font-size: 0.9em;'><code>model = SAC('MlpPolicy', env, ent_coef='auto', target_entropy=-0.1)</code></pre>"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse Théorique de la Maximisation de l'Entropie",
+    "type": "ressource",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>L'objectif de SAC est de résoudre le problème d'optimisation suivant :</p><div class='math-block'><div class='math'>$$\\max_\\pi \\mathbb{E}_{\\pi} \\left[ \\sum_{t=0}^\\infty \\gamma^t \\left( r(s_t, a_t) + \\alpha \\mathcal{H}(\\pi(\\cdot|s_t)) \\right) \\right]$$</div></div><p>Cette formulation peut être vue comme un MDP augmenté où la récompense est modifiée.</p>",
+      "images": [
+        "Un schéma du MDP augmenté avec l'ajout de l'entropie comme récompense."
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Démontrez que l'objectif de maximisation de l'entropie peut être reformulé comme un MDP standard avec une récompense modifiée. Quelle est cette nouvelle récompense ?",
+        "niveau": "very hard",
+        "reponse": "On définit une nouvelle récompense :\n\n<div class='math-block'><div class='math'>$$\\tilde{r}(s_t, a_t) = r(s_t, a_t) + \\alpha \\mathcal{H}(\\pi(\\cdot|s_t))$$</div></div>\n\nLe problème devient alors :\n\n<div class='math-block'><div class='math'>$$\\max_\\pi \\mathbb{E}_{\\pi} \\left[ \\sum_{t=0}^\\infty \\gamma^t \\tilde{r}(s_t, a_t) \\right]$$</div></div>\n\nCette formulation permet d'appliquer les méthodes standards de RL (comme le Q-learning) à ce MDP augmenté. La politique optimale pour ce MDP est exactement la solution de SAC. L'entropie agit comme une récompense intrinsèque qui encourage l'exploration.\n\n**Remarque :** Cette reformulation est théorique car \\(\\mathcal{H}(\\pi(\\cdot|s_t))\\) dépend de la politique \\(\\pi\\), ce qui rend le MDP non-stationnaire. C'est pourquoi SAC utilise des méthodes spécifiques (comme la résolution de l'équation de Bellman modifiée).",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Comment cette reformulation influence-t-elle l'équation de Bellman pour la Q-valeur ?",
+            "niveau": "very hard",
+            "reponse": "L'équation de Bellman modifiée pour SAC est :\n\n<div class='math-block'><div class='math'>$$Q^\\pi(s, a) = \\mathbb{E}_{s' \\sim P} \\left[ r(s, a) + \\gamma \\mathbb{E}_{a' \\sim \\pi} \\left[ Q^\\pi(s', a') - \\alpha \\log \\pi(a'|s') \\right] \\right]$$</div></div>\n\nLe terme \\(-\\alpha \\log \\pi(a'|s')\\) est une pénalité qui décourage les actions déterministes. La politique optimale est alors :\n\n<div class='math-block'><div class='math'>$$\\pi^*(a|s) = \\arg\\max_{\\pi} \\mathbb{E}_{a \\sim \\pi} \\left[ Q^\\pi(s, a) - \\alpha \\log \\pi(a|s) \\right]$$</div></div>\n\nCette formulation est à la base de l'algorithme SAC et permet de trouver une politique qui équilibre exploration et exploitation de manière optimale."
+          }
+        ]
+      }
+    ]
+  }
+]

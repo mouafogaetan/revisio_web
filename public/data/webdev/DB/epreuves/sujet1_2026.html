@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+  "matiere": "Initiation aux Bases de données",
+  "classe": "Développement Web",
+  "sequence": "Séquence 1",
+  "anneeScolaire": "2025-2026",
+  "exercices": [
+    {
+      "titre": "Exercice 1 : Concepts fondamentaux (5 pts)",
+      "points": "5 pts",
+      "enonce": "<div style='padding: 10px;'><p><strong>Contexte :</strong> Vous êtes consultant en bases de données pour une nouvelle startup camerounaise appelée <strong>\"AfriVente\"</strong>, qui souhaite créer une plateforme de vente en ligne de produits artisanaux. L'équipe a besoin de comprendre les concepts de base pour bien démarrer son projet.</p></div>",
+      "questions": [
+        {
+          "question": "<div><p><strong>Question 1.1 (2 pts) :</strong> Expliquez la <strong>différence entre donnée, information et connaissance</strong> en prenant un exemple concret dans le contexte de la plateforme AfriVente.</p></div>",
+          "reponse": "<div><p><strong>Différence donnée / information / connaissance :</strong></p><ul style='list-style-type: disc; padding-left: 20px;'><li><strong>Donnée :</strong> C'est un fait brut, non interprété. Exemple : \"25\" (c'est un nombre sans contexte).</li><li><strong>Information :</strong> C'est une donnée interprétée, contextualisée. Exemple : \"25 ventes de sculptures en bois ce mois-ci\" (la donnée \"25\" prend un sens dans le contexte des ventes).</li><li><strong>Connaissance :</strong> C'est l'information enrichie par l'expérience et l'analyse. Exemple : \"Les ventes de sculptures en bois augmentent de 20% chaque mois pendant la saison des fêtes ; il faut donc augmenter les stocks en novembre et décembre.\"</li></ul></div>"
+        },
+        {
+          "question": "<div><p><strong>Question 1.2 (1.5 pts) :</strong> Citez et expliquez <strong>quatre avantages</strong> de l'utilisation d'une base de données pour AfriVente par rapport à un simple fichier Excel.</p></div>",
+          "reponse": "<div><p><strong>Avantages d'une base de données :</strong></p><ul style='list-style-type: disc; padding-left: 20px;'><li><strong>Persistance :</strong> Les données sont stockées de manière durable et peuvent être sauvegardées régulièrement.</li><li><strong>Partage :</strong> Plusieurs utilisateurs peuvent accéder et modifier les données simultanément.</li><li><strong>Sécurité :</strong> La base de données permet de gérer des droits d'accès (qui peut voir, modifier, supprimer).</li><li><strong>Cohérence :</strong> Les contraintes (clés primaires, clés étrangères, types de données) garantissent l'intégrité des données.</li></ul></div>"
+        },
+        {
+          "question": "<div><p><strong>Question 1.3 (1.5 pts) :</strong> AfriVente hésite entre une base de données <strong>relationnelle (SQL)</strong> et une base <strong>NoSQL</strong>. Pour chaque type, donnez un exemple de SGBD et indiquez <strong>deux cas d'usage</strong> où ce type serait plus approprié pour leur plateforme.</p></div>",
+          "reponse": "<div><p><strong>Choix entre SQL et NoSQL :</strong></p><ul style='list-style-type: disc; padding-left: 20px;'><li><strong>Base relationnelle (SQL) :</strong><ul style='list-style-type: circle; padding-left: 20px;'><li>Exemple : MySQL, PostgreSQL.</li><li>Cas d'usage : Gestion des commandes avec relations (client, produits, commandes, paiements).</li><li>Cas d'usage : Gestion des utilisateurs avec authentification et rôles.</li></ul></li><li><strong>Base NoSQL :</strong><ul style='list-style-type: circle; padding-left: 20px;'><li>Exemple : MongoDB (type document).</li><li>Cas d'usage : Stockage des avis clients avec des structures variables.</li><li>Cas d'usage : Catalogue de produits avec des attributs qui varient selon les catégories (ex: vêtements vs électronique).</li></ul></li></ul></div>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 2 : Conception de base de données (10 pts)",
+      "points": "10 pts",
+      "enonce": "<div style='padding: 10px;'><p><strong>Contexte :</strong> L'équipe d'AfriVente vous a confié la conception de la base de données. Après analyse des besoins, vous avez identifié les entités suivantes :</p><ul style='list-style-type: disc; padding-left: 20px;'><li><strong>Client</strong> : Un acheteur sur la plateforme.</li><li><strong>Produit</strong> : Un article proposé à la vente.</li><li><strong>Catégorie</strong> : Le type de produit (ex: Sculpture, Poterie, Tissage).</li><li><strong>Commande</strong> : Un achat effectué par un client.</li><li><strong>LigneCommande</strong> : Détail d'une commande (produit, quantité, prix).</li></ul></div>",
+      "questions": [
+        {
+          "question": "<div><p><strong>Question 2.1 (3 pts) :</strong> Construisez un <strong>diagramme entité-association (DER)</strong> pour ces entités. Vous devez :</p><ul style='list-style-type: lower-alpha; padding-left: 20px;'><li>Définir les <strong>attributs</strong> pertinents pour chaque entité.</li><li>Identifier les <strong>clés primaires</strong>.</li><li>Définir les <strong>relations</strong> avec leurs cardinalités.</li></ul><p><em>Note : Vous pouvez décrire le DER textuellement si vous ne pouvez pas le dessiner.</em></p></div>",
+          "reponse": "<div><p><strong>Diagramme entité-association (DER) :</strong></p><ul style='list-style-type: disc; padding-left: 20px;'><li><strong>Client</strong> (id_client, nom, email, telephone, date_inscription) <ul style='list-style-type: circle; padding-left: 20px;'><li>PK : id_client</li><li>Relation avec Commande : 1,n (un client peut avoir plusieurs commandes).</li></ul></li><li><strong>Produit</strong> (id_produit, nom, description, prix, stock, reference) <ul style='list-style-type: circle; padding-left: 20px;'><li>PK : id_produit</li><li>Relation avec Catégorie : n,1 (un produit appartient à une catégorie).</li></ul></li><li><strong>Catégorie</strong> (id_categorie, nom, description) <ul style='list-style-type: circle; padding-left: 20px;'><li>PK : id_categorie</li></ul></li><li><strong>Commande</strong> (id_commande, date, statut, total) <ul style='list-style-type: circle; padding-left: 20px;'><li>PK : id_commande</li><li>Relation avec Client : n,1 (une commande appartient à un seul client).</li></ul></li><li><strong>LigneCommande</strong> (id_ligne, quantite, prix_unitaire) <ul style='list-style-type: circle; padding-left: 20px;'><li>PK : id_ligne (ou clé composite id_commande + id_produit)</li><li>Relation avec Commande : n,1 (une ligne appartient à une commande).</li><li>Relation avec Produit : n,1 (une ligne concerne un produit).</li></ul></li></ul></div>"
+        },
+        {
+          "question": "<div><p><strong>Question 2.2 (2 pts) :</strong> Expliquez le <strong>rôle des clés primaires et étrangères</strong> dans votre DER. Identifiez-les pour chaque table.</p></div>",
+          "reponse": "<div><p><strong>Clés primaires et étrangères :</strong></p><ul style='list-style-type: disc; padding-left: 20px;'><li><strong>Clé primaire (PK) :</strong> Identifiant unique de chaque enregistrement dans une table. Elle garantit qu'il n'y a pas de doublons.<ul style='list-style-type: circle; padding-left: 20px;'><li>Exemple : id_client est la clé primaire de la table Client.</li><li>Exemple : id_commande est la clé primaire de la table Commande.</li></ul></li><li><strong>Clé étrangère (FK) :</strong> Colonne qui fait référence à la clé primaire d'une autre table. Elle permet de lier les tables entre elles.<ul style='list-style-type: circle; padding-left: 20px;'><li>Exemple : Dans la table Commande, la colonne id_client est une clé étrangère qui référence id_client de la table Client.</li><li>Exemple : Dans la table LigneCommande, les colonnes id_commande et id_produit sont des clés étrangères.</li></ul></li></ul></div>"
+        },
+        {
+          "question": "<div><p><strong>Question 2.3 (2 pts) :</strong> Transformez votre DER en <strong>schéma relationnel</strong> (tables). Pour chaque table, listez les colonnes, leur type, et les contraintes (PK, FK, NOT NULL, etc.).</p></div>",
+          "reponse": "<div><p><strong>Schéma relationnel :</strong></p><pre style='background-color: #2d2d2d; color: #f8f8f2; padding: 10px; border-radius: 5px; font-size: 14px;'>Client (id_client INT PRIMARY KEY, nom VARCHAR(100) NOT NULL, email VARCHAR(150) UNIQUE NOT NULL, telephone VARCHAR(20), date_inscription DATE DEFAULT CURRENT_DATE)\n\nCatégorie (id_categorie INT PRIMARY KEY, nom VARCHAR(100) NOT NULL, description TEXT)\n\nProduit (id_produit INT PRIMARY KEY, nom VARCHAR(200) NOT NULL, description TEXT, prix DECIMAL(10,2) NOT NULL CHECK (prix >= 0), stock INT NOT NULL DEFAULT 0 CHECK (stock >= 0), reference VARCHAR(50) UNIQUE, id_categorie INT NOT NULL, FOREIGN KEY (id_categorie) REFERENCES Catégorie(id_categorie))\n\nCommande (id_commande INT PRIMARY KEY, date DATETIME DEFAULT CURRENT_TIMESTAMP, statut VARCHAR(20) DEFAULT 'en_attente', total DECIMAL(10,2), id_client INT NOT NULL, FOREIGN KEY (id_client) REFERENCES Client(id_client))\n\nLigneCommande (id_ligne INT PRIMARY KEY, quantite INT NOT NULL CHECK (quantite > 0), prix_unitaire DECIMAL(10,2) NOT NULL, id_commande INT NOT NULL, id_produit INT NOT NULL, FOREIGN KEY (id_commande) REFERENCES Commande(id_commande), FOREIGN KEY (id_produit) REFERENCES Produit(id_produit))</pre></div>"
+        },
+        {
+          "question": "<div><p><strong>Question 2.4 (3 pts) :</strong> Expliquez le principe de <strong>normalisation</strong> et appliquez les <strong>trois premières formes normales (1NF, 2NF, 3NF)</strong> à la table <code>Commande</code> si elle contenait initialement les colonnes suivantes : <em>id_commande, date, client_nom, client_email, produit_1_nom, produit_1_prix, produit_2_nom, produit_2_prix</em>.</p></div>",
+          "reponse": "<div><p><strong>Normalisation 1NF, 2NF, 3NF :</strong></p><ul style='list-style-type: disc; padding-left: 20px;'><li><strong>Problème initial :</strong> La table contient des groupes répétés (produit_1_nom, produit_2_nom, ...) et des dépendances transitives (client_email dépend de client_nom).</li><li><strong>1NF (Première Forme Normale) :</strong> Éliminer les groupes répétés. Créer une table LigneCommande séparée pour chaque produit commandé.</li><li><strong>2NF (Deuxième Forme Normale) :</strong> Supprimer les dépendances partielles. Dans LigneCommande, le prix du produit dépend du produit, pas de la commande. Donc on déplace les informations produit dans une table Produit.</li><li><strong>3NF (Troisième Forme Normale) :</strong> Supprimer les dépendances transitives. Dans Commande, les informations client (nom, email) ne doivent pas dépendre directement de la commande. On crée une table Client séparée, et Commande contient une clé étrangère id_client.</li></ul></div>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 3 : Requêtes SQL (10 pts)",
+      "points": "10 pts",
+      "enonce": "<div style='padding: 10px;'><p><strong>Contexte :</strong> La base de données d'AfriVente est maintenant opérationnelle. Vous devez écrire des requêtes SQL pour répondre aux besoins de l'équipe. Utilisez le schéma suivant :</p><ul style='list-style-type: disc; padding-left: 20px;'><li><code>Client(id_client, nom, email, telephone, date_inscription)</code></li><li><code>Produit(id_produit, nom, description, prix, stock, id_categorie)</code></li><li><code>Categorie(id_categorie, nom, description)</code></li><li><code>Commande(id_commande, date, statut, total, id_client)</code></li><li><code>LigneCommande(id_ligne, quantite, prix_unitaire, id_commande, id_produit)</code></li></ul></div>",
+      "questions": [
+        {
+          "question": "<div><p><strong>Question 3.1 (1.5 pts) :</strong> Écrivez la requête SQL pour <strong>afficher</strong> le nom, l'email et la date d'inscription de tous les clients, triés par date d'inscription décroissante (les plus récents en premier).</p></div>",
+          "reponse": "<pre style='background-color: #2d2d2d; color: #f8f8f2; padding: 10px; border-radius: 5px; font-size: 14px;'>SELECT nom, email, date_inscription\nFROM Client\nORDER BY date_inscription DESC;</pre>"
+        },
+        {
+          "question": "<div><p><strong>Question 3.2 (2 pts) :</strong> Écrivez la requête SQL pour <strong>trouver tous les produits</strong> de la catégorie \"Sculpture\" qui ont un <strong>prix inférieur à 50 000 FCFA</strong> et un <strong>stock supérieur à 10</strong> unités.</p></div>",
+          "reponse": "<pre style='background-color: #2d2d2d; color: #f8f8f2; padding: 10px; border-radius: 5px; font-size: 14px;'>SELECT p.nom, p.prix, p.stock\nFROM Produit p\nINNER JOIN Categorie c ON p.id_categorie = c.id_categorie\nWHERE c.nom = 'Sculpture'\n  AND p.prix < 50000\n  AND p.stock > 10;</pre>"
+        },
+        {
+          "question": "<div><p><strong>Question 3.3 (2 pts) :</strong> Écrivez la requête SQL pour <strong>insérer</strong> un nouveau client dans la table Client avec les informations suivantes : <em>nom = 'Mbarga Jean', email = 'jean.mbarga@gmail.com', telephone = '699001122', date_inscription = la date actuelle</em>.</p></div>",
+          "reponse": "<pre style='background-color: #2d2d2d; color: #f8f8f2; padding: 10px; border-radius: 5px; font-size: 14px;'>INSERT INTO Client (nom, email, telephone, date_inscription)\nVALUES ('Mbarga Jean', 'jean.mbarga@gmail.com', '699001122', CURDATE());</pre>"
+        },
+        {
+          "question": "<div><p><strong>Question 3.4 (2 pts) :</strong> Écrivez la requête SQL pour <strong>mettre à jour le stock</strong> du produit ayant l'ID 5, en le réduisant de 3 unités (le stock actuel est de 15).</p></div>",
+          "reponse": "<pre style='background-color: #2d2d2d; color: #f8f8f2; padding: 10px; border-radius: 5px; font-size: 14px;'>UPDATE Produit\nSET stock = stock - 3\nWHERE id_produit = 5;\n\n-- (Cela suppose que le stock était de 15, il passe à 12)</pre>"
+        },
+        {
+          "question": "<div><p><strong>Question 3.5 (2.5 pts) :</strong> Écrivez la requête SQL pour <strong>afficher le chiffre d'affaires total</strong> (somme des totaux des commandes) réalisé sur le mois de janvier 2026. <em>(Rappel : le total de chaque commande est stocké dans la colonne total de la table Commande)</em></p></div>",
+          "reponse": "<pre style='background-color: #2d2d2d; color: #f8f8f2; padding: 10px; border-radius: 5px; font-size: 14px;'>SELECT SUM(total) AS chiffre_affaires_janvier_2026\nFROM Commande\nWHERE statut = 'payee'\n  AND date >= '2026-01-01'\n  AND date < '2026-02-01';</pre>"
+        }
+      ]
+    }
+  ]
+};
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

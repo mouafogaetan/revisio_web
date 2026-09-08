@@ -1,0 +1,184 @@
+[
+    {
+        "intitule": "Exercice 1 : Comprendre l'architecture de Kubeflow",
+        "type": "ressource",
+        "niveau": "easy",
+        "enonce": {
+            "texte": "<p>Vous êtes consultant MLOps et devez présenter Kubeflow à une entreprise qui souhaite moderniser ses pipelines de Machine Learning. L'entreprise utilise déjà Kubernetes et souhaite comprendre comment Kubeflow s'intègre dans son écosystème.</p><p><strong>Consigne :</strong> Décrivez l'architecture de Kubeflow en identifiant <strong>quatre</strong> composants principaux et leur rôle dans le cycle de vie ML.</p>",
+            "images": [
+                "Schéma de l'architecture Kubeflow montrant les principaux composants comme Kubeflow Pipelines, Notebooks, Training Operators, Serving, et leur interaction avec Kubernetes"
+            ]
+        },
+        "questions": [
+            {
+                "numero": 1,
+                "texte": "Décrivez quatre composants principaux de l'architecture Kubeflow.",
+                "niveau": "easy",
+                "reponse": "<p><strong>1. Kubeflow Pipelines :</strong> Plateforme pour construire, déployer et gérer des pipelines ML reproductibles. Elle permet de définir des workflows sous forme de DAG (Directed Acyclic Graph).</p><p><strong>2. Notebooks :</strong> Environnements Jupyter préconfigurés pour le développement et l'expérimentation. Ils s'exécutent sur Kubernetes et peuvent accéder aux ressources du cluster.</p><p><strong>3. Training Operators :</strong> Composants pour l'entraînement distribué. Inclut TFJob (TensorFlow), PyTorchJob, XGBoostJob, qui orchestrent l'entraînement sur plusieurs nœuds.</p><p><strong>4. KFServing (ou KServe) :</strong> Service de déploiement et de serving de modèles. Supporte le déploiement de modèles TensorFlow, PyTorch, Scikit-learn, ONNX, avec auto-scaling et canary deployments.</p>",
+                "sousQuestions": []
+            }
+        ]
+    },
+    {
+        "intitule": "Exercice 2 : Définir un pipeline Kubeflow avec Python",
+        "type": "competence",
+        "niveau": "medium",
+        "enonce": {
+            "texte": "<p>Vous devez créer un pipeline d'entraînement de modèle sur Kubeflow. Le pipeline doit :</p><ul><li>Télécharger un dataset depuis un bucket S3 (ou GCS)</li><li>Prétraiter les données (nettoyage, normalisation)</li><li>Entraîner un modèle de classification avec Scikit-learn</li><li>Enregistrer le modèle entraîné dans un bucket</li><li>Déployer le modèle sur un serveur de prédiction</li></ul><p><strong>Consigne :</strong> Écrivez le code Python qui définit ce pipeline en utilisant le SDK Kubeflow Pipelines (kfp).</p>",
+            "images": []
+        },
+        "questions": [
+            {
+                "numero": 1,
+                "texte": "Écrivez le code Python du pipeline Kubeflow.",
+                "niveau": "medium",
+                "reponse": "<pre style='background: #1e272e; color: #dcdde1; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.9rem;'>import kfp\nfrom kfp import dsl\nfrom kfp.components import create_component_from_func\n\n# 1. Composant de téléchargement des données\n@dsl.component\n def download_data() -> str:\n     import subprocess\n     url = \"gs://mon-bucket/dataset.csv\"\n     subprocess.run([\"gsutil\", \"cp\", url, \"/tmp/dataset.csv\"])\n     return \"/tmp/dataset.csv\"\n\n # 2. Composant de prétraitement\n @dsl.component\n def preprocess_data(input_path: str) -> str:\n     import pandas as pd\n     from sklearn.preprocessing import StandardScaler\n     \n     df = pd.read_csv(input_path)\n     X = df.drop('target', axis=1)\n     y = df['target']\n     scaler = StandardScaler()\n     X_scaled = scaler.fit_transform(X)\n     pd.DataFrame(X_scaled).to_csv('/tmp/preprocessed.csv', index=False)\n     return '/tmp/preprocessed.csv'\n\n # 3. Composant d'entraînement\n @dsl.component\n def train_model(data_path: str) -> str:\n     import pandas as pd\n     from sklearn.ensemble import RandomForestClassifier\n     import joblib\n     \n     df = pd.read_csv(data_path)\n     model = RandomForestClassifier(n_estimators=100)\n     model.fit(df, df['target'])\n     joblib.dump(model, '/tmp/model.pkl')\n     return '/tmp/model.pkl'\n\n # 4. Composant de déploiement\n @dsl.component\n def deploy_model(model_path: str):\n     # Code pour déployer le modèle sur KFServing\n     print(f\"Déploiement du modèle : {model_path}\")\n\n # Définition du pipeline\n @dsl.pipeline(\n     name='MonPipelineML',\n     description='Pipeline d\\'entraînement et déploiement'\n )\n def ml_pipeline():\n     download_task = download_data()\n     preprocess_task = preprocess_data(download_task.output)\n     train_task = train_model(preprocess_task.output)\n     deploy_task = deploy_model(train_task.output)\n\n if __name__ == '__main__':\n     kfp.compiler.Compiler().compile(ml_pipeline, 'mon_pipeline.yaml')</pre>",
+                "sousQuestions": []
+            }
+        ]
+    },
+    {
+        "intitule": "Exercice 3 : Configurer Kubeflow sur un cluster Kubernetes",
+        "type": "competence",
+        "niveau": "hard",
+        "enonce": {
+            "texte": "<p>Vous devez installer Kubeflow sur un cluster Kubernetes existant. Le cluster est sur GKE (Google Kubernetes Engine).</p><p><strong>Consigne :</strong> Rédigez un guide d'installation en utilisant <strong>Kubeflow Manifest</strong>. Décrivez :</p><ol><li>Les prérequis (versions, outils)</li><li>Les commandes d'installation</li><li>Les commandes de vérification</li><li>Les problématiques potentielles et leurs solutions</li></ol>",
+            "images": []
+        },
+        "questions": [
+            {
+                "numero": 1,
+                "texte": "Rédigez un guide d'installation de Kubeflow sur GKE.",
+                "niveau": "hard",
+                "reponse": "<p><strong>Guide d'installation de Kubeflow sur GKE</strong></p><p><strong>1. Prérequis :</strong></p><ul><li>gcloud installé et configuré</li><li>kubectl installé</li><li>kustomize installé (v4.0.0+)</li><li>Cluster Kubernetes (version 1.21+)</li></ul><p><strong>2. Commandes d'installation :</strong></p><pre style='background: #1e272e; color: #dcdde1; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.9rem;'># 1. Création du cluster GKE (si non existant)\n gcloud container clusters create kubeflow-cluster \\\n    --zone=us-central1-a \\\n    --machine-type=n1-standard-4 \\\n    --num-nodes=3 \\\n    --enable-ip-alias \\\n    --enable-autoscaling --min-nodes=3 --max-nodes=10\n\n # 2. Téléchargement des manifests\n git clone https://github.com/kubeflow/manifests.git\n cd manifests\n\n # 3. Installation avec Kustomize\n while ! kustomize build example | kubectl apply -f -; do\n    echo \"Réessai de l'application des ressources...\"\n    sleep 20\n done</pre><p><strong>3. Vérification :</strong></p><pre style='background: #1e272e; color: #dcdde1; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.9rem;'># Vérifier tous les pods\n kubectl get pods -n kubeflow\n\n # Vérifier le statut des services\n kubectl get services -n kubeflow\n\n # Accéder à l'interface web (port-forward)\n kubectl port-forward svc/istio-ingressgateway -n istio-system 8080:80</pre><p><strong>4. Problématiques potentielles :</strong></p><ul><li><strong>Problème :</strong> Manque de ressources CPU/Mémoire → Augmenter les nœuds.</li><li><strong>Problème :</strong> Certificats SSL → Utiliser un certificat auto-signé ou configurer un certificat Let's Encrypt.</li><li><strong>Problème :</strong> Kubeflow Pipelines ne démarre pas → Vérifier les logs du pod <code>kubeflow-pipelines</code>.</li></ul>",
+                "sousQuestions": []
+            }
+        ]
+    },
+    {
+        "intitule": "Exercice 4 : Comparer Kubeflow avec d'autres outils MLOps",
+        "type": "ressource",
+        "niveau": "hard",
+        "enonce": {
+            "texte": "<p>Votre entreprise doit choisir une plateforme MLOps. Les options sont <strong>Kubeflow</strong>, <strong>MLflow</strong> et <strong>Airflow</strong>. Chaque outil a ses forces et faiblesses.</p><p><strong>Consigne :</strong> Rédigez une analyse comparative selon les critères suivants :</p><ol><li>Complexité d'installation et maintenance</li><li>Fonctionnalités (pipelines, tracking, serving)</li><li>Scalabilité</li><li>Intégration avec l'écosystème existant</li></ol>",
+            "images": []
+        },
+        "questions": [
+            {
+                "numero": 1,
+                "texte": "Rédigez une analyse comparative de Kubeflow, MLflow et Airflow.",
+                "niveau": "hard",
+                "reponse": "<p><strong>Comparaison des outils MLOps :</strong></p><p><strong>1. Complexité d'installation et maintenance :</strong></p><ul><li><strong>Kubeflow :</strong> Installation complexe (nécessite Kubernetes). Maintenance requiert une expertise en Kubernetes.</li><li><strong>MLflow :</strong> Installation très simple (<code>pip install mlflow</code>). Maintenance légère.</li><li><strong>Airflow :</strong> Installation modérée (nécessite une base de données). Maintenance standard.</li></ul><p><strong>2. Fonctionnalités :</strong></p><ul><li><strong>Kubeflow :</strong> Pipelines, Notebooks, Training Operators, Serving (KFServing), AutoML, Katib (hyperparameter tuning). Très complet.</li><li><strong>MLflow :</strong> Tracking (expérimentations), Projects, Models (registre), Serving. Focus sur le cycle de vie du modèle.</li><li><strong>Airflow :</strong> Orchestration de pipelines (DAGs), pas de fonctionnalités ML spécifiques (tracking, serving).</li></ul><p><strong>3. Scalabilité :</strong></p><ul><li><strong>Kubeflow :</strong> Très scalable grâce à Kubernetes. Supporte l'entraînement distribué.</li><li><strong>MLflow :</strong> Scalabilité limitée (nécessite une base de données backend).</li><li><strong>Airflow :</strong> Scalable avec des workers distribués (Celery, Kubernetes Executor).</li></ul><p><strong>4. Intégration :</strong></p><ul><li><strong>Kubeflow :</strong> Intégration native avec Kubernetes. Supporte TensorFlow, PyTorch, Scikit-learn.</li><li><strong>MLflow :</strong> S'intègre avec de nombreux frameworks (TensorFlow, PyTorch, Scikit-learn, Spark).</li><li><strong>Airflow :</strong> S'intègre avec tout (Python). Utilisé comme orchestrateur généraliste.</li></ul><p><strong>Recommandation :</strong> Choisir Kubeflow si on a une infrastructure Kubernetes et un besoin d'outils ML complets. MLflow pour une solution légère. Airflow pour l'orchestration uniquement.</p>",
+                "sousQuestions": []
+            }
+        ]
+    },
+    {
+        "intitule": "Exercice 5 : Implémenter un composant personnalisé pour Kubeflow",
+        "type": "competence",
+        "niveau": "hard",
+        "enonce": {
+            "texte": "<p>Vous devez créer un composant personnalisé pour Kubeflow qui calcule les métriques de performance d'un modèle (accuracy, precision, recall, F1-score) et les enregistre dans un fichier.</p><p><strong>Consigne :</strong> Implémentez ce composant en utilisant <strong>Python</strong> et le décorateur <code>@dsl.component</code> de Kubeflow. Le composant doit :</p><ol><li>Prendre en entrée le chemin du modèle et le chemin des données de test</li><li>Calculer les métriques</li><li>Enregistrer les métriques dans un fichier JSON</li><li>Retourner le chemin du fichier JSON</li></ol>",
+            "images": []
+        },
+        "questions": [
+            {
+                "numero": 1,
+                "texte": "Implémentez le composant de calcul des métriques.",
+                "niveau": "hard",
+                "reponse": "<pre style='background: #1e272e; color: #dcdde1; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.9rem;'>import kfp\nfrom kfp import dsl\nimport json\n\n@dsl.component\n def compute_metrics(model_path: str, test_data_path: str) -> str:\n     import joblib\n     import pandas as pd\n     from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score\n\n     # Chargement du modèle\n     model = joblib.load(model_path)\n\n     # Chargement des données de test\n     df = pd.read_csv(test_data_path)\n     X_test = df.drop('target', axis=1)\n     y_test = df['target']\n\n     # Prédictions\n     y_pred = model.predict(X_test)\n\n     # Calcul des métriques\n     metrics = {\n         'accuracy': accuracy_score(y_test, y_pred),\n         'precision': precision_score(y_test, y_pred, average='weighted'),\n         'recall': recall_score(y_test, y_pred, average='weighted'),\n         'f1_score': f1_score(y_test, y_pred, average='weighted')\n     }\n\n     # Sauvegarde des métriques\n     output_path = '/tmp/metrics.json'\n     with open(output_path, 'w') as f:\n         json.dump(metrics, f, indent=2)\n\n     return output_path\n\n # Utilisation dans un pipeline\n @dsl.pipeline(\n     name='Pipeline avec évaluation',\n     description='Pipeline d\\'entraînement et évaluation'\n )\n def ml_pipeline_with_eval(model_path: str, test_data_path: str):\n     metrics_task = compute_metrics(\n         model_path=model_path,\n         test_data_path=test_data_path\n     )\n     # Les métriques sont disponibles dans metrics_task.output\n\n if __name__ == '__main__':\n     kfp.compiler.Compiler().compile(\n         ml_pipeline_with_eval,\n         'pipeline_eval.yaml'\n     )</pre>",
+                "sousQuestions": []
+            }
+        ]
+    },
+    {
+        "intitule": "Exercice 6 : Déployer un modèle avec KFServing",
+        "type": "competence",
+        "niveau": "hard",
+        "enonce": {
+            "texte": "<p>Votre modèle Scikit-learn est entraîné et sauvegardé. Vous devez le déployer sur <strong>KFServing (KServe)</strong> pour qu'il soit accessible via une API REST.</p><p><strong>Consigne :</strong> Rédigez les <strong>manifestes Kubernetes</strong> pour :</p><ol><li>Créer un InferenceService avec KFServing</li><li>Configurer l'auto-scaling</li><li>Configurer un canary deployment (10% du trafic vers une nouvelle version)</li></ol>",
+            "images": []
+        },
+        "questions": [
+            {
+                "numero": 1,
+                "texte": "Rédigez les manifestes Kubernetes pour le déploiement KFServing.",
+                "niveau": "hard",
+                "reponse": "<pre style='background: #1e272e; color: #dcdde1; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.9rem;'># inference-service.yaml\napiVersion: serving.kserve.io/v1beta1\nkind: InferenceService\nmetadata:\n  name: mon-modele-sklearn\n  namespace: kubeflow\nspec:\n  predictor:\n    minReplicas: 1\n    maxReplicas: 10\n    containerConcurrency: 5\n    scaleTarget: 1000  # Nombre de requêtes par minute pour le scaling\n    model:\n      modelFormat:\n        name: sklearn\n      storageUri: gs://mon-bucket/mon_modele/model.joblib\n      resources:\n        requests:\n          cpu: 1\n          memory: 2Gi\n        limits:\n          cpu: 2\n          memory: 4Gi\n\n ---\n # canary-deployment.yaml\n # Deuxième version avec 10% du trafic\n apiVersion: serving.kserve.io/v1beta1\n kind: InferenceService\n metadata:\n   name: mon-modele-sklearn\n   namespace: kubeflow\n spec:\n   predictor:\n     minReplicas: 1\n     maxReplicas: 10\n     canaryTrafficPercent: 10\n     model:\n       modelFormat:\n         name: sklearn\n       storageUri: gs://mon-bucket/mon_modele_v2/model.joblib\n\n # Application des manifests\n # kubectl apply -f inference-service.yaml\n # kubectl apply -f canary-deployment.yaml</pre>",
+                "sousQuestions": []
+            }
+        ]
+    },
+    {
+        "intitule": "Exercice 7 : Optimiser les coûts sur Kubeflow",
+        "type": "ressource",
+        "niveau": "medium",
+        "enonce": {
+            "texte": "<p>Votre entreprise utilise Kubeflow sur GKE. Les coûts d'infrastructure ont augmenté de 40% ce mois-ci. Vous devez identifier les causes et proposer des solutions pour optimiser les coûts.</p><p><strong>Consigne :</strong> Proposez <strong>cinq</strong> stratégies d'optimisation des coûts pour Kubeflow sur GKE.</p>",
+            "images": []
+        },
+        "questions": [
+            {
+                "numero": 1,
+                "texte": "Proposez cinq stratégies d'optimisation des coûts.",
+                "niveau": "medium",
+                "reponse": "<p><strong>1. Utiliser des instances préemptives :</strong> Pour les workloads non critiques (entraînement, notebooks), utiliser des instances préemptives de GKE qui sont jusqu'à 60-80% moins chères.</p><pre style='background: #1e272e; color: #dcdde1; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.9rem;'>gcloud container node-pools create preemptible-pool \\\n    --zone=us-central1-a \\\n    --cluster=kubeflow-cluster \\\n    --machine-type=n1-standard-4 \\\n    --num-nodes=2 \\\n    --preemptible</pre><p><strong>2. Mettre en place l'auto-scaling :</strong> Configurer l'auto-scaling des nœuds pour réduire les ressources en période creuse.</p><pre style='background: #1e272e; color: #dcdde1; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.9rem;'>gcloud container clusters update kubeflow-cluster \\\n    --enable-autoscaling \\\n    --min-nodes=3 \\\n    --max-nodes=5</pre><p><strong>3. Limiter les ressources des composants :</strong> Définir des <code>resource requests</code> et <code>limits</code> pour chaque composant Kubeflow.</p><pre style='background: #1e272e; color: #dcdde1; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.9rem;'># Dans les manifests Kubeflow\n resources:\n   requests:\n     memory: \"256Mi\"\n     cpu: \"250m\"\n   limits:\n     memory: \"512Mi\"\n     cpu: \"500m\"</pre><p><strong>4. Supprimer les ressources inutilisées :</strong> Nettoyer régulièrement les jobs, notebooks et pipelines terminés.</p><pre style='background: #1e272e; color: #dcdde1; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.9rem;'>kubectl delete pods --field-selector=status.phase==Succeeded -n kubeflow</pre><p><strong>5. Utiliser des images optimisées :</strong> Utiliser des images Docker plus légères (ex: Alpine) pour réduire les temps de démarrage et la consommation de ressources.</p>",
+                "sousQuestions": []
+            }
+        ]
+    },
+    {
+        "intitule": "Exercice 8 : Sécuriser Kubeflow",
+        "type": "competence",
+        "niveau": "hard",
+        "enonce": {
+            "texte": "<p>Vous devez sécuriser votre cluster Kubeflow. Les exigences de sécurité sont :</p><ul><li>Authentification des utilisateurs avec IAM</li><li>RBAC (Role-Based Access Control) pour limiter les accès</li><li>Chiffrement des données en transit et au repos</li></ul><p><strong>Consigne :</strong> Expliquez comment configurer ces aspects de sécurité sur Kubeflow.</p>",
+            "images": []
+        },
+        "questions": [
+            {
+                "numero": 1,
+                "texte": "Expliquez comment sécuriser Kubeflow avec IAM, RBAC et chiffrement.",
+                "niveau": "hard",
+                "reponse": "<p><strong>1. Authentification avec IAM (sur GCP) :</strong></p><pre style='background: #1e272e; color: #dcdde1; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.9rem;'># Activation du Workload Identity\n gcloud container clusters update kubeflow-cluster \\\n    --zone=us-central1-a \\\n    --workload-pool=mon-projet.svc.id.goog\n\n # Association d'un compte de service GCP à un compte Kubernetes\n gcloud iam service-accounts add-iam-policy-binding \\\n    mon-compte-de-service@mon-projet.iam.gserviceaccount.com \\\n    --role=roles/iam.workloadIdentityUser \\\n    --member=\"serviceAccount:mon-projet.svc.id.goog[kubeflow/ksa-user]\"\n\n # Annotation du Kubernetes Service Account\n kubectl annotate serviceaccount ksa-user \\\n    iam.gke.io/gcp-service-account=mon-compte-de-service@mon-projet.iam.gserviceaccount.com</pre><p><strong>2. RBAC (Role-Based Access Control) :</strong></p><pre style='background: #1e272e; color: #dcdde1; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.9rem;'># Création d'un role restreint\n apiVersion: rbac.authorization.k8s.io/v1\n kind: Role\n metadata:\n   namespace: kubeflow\n   name: ml-engineer\n rules:\n - apiGroups: [\"\"]\n   resources: [\"pods\", \"services\", \"configmaps\"]\n   verbs: [\"get\", \"list\", \"watch\", \"create\", \"delete\"]\n - apiGroups: [\"kubeflow.org\"]\n   resources: [\"pytorchjobs\", \"tfjobs\"]\n   verbs: [\"get\", \"list\", \"watch\", \"create\", \"delete\"]\n\n ---\n # Liaison du role à un utilisateur\n apiVersion: rbac.authorization.k8s.io/v1\n kind: RoleBinding\n metadata:\n   namespace: kubeflow\n   name: ml-engineer-binding\n subjects:\n - kind: User\n   name: datascientist@monentreprise.com\n roleRef:\n   kind: Role\n   name: ml-engineer\n   apiGroup: rbac.authorization.k8s.io</pre><p><strong>3. Chiffrement :</strong></p><ul><li><strong>En transit :</strong> Activer TLS sur l'Ingress Gateway (certificats Let's Encrypt ou GCP Managed Certificates).</li><li><strong>Au repos :</strong> Utiliser les secrets chiffrés de Kubernetes ou intégrer avec GCP KMS.</li></ul>",
+                "sousQuestions": []
+            }
+        ]
+    },
+    {
+        "intitule": "Exercice 9 : Analyser un pipeline Kubeflow existant",
+        "type": "ressource",
+        "niveau": "medium",
+        "enonce": {
+            "texte": "<p>Vous reprenez un pipeline Kubeflow existant qui contient les composants suivants :</p><ul><li><code>download_data</code> : télécharge des données depuis BigQuery (30 minutes)</li><li><code>preprocess_data</code> : prétraite les données (15 minutes)</li><li><code>train_model</code> : entraîne un modèle (2 heures)</li><li><code>evaluate_model</code> : évalue le modèle (5 minutes)</li><li><code>deploy_model</code> : déploie le modèle (10 minutes)</li></ul><p><strong>Consigne :</strong> Analysez ce pipeline et proposez trois optimisations pour réduire le temps d'exécution et améliorer l'efficacité.</p>",
+            "images": []
+        },
+        "questions": [
+            {
+                "numero": 1,
+                "texte": "Analysez le pipeline et proposez trois optimisations.",
+                "niveau": "medium",
+                "reponse": "<p><strong>1. Parallélisation :</strong> Si <code>preprocess_data</code> peut être exécuté sur plusieurs partitions, le paralléliser avec des composants séparés pour chaque partition.</p><pre style='background: #1e272e; color: #dcdde1; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.9rem;'># Parallélisation du prétraitement\n for i in range(4):\n     preprocess_task = preprocess_data(\n         partition=i,\n         total_partitions=4\n     )\n     train_task = train_model(preprocess_task.output)</pre><p><strong>2. Utiliser des données en cache :</strong> Si <code>download_data</code> est toujours la même, mettre en cache les données pour éviter de les retélécharger à chaque exécution.</p><pre style='background: #1e272e; color: #dcdde1; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.9rem;'>@dsl.component\n def download_data() -> str:\n     # Vérifier si les données sont déjà en cache\n     if os.path.exists('/cache/dataset.csv'):\n         return '/cache/dataset.csv'\n     # Sinon, télécharger\n     # ...</pre><p><strong>3. Utiliser des ressources GPU plus puissantes :</strong> Pour <code>train_model</code>, utiliser des nœuds avec GPU pour réduire le temps d'entraînement de 2 heures à 30 minutes.</p><pre style='background: #1e272e; color: #dcdde1; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.9rem;'># Dans le manifeste du job\n spec:\n   containers:\n   - name: trainer\n     resources:\n       limits:\n         nvidia.com/gpu: 2</pre>",
+                "sousQuestions": []
+            }
+        ]
+    },
+    {
+        "intitule": "Exercice 10 : Évaluer l'impact de Kubeflow sur l'équipe MLOps",
+        "type": "ressource",
+        "niveau": "hard",
+        "enonce": {
+            "texte": "<p>Votre entreprise a adopté Kubeflow depuis 6 mois. Vous devez évaluer l'impact de cet outil sur l'équipe MLOps et la productivité.</p><p><strong>Consigne :</strong> Rédigez un rapport d'évaluation qui couvre :</p><ol><li>Les bénéfices apportés par Kubeflow</li><li>Les défis rencontrés par l'équipe</li><li>Les recommandations pour améliorer l'adoption</li></ol>",
+            "images": []
+        },
+        "questions": [
+            {
+                "numero": 1,
+                "texte": "Rédigez un rapport d'évaluation de l'impact de Kubeflow.",
+                "niveau": "hard",
+                "reponse": "<p><strong>Rapport d'évaluation - Impact de Kubeflow</strong></p><p><strong>1. Bénéfices apportés :</strong></p><ul><li><strong>Réduction du temps de mise en production :</strong> De 4 semaines à 2 jours grâce aux pipelines automatisés.</li><li><strong>Reproductibilité :</strong> Les pipelines sont versionnés, permettant de reproduire les résultats.</li><li><strong>Scalabilité :</strong> L'entraînement distribué est devenu trivial sur le cluster Kubernetes.</li><li><strong>Visibilité :</strong> L'interface web permet de suivre l'avancement des pipelines.</li></ul><p><strong>2. Défis rencontrés :</strong></p><ul><li><strong>Courbe d'apprentissage :</strong> Les Data Scientists ont dû apprendre Kubernetes, Kubeflow, et les concepts de conteneurisation.</li><li><strong>Complexité de debugging :</strong> Debugger un pipeline Kubeflow est plus complexe que du code local.</li><li><strong>Coûts d'infrastructure :</strong> Les coûts de GKE ont augmenté de 30%.</li></ul><p><strong>3. Recommandations :</strong></p><ul><li><strong>Formation :</strong> Organiser des sessions de formation sur Kubeflow pour toute l'équipe.</li><li><strong>Bonnes pratiques :</strong> Documenter les bonnes pratiques pour l'écriture des composants.</li><li><strong>Optimisation des coûts :</strong> Mettre en place des politiques de scaling et de nettoyage.</li><li><strong>Support :</strong> Nommer un MLOps Engineer dédié à la maintenance de Kubeflow.</li></ul>",
+                "sousQuestions": []
+            }
+        ]
+    }
+]

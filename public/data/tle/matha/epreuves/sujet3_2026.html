@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+  "matiere": "Maths Tle A",
+  "classe": "Terminale A",
+  "sequence": "Séquence 3",
+  "anneeScolaire": "2025-2026",
+  "exercices": [
+    {
+      "titre": "EXERCICE 1 : Statistiques",
+      "points": "4 pts",
+      "enonce": "<div style='background-color: #f8f9fa; padding: 15px; border-radius: 8px; color: #333;'>Le tableau ci-dessous donne l'évolution du nombre d'adhérents d'un club sportif au Cameroun entre 2017 et 2021.<br><br><table style='width:100%; border-collapse: collapse; text-align:center;'><tr style='background-color:#e9ecef;'><th style='padding: 8px; border: 1px solid #ddd;'>Année</th><td style='padding: 8px; border: 1px solid #ddd;'>2017</td><td style='padding: 8px; border: 1px solid #ddd;'>2018</td><td style='padding: 8px; border: 1px solid #ddd;'>2019</td><td style='padding: 8px; border: 1px solid #ddd;'>2020</td><td style='padding: 8px; border: 1px solid #ddd;'>2021</td></tr><tr><th style='padding: 8px; border: 1px solid #ddd; background-color:#e9ecef;'>Rang <span style='font-style:italic;'>x</span>i</th><td style='padding: 8px; border: 1px solid #ddd;'>1</td><td style='padding: 8px; border: 1px solid #ddd;'>2</td><td style='padding: 8px; border: 1px solid #ddd;'>3</td><td style='padding: 8px; border: 1px solid #ddd;'>4</td><td style='padding: 8px; border: 1px solid #ddd;'>5</td></tr><tr><th style='padding: 8px; border: 1px solid #ddd; background-color:#e9ecef;'>Nombre d'adhérents <span style='font-style:italic;'>y</span>i</th><td style='padding: 8px; border: 1px solid #ddd;'>10</td><td style='padding: 8px; border: 1px solid #ddd;'>12</td><td style='padding: 8px; border: 1px solid #ddd;'>15</td><td style='padding: 8px; border: 1px solid #ddd;'>18</td><td style='padding: 8px; border: 1px solid #ddd;'>22</td></tr></table></div>",
+      "questions": [
+        {
+          "question": "<div style='color: #333;'>1) Représenter le nuage de points de cette série dans un repère orthogonal. (On prendra 1 cm pour 1 unité sur l'axe des abscisses et 1 cm pour 2 unités sur l'axe des ordonnées).</div>",
+          "reponse": "<div style='color: #333;'>Nuage de points avec les coordonnées (1;10), (2;12), (3;15), (4;18), (5;22).</div>"
+        },
+        {
+          "question": "<div style='color: #333;'>2) Calculer les coordonnées du point moyen G de cette série.</div>",
+          "reponse": "<div style='color: #333;'>On a \\( \\bar{x} = \\frac{1+2+3+4+5}{5} = 3 \\) et \\( \\bar{y} = \\frac{10+12+15+18+22}{5} = 15.4 \\). Donc \\( G(3; 15.4) \\).</div>"
+        },
+        {
+          "question": "<div style='color: #333;'>3) On partage la série en deux sous-séries de même effectif : (1;2) et (4;5). Calculer les coordonnées des points moyens G<sub>1</sub> et G<sub>2</sub>, puis déterminer l'équation de la droite de Mayer (D) passant par ces deux points.</div>",
+          "reponse": "<div style='color: #333;'>G<sub>1</sub> a pour coordonnées \\( (\\frac{1+2}{2}; \\frac{10+12}{2}) = (1.5; 11) \\).<br>G<sub>2</sub> a pour coordonnées \\( (\\frac{4+5}{2}; \\frac{18+22}{2}) = (4.5; 20) \\).<br>Le coefficient directeur de (D) est \\( a = \\frac{20-11}{4.5-1.5} = \\frac{9}{3} = 3 \\).<br>L'équation est de la forme \\( y = 3x + b \\). En utilisant G<sub>1</sub> : \\( 11 = 3(1.5) + b \\Rightarrow b = 11 - 4.5 = 6.5 \\).<br>Donc \\( (D) : y = 3x + 6.5 \\).</div>"
+        },
+        {
+          "question": "<div style='color: #333;'>4) En utilisant l'ajustement par la droite de Mayer, estimer le nombre d'adhérents du club en 2023 (rang 7).</div>",
+          "reponse": "<div style='color: #333;'>En 2023, \\( x = 7 \\).<br>On a \\( y = 3(7) + 6.5 = 21 + 6.5 = 27.5 \\).<br>L'estimation est de 27 ou 28 adhérents.</div>"
+        }
+      ]
+    },
+    {
+      "titre": "EXERCICE 2 : Fonctions logarithmes et exponentielles",
+      "points": "5 pts",
+      "enonce": "<div style='background-color: #f8f9fa; padding: 15px; border-radius: 8px; color: #333;'>Résoudre dans \\(\\mathbb{R}\\) les équations et inéquations suivantes.</div>",
+      "questions": [
+        {
+          "question": "<div style='color: #333;'>1) \\( \\ln(x+3) = 2 \\)</div>",
+          "reponse": "<div style='color: #333;'>Condition : \\( x+3 > 0 \\iff x > -3 \\).<br>\\( \\ln(x+3) = 2 \\iff x+3 = e^2 \\iff x = e^2 - 3 \\).<br>Comme \\( e^2 - 3 \\approx 4.39 > -3 \\), la solution est \\( S = \\{ e^2 - 3 \\} \\).</div>"
+        },
+        {
+          "question": "<div style='color: #333;'>2) \\( \\ln(x-1) + \\ln(x+2) = \\ln(6) \\)</div>",
+          "reponse": "<div style='color: #333;'>Conditions : \\( x-1 > 0 \\iff x > 1 \\) et \\( x+2 > 0 \\iff x > -2 \\), donc \\( x > 1 \\).<br>\\( \\ln((x-1)(x+2)) = \\ln(6) \\iff (x-1)(x+2) = 6 \\).<br>\\( x^2 + x - 2 = 6 \\iff x^2 + x - 8 = 0 \\).<br>Discriminant : \\( \\Delta = 1 - 4(1)(-8) = 33 \\).<br>Racines : \\( x_1 = \\frac{-1 - \\sqrt{33}}{2} \\approx -3.37 \\) (ne convient pas) et \\( x_2 = \\frac{-1 + \\sqrt{33}}{2} \\approx 2.37 \\) (convient).<br>\\( S = \\{ \\frac{-1 + \\sqrt{33}}{2} \\} \\).</div>"
+        },
+        {
+          "question": "<div style='color: #333;'>3) \\( \\ln(x^2 - 2x) = 0 \\)</div>",
+          "reponse": "<div style='color: #333;'>Condition : \\( x^2 - 2x > 0 \\iff x(x-2) > 0 \\iff x < 0 \\) ou \\( x > 2 \\).<br>\\( \\ln(x^2 - 2x) = 0 \\iff x^2 - 2x = e^0 = 1 \\iff x^2 - 2x - 1 = 0 \\).<br>Discriminant : \\( \\Delta = 4 + 4 = 8 \\). Racines : \\( x = \\frac{2 \\pm 2\\sqrt{2}}{2} = 1 \\pm \\sqrt{2} \\).<br>\\( 1 - \\sqrt{2} \\approx -0.41 \\) convient car < 0. \\( 1 + \\sqrt{2} \\approx 2.41 \\) convient car > 2.<br>\\( S = \\{ 1 - \\sqrt{2}; 1 + \\sqrt{2} \\} \\).</div>"
+        },
+        {
+          "question": "<div style='color: #333;'>4) \\( e^{2x} - 5e^x + 4 \\ge 0 \\)</div>",
+          "reponse": "<div style='color: #333;'>On pose \\( X = e^x > 0 \\). L'inéquation devient \\( X^2 - 5X + 4 \\ge 0 \\).<br>Racines de \\( X^2 - 5X + 4 = 0 \\) : \\( \\Delta = 25 - 16 = 9 \\), \\( X_1 = 1 \\), \\( X_2 = 4 \\).<br>Le trinôme est positif pour \\( X \\le 1 \\) ou \\( X \\ge 4 \\).<br>Comme \\( X > 0 \\), on a \\( 0 < X \\le 1 \\) ou \\( X \\ge 4 \\).<br>Soit \\( 0 < e^x \\le 1 \\iff x \\le 0 \\) ou \\( e^x \\ge 4 \\iff x \\ge \\ln 4 \\).<br>\\( S = \\] -\\infty; 0 ] \\cup [ \\ln 4; +\\infty [ \\).</div>"
+        }
+      ]
+    },
+    {
+      "titre": "EXERCICE 3 : Étude complète d'une fonction",
+      "points": "6 pts",
+      "enonce": "<div style='background-color: #f8f9fa; padding: 15px; border-radius: 8px; color: #333;'>On considère la fonction \\( f \\) définie par \\( f(x) = x - 1 + \\frac{1}{x-2} \\). On note \\( (C_f) \\) sa courbe représentative dans un repère orthonormé \\( (O; \\vec{i}; \\vec{j}) \\).</div>",
+      "questions": [
+        {
+          "question": "<div style='color: #333;'>1) Déterminer le domaine de définition de \\( f \\).</div>",
+          "reponse": "<div style='color: #333;'>La fonction est définie si \\( x-2 \\neq 0 \\iff x \\neq 2 \\).<br>Donc \\( D_f = \\mathbb{R} \\setminus \\{2\\} = \\]-\\infty; 2[ \\cup ]2; +\\infty[ \\).</div>"
+        },
+        {
+          "question": "<div style='color: #333;'>2) Calculer les limites de \\( f \\) aux bornes de son domaine de définition. En déduire les asymptotes éventuelles.</div>",
+          "reponse": "<div style='color: #333;'>Limites en l'infini :<br>\\( \\lim_{x \\to -\\infty} f(x) = -\\infty \\) et \\( \\lim_{x \\to +\\infty} f(x) = +\\infty \\).<br>La droite \\( y = x-1 \\) est asymptote oblique car \\( \\lim_{x \\to \\pm \\infty} (f(x) - (x-1)) = \\lim_{x \\to \\pm \\infty} \\frac{1}{x-2} = 0 \\).<br>Limites en 2 :<br>\\( \\lim_{x \\to 2^-} (x-2) = 0^- \\), donc \\( \\lim_{x \\to 2^-} \\frac{1}{x-2} = -\\infty \\) et \\( \\lim_{x \\to 2^-} f(x) = -\\infty \\).<br>\\( \\lim_{x \\to 2^+} (x-2) = 0^+ \\), donc \\( \\lim_{x \\to 2^+} \\frac{1}{x-2} = +\\infty \\) et \\( \\lim_{x \\to 2^+} f(x) = +\\infty \\).<br>La droite \\( x=2 \\) est asymptote verticale.</div>"
+        },
+        {
+          "question": "<div style='color: #333;'>3) Montrer que pour tout \\( x \\neq 2 \\), \\( f'(x) = 1 - \\frac{1}{(x-2)^2} \\). Étudier le signe de \\( f'(x) \\) et dresser le tableau de variations de \\( f \\).</div>",
+          "reponse": "<div style='color: #333;'>La dérivée de \\( x-1 \\) est 1. La dérivée de \\( \\frac{1}{x-2} = (x-2)^{-1} \\) est \\( -(x-2)^{-2} = -\\frac{1}{(x-2)^2} \\).<br>Donc \\( f'(x) = 1 - \\frac{1}{(x-2)^2} \\).<br>Signe de \\( f'(x) \\) : <br>\\( f'(x) \\ge 0 \\iff 1 - \\frac{1}{(x-2)^2} \\ge 0 \\iff \\frac{(x-2)^2 - 1}{(x-2)^2} \\ge 0 \\iff (x-2)^2 - 1 \\ge 0 \\) (car le dénominateur est positif).<br>\\( \\iff (x-2-1)(x-2+1) \\ge 0 \\iff (x-3)(x-1) \\ge 0 \\).<br>Donc \\( f'(x) \\ge 0 \\) pour \\( x \\in ]-\\infty; 1] \\cup [3; +\\infty[ \\) et \\( f'(x) \\le 0 \\) pour \\( x \\in [1; 2[ \\cup ]2; 3] \\).<br>Tableau de variations :<br><ul><li>Sur \\( ]-\\infty; 1] \\): \\( f \\) est croissante.</li><li>Sur \\( [1; 2[ \\): \\( f \\) est décroissante.</li><li>Sur \\( ]2; 3] \\): \\( f \\) est décroissante.</li><li>Sur \\( [3; +\\infty[ \\): \\( f \\) est croissante.</li></ul>Les valeurs remarquables sont \\( f(1) = 0 \\) et \\( f(3) = 2 \\).</div>"
+        },
+        {
+          "question": "<div style='color: #333;'>4) Déterminer l'équation de la tangente \\( (T) \\) à \\( (C_f) \\) au point d'abscisse \\( x_0 = 3 \\).</div>",
+          "reponse": "<div style='color: #333;'>La formule de la tangente en \\( x_0 = 3 \\) est : \\( y = f'(3)(x-3) + f(3) \\).<br>\\( f(3) = 3 - 1 + \\frac{1}{3-2} = 2 + 1 = 3 \\).<br>\\( f'(3) = 1 - \\frac{1}{(3-2)^2} = 1 - 1 = 0 \\).<br>Donc \\( (T) : y = 0 \\times (x-3) + 3 \\iff y = 3 \\). La tangente est horizontale.</div>"
+        },
+        {
+          "question": "<div style='color: #333;'>5) Construire soigneusement la courbe \\( (C_f) \\), ses asymptotes et la tangente \\( (T) \\) dans un repère orthonormé.</div>",
+          "reponse": "<div style='color: #333;'>Construction graphique à réaliser sur copie. Points clés :<br>- Asymptotes : \\( y = x-1 \\) (oblique), \\( x = 2 \\) (verticale).<br>- Tangente \\( y = 3 \\) en \\( x = 3 \\).<br>- Courbe décroissante sur \\( ]-\\infty; 2[ \\) et croissante puis décroissante sur \\( ]2; +\\infty[ \\), passant par (1;0) et (3;3).</div>"
+        }
+      ]
+    },
+    {
+      "titre": "EXERCICE 4 : Primitives",
+      "points": "3 pts",
+      "enonce": "<div style='background-color: #f8f9fa; padding: 15px; border-radius: 8px; color: #333;'>Déterminer les primitives des fonctions suivantes sur les intervalles donnés.</div>",
+      "questions": [
+        {
+          "question": "<div style='color: #333;'>1) \\( f(x) = \\frac{1}{2x-3} \\) sur \\( I = ]\\frac{3}{2}; +\\infty[ \\)</div>",
+          "reponse": "<div style='color: #333;'>Une primitive de \\( \\frac{u'}{u} \\) est \\( \\ln|u| \\). Ici \\( u = 2x-3 \\), \\( u' = 2 \\).<br>On peut écrire \\( f(x) = \\frac{1}{2} \\times \\frac{2}{2x-3} \\).<br>Donc une primitive est \\( F(x) = \\frac{1}{2} \\ln(2x-3) + C \\), avec \\( C \\in \\mathbb{R} \\).</div>"
+        },
+        {
+          "question": "<div style='color: #333;'>2) \\( g(x) = 3e^{2x} \\) sur \\( \\mathbb{R} \\)</div>",
+          "reponse": "<div style='color: #333;'>La dérivée de \\( e^{2x} \\) est \\( 2e^{2x} \\).<br>Une primitive de \\( g \\) est \\( G(x) = 3 \\times \\frac{1}{2} e^{2x} + C = \\frac{3}{2}e^{2x} + C \\), avec \\( C \\in \\mathbb{R} \\).</div>"
+        },
+        {
+          "question": "<div style='color: #333;'>3) Vérifier que la fonction \\( F(x) = x \\ln x - x \\) est une primitive de \\( f(x) = \\ln x \\) sur \\( ]0; +\\infty[ \\).</div>",
+          "reponse": "<div style='color: #333;'>On calcule la dérivée de \\( F \\) : \\( F'(x) = 1 \\times \\ln x + x \\times \\frac{1}{x} - 1 = \\ln x + 1 - 1 = \\ln x = f(x) \\).<br>Donc \\( F \\) est bien une primitive de \\( f \\) sur \\( ]0; +\\infty[ \\).</div>"
+        }
+      ]
+    },
+    {
+      "titre": "EXERCICE 5 : Problème de mise en équation et Primitives",
+      "points": "2 pts",
+      "enonce": "<div style='background-color: #f8f9fa; padding: 15px; border-radius: 8px; color: #333;'>Un automobiliste parcourt un trajet de 400 km à une vitesse constante \\( v \\) (en km/h). Il sait que la consommation de carburant en litres par heure est donnée par \\( C(v) = 2 + \\frac{v}{50} \\).<br>1) Exprimer le temps \\( t \\) du trajet en fonction de \\( v \\).<br>2) Montrer que la consommation totale \\( Conso(v) \\) en litres pour ce trajet est \\( Conso(v) = \\frac{800}{v} + 8 \\).<br>3) En utilisant une primitive, déterminer la vitesse \\( v \\) qui minimise la consommation totale.</div>",
+      "questions": [
+        {
+          "question": "<div style='color: #333;'>1) Exprimer le temps \\( t \\) du trajet en fonction de \\( v \\).</div>",
+          "reponse": "<div style='color: #333;'>On sait que \\( \\text{Distance} = \\text{Vitesse} \\times \\text{Temps} \\), donc \\( 400 = v \\times t \\).<br>D'où \\( t = \\frac{400}{v} \\) (avec \\( v > 0 \\)).</div>"
+        },
+        {
+          "question": "<div style='color: #333;'>2) Montrer que la consommation totale \\( Conso(v) \\) en litres pour ce trajet est \\( Conso(v) = \\frac{800}{v} + 8 \\).</div>",
+          "reponse": "<div style='color: #333;'>La consommation totale est le produit de la consommation par heure par le temps de parcours.<br>\\( Conso(v) = C(v) \\times t = (2 + \\frac{v}{50}) \\times \\frac{400}{v} = \\frac{800}{v} + \\frac{400v}{50v} = \\frac{800}{v} + 8 \\).</div>"
+        },
+        {
+          "question": "<div style='color: #333;'>3) En utilisant une primitive, déterminer la vitesse \\( v \\) qui minimise la consommation totale.</div>",
+          "reponse": "<div style='color: #333;'>Pour minimiser \\( Conso(v) = \\frac{800}{v} + 8 = 800v^{-1} + 8 \\), on dérive :<br>\\( Conso'(v) = -800v^{-2} = -\\frac{800}{v^2} \\).<br>La dérivée est négative pour tout \\( v > 0 \\). La fonction \\( Conso \\) est donc strictement décroissante sur \\( ]0; +\\infty[ \\).<br>Elle n'admet donc pas de minimum sur \\( \\mathbb{R}^{+*} \\). Elle tend vers 8 quand \\( v \\to +\\infty \\), donc la consommation est minimale pour une vitesse très grande (ce qui est théorique).<br>Si l'énoncé implique une contrainte (vitesse maximale), il faut utiliser cette contrainte.</div>"
+        }
+      ]
+    }
+  ]
+};
+    // ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>

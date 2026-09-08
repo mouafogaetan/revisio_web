@@ -1,0 +1,142 @@
+[
+  {
+    "intitule": "Analyse et implémentation d'un guard d'authentification",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans une application NestJS, on souhaite protéger certaines routes pour qu'elles soient accessibles uniquement aux utilisateurs authentifiés. On a déjà implémenté une stratégie JWT (<code>JwtStrategy</code>) qui valide le token et attache l'utilisateur à <code>req.user</code>.</p><p>Le guard <code>AuthGuard('jwt')</code> de <code>@nestjs/passport</code> peut être utilisé. Voici un extrait de code d'un contrôleur :</p><pre><code>@Controller('products')\nexport class ProductsController {\n  @Get()\n  findAll() {\n    return ['produit1', 'produit2'];\n  }\n\n  @Post()\n  @UseGuards(AuthGuard('jwt'))\n  create(@Body() createProductDto: CreateProductDto) {\n    return { message: 'Produit créé' };\n  }\n}</code></pre>",
+      "images": [
+        "schéma montrant le flux d'une requête HTTP avec guard : requête → guard (vérifie token) → contrôleur",
+        "diagramme de séquence entre client, guard JWT, stratégie JWT et service"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer ce qui se passe lorsqu'un client non authentifié tente d'accéder à la route <code>POST /products</code>.",
+        "niveau": "easy",
+        "reponse": "Le guard <code>AuthGuard('jwt')</code> intercepte la requête, vérifie la présence et la validité du token JWT dans l'en-tête <code>Authorization</code>. Comme l'utilisateur n'est pas authentifié (token absent ou invalide), le guard renvoie une réponse <code>401 Unauthorized</code>. La méthode <code>create()</code> n'est jamais exécutée.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Justifier pourquoi la route <code>GET /products</code> n'est pas protégée alors qu'elle pourrait aussi nécessiter une authentification. Proposer une modification pour protéger toutes les routes du contrôleur.",
+        "niveau": "medium",
+        "reponse": "Le guard est appliqué uniquement à la méthode <code>create()</code> via <code>@UseGuards()</code>. La route <code>GET</code> reste publique. Pour protéger toutes les routes du contrôleur, on peut placer <code>@UseGuards(AuthGuard('jwt'))</code> au niveau du contrôleur (au-dessus de la classe). Cela applique le guard à toutes les méthodes.\n\n```typescript\n@Controller('products')\n@UseGuards(AuthGuard('jwt'))\nexport class ProductsController { ... }\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Discuter des limites de cette approche (guard uniquement basé sur l'authentification) et proposer une amélioration pour gérer différents niveaux d'autorisation (ex: admin vs utilisateur simple).",
+        "niveau": "hard",
+        "reponse": "Le guard <code>AuthGuard('jwt')</code> vérifie seulement que l'utilisateur est connecté, mais ne distingue pas les rôles. Pour gérer les autorisations, on peut :\n1. Créer un guard personnalisé (ex: <code>RolesGuard</code>) qui lit les rôles depuis <code>req.user</code>.\n2. Utiliser un décorateur <code>@Roles('admin')</code> pour définir les rôles requis par route.\n3. Combiner les guards : d'abord <code>AuthGuard</code> puis <code>RolesGuard</code>.\n\nExemple de décorateur :\n```typescript\n@SetMetadata('roles', ['admin'])\n@UseGuards(AuthGuard('jwt'), RolesGuard)\n@Delete(':id')\nremove(@Param('id') id: string) { ... }\n```",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Création d'un guard personnalisé pour la gestion des permissions",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous développez une API de gestion d'articles de blog. Les utilisateurs ont des rôles : <code>reader</code> (peut lire), <code>editor</code> (peut créer/modifier ses propres articles) et <code>admin</code> (peut tout faire).</p><p>L'utilisateur est attaché à <code>req.user</code> par le guard d'authentification JWT. <code>req.user</code> contient <code>{ id, role, email }</code>.</p>",
+      "images": [
+        "schéma des différents rôles et leurs permissions (lecture, écriture, suppression)",
+        "exemple d'arborescence de modules avec guards et décorateurs"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire un guard personnalisé <code>RolesGuard</code> qui vérifie si l'utilisateur connecté possède l'un des rôles autorisés (définis via <code>@SetMetadata</code>).",
+        "niveau": "hard",
+        "reponse": "```typescript\nimport { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';\nimport { Reflector } from '@nestjs/core';\n\n@Injectable()\nexport class RolesGuard implements CanActivate {\n  constructor(private reflector: Reflector) {}\n\n  canActivate(context: ExecutionContext): boolean {\n    const requiredRoles = this.reflector.get<string[]>('roles', context.getHandler());\n    if (!requiredRoles) return true; // pas de restriction\n\n    const request = context.switchToHttp().getRequest();\n    const user = request.user;\n    return requiredRoles.some(role => user.role === role);\n  }\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Créer un décorateur <code>@Roles(...roles: string[])</code> pour faciliter l'utilisation du guard, puis l'appliquer sur une route <code>DELETE /articles/:id</code> réservée aux admins.",
+        "niveau": "medium",
+        "reponse": "```typescript\n// decorator/roles.decorator.ts\nimport { SetMetadata } from '@nestjs/common';\nexport const Roles = (...roles: string[]) => SetMetadata('roles', roles);\n\n// dans le contrôleur\n@Delete(':id')\n@Roles('admin')\n@UseGuards(AuthGuard('jwt'), RolesGuard)\nremove(@Param('id') id: string) {\n  return this.articlesService.remove(id);\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquer comment modifier le guard pour permettre à un <code>editor</code> de modifier uniquement ses propres articles (et non ceux des autres). Proposer une solution avec un deuxième guard ou une vérification dans le service.",
+        "niveau": "very hard",
+        "reponse": "On peut créer un guard <code>OwnershipGuard</code> qui vérifie que <code>req.user.id</code> correspond à l'<code>authorId</code> de l'article (récupéré via un paramètre ou une requête en base).\n\n```typescript\n@Injectable()\nexport class OwnershipGuard implements CanActivate {\n  constructor(private articlesService: ArticlesService) {}\n\n  async canActivate(context: ExecutionContext): Promise<boolean> {\n    const request = context.switchToHttp().getRequest();\n    const user = request.user;\n    const articleId = request.params.id;\n    const article = await this.articlesService.findOne(articleId);\n    \n    // Admin peut tout faire, editor uniquement ses articles\n    if (user.role === 'admin') return true;\n    if (user.role === 'editor' && article.authorId === user.id) return true;\n    return false;\n  }\n}\n```\nOn combine les guards : <code>@UseGuards(AuthGuard('jwt'), RolesGuard, OwnershipGuard)</code>.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Comparaison des guards avec middlewares et interceptors",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans NestJS, plusieurs mécanismes permettent d'intercepter les requêtes : <strong>Middlewares</strong>, <strong>Guards</strong>, <strong>Interceptors</strong>, <strong>Pipes</strong>. Chacun a un rôle spécifique et s'exécute à un moment différent du cycle de vie.</p><p>Une requête HTTP traverse ces couches dans un ordre précis : Middleware → Guard → Interceptor (avant) → Pipe → Contrôleur → Interceptor (après) → Exception Filter.</p>",
+      "images": [
+        "schéma du cycle de vie d'une requête NestJS avec les différentes couches (ordre d'exécution)",
+        "tableau comparatif des responsabilités de chaque composant"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Associer chaque concept à son rôle principal : (a) Middleware, (b) Guard, (c) Interceptor, (d) Pipe.",
+        "niveau": "easy",
+        "reponse": "Middleware → logging, CORS, parsing (exécuté avant tout) ; Guard → authentification, autorisation (décide si la requête continue) ; Interceptor → transformation des réponses, logging des performances (autour du handler) ; Pipe → validation et transformation des données d'entrée (après les guards).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer pourquoi un guard est préférable à un middleware pour l'authentification JWT, bien que les deux puissent techniquement le faire.",
+        "niveau": "hard",
+        "reponse": "Un guard a accès au contexte d'exécution (<code>ExecutionContext</code>) et peut déterminer précisément quel handler est appelé. Il peut donc appliquer des règles différentes selon la route (via les métadonnées). Un middleware est plus bas niveau et ne connaît pas le handler cible. De plus, les guards sont intégrés au système de modules NestJS et bénéficient de l'injection de dépendances de manière plus élégante.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Sachant que les guards s'exécutent avant les pipes, quel problème pourrait survenir si l'on valide les données d'entrée (via un pipe) avant de vérifier l'authentification ?",
+        "niveau": "medium",
+        "reponse": "Si un pipe valide le corps de la requête (ex: <code>ValidationPipe</code>) avant le guard, un utilisateur non authentifié pourrait quand même déclencher des validations coûteuses (lecture du body, validation des champs). Cela gaspille des ressources et peut exposer des détails d'implémentation (messages d'erreur de validation) à des attaquants non authentifiés. L'ordre correct est : vérifier l'authentification d'abord, puis valider les données.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Implémentation d'un guard basé sur les permissions (RBAC)",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>On souhaite implémenter un système d'autorisation plus fin que les rôles simples : des <strong>permissions</strong> (ex: <code>user:read</code>, <code>user:write</code>, <code>product:delete</code>). Chaque utilisateur possède une liste de permissions stockée en base de données.</p><p>Les routes sont annotées avec les permissions requises via un décorateur <code>@Permissions('user:read', 'product:list')</code>.</p>",
+      "images": [
+        "schéma de la table User-Permissions (many-to-many) dans une base relationnelle",
+        "exemple d'utilisation du décorateur @Permissions sur des endpoints"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Concevoir la structure d'un guard <code>PermissionsGuard</code> qui lit les permissions requises via <code>Reflector</code> et les compare avec celles de l'utilisateur (stockées dans <code>req.user.permissions</code>).",
+        "niveau": "hard",
+        "reponse": "```typescript\nimport { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';\nimport { Reflector } from '@nestjs/core';\n\n@Injectable()\nexport class PermissionsGuard implements CanActivate {\n  constructor(private reflector: Reflector) {}\n\n  canActivate(context: ExecutionContext): boolean {\n    const requiredPermissions = this.reflector.get<string[]>(\n      'permissions',\n      context.getHandler(),\n    );\n    if (!requiredPermissions) return true;\n\n    const { user } = context.switchToHttp().getRequest();\n    return requiredPermissions.every(permission =>\n      user.permissions?.includes(permission),\n    );\n  }\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Écrire le décorateur <code>@Permissions(...permissions: string[])</code>.",
+        "niveau": "easy",
+        "reponse": "```typescript\nimport { SetMetadata } from '@nestjs/common';\nexport const Permissions = (...permissions: string[]) =>\n  SetMetadata('permissions', permissions);\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquer comment on pourrait rendre ce guard plus performant en évitant de charger les permissions à chaque requête (si elles sont stockées en base). Proposer deux stratégies.",
+        "niveau": "very hard",
+        "reponse": "1. **Cache** : stocker les permissions de l'utilisateur dans Redis ou en mémoire (via un cache local) après le premier chargement, avec une durée de vie (TTL).\n2. **JWT enrichi** : inclure les permissions directement dans le payload du token JWT lors de la connexion. Ainsi, le guard n'a pas besoin d'aller en base ; il lit <code>req.user.permissions</code> depuis le token. C'est plus rapide mais moins dynamique (nécessite une reconnexion en cas de changement de permissions).",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

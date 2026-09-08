@@ -1,0 +1,146 @@
+[
+  {
+    "intitule": "Analyse d'une requête SQL avec EXPLAIN",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous êtes data scientist dans une entreprise de e-commerce. On vous fournit la requête SQL suivante qui est très lente :</p><pre style='background: #2d3748; color: #f6e05e; padding: 10px; border-radius: 8px;'><code>SELECT * FROM commandes c\nINNER JOIN clients cl ON c.client_id = cl.id\nINNER JOIN produits p ON c.produit_id = p.id\nWHERE c.date_commande BETWEEN '2025-01-01' AND '2025-12-31'\nAND cl.ville = 'Douala';</code></pre><p>Votre mission est d'analyser et d'optimiser cette requête.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer ce que la commande <code>EXPLAIN</code> permet de faire et comment elle peut aider à diagnostiquer la lenteur de cette requête.",
+        "niveau": "medium",
+        "reponse": "EXPLAIN permet d'obtenir le plan d'exécution d'une requête SQL. Elle montre comment le SGBD exécute la requête : l'ordre de lecture des tables, le type de jointure utilisé, les index sollicités, et le nombre estimé de lignes à parcourir. Avec ces informations, on peut identifier les goulots d'étranglement (scan complet de tables, absence d'index, etc.) et ainsi optimiser la requête."
+      }
+    ]
+  },
+  {
+    "intitule": "Optimisation par les index",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>La table <code>commandes</code> contient 1 500 000 enregistrements. L'entreprise souhaite optimiser la requête précédente.</p><p><strong>Structure de la table commandes :</strong></p><ul><li><code>id</code> (INT, PRIMARY KEY)</li><li><code>client_id</code> (INT, FOREIGN KEY)</li><li><code>produit_id</code> (INT, FOREIGN KEY)</li><li><code>date_commande</code> (DATE)</li><li><code>montant</code> (DECIMAL(10,2))</li><li><code>statut</code> (VARCHAR(20))</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier les colonnes sur lesquelles des index seraient les plus bénéfiques pour accélérer la requête. Justifier votre choix.",
+        "niveau": "medium",
+        "reponse": "Les colonnes les plus bénéfiques pour l'indexation sont :<br>- <code>date_commande</code> : car elle est utilisée dans une condition de filtrage (BETWEEN). Un index sur cette colonne évitera un scan complet de la table.<br>- <code>client_id</code> : bien que la table clients soit jointe sur cette colonne, l'index est déjà présent via la clé étrangère. Cependant, vérifier qu'il existe bien.<br>- <code>produit_id</code> : similaire à client_id.<br><br>Un index composite sur <code>(date_commande, client_id)</code> pourrait être envisagé si les requêtes filtrent souvent sur ces deux colonnes."
+      },
+      {
+        "numero": 2,
+        "texte": "Écrire la commande SQL pour créer l'index le plus utile sur la table <code>commandes</code>.",
+        "niveau": "easy",
+        "reponse": "<code>CREATE INDEX idx_commandes_date ON commandes(date_commande);</code><br><br>Pour un index composite :<br><code>CREATE INDEX idx_commandes_date_client ON commandes(date_commande, client_id);</code>"
+      },
+      {
+        "numero": 3,
+        "texte": "Décrire deux inconvénients de l'ajout d'index sur une table.",
+        "niveau": "medium",
+        "reponse": "1. <strong>Espace de stockage supplémentaire</strong> : chaque index occupe de l'espace sur le disque (jusqu'à 10-20% de la taille de la table).<br>2. <strong>Ralentissement des opérations d'écriture</strong> : chaque INSERT, UPDATE ou DELETE nécessite la mise à jour de tous les index de la table, ce qui peut dégrader les performances en cas de forte activité d'écriture."
+      }
+    ]
+  },
+  {
+    "intitule": "Sécurité et injections SQL",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous développez une application web qui utilise une base de données. Un utilisateur malveillant tente d'exécuter une injection SQL via un champ de recherche.</p><p>La requête initiale est :</p><pre style='background: #2d3748; color: #f6e05e; padding: 10px; border-radius: 8px;'><code>SELECT * FROM produits WHERE nom LIKE '%" + recherche + "%';</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer le principe d'une injection SQL et ses conséquences potentielles sur une base de données.",
+        "niveau": "medium",
+        "reponse": "Une injection SQL est une technique d'attaque qui consiste à insérer du code SQL malveillant dans une requête via des entrées utilisateur non sécurisées. Ses conséquences peuvent être :<br>- Lecture de données sensibles (exfiltration)<br>- Modification ou suppression de données<br>- Accès administrateur à la base de données<br>- Exécution de commandes sur le serveur (dans certains SGBD)"
+      },
+      {
+        "numero": 2,
+        "texte": "Donner un exemple d'entrée malveillante que l'utilisateur pourrait saisir pour exploiter cette vulnérabilité et le code SQL qui serait exécuté.",
+        "niveau": "hard",
+        "reponse": "L'utilisateur pourrait saisir :<br><code>'; DROP TABLE produits; --</code><br><br>La requête exécutée deviendrait :<br><code>SELECT * FROM produits WHERE nom LIKE '%'; DROP TABLE produits; --%';</code><br><br>Ce qui supprimerait la table produits après l'exécution de la première requête."
+      },
+      {
+        "numero": 3,
+        "texte": "Proposer une solution pour empêcher ce type d'attaque. Justifier votre réponse.",
+        "niveau": "easy",
+        "reponse": "La meilleure solution est d'utiliser des <strong>requêtes préparées</strong> (prepared statements). Elles séparent la structure de la requête des données, ce qui empêche l'interprétation des entrées utilisateur comme du code SQL. Exemple en PHP/PDO :<br><pre style='background: #2d3748; color: #f6e05e; padding: 10px; border-radius: 8px;'><code>$stmt = $pdo->prepare(\"SELECT * FROM produits WHERE nom LIKE ?\");\n$stmt->execute(['%' . $recherche . '%']);</code></pre>"
+      }
+    ]
+  },
+  {
+    "intitule": "Bonnes pratiques d'écriture SQL",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Un de vos collègues vous soumet la requête suivante pour valider son travail :</p><pre style='background: #2d3748; color: #f6e05e; padding: 10px; border-radius: 8px;'><code>select nom, prenom, age, ville, email, telephone, date_inscription, dernier_achat from clients where age > 18 order by nom;</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Énumérer les mauvaises pratiques présentes dans cette requête en les justifiant.",
+        "niveau": "easy",
+        "reponse": "1. <strong>Mots-clés en minuscules</strong> : bien que fonctionnel, il est préférable d'utiliser les majuscules pour les mots-clés SQL (SELECT, FROM, WHERE) pour une meilleure lisibilité.<br>2. <strong>Sélection de trop nombreuses colonnes</strong> : 'SELECT *' ou une longue liste de colonnes peut ralentir la requête si toutes ne sont pas nécessaires.<br>3. <strong>Absence de formatage</strong> : la requête est écrite sur une seule ligne, ce qui la rend difficile à lire. L'indentation améliorerait la lisibilité."
+      },
+      {
+        "numero": 2,
+        "texte": "Réécrire la requête en respectant les bonnes pratiques SQL (indentation, casse, clarté).",
+        "niveau": "easy",
+        "reponse": "<pre style='background: #2d3748; color: #f6e05e; padding: 10px; border-radius: 8px;'><code>SELECT nom,\n       prenom,\n       age,\n       ville,\n       email,\n       telephone,\n       date_inscription,\n       dernier_achat\nFROM clients\nWHERE age > 18\nORDER BY nom;</code></pre>"
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse de performance et optimisation",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous travaillez sur une base de données analytique contenant des données de ventes. Voici une requête qui doit extraire les ventes mensuelles par catégorie de produit :</p><pre style='background: #2d3748; color: #f6e05e; padding: 10px; border-radius: 8px;'><code>SELECT\n    YEAR(date_vente) as annee,\n    MONTH(date_vente) as mois,\n    c.nom_categorie,\n    SUM(v.montant) as total_ventes,\n    COUNT(v.id) as nombre_ventes,\n    AVG(v.montant) as panier_moyen\nFROM ventes v\nINNER JOIN produits p ON v.produit_id = p.id\nINNER JOIN categories c ON p.categorie_id = c.id\nWHERE v.date_vente >= '2024-01-01'\nGROUP BY YEAR(date_vente), MONTH(date_vente), c.nom_categorie\nORDER BY annee DESC, mois DESC, total_ventes DESC;</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Proposer au moins deux optimisations pour améliorer les performances de cette requête, en justifiant chaque proposition.",
+        "niveau": "hard",
+        "reponse": "1. <strong>Index sur date_vente</strong> : créer un index sur la colonne <code>date_vente</code> pour accélérer le filtrage WHERE.<br><code>CREATE INDEX idx_ventes_date ON ventes(date_vente);</code><br><br>2. <strong>Index composite sur (produit_id, date_vente)</strong> : pour la jointure avec produits et le filtrage sur date.<br><code>CREATE INDEX idx_ventes_produit_date ON ventes(produit_id, date_vente);</code><br><br>3. <strong>Pré-calculer l'année et le mois</strong> : ajouter des colonnes calculées <code>annee_vente</code> et <code>mois_vente</code> pour éviter les fonctions YEAR() et MONTH() dans le GROUP BY."
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer l'impact de l'ajout d'un index sur les performances des opérations d'INSERT dans cette table.",
+        "niveau": "medium",
+        "reponse": "L'ajout d'index ralentit les opérations d'INSERT car chaque insertion doit mettre à jour tous les index de la table. Avec 2 index (date_vente et produit_id, date_vente), chaque INSERT nécessitera 3 écritures au lieu d'une (1 dans la table + 2 dans les index). Dans un contexte de forte volumétrie d'insertion, cela peut dégrader significativement les performances."
+      }
+    ]
+  },
+  {
+    "intitule": "Utilisation de EXPLAIN",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Le plan d'exécution obtenu avec <code>EXPLAIN</code> pour une requête montre les informations suivantes :</p><ul><li><strong>type</strong> : ALL pour la table clients</li><li><strong>type</strong> : ref pour la table commandes</li><li><strong>rows</strong> : 50000 pour clients, 150 pour commandes</li><li><strong>Extra</strong> : Using where; Using temporary; Using filesort</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Interpréter chacune de ces informations et identifier les problèmes potentiels de performance.",
+        "niveau": "hard",
+        "reponse": "- <strong>ALL pour clients</strong> : scan complet de la table clients (50 000 lignes). C'est un problème majeur car toutes les lignes sont lues.<br>- <strong>ref pour commandes</strong> : utilisation d'un index non unique, bon signe mais dépend de l'index utilisé.<br>- <strong>Using temporary + Using filesort</strong> : la requête utilise une table temporaire et un tri sur disque, ce qui est coûteux en performance. Cela est souvent dû à un ORDER BY ou GROUP BY sans index adéquat."
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer des corrections en vous basant sur cette analyse.",
+        "niveau": "hard",
+        "reponse": "1. Ajouter un index sur la colonne utilisée dans la jointure avec clients pour éviter le scan complet (ALL).<br><br>2. Créer un index composite sur les colonnes utilisées dans le GROUP BY/ORDER BY pour éliminer la table temporaire et le filesort.<br><br>3. Réécrire la requête pour réduire le nombre de colonnes sélectionnées si certaines ne sont pas nécessaires.<br><br>4. Si possible, ajouter des index couvrants (covering indexes) pour que toutes les colonnes nécessaires soient dans l'index."
+      }
+    ]
+  }
+]

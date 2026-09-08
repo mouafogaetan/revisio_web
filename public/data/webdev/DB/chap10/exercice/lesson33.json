@@ -1,0 +1,126 @@
+[
+  {
+    "intitule": "Identifier les failles d'injection SQL",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Dans un formulaire de connexion, un utilisateur saisit dans le champ \"nom_utilisateur\" la valeur suivante : <code>Jean' OR '1'='1</code>. Le code PHP exécute la requête suivante : <br><code>SELECT * FROM utilisateurs WHERE nom = '$nom' AND mot_de_passe = '$mot_de_passe'</code>.</p><p>Expliquez pourquoi cette saisie est dangereuse et ce qu'il pourrait se passer.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analyser la vulnérabilité : Que se passe-t-il si l'application ne filtre pas l'entrée ?",
+        "niveau": "easy",
+        "reponse": "La chaîne saisie modifie la structure de la requête SQL. La requête devient : SELECT * FROM utilisateurs WHERE nom = 'Jean' OR '1'='1' AND mot_de_passe = '$mot_de_passe'. Comme '1'='1' est toujours vrai, l'attaquant peut contourner l'authentification sans connaître le mot de passe.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Citer le type d'attaque correspondant.",
+            "niveau": "easy",
+            "reponse": "Injection SQL (SQL Injection), plus précisément contournement d'authentification."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Proposer une méthode simple pour éviter ce problème en PHP.",
+            "niveau": "medium",
+            "reponse": "Utiliser les requêtes paramétrées (prepared statements) avec PDO ou MySQLi, ou échapper les entrées avec mysqli_real_escape_string()."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Mettre en place le chiffrement des mots de passe",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous êtes responsable de la sécurité d'une petite application web camerounaise de e-commerce. Les mots de passe des utilisateurs sont actuellement stockés en clair dans la base de données MySQL.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Justifier pourquoi le stockage en clair est une mauvaise pratique.",
+        "niveau": "easy",
+        "reponse": "En cas de violation de la base de données, un attaquant peut lire tous les mots de passe. Cela compromet également les utilisateurs qui réutilisent leurs identifiants sur d'autres services.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Choisir un algorithme de hachage adapté aux mots de passe en 2025.",
+            "niveau": "medium",
+            "reponse": "Argon2id (recommandé), bcrypt ou PBKDF2. Éviter MD5 ou SHA-1 qui sont trop rapides et non sécurisés pour les mots de passe."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Écrire en pseudo-code ou SQL comment modifier la table `utilisateurs` pour ajouter une colonne `mot_de_passe_hash` et supprimer `mot_de_passe_clair`.",
+            "niveau": "hard",
+            "reponse": "ALTER TABLE utilisateurs ADD mot_de_passe_hash VARCHAR(255);\nUPDATE utilisateurs SET mot_de_passe_hash = hash_argon2(mot_de_passe_clair);\nALTER TABLE utilisateurs DROP COLUMN mot_de_passe_clair;"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Configurer le pare-feu et l'accès réseau pour une base de données",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Votre serveur MySQL (port 3306) est sur un VPS. Vous souhaitez qu'il soit accessible uniquement depuis l'application web (IP 192.168.1.100) et depuis votre poste d'administration (IP 10.0.0.50). Toute autre source doit être bloquée.</p><p>Le serveur utilise <strong>iptables</strong> (Linux).</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Déterminer la règle iptables pour autoriser l'accès MySQL uniquement depuis ces deux IP.",
+        "niveau": "hard",
+        "reponse": "iptables -A INPUT -p tcp --dport 3306 -s 192.168.1.100 -j ACCEPT\niptables -A INPUT -p tcp --dport 3306 -s 10.0.0.50 -j ACCEPT\niptables -A INPUT -p tcp --dport 3306 -j DROP",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Expliquer pourquoi il ne faut pas exposer MySQL directement sur Internet (0.0.0.0:3306) sans restriction.",
+            "niveau": "medium",
+            "reponse": "Cela expose la base de données à des attaques par force brute, à l'exploitation de vulnérabilités MySQL non patchées, et au scan de ports. Un attaquant peut tenter de se connecter depuis n'importe où."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Citer une alternative plus sécurisée que l'ouverture directe du port MySQL.",
+            "niveau": "hard",
+            "reponse": "Utiliser un VPN (WireGuard, OpenVPN) ou un tunnel SSH (ssh -L 3306:localhost:3306 user@serveur) pour accéder à la base sans exposer le port publiquement."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Auditer la sécurité d'une base de données",
+    "type": "ressource",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Lors d'un audit de sécurité sur une application camerounaise de gestion des notes, vous découvrez :</p><ul><li>Les requêtes SQL sont construites par concaténation directe des entrées utilisateur.</li><li>Les mots de passe sont stockés en clair.</li><li>Le serveur MySQL est accessible depuis n'importe quelle IP (0.0.0.0).</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Évaluer chaque point faible selon l'impact (Confidentialité, Intégrité, Disponibilité).",
+        "niveau": "very hard",
+        "reponse": "1. Concaténation SQL → impact sur confidentialité (exfiltration) et intégrité (modification/suppression). 2. Mots de passe en clair → impact majeur sur confidentialité et réputation. 3. Accès 0.0.0.0 → augmentation surface d'attaque, impact sur tous les piliers.",
+        "sousQuestions": [
+          {
+            "numero": "1.a",
+            "texte": "Proposer un plan de correction hiérarchisé (3 actions prioritaires).",
+            "niveau": "hard",
+            "reponse": "1. Remplacer la concaténation par des requêtes paramétrées. 2. Hacher tous les mots de passe avec bcrypt/Argon2. 3. Restreindre l'accès réseau via pare-feu (iptables) ou bind à 127.0.0.1 + tunnel SSH."
+          },
+          {
+            "numero": "1.b",
+            "texte": "Décrire une méthode pour chiffrer des colonnes sensibles (ex: numéro CNI) au repos en base.",
+            "niveau": "very hard",
+            "reponse": "Utiliser le chiffrement côté application (ex: AES-256-GCM avec une clé stockée hors base, dans un fichier de config protégé ou un gestionnaire de secrets comme HashiCorp Vault). En MySQL, on peut aussi utiliser AES_ENCRYPT() mais la clé reste accessible si le serveur est compromis."
+          }
+        ]
+      }
+    ]
+  }
+]

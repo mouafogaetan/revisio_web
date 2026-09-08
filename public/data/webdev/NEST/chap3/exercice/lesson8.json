@@ -1,0 +1,144 @@
+[
+  {
+    "intitule": "Configuration et compréhension du ValidationPipe global",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Dans une application NestJS, vous devez configurer le <code>ValidationPipe</code> au niveau global pour sécuriser tous les endpoints de l'API. Le pipe doit répondre aux exigences suivantes :</p><ul><li>Supprimer automatiquement les propriétés non définies dans le DTO</li><li>Rejeter les requêtes contenant des propriétés non autorisées avec une erreur explicite</li><li>Transformer automatiquement les types (ex: convertir les chaînes en nombres)</li></ul><p>La société pour laquelle vous travaillez développe une API e-commerce. Un développeur junior a écrit le code suivant :</p><pre><code>// main.ts\nimport { ValidationPipe } from '@nestjs/common';\nimport { NestFactory } from '@nestjs/core';\nimport { AppModule } from './app.module';\n\nasync function bootstrap() {\n  const app = await NestFactory.create(AppModule);\n  app.useGlobalPipes(new ValidationPipe());\n  await app.listen(3000);\n}\nbootstrap();</code></pre>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer quel est le comportement par défaut du ValidationPipe sans options supplémentaires concernant les trois exigences (whitelist, forbidNonWhitelisted, transform).",
+        "niveau": "medium",
+        "reponse": "Par défaut, sans options explicites : <ul><li><strong>whitelist</strong> est à false : les propriétés non définies dans le DTO ne sont pas supprimées mais simplement ignorées (elles restent dans l'objet req.body).</li><li><strong>forbidNonWhitelisted</strong> est à false : aucune erreur n'est levée si des propriétés non autorisées sont présentes.</li><li><strong>transform</strong> est à false : les types ne sont pas automatiquement convertis (une chaîne '123' reste une chaîne au lieu d'être convertie en nombre).</li></ul>Le code actuel ne répond donc à aucune des trois exigences.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Modifier le code de configuration pour répondre aux trois exigences. Justifier chaque option ajoutée.",
+        "niveau": "medium",
+        "reponse": "<pre><code>app.useGlobalPipes(new ValidationPipe({\n  whitelist: true,           // Supprime les propriétés non définies dans le DTO\n  forbidNonWhitelisted: true, // Rejette la requête avec erreur BadRequest si des propriétés non autorisées sont présentes\n  transform: true,           // Convertit automatiquement les types (string → number, etc.)\n}));</code></pre><ul><li><strong>whitelist: true</strong> : nettoie l'objet reçu en supprimant les propriétés qui n'ont pas de décorateur dans le DTO.</li><li><strong>forbidNonWhitelisted: true</strong> : va plus loin en levant une exception 400 Bad Request si des propriétés non autorisées sont détectées.</li><li><strong>transform: true</strong> : active la transformation automatique selon les types définis dans le DTO (ex: @Type(() => Number)).</li></ul>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Créer un DTO <code>CreateProductDto</code> pour illustrer le fonctionnement du ValidationPipe avec les options configurées. Le DTO doit contenir : un nom (chaîne, obligatoire, longueur min 3), un prix (nombre, obligatoire, > 0) et une description optionnelle. Utiliser les décorateurs appropriés de class-validator.",
+        "niveau": "hard",
+        "reponse": "<pre><code>import { IsString, IsNumber, IsOptional, Min, MinLength } from 'class-validator';\nimport { Type } from 'class-transformer';\n\nexport class CreateProductDto {\n  @IsString()\n  @MinLength(3, { message: 'Le nom doit contenir au moins 3 caractères' })\n  nom: string;\n\n  @IsNumber()\n  @Min(0.01, { message: 'Le prix doit être supérieur à 0' })\n  @Type(() => Number)  // Nécessaire avec transform: true\n  prix: number;\n\n  @IsOptional()\n  @IsString()\n  description?: string;\n}</code></pre>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Création d'un pipe personnalisé pour la validation métier",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous développez une API de réservation pour une compagnie aérienne camerounaise. Chaque réservation doit avoir un numéro de vol au format spécifique : <code>CM-[A-Z]{2}[0-9]{3}[A-Z]?</code> (ex: CM-AB123 ou CM-XY789C).</p><p>Plutôt que de valider ce format dans chaque contrôleur, vous décidez de créer un <strong>pipe personnalisé</strong> réutilisable.</p><p>Le client souhaite également que le pipe :</p><ul><li>Transforme automatiquement le numéro en majuscules</li><li>Lève une exception BadRequest avec un message explicite si le format est invalide</li><li>Puisse être utilisé avec le décorateur <code>@Param('flightNumber', FlightNumberPipe)</code> ou <code>@Body('flightNumber', FlightNumberPipe)</code></li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Analyser la problématique et expliquer pourquoi un pipe personnalisé est plus adapté qu'une validation dans le DTO pour ce cas d'usage.",
+        "niveau": "medium",
+        "reponse": "Un pipe personnalisé est plus adapté car :<ul><li>La validation nécessite une transformation (mise en majuscules) qui ne relève pas de la simple validation de type.</li><li>Le format est spécifique à un domaine métier (vols) et pourrait être réutilisé dans plusieurs DTO ou paramètres.</li><li>class-validator ne gère pas nativement les transformations comme la conversion en majuscules.</li><li>Un pipe permet de séparer la logique de validation/transformation et de la rendre testable indépendamment.</li></ul>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Implémenter entièrement le pipe personnalisé <code>FlightNumberPipe</code> en respectant les exigences. Le pipe doit implémenter <code>PipeTransform</code> et utiliser une expression régulière pour valider le format.",
+        "niveau": "hard",
+        "reponse": "<pre><code>import { PipeTransform, Injectable, BadRequestException } from '@nestjs/common';\n\n@Injectable()\nexport class FlightNumberPipe implements PipeTransform&lt;string, string&gt; {\n  private readonly regex = /^CM-[A-Z]{2}[0-9]{3}[A-Z]?$/i;\n\n  transform(value: string): string {\n    if (!value || typeof value !== 'string') {\n      throw new BadRequestException('Le numéro de vol est requis et doit être une chaîne de caractères');\n    }\n\n    const transformedValue = value.toUpperCase();\n\n    if (!this.regex.test(transformedValue)) {\n      throw new BadRequestException(\n        `Format de vol invalide. Utilisez le format CM-XX123 ou CM-XX123X (ex: CM-AB123, CM-XY789C). Reçu : ${value}`\n      );\n    }\n\n    return transformedValue;\n  }\n}</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Montrer comment utiliser ce pipe dans un contrôleur de réservation pour :<br/>a) Valider un paramètre de route <code>@Param('flightNumber')</code><br/>b) Valider une propriété dans le corps de la requête",
+        "niveau": "medium",
+        "reponse": "<pre><code>import { Controller, Post, Param, Body, Get } from '@nestjs/common';\nimport { FlightNumberPipe } from './pipes/flight-number.pipe';\nimport { CreateReservationDto } from './dto/create-reservation.dto';\n\n@Controller('reservations')\nexport class ReservationController {\n\n  // a) Validation d'un paramètre de route\n  @Get(':flightNumber')\n  getReservationsByFlight(\n    @Param('flightNumber', FlightNumberPipe) flightNumber: string\n  ) {\n    return { flightNumber, message: 'Vol valide' };\n  }\n\n  // b) Validation d'une propriété dans le Body\n  @Post()\n  createReservation(\n    @Body('flightNumber', FlightNumberPipe) flightNumber: string,\n    @Body() createReservationDto: CreateReservationDto\n  ) {\n    return { flightNumber, ...createReservationDto };\n  }\n\n  // Alternative : valider tout le DTO (si flightNumber est une propriété du DTO)\n  @Post('with-dto')\n  createReservationWithDto(\n    @Body(FlightNumberPipe) dto: CreateReservationDto\n  ) {\n    // Le pipe appliqué sur tout le corps transforme la propriété flightNumber\n    return dto;\n  }\n}</code></pre>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Analyse comparative des options du ValidationPipe",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Une API NestJS reçoit la requête POST suivante sur l'endpoint <code>/users</code> :</p><pre><code>{\n  \"name\": \"Alice\",\n  \"email\": \"alice@example.com\",\n  \"age\": \"25\",\n  \"role\": \"admin\",\n  \"token\": \"secret123\"\n}</code></pre><p>Le DTO <code>CreateUserDto</code> est défini comme suit :</p><pre><code>export class CreateUserDto {\n  @IsString()\n  name: string;\n\n  @IsEmail()\n  email: string;\n\n  @IsInt()\n  age: number;\n}</code></pre><p>Le ValidationPipe est configuré avec différentes options. Pour chaque scénario, déterminer ce qui se passe.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Scénario A : <code>new ValidationPipe()</code> (options par défaut). Décrire le contenu de <code>req.body</code> après validation.",
+        "niveau": "easy",
+        "reponse": "La validation réussit partiellement :<ul><li>name et email sont valides</li><li>age est reçu comme une chaîne '25' mais le DTO attend un nombre → une erreur de validation BadRequest est levée car class-validator vérifie le type avec @IsInt() et '25' (string) n'est pas un nombre</li><li>Les propriétés role et token sont ignorées (ni supprimées ni rejetées)</li></ul>La requête est donc rejetée avec une erreur 400.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Scénario B : <code>new ValidationPipe({ whitelist: true })</code>. Quelles propriétés seront présentes dans l'objet validé (si la validation réussit) ?",
+        "niveau": "easy",
+        "reponse": "Avec whitelist: true, les propriétés non définies dans le DTO (role et token) sont automatiquement supprimées de l'objet reçu. Cependant, le problème de type sur 'age' persiste car la conversion automatique n'est pas activée. Si le problème de type est résolu, l'objet validé contiendrait uniquement { name, email, age }.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Scénario C : <code>new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true })</code>. Décrire le comportement.",
+        "niveau": "easy",
+        "reponse": "En plus de supprimer les propriétés non autorisées, le pipe lève une exception BadRequest avec un message indiquant que des propriétés non autorisées ('role', 'token') sont présentes. La requête est immédiatement rejetée, avant même la validation des types, avec un code 400.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 4,
+        "texte": "Scénario D : <code>new ValidationPipe({ transform: true })</code>. Expliquer ce qui se passe pour la propriété 'age'.",
+        "niveau": "easy",
+        "reponse": "Avec transform: true, le ValidationPipe utilise class-transformer pour convertir automatiquement les types selon les décorateurs du DTO. La valeur '25' (string) est convertie en nombre 25. La validation @IsInt() réussit donc. Les propriétés role et token restent présentes (car whitelist est false). La requête serait acceptée.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Application : Sécurisation d'une API de blog avec validation avancée",
+    "type": "competence",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Vous êtes responsable de la sécurité d'une API de blog développée avec NestJS. L'équipe a constaté plusieurs attaques où des utilisateurs malveillants injectent des propriétés supplémentaires dans les requêtes pour tenter d'élever leurs privilèges (ex: ajouter <code>\"isAdmin\": true</code> ou <code>\"role\": \"admin\"</code> dans le corps d'une requête de création d'utilisateur).</p><p>Le DTO actuel est le suivant :</p><pre><code>export class CreateUserDto {\n  @IsString()\n  username: string;\n\n  @IsEmail()\n  email: string;\n\n  @IsString()\n  @MinLength(8)\n  password: string;\n}</code></pre><p>L'API utilise également un DTO de mise à jour :</p><pre><code>export class UpdateUserDto {\n  @IsString()\n  @IsOptional()\n  username?: string;\n\n  @IsEmail()\n  @IsOptional()\n  email?: string;\n\n  @IsString()\n  @IsOptional()\n  bio?: string;\n}</code></pre><p>La base de données contient une colonne <code>role</code> qui ne devrait jamais être modifiée par le client, seulement par les administrateurs via une route dédiée.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Identifier la vulnérabilité décrite et expliquer comment elle pourrait être exploitée si aucune protection n'est mise en place.",
+        "niveau": "medium",
+        "reponse": "Il s'agit d'une vulnérabilité de type <strong>Mass Assignment</strong> (ou assignation massive). Exploitation possible :<ul><li>Un utilisateur malveillant ajoute <code>\"role\": \"admin\"</code> dans le corps de la requête POST /users lors de la création de son compte.</li><li>Si l'application n'utilise pas whitelist ou si elle assigne directement toutes les propriétés de la requête à l'entité, l'utilisateur devient administrateur.</li><li>De même, lors d'une requête PATCH /users/:id, l'attaquant pourrait modifier son rôle ou d'autres propriétés sensibles.</li></ul>C'est une faille fréquente dans les frameworks qui lient automatiquement les données entrantes aux objets métier.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Proposer une configuration du ValidationPipe global qui protège l'API contre cette vulnérabilité. Justifier le choix des options.",
+        "niveau": "medium",
+        "reponse": "<pre><code>app.useGlobalPipes(new ValidationPipe({\n  whitelist: true,              // Supprime les propriétés non définies dans le DTO\n  forbidNonWhitelisted: true,   // Rejette explicitement les requêtes contenant des propriétés non autorisées\n  transform: true               // Optionnel mais recommandé pour la conversion de types\n}));</code></pre><p><strong>Justification :</strong></p><ul><li><strong>whitelist: true</strong> : toute propriété comme 'role' (absente du DTO) est automatiquement supprimée, empêchant son assignation.</li><li><strong>forbidNonWhitelisted: true</strong> : va plus loin en rejetant la requête, ce qui alerte également sur une tentative d'attaque potentielle (logging possible).</li><li>Aucune modification côté DTO n'est nécessaire ; les DTO définissent explicitement les champs autorisés.</li></ul>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Pour le DTO de mise à jour <code>UpdateUserDto</code>, expliquer comment gérer le cas où le client envoie une propriété 'role' même avec whitelist activée.",
+        "niveau": "medium",
+        "reponse": "Avec whitelist: true, la propriété 'role' est ignorée (supprimée silencieusement). Si on souhaite être plus strict et rejeter explicitement la requête (recommandé pour la sécurité), on utilise <code>forbidNonWhitelisted: true</code>. Cela renverra une erreur 400 avec un message indiquant que la propriété 'role' n'est pas autorisée.<br/><br/>Pour les routes administrateurs qui doivent modifier le rôle, on crée un DTO séparé :<pre><code>export class UpdateUserRoleDto {\n  @IsString()\n  @IsIn(['user', 'admin', 'moderator'])\n  role: string;\n}</code></pre>Cette route spécifique est protégée par un guard d'authentification et un guard de rôle (@Roles('admin')).",
+        "sousQuestions": []
+      },
+      {
+        "numero": 4,
+        "texte": "Écrire un test unitaire pour valider que le ValidationPipe correctement configuré rejette une requête contenant une propriété non autorisée (ex: 'role' dans la création d'utilisateur). Utiliser le module <code>Test</code> de NestJS pour les tests.",
+        "niveau": "very hard",
+        "reponse": "<pre><code>import { Test, TestingModule } from '@nestjs/testing';\nimport { INestApplication, ValidationPipe } from '@nestjs/common';\nimport * as request from 'supertest';\nimport { AppModule } from '../src/app.module';\n\ndescribe('UserController (e2e) - Mass Assignment Protection', () => {\n  let app: INestApplication;\n\n  beforeAll(async () => {\n    const moduleFixture: TestingModule = await Test.createTestingModule({\n      imports: [AppModule],\n    }).compile();\n\n    app = moduleFixture.createNestApplication();\n    app.useGlobalPipes(new ValidationPipe({\n      whitelist: true,\n      forbidNonWhitelisted: true,\n    }));\n    await app.init();\n  });\n\n  afterAll(async () => {\n    await app.close();\n  });\n\n  it('devrait rejeter une requête contenant une propriété role non autorisée', async () => {\n    const maliciousPayload = {\n      username: 'attacker',\n      email: 'attacker@test.com',\n      password: 'password123',\n      role: 'admin',  // Propriété non autorisée\n    };\n\n    const response = await request(app.getHttpServer())\n      .post('/users')\n      .send(maliciousPayload)\n      .expect(400);\n\n    expect(response.body.message).toContain('property role should not exist');\n    expect(response.body.statusCode).toBe(400);\n  });\n\n  it('devrait accepter une requête valide sans propriétés supplémentaires', async () => {\n    const validPayload = {\n      username: 'validuser',\n      email: 'valid@test.com',\n      password: 'securepassword',\n    };\n\n    const response = await request(app.getHttpServer())\n      .post('/users')\n      .send(validPayload)\n      .expect(201);\n\n    expect(response.body.username).toBe('validuser');\n    expect(response.body).not.toHaveProperty('role');\n  });\n});</code></pre>",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

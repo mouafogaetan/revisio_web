@@ -1,0 +1,169 @@
+[
+  {
+    "intitule": "Configuration de base et injection du ConfigService",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Vous êtes développeur backend dans une startup camerounaise spécialisée dans la livraison de repas. L'application NestJS doit se connecter à une base de données PostgreSQL, à un service de paiement (Stripe) et à une API de géolocalisation. Les informations sensibles (mots de passe, clés API) ne doivent pas être hardcodées dans le code source.</p><p>Votre responsable vous demande de mettre en place la configuration de l'application en utilisant le module <code>@nestjs/config</code>.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Citer la commande npm permettant d'installer le package @nestjs/config.",
+        "niveau": "easy",
+        "reponse": "<code>npm install @nestjs/config</code>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer la démarche pour configurer le ConfigModule dans le module racine (AppModule) afin qu'il charge automatiquement les variables du fichier <code>.env</code>.",
+        "niveau": "medium",
+        "reponse": "Dans <code>AppModule</code>, il faut importer <code>ConfigModule</code> avec <code>ConfigModule.forRoot()</code>. Par défaut, il charge les variables du fichier <code>.env</code> à la racine du projet. Exemple :<br/><pre><code>import { Module } from '@nestjs/common';\nimport { ConfigModule } from '@nestjs/config';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true, // rend le module disponible partout\n    }),\n  ],\n})\nexport class AppModule {}</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Rédiger le contenu d'un fichier <code>.env</code> pour cette application avec au moins : port du serveur, URL de la base de données, clé API Stripe (fictive) et environnement (development/production).",
+        "niveau": "easy",
+        "reponse": "<pre><code># Configuration serveur\nPORT=3000\nNODE_ENV=development\n\n# Base de données\nDATABASE_URL=postgresql://user:password@localhost:5432/livraison_db\n\n# Services externes\nSTRIPE_API_KEY=sk_test_4eC39HqLyjWDarjtT1zdp7dc\n\n# API Géolocalisation\nGEOCODING_API_KEY=AIzaSyDxxxxxxxxxxxxx</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 4,
+        "texte": "Démontrer comment injecter et utiliser le <code>ConfigService</code> dans un service <code>DatabaseService</code> pour récupérer l'URL de connexion à la base de données.",
+        "niveau": "medium",
+        "reponse": "<pre><code>import { Injectable } from '@nestjs/common';\nimport { ConfigService } from '@nestjs/config';\n\n@Injectable()\nexport class DatabaseService {\n  constructor(private configService: ConfigService) {}\n\n  getDatabaseUrl(): string {\n    return this.configService.get&lt;string&gt;('DATABASE_URL');\n  }\n\n  getEnvironment(): string {\n    return this.configService.get('NODE_ENV', 'development');\n  }\n}</code></pre>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Validation des variables d'environnement avec Joi",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Une application NestJS de gestion des étudiants dans une université camerounaise utilise plusieurs variables d'environnement. Pour éviter les erreurs silencieuses, l'équipe décide de valider toutes les variables au démarrage avec Joi.</p><p>Les variables requises sont :</p><ul><li><code>PORT</code> : nombre entre 3000 et 9000, défaut 3000</li><li><code>NODE_ENV</code> : valeur parmi 'development', 'test', 'production'</li><li><code>DB_HOST</code> : chaîne obligatoire</li><li><code>DB_PORT</code> : nombre entre 5432 et 5432 (par défaut 5432) ou 3306 pour MySQL</li><li><code>DB_USER</code> : chaîne obligatoire</li><li><code>DB_PASSWORD</code> : chaîne obligatoire</li><li><code>JWT_SECRET</code> : chaîne d'au moins 32 caractères</li></ul>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Installer la dépendance nécessaire pour utiliser Joi avec @nestjs/config.",
+        "niveau": "easy",
+        "reponse": "<code>npm install joi</code>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Créer le schéma de validation Joi correspondant à toutes les variables d'environnement listées. Utiliser les méthodes appropriées (.required(), .valid(), .min(), etc.).",
+        "niveau": "hard",
+        "reponse": "<pre><code>import * as Joi from 'joi';\n\nexport const validationSchema = Joi.object({\n  PORT: Joi.number().default(3000).min(3000).max(9000),\n  NODE_ENV: Joi.string()\n    .valid('development', 'test', 'production')\n    .default('development'),\n  DB_HOST: Joi.string().required(),\n  DB_PORT: Joi.number().default(5432).valid(5432, 3306),\n  DB_USER: Joi.string().required(),\n  DB_PASSWORD: Joi.string().required(),\n  JWT_SECRET: Joi.string().min(32).required(),\n});</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Intégrer ce schéma de validation dans la configuration du ConfigModule dans AppModule.",
+        "niveau": "medium",
+        "reponse": "<pre><code>import { Module } from '@nestjs/common';\nimport { ConfigModule } from '@nestjs/config';\nimport { validationSchema } from './config/validation.schema';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      validationSchema,\n      validationOptions: {\n        abortEarly: false, // retourne toutes les erreurs, pas seulement la première\n      },\n    }),\n  ],\n})\nexport class AppModule {}</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 4,
+        "texte": "Expliquer ce qui se passe si une variable requise est manquante ou invalide et comment personnaliser le message d'erreur.",
+        "niveau": "medium",
+        "reponse": "Si une variable requise est manquante ou invalide, NestJS lève une exception fatale au démarrage (l'application ne démarre pas). Les messages d'erreur par défaut de Joi sont affichés dans la console. Pour personnaliser les messages, on peut utiliser la méthode <code>.messages()</code> de Joi :<br/><pre><code>DB_HOST: Joi.string().required().messages({\n  'any.required': 'La variable DB_HOST est obligatoire dans le fichier .env',\n  'string.empty': 'DB_HOST ne peut pas être vide',\n}),</code></pre>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Environnements multiples et chargement conditionnel",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Une application e-commerce développée avec NestJS doit fonctionner dans trois environnements : développement (local), recette (test) et production. Chaque environnement a des configurations différentes :</p><ul><li>Développement : base de données locale, logs détaillés, email catcher</li><li>Recette : base de données de test, logs limités, API de paiement sandbox</li><li>Production : base de données haute disponibilité, logs minimaux, API de paiement live</li></ul><p>Il faut également que chaque développeur puisse avoir ses propres variables sans les committer dans Git.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Décrire la structure des fichiers .env recommandée pour cette application (noms des fichiers).",
+        "niveau": "easy",
+        "reponse": "Structure recommandée :<ul><li><code>.env</code> (valeurs par défaut, versionnée avec des placeholders)</li><li><code>.env.development</code> (variables spécifiques au développement)</li><li><code>.env.staging</code> ou <code>.env.test</code> (pour la recette)</li><li><code>.env.production</code> (variables de production, non versionné)</li><li><code>.env.local</code> (surcharges locales pour chaque développeur, ignoré par Git)</li></ul>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Configurer le ConfigModule pour charger le fichier correspondant à la variable d'environnement <code>NODE_ENV</code> (ex: si NODE_ENV=production, charger .env.production).",
+        "niveau": "hard",
+        "reponse": "<pre><code>import { Module } from '@nestjs/common';\nimport { ConfigModule } from '@nestjs/config';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      envFilePath: [\n        `.env.${process.env.NODE_ENV || 'development'}.local`,\n        `.env.${process.env.NODE_ENV || 'development'}`,\n        '.env.local',\n        '.env',\n      ],\n      isGlobal: true,\n    }),\n  ],\n})\nexport class AppModule {}</code></pre><p>L'ordre du tableau est important : les premiers fichiers ont priorité.</p>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Analyser pourquoi il ne faut pas versionner les fichiers <code>.env.production</code> et <code>.env.local</code>. Proposer une alternative sécurisée pour la production.",
+        "niveau": "medium",
+        "reponse": "Les fichiers <code>.env.production</code> contiennent des secrets (clés API, mots de passe DB) qui ne doivent pas être exposés dans le dépôt Git. <code>.env.local</code> contient des variables personnelles aux développeurs.<br/><br/>Alternative sécurisée pour la production :<br/><ul><li>Utiliser les variables d'environnement natives du système (ex: sur Railway, Heroku, AWS ECS)</li><li>Utiliser un gestionnaire de secrets comme AWS Secrets Manager, HashiCorp Vault</li><li>Injecter les variables via CI/CD (GitHub Actions secrets)</li><li>Utiliser <code>process.env</code> directement sans fichier .env en production</li></ul>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Configuration asynchrone et modules personnalisés",
+    "type": "ressource",
+    "niveau": "very hard",
+    "enonce": {
+      "texte": "<p>Dans une application NestJS, vous devez configurer un module de base de données TypeORM qui dépend du <code>ConfigService</code>. La configuration doit être chargée de manière asynchrone car certaines valeurs proviennent d'un service externe ou nécessitent des calculs.</p><p>Le service de configuration a besoin de récupérer des informations depuis une API distante avant de pouvoir fournir les paramètres de connexion à la base de données.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer pourquoi on utilise <code>forRootAsync()</code> plutôt que <code>forRoot()</code> dans ce contexte.",
+        "niveau": "medium",
+        "reponse": "<code>forRootAsync()</code> permet de configurer un module de manière asynchrone et d'injecter des dépendances (comme <code>ConfigService</code>) avant que la configuration ne soit résolue. C'est essentiel lorsque la configuration dépend de services qui nécessitent eux-mêmes une initialisation asynchrone. <code>forRoot()</code> nécessite une configuration statique, ce qui ne convient pas ici.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Rédiger la configuration TypeORM en utilisant <code>forRootAsync()</code> avec <code>useFactory</code> et injection du <code>ConfigService</code>.",
+        "niveau": "hard",
+        "reponse": "<pre><code>import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { User } from './users/user.entity';\nimport { Product } from './products/product.entity';\n\n@Module({\n  imports: [\n    TypeOrmModule.forRootAsync({\n      imports: [ConfigModule],\n      inject: [ConfigService],\n      useFactory: (configService: ConfigService) => ({\n        type: 'postgres',\n        host: configService.get('DB_HOST'),\n        port: configService.get('DB_PORT'),\n        username: configService.get('DB_USER'),\n        password: configService.get('DB_PASSWORD'),\n        database: configService.get('DB_NAME'),\n        entities: [User, Product],\n        synchronize: configService.get('NODE_ENV') !== 'production',\n        logging: configService.get('NODE_ENV') === 'development',\n      }),\n    }),\n  ],\n})\nexport class DatabaseModule {}</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Créer une configuration personnalisée avec <code>registerAsync</code> pour un module <code>EmailModule</code> qui prend une configuration asynchrone provenant du <code>ConfigService</code>. Le module doit avoir une méthode statique <code>registerAsync</code> retournant un <code>DynamicModule</code>.",
+        "niveau": "very hard",
+        "reponse": "<pre><code>// email.module.ts\nimport { DynamicModule, Module } from '@nestjs/common';\nimport { ConfigService } from '@nestjs/config';\nimport { EmailService } from './email.service';\n\nexport interface EmailOptions {\n  host: string;\n  port: number;\n  user: string;\n  password: string;\n}\n\n@Module({})\nexport class EmailModule {\n  static registerAsync(options: {\n    useFactory: (configService: ConfigService) => Promise&lt;EmailOptions&gt; | EmailOptions;\n    inject?: any[];\n  }): DynamicModule {\n    return {\n      module: EmailModule,\n      providers: [\n        {\n          provide: 'EMAIL_OPTIONS',\n          useFactory: options.useFactory,\n          inject: options.inject || [],\n        },\n        EmailService,\n      ],\n      exports: [EmailService],\n    };\n  }\n}\n\n// email.service.ts\nimport { Inject, Injectable } from '@nestjs/common';\n\n@Injectable()\nexport class EmailService {\n  constructor(@Inject('EMAIL_OPTIONS') private options: EmailOptions) {}\n\n  async sendMail(to: string, subject: string, body: string) {\n    console.log(`Envoi email à ${to} via ${this.options.host}`);\n    // Implémentation réelle...\n  }\n}\n\n// app.module.ts utilisation\n@Module({\n  imports: [\n    EmailModule.registerAsync({\n      inject: [ConfigService],\n      useFactory: (configService: ConfigService) => ({\n        host: configService.get('EMAIL_HOST'),\n        port: configService.get('EMAIL_PORT'),\n        user: configService.get('EMAIL_USER'),\n        password: configService.get('EMAIL_PASSWORD'),\n      }),\n    }),\n  ],\n})\nexport class AppModule {}</code></pre>",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Utilisation avancée : Configuration typée avec TypeScript",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Pour améliorer la maintenabilité et la sécurité de type, vous décidez de créer une classe de configuration typée qui centralise l'accès aux variables d'environnement. Cette classe sera injectable dans toute l'application et fournira des getters typés pour chaque variable.</p>",
+      "images": []
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Créer une classe <code>AppConfigService</code> qui étend ou encapsule <code>ConfigService</code> avec des getters typés pour : PORT (number), NODE_ENV (string union type), JWT_SECRET (string), et une méthode <code>isProduction()</code>.",
+        "niveau": "hard",
+        "reponse": "<pre><code>import { Injectable } from '@nestjs/common';\nimport { ConfigService } from '@nestjs/config';\n\ntype NodeEnv = 'development' | 'test' | 'production';\n\n@Injectable()\nexport class AppConfigService {\n  constructor(private configService: ConfigService) {}\n\n  get port(): number {\n    return this.configService.get&lt;number&gt;('PORT', 3000);\n  }\n\n  get nodeEnv(): NodeEnv {\n    return this.configService.get&lt;NodeEnv&gt;('NODE_ENV', 'development');\n  }\n\n  get jwtSecret(): string {\n    const secret = this.configService.get&lt;string&gt;('JWT_SECRET');\n    if (!secret) {\n      throw new Error('JWT_SECRET is not defined in environment variables');\n    }\n    return secret;\n  }\n\n  isProduction(): boolean {\n    return this.nodeEnv === 'production';\n  }\n\n  isDevelopment(): boolean {\n    return this.nodeEnv === 'development';\n  }\n\n  get databaseConfig() {\n    return {\n      host: this.configService.get('DB_HOST'),\n      port: this.configService.get('DB_PORT'),\n      username: this.configService.get('DB_USER'),\n      password: this.configService.get('DB_PASSWORD'),\n      database: this.configService.get('DB_NAME'),\n    };\n  }\n}</code></pre>",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Démontrer comment enregistrer cette classe comme provider dans AppModule et l'utiliser dans un contrôleur ou un service.",
+        "niveau": "medium",
+        "reponse": "<pre><code>// app.module.ts\nimport { Module } from '@nestjs/common';\nimport { ConfigModule } from '@nestjs/config';\nimport { AppConfigService } from './app-config.service';\n\n@Module({\n  imports: [ConfigModule.forRoot({ isGlobal: true })],\n  providers: [AppConfigService],\n  exports: [AppConfigService],\n})\nexport class AppModule {}\n\n// auth.service.ts\nimport { Injectable } from '@nestjs/common';\nimport { AppConfigService } from './app-config.service';\nimport { JwtService } from '@nestjs/jwt';\n\n@Injectable()\nexport class AuthService {\n  constructor(\n    private appConfig: AppConfigService,\n    private jwtService: JwtService,\n  ) {}\n\n  login() {\n    // Utilisation typée\n    if (this.appConfig.isProduction()) {\n      // Comportement spécifique production\n    }\n    const token = this.jwtService.sign({ sub: 1 }, {\n      secret: this.appConfig.jwtSecret,\n    });\n    return { token };\n  }\n}</code></pre>",
+        "sousQuestions": []
+      }
+    ]
+  }
+]

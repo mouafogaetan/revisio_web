@@ -1,0 +1,170 @@
+[
+  {
+    "intitule": "Compréhension des hooks personnalisés",
+    "type": "ressource",
+    "niveau": "easy",
+    "enonce": {
+      "texte": "<p>Un <strong>hook personnalisé</strong> est une fonction JavaScript qui commence par <code>use</code> et qui peut appeler d'autres hooks React. Il permet de réutiliser de la logique avec état entre plusieurs composants.</p>",
+      "images": [
+        "schéma montrant deux composants différents utilisant le même hook personnalisé useFetch",
+        "diagramme illustrant le partage de logique sans duplication de code"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Expliquer pourquoi un hook personnalisé doit impérativement commencer par le préfixe <code>use</code>.",
+        "niveau": "easy",
+        "reponse": "Le préfixe <code>use</code> est une convention obligatoire que React utilise pour détecter les violations des règles des hooks (comme l'appel conditionnel). Cela permet aux outils de linting (ESLint) de vérifier automatiquement que les règles des hooks sont respectées.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Citer deux règles fondamentales des hooks que tout hook personnalisé doit respecter.",
+        "niveau": "easy",
+        "reponse": "1. Les hooks doivent être appelés uniquement au niveau racine des composants ou des hooks personnalisés (pas dans des conditions, boucles ou fonctions imbriquées). 2. Les hooks ne peuvent être appelés que depuis des composants React fonctionnels ou d'autres hooks personnalisés, pas depuis des fonctions JavaScript classiques.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Création d'un hook useFetch pour une application météo",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous développez une application météo pour plusieurs villes du Cameroun (Douala, Yaoundé, Garoua). Vous devez créer un <strong>hook personnalisé <code>useFetch</code></strong> qui permettra de récupérer des données météo depuis une API REST. Ce hook devra gérer les états de <strong>chargement (loading)</strong>, d'<strong>erreur</strong> et les <strong>données</strong>.</p>",
+      "images": [
+        "interface d'application météo avec indicateur de chargement et affichage des températures",
+        "schéma d'un hook personnalisé useFetch montrant son entrée (url) et ses sorties (data, loading, error)"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire le code complet du hook <code>useFetch</code> qui prend une URL en paramètre et retourne un objet contenant <code>data</code>, <code>loading</code> et <code>error</code>. Utiliser <code>useState</code> et <code>useEffect</code>.",
+        "niveau": "medium",
+        "reponse": "```javascript\nimport { useState, useEffect } from 'react';\n\nfunction useFetch(url) {\n  const [data, setData] = useState(null);\n  const [loading, setLoading] = useState(true);\n  const [error, setError] = useState(null);\n\n  useEffect(() => {\n    const fetchData = async () => {\n      setLoading(true);\n      try {\n        const response = await fetch(url);\n        if (!response.ok) {\n          throw new Error(`Erreur HTTP ${response.status}`);\n        }\n        const result = await response.json();\n        setData(result);\n        setError(null);\n      } catch (err) {\n        setError(err.message);\n        setData(null);\n      } finally {\n        setLoading(false);\n      }\n    };\n\n    fetchData();\n  }, [url]);\n\n  return { data, loading, error };\n}\n\nexport default useFetch;\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer le rôle du tableau de dépendances <code>[url]</code> dans le <code>useEffect</code> de ce hook.",
+        "niveau": "medium",
+        "reponse": "Le tableau de dépendances <code>[url]</code> indique à React de réexécuter l'effet uniquement lorsque l'URL change. Cela évite des appels réseau inutiles si le composant parent se re-rend avec la même URL. C'est une optimisation essentielle pour les performances.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Proposer une amélioration du hook pour <strong>annuler les requêtes</strong> en cas de démontage du composant ou de changement d'URL avant la fin de la requête.",
+        "niveau": "hard",
+        "reponse": "On utilise <code>AbortController</code> :\n```javascript\nuseEffect(() => {\n  const abortController = new AbortController();\n  \n  const fetchData = async () => {\n    try {\n      const response = await fetch(url, { signal: abortController.signal });\n      // ... traitement\n    } catch (err) {\n      if (err.name !== 'AbortError') {\n        setError(err.message);\n      }\n    }\n  };\n  \n  fetchData();\n  return () => abortController.abort();\n}, [url]);\n```\nCela évite les erreurs de mise à jour d'état sur un composant démonté (memory leaks).",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Utilisation de useFetch dans un tableau de bord",
+    "type": "competence",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Vous devez afficher une liste d'articles depuis une API. Le composant <code>ArticleList</code> utilise le hook <code>useFetch</code> que vous avez créé. Complétez le code et répondez aux questions.</p>",
+      "images": [
+        "interface de liste d'articles avec chargement puis affichage des titres",
+        "exemple de réponse API JSON contenant un tableau d'articles"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Compléter le code du composant <code>ArticleList</code> pour afficher correctement les états de chargement, d'erreur et la liste des articles :\n```jsx\nfunction ArticleList() {\n  const { data, loading, error } = useFetch('https://api.example.com/articles');\n  \n  if (loading) return <div>...</div>;\n  if (error) return <div>...</div>;\n  \n  return (\n    <ul>\n      {data && data.map(article => (\n        <li key={article.id}>{article.title}</li>\n      ))}\n    </ul>\n  );\n}\n```",
+        "niveau": "easy",
+        "reponse": "```jsx\nif (loading) return <div>Chargement des articles...</div>;\nif (error) return <div>Erreur : {error}</div>;\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Analyser ce qui se passerait si on utilisait le même hook <code>useFetch</code> dans <strong>deux composants différents</strong> sur la même page avec la même URL. Les requêtes seraient-elles dupliquées ? Proposer une solution.",
+        "niveau": "hard",
+        "reponse": "Par défaut, chaque appel à <code>useFetch</code> déclenche sa propre requête indépendante, donc deux composants avec la même URL feraient deux appels réseau identiques. Pour éviter cela, on peut implémenter un système de cache (ex: avec un objet Map stocké hors du hook, ou utiliser React Query qui gère cela nativement). Une solution simple : stocker les résultats dans un cache global et vérifier si l'URL a déjà été chargée.",
+        "sousQuestions": [
+          {
+            "numero": "2.a",
+            "texte": "Proposer une implémentation simplifiée d'un cache avec une variable extérieure au hook.",
+            "niveau": "hard",
+            "reponse": "```javascript\nconst cache = new Map();\n\nfunction useFetch(url) {\n  const [data, setData] = useState(() => cache.get(url) || null);\n  // ... si cache.get(url) existe, on ne refait pas la requête\n}\n```"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "intitule": "Création d'un hook useLocalStorage",
+    "type": "competence",
+    "niveau": "hard",
+    "enonce": {
+      "texte": "<p>Vous souhaitez persister les préférences utilisateur (thème, langue, taille de police) dans le <code>localStorage</code> du navigateur. Créez un hook personnalisé <code>useLocalStorage</code> qui fonctionne comme <code>useState</code> mais qui synchronise automatiquement la valeur avec le localStorage.</p>",
+      "images": [
+        "schéma de synchronisation entre l'état React et le localStorage",
+        "interface de paramètres avec options de thème (clair/sombre)"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire le code du hook <code>useLocalStorage</code> avec la signature <code>const [value, setValue] = useLocalStorage(key, initialValue)</code>.",
+        "niveau": "hard",
+        "reponse": "```javascript\nimport { useState, useEffect } from 'react';\n\nfunction useLocalStorage(key, initialValue) {\n  const [storedValue, setStoredValue] = useState(() => {\n    try {\n      const item = window.localStorage.getItem(key);\n      return item ? JSON.parse(item) : initialValue;\n    } catch (error) {\n      console.error(error);\n      return initialValue;\n    }\n  });\n\n  const setValue = (value) => {\n    try {\n      const valueToStore = value instanceof Function ? value(storedValue) : value;\n      setStoredValue(valueToStore);\n      window.localStorage.setItem(key, JSON.stringify(valueToStore));\n    } catch (error) {\n      console.error(error);\n    }\n  };\n\n  return [storedValue, setValue];\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Expliquer pourquoi on utilise une fonction dans <code>useState(() => ...)</code> pour la lecture initiale du localStorage plutôt qu'une évaluation directe.",
+        "niveau": "medium",
+        "reponse": "La forme fonctionnelle de <code>useState</code> (initialisation paresseuse) garantit que la lecture du localStorage n'est exécutée qu'une seule fois, au premier rendu. Une évaluation directe s'exécuterait à chaque rendu (même si la valeur n'est utilisée qu'au premier), ce qui est inefficace et pourrait causer des problèmes avec des opérations coûteuses.",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Discuter des limites de ce hook (sécurité, performance, synchronisation entre onglets) et proposer des améliorations.",
+        "niveau": "very hard",
+        "reponse": "**Limites** : 1) Ne fonctionne pas avec des données non sérialisables (fonctions, Symbol). 2) Peut lancer des exceptions si localStorage est désactivé ou plein. 3) Ne synchronise pas les changements entre onglets (un onglet qui modifie une valeur ne met pas à jour l'autre). **Améliorations** : Ajouter un écouteur d'événement 'storage' pour synchroniser les onglets ; utiliser try/catch pour gérer les erreurs de quota ; ajouter un paramètre optionnel pour sérialiseur/désérialiseur personnalisé.",
+        "sousQuestions": []
+      }
+    ]
+  },
+  {
+    "intitule": "Refactorisation d'un composant avec un hook personnalisé",
+    "type": "ressource",
+    "niveau": "medium",
+    "enonce": {
+      "texte": "<p>Le composant suivant gère un compteur avec incrémentation, décrémentation et réinitialisation. Refactorisez-le pour extraire la logique du compteur dans un hook personnalisé <code>useCounter</code>.</p>\n<pre><code>function Counter() {\n  const [count, setCount] = useState(0);\n  \n  const incrementer = () => setCount(c => c + 1);\n  const decrementer = () => setCount(c => c - 1);\n  const reset = () => setCount(0);\n  \n  return (\n    &lt;div&gt;\n      &lt;p&gt;Compteur : {count}&lt;/p&gt;\n      &lt;button onClick={incrementer}&gt;+&lt;/button&gt;\n      &lt;button onClick={decrementer}&gt;-&lt;/button&gt;\n      &lt;button onClick={reset}&gt;Reset&lt;/button&gt;\n    &lt;/div&gt;\n  );\n}\n</code></pre>",
+      "images": [
+        "interface d'un compteur avec trois boutons (+, -, reset)",
+        "schéma montrant l'extraction d'une logique réutilisable dans un hook"
+      ]
+    },
+    "questions": [
+      {
+        "numero": 1,
+        "texte": "Écrire le hook <code>useCounter</code> qui prend éventuellement une valeur initiale (par défaut 0) et retourne l'état du compteur ainsi que les fonctions d'incrémentation, décrémentation et réinitialisation.",
+        "niveau": "medium",
+        "reponse": "```javascript\nfunction useCounter(initialValue = 0) {\n  const [count, setCount] = useState(initialValue);\n  \n  const incrementer = () => setCount(c => c + 1);\n  const decrementer = () => setCount(c => c - 1);\n  const reset = () => setCount(initialValue);\n  \n  return { count, incrementer, decrementer, reset };\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 2,
+        "texte": "Réécrire le composant <code>Counter</code> pour qu'il utilise ce hook.",
+        "niveau": "easy",
+        "reponse": "```jsx\nfunction Counter() {\n  const { count, incrementer, decrementer, reset } = useCounter(0);\n  \n  return (\n    &lt;div&gt;\n      &lt;p&gt;Compteur : {count}&lt;/p&gt;\n      &lt;button onClick={incrementer}&gt;+&lt;/button&gt;\n      &lt;button onClick={decrementer}&gt;-&lt;/button&gt;\n      &lt;button onClick={reset}&gt;Reset&lt;/button&gt;\n    &lt;/div&gt;\n  );\n}\n```",
+        "sousQuestions": []
+      },
+      {
+        "numero": 3,
+        "texte": "Expliquer quel avantage apporte cette refactorisation si l'application comporte plusieurs compteurs à différents endroits.",
+        "niveau": "medium",
+        "reponse": "La refactorisation évite la duplication de code. Chaque composant qui a besoin d'un compteur peut réutiliser <code>useCounter</code> avec sa propre valeur initiale. Si la logique du compteur doit évoluer (ajout d'un pas, limitation max/min), la modification se fait en un seul endroit. Cela rend le code plus maintenable et cohérent.",
+        "sousQuestions": []
+      }
+    ]
+  }
+]
