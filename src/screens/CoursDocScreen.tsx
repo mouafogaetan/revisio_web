@@ -115,7 +115,7 @@ export const CoursDocScreen: React.FC = () => {
         setLoading(true)
         setError(null)
         const url = `${API_URL}/data/${classeId}/${matiereId}/${chapitreId}/cours/${lessonId}.html`
-        const response = await fetch(url)
+        const response = await fetch(url, { cache: 'no-store' })
         
         // Vérifier si le fichier existe
         if (!response.ok) {

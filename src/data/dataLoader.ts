@@ -13,9 +13,12 @@ type DataPath = string;
 // Fonction pour charger un fichier JSON local
 async function loadLocalJSON<T>(path: string): Promise<T> {
   try {
-    // Utiliser fetch pour charger le fichier depuis le dossier public
-    // ou directement importer si c'est un module
-    const response = await fetch(path);
+    const response = await fetch(path, {
+      cache: 'no-store', // ✅ Force le rechargement
+      headers: {
+        'Cache-Control': 'no-cache',
+      }
+    });
     if (!response.ok) {
       throw new Error(`Failed to load ${path}: ${response.status}`);
     }
@@ -26,10 +29,14 @@ async function loadLocalJSON<T>(path: string): Promise<T> {
   }
 }
 
-// Fonction pour charger un fichier HTML local
 async function loadLocalHTML(path: string): Promise<string> {
   try {
-    const response = await fetch(path);
+    const response = await fetch(path, {
+      cache: 'no-store', // ✅ Force le rechargement
+      headers: {
+        'Cache-Control': 'no-cache',
+      }
+    });
     if (!response.ok) {
       throw new Error(`Failed to load ${path}: ${response.status}`);
     }
