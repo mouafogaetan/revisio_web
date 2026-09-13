@@ -51,7 +51,7 @@ export const LessonViewScreen: React.FC = () => {
         lessonId,
         matiere.matiereName,
         lesson.lessonName,
-        10
+        100
       )
 
       if (quiz) {
