@@ -114,7 +114,8 @@ export const CoursDocScreen: React.FC = () => {
       try {
         setLoading(true)
         setError(null)
-        const url = `${API_URL}/data/${classeId}/${matiereId}/${chapitreId}/cours/${lessonId}.html`
+        const url = `${API_URL}/${classeId}/${matiereId}/${chapitreId}/cours/${lessonId}.html`
+        console.log('Fetching slides from URL:', url)
         const response = await fetch(url, { cache: 'no-store' })
         
         // Vérifier si le fichier existe

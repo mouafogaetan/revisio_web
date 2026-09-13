@@ -242,7 +242,7 @@ export const SujetScreen: React.FC = () => {
       setSelectedEpreuve(epreuve)
 
       const htmlResponse = await fetch(
-        `${DATA_SOURCE_URL}/data/${classeId}/${matiereId}/epreuves/${epreuve.epreuveId}.html`,
+        `${DATA_SOURCE_URL}/${classeId}/${matiereId}/epreuves/${epreuve.epreuveId}.html`,
         { cache: 'no-store' }
       )
       if (!htmlResponse.ok) throw new Error('Impossible de charger le sujet')
