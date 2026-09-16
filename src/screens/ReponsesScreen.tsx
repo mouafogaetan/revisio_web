@@ -204,8 +204,8 @@ export const ReponsesScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* Navigation */}
-      <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
+      {/* Navigation desktop */}
+      <div className="hidden sm:flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
         <Button
           variant="ghost"
           onClick={handlePrev}
@@ -239,6 +239,38 @@ export const ReponsesScreen: React.FC = () => {
           Suivant
           <ChevronRight className="w-4 h-4 ml-1" />
         </Button>
+      </div>
+
+      {/* Navigation mobile */}
+      <div className="sm:hidden fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
+        <div className="bg-white/95 backdrop-blur rounded-full px-2 py-2 shadow-lg flex items-center gap-1 border border-gray-200">
+          <Button
+            variant="ghost"
+            onClick={handlePrev}
+            disabled={currentIndex === 0}
+            className="flex items-center gap-1 px-3 py-2 rounded-full text-[11px] font-medium"
+            aria-label="Précédent"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            <span>Préc.</span>
+          </Button>
+
+          <div className="min-w-[78px] text-center text-[10px] font-semibold text-gray-600 leading-tight px-1">
+            {currentIndex + 1}/{totalQuestions}
+            <span className="block text-[9px] text-gray-500">question</span>
+          </div>
+
+          <Button
+            variant="ghost"
+            onClick={handleNext}
+            disabled={currentIndex === totalQuestions - 1}
+            className="flex items-center gap-1 px-3 py-2 rounded-full text-[11px] font-medium"
+            aria-label="Suivant"
+          >
+            <span>Suiv.</span>
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
 
       <FullScreenAdModal

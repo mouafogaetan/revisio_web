@@ -51,7 +51,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
 
         {/* Informations */}
         <div className="flex-1 min-w-0">
-          <h3 className="text-base font-semibold text-gray-800 truncate">
+          <h3 className="text-base font-semibold text-gray-800 line-clamp-2 min-h-[3rem]">
             {title}
           </h3>
           {subtitle && (
