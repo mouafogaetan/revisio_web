@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Épreuve</title>
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' },
+            options: {
+                skipHtmlTypes: 'script',
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous">
+</script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        color: #1e293b;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    /* ===== HEADER ===== */
+    .slide-header {
+        flex-shrink: 0;
+        padding: 14px 16px 10px 16px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        z-index: 10;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+    }
+    .slide-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.3;
+        padding: 0 4px;
+        word-break: break-word;
+    }
+    .header-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+    .header-sub span {
+        background: rgba(0,0,0,0.04);
+        padding: 2px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== CORPS ===== */
+    .slide-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 16px 18px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    .slide-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .slide-body::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.04);
+    }
+    .slide-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    /* ===== EXERCICE ===== */
+    .exercise-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px 16px 12px 16px;
+        flex-shrink: 0;
+    }
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .exercise-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1e40af;
+    }
+    .exercise-points {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 2px 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    .exercise-statement {
+        color: #1e293b;
+        line-height: 1.7;
+        margin-bottom: 12px;
+        font-size: 0.95rem;
+        padding: 0 4px;
+    }
+    .exercise-statement .math {
+        color: #1e40af;
+    }
+    /* ===== QUESTIONS ===== */
+    .question-block {
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-left: 3px solid #e2e8f0;
+        transition: border-color 0.3s ease;
+    }
+    .question-block.revealed {
+        border-left-color: #059669;
+    }
+    .question-text {
+        font-size: 0.92rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .question-label {
+        font-weight: 600;
+        color: #2563eb;
+        flex-shrink: 0;
+    }
+    .question-answer {
+        background: rgba(5, 150, 105, 0.06);
+        border: 1px solid rgba(5, 150, 105, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        display: none;
+        font-size: 0.9rem;
+        color: #065f46;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    .question-answer.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .question-answer .math {
+        color: #065f46;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-reveal {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        margin-top: 4px;
+    }
+    .btn-reveal:active {
+        transform: scale(0.94);
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-reveal.revealed {
+        background: rgba(5, 150, 105, 0.1);
+        border-color: rgba(5, 150, 105, 0.2);
+        color: #059669;
+    }
+    /* ===== FOOTER ===== */
+    .slide-footer {
+        flex-shrink: 0;
+        padding: 12px 14px 16px 14px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10;
+    }
+    .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+    }
+    .footer-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 40px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 40px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        flex: 0 1 auto;
+    }
+    .btn:active {
+        transform: scale(0.94);
+        background: rgba(0,0,0,0.08);
+    }
+    .btn-secondary {
+        background: rgba(0,0,0,0.03);
+        border-color: rgba(0,0,0,0.06);
+    }
+    .btn-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .btn-primary {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(37, 99, 235, 0.12);
+        color: #2563eb;
+    }
+    .btn-primary:active {
+        background: rgba(37, 99, 235, 0.15);
+    }
+    .btn-success {
+        background: rgba(5, 150, 105, 0.08);
+        border-color: rgba(5, 150, 105, 0.12);
+        color: #059669;
+    }
+    .btn-success:active {
+        background: rgba(5, 150, 105, 0.15);
+    }
+    .btn-warning {
+        background: rgba(217, 119, 6, 0.08);
+        border-color: rgba(217, 119, 6, 0.12);
+        color: #d97706;
+    }
+    .btn-warning:active {
+        background: rgba(217, 119, 6, 0.15);
+    }
+    .counter {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        background: rgba(0,0,0,0.04);
+        padding: 4px 14px;
+        border-radius: 30px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 400px) {
+        .slide-header h1 {
+            font-size: 1.1rem;
+        }
+        .header-sub {
+            font-size: 0.65rem;
+            gap: 6px;
+        }
+        .exercise-title {
+            font-size: 1rem;
+        }
+        .exercise-statement {
+            font-size: 0.85rem;
+        }
+        .question-text {
+            font-size: 0.82rem;
+        }
+        .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            min-height: 34px;
+        }
+        .footer-actions {
+            gap: 5px;
+        }
+        .slide-body {
+            padding: 12px 12px 16px 12px;
+        }
+    }
+    @media (min-width: 700px) {
+        .app-container {
+            max-width: 600px;
+            border-radius: 32px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            height: 90vh;
+            height: 90dvh;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="slide-header">
+        <h1 id="examTitle">Épreuve</h1>
+        <div class="header-sub" id="examInfo">
+            <span id="subjectInfo">Matière</span>
+            <span id="classInfo">Classe</span>
+            <span id="sequenceInfo">Séquence</span>
+            <span id="yearInfo">Année</span>
+        </div>
+    </header>
+    <!-- BODY -->
+    <main class="slide-body" id="slideBody"></main>
+    <!-- FOOTER -->
+    <footer class="slide-footer">
+        <div class="footer-top">
+            <span class="counter" id="exerciseCounter">Exercice 1 / 3</span>
+            <span class="counter" id="questionCounter">Q: 0 / 0</span>
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-secondary" id="prevBtn">
+                <span class="btn-icon">◀</span> <span class="btn-label">Préc.</span>
+            </button>
+            <button class="btn btn-secondary" id="nextBtn">
+                <span class="btn-label">Suiv.</span> <span class="btn-icon">▶</span>
+            </button>
+            <button class="btn btn-primary" id="revealAllBtn">
+                <span class="btn-icon">👁️</span> <span class="btn-label">Tout voir</span>
+            </button>
+            <button class="btn btn-warning" id="hideAllBtn">
+                <span class="btn-icon">🙈</span> <span class="btn-label">Tout cacher</span>
+            </button>
+        </div>
+    </footer>
+</div>
+<script>
+$(function() {
+    // ================================================================
+    // DONNÉES DE L'ÉPREUVE - MODIFIEZ ICI
+    // ================================================================
+    const examData = {
+  "matiere": "Chimie",
+  "classe": "1ère D",
+  "sequence": "Évaluation",
+  "anneeScolaire": "2026-2027",
+  "exercices": [
+    {
+      "titre": "Exercice 1 : Vérification des savoirs",
+      "points": "4 pts",
+      "enonce": "<div style='font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif; font-size: 17px; line-height: 1.6; color: #1d1d1f; background-color: #ffffff; padding: 5px;'><p><strong>PARTIE A : ÉVALUATION DES RESSOURCES / 12 points</strong></p><p>Vérification des savoirs.</p></div>",
+      "questions": [
+        {
+          "question": "<div style='font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif; font-size: 17px; line-height: 1.6; color: #1d1d1f; background-color: #ffffff; padding: 5px;'><p>1) Définir : un alcane ; deux isomères ; un groupe alkylé ; une réaction de substitution. <em>(4 × 0,5 pt)</em></p></div>",
+          "reponse": "<div style='font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif; font-size: 17px; line-height: 1.6; color: #1d1d1f; background-color: #ffffff; padding: 5px;'><ul style='list-style-type: disc; padding-left: 20px;'><li><strong>Alcane :</strong> hydrocarbure saturé, à chaîne ouverte, de formule générale C<sub>n</sub>H<sub>2n+2</sub>.</li><li><strong>Deux isomères :</strong> composés ayant la même formule brute mais des formules semi-développées (ou structures) différentes.</li><li><strong>Groupe alkylé :</strong> groupe monovalent obtenu en enlevant un atome d'hydrogène à un alcane ; de formule générale C<sub>n</sub>H<sub>2n+1</sub>–.</li><li><strong>Réaction de substitution :</strong> réaction au cours de laquelle un atome ou un groupe d'atomes d'une molécule est remplacé par un autre atome ou groupe d'atomes.</li></ul></div>"
+        },
+        {
+          "question": "<div style='font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif; font-size: 17px; line-height: 1.6; color: #1d1d1f; background-color: #ffffff; padding: 5px;'><p>2) Recopier chaque affirmation et indiquer si elle est vraie ou fausse. <em>(4 × 0,5 pt)</em></p><p>2.1. Les alcanes sont des hydrocarbures saturés à chaîne ouverte de formule générale C<sub>n</sub>H<sub>2n+2</sub>.</p><p>2.2. Les alcanes sont très solubles dans l'eau.</p><p>2.3. Le méthane peut être préparé au laboratoire en chauffant un mélange d'éthanoate de sodium et de chaux sodée.</p><p>2.4. Les alcanes sont plus denses que l'eau.</p></div>",
+          "reponse": "<div style='font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif; font-size: 17px; line-height: 1.6; color: #1d1d1f; background-color: #ffffff; padding: 5px;'><ul style='list-style-type: disc; padding-left: 20px;'><li><strong>2.1. Vrai :</strong> c'est la définition des alcanes.</li><li><strong>2.2. Faux :</strong> les alcanes sont insolubles dans l'eau.</li><li><strong>2.3. Vrai :</strong> c'est la préparation du méthane au laboratoire par décarboxylation de l'éthanoate de sodium en présence de chaux sodée.</li><li><strong>2.4. Faux :</strong> les alcanes sont moins denses que l'eau.</li></ul></div>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 2 : Application des savoirs",
+      "points": "4 pts",
+      "enonce": "<div style='font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif; font-size: 17px; line-height: 1.6; color: #1d1d1f; background-color: #ffffff; padding: 5px;'><p>Application des savoirs.</p></div>",
+      "questions": [
+        {
+          "question": "<div style='font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif; font-size: 17px; line-height: 1.6; color: #1d1d1f; background-color: #ffffff; padding: 5px;'><p>1) Donner le nom des alcanes suivants : <em>(3 × 0,5 pt)</em></p><p>A : CH<sub>3</sub>–CH(CH<sub>3</sub>)–CH<sub>2</sub>–CH<sub>2</sub>–CH<sub>3</sub></p><p>B : CH<sub>3</sub>–C(CH<sub>3</sub>)<sub>2</sub>–CH<sub>2</sub>–CH<sub>3</sub></p><p>C : CH<sub>3</sub>–CH(CH<sub>3</sub>)–CH(CH<sub>3</sub>)–CH<sub>2</sub>–CH<sub>3</sub></p></div>",
+          "reponse": "<div style='font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif; font-size: 17px; line-height: 1.6; color: #1d1d1f; background-color: #ffffff; padding: 5px;'><ul style='list-style-type: disc; padding-left: 20px;'><li><strong>A :</strong> 2-méthylpentane</li><li><strong>B :</strong> 2,2-diméthylbutane</li><li><strong>C :</strong> 2,3-diméthylpentane</li></ul></div>"
+        },
+        {
+          "question": "<div style='font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif; font-size: 17px; line-height: 1.6; color: #1d1d1f; background-color: #ffffff; padding: 5px;'><p>2) Écrire la formule semi-développée du 3-éthyl-2-méthylpentane. <em>(0,5 pt)</em></p></div>",
+          "reponse": "<div style='font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif; font-size: 17px; line-height: 1.6; color: #1d1d1f; background-color: #ffffff; padding: 5px;'><p>CH<sub>3</sub>–CH(CH<sub>3</sub>)–CH(CH<sub>2</sub>CH<sub>3</sub>)–CH<sub>2</sub>–CH<sub>3</sub></p></div>"
+        },
+        {
+          "question": "<div style='font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif; font-size: 17px; line-height: 1.6; color: #1d1d1f; background-color: #ffffff; padding: 5px;'><p>3) Un alcane X a pour masse molaire M = 72 g/mol.</p><p>3.1. Déterminer sa formule brute. <em>(0,5 pt)</em></p></div>",
+          "reponse": "<div style='font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif; font-size: 17px; line-height: 1.6; color: #1d1d1f; background-color: #ffffff; padding: 5px;'><p>Formule générale : C<sub>n</sub>H<sub>2n+2</sub>.</p><p>M = 12n + (2n + 2) × 1 = 14n + 2 = 72 ⇒ 14n = 70 ⇒ n = 5.</p><p><strong>Formule brute : C<sub>5</sub>H<sub>12</sub></strong> (pentane).</p></div>"
+        },
+        {
+          "question": "<div style='font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif; font-size: 17px; line-height: 1.6; color: #1d1d1f; background-color: #ffffff; padding: 5px;'><p>3.2. Écrire les formules semi-développées de tous ses isomères de chaîne et les nommer. <em>(1,5 pt)</em></p></div>",
+          "reponse": "<div style='font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif; font-size: 17px; line-height: 1.6; color: #1d1d1f; background-color: #ffffff; padding: 5px;'><p>Les isomères de chaîne de C<sub>5</sub>H<sub>12</sub> sont :</p><ul style='list-style-type: disc; padding-left: 20px;'><li><strong>Pentane :</strong> CH<sub>3</sub>–CH<sub>2</sub>–CH<sub>2</sub>–CH<sub>2</sub>–CH<sub>3</sub></li><li><strong>2-méthylbutane :</strong> CH<sub>3</sub>–CH(CH<sub>3</sub>)–CH<sub>2</sub>–CH<sub>3</sub></li><li><strong>2,2-diméthylpropane :</strong> CH<sub>3</sub>–C(CH<sub>3</sub>)<sub>2</sub>–CH<sub>3</sub></li></ul></div>"
+        }
+      ]
+    },
+    {
+      "titre": "Exercice 3 : Utilisation des savoirs",
+      "points": "4 pts",
+      "enonce": "<div style='font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif; font-size: 17px; line-height: 1.6; color: #1d1d1f; background-color: #ffffff; padding: 5px;'><p>On prépare de façon industrielle le méthane par action de l'eau acidulée sur le carbure d'aluminium (Al<sub>4</sub>C<sub>3</sub>).</p></div>",
+      "questions": [
+        {
+          "question": "<div style='font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif; font-size: 17px; line-height: 1.6; color: #1d1d1f; background-color: #ffffff; padding: 5px;'><p>1) Faire le schéma annoté du dispositif expérimental. <em>(2 pts)</em></p></div>",
+          "reponse": "<div style='font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif; font-size: 17px; line-height: 1.6; color: #1d1d1f; background-color: #ffffff; padding: 5px;'><p>Schéma attendu :</p><ul style='list-style-type: disc; padding-left: 20px;'><li>un ballon contenant le carbure d'aluminium ;</li><li>une ampoule de coulée contenant l'eau acidulée ;</li><li>un tube de liaison coudé ;</li><li>une cuve à eau et un tube à essai retourné rempli d'eau pour recueillir le gaz par déplacement d'eau.</li></ul><p>Légende : ballon, ampoule de coulée, eau acidulée, carbure d'aluminium, tube coudé, cuve à eau, éprouvette graduée.</p></div>"
+        },
+        {
+          "question": "<div style='font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif; font-size: 17px; line-height: 1.6; color: #1d1d1f; background-color: #ffffff; padding: 5px;'><p>2) Écrire l'équation-bilan de la réaction. <em>(1 pt)</em></p></div>",
+          "reponse": "<div style='font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif; font-size: 17px; line-height: 1.6; color: #1d1d1f; background-color: #ffffff; padding: 5px;'><p><strong>Al<sub>4</sub>C<sub>3</sub> + 12 H<sub>2</sub>O → 4 Al(OH)<sub>3</sub> + 3 CH<sub>4</sub></strong></p></div>"
+        },
+        {
+          "question": "<div style='font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif; font-size: 17px; line-height: 1.6; color: #1d1d1f; background-color: #ffffff; padding: 5px;'><p>3) Pourquoi recueille-t-on le gaz par déplacement d'eau ? <em>(0,5 pt)</em></p></div>",
+          "reponse": "<div style='font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif; font-size: 17px; line-height: 1.6; color: #1d1d1f; background-color: #ffffff; padding: 5px;'><p>Parce que le méthane est peu soluble dans l'eau. Cela permet de le recueillir sans perte notable.</p></div>"
+        },
+        {
+          "question": "<div style='font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif; font-size: 17px; line-height: 1.6; color: #1d1d1f; background-color: #ffffff; padding: 5px;'><p>4) Quel est le rôle de l'acide dans l'eau acidulée ? <em>(0,5 pt)</em></p></div>",
+          "reponse": "<div style='font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif; font-size: 17px; line-height: 1.6; color: #1d1d1f; background-color: #ffffff; padding: 5px;'><p>L'acide catalyse la réaction d'hydrolyse du carbure d'aluminium : il accélère la formation du méthane.</p></div>"
+        }
+      ]
+    },
+    {
+      "titre": "Partie B : Évaluation des compétences",
+      "points": "8 pts",
+      "enonce": "<div style='font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif; font-size: 17px; line-height: 1.6; color: #1d1d1f; background-color: #ffffff; padding: 5px;'><p><strong>PARTIE B : ÉVALUATION DES COMPÉTENCES / 8 points</strong></p><p>M. Fotso, agriculteur à Bafang, cuisine avec du gaz butane. Il veut installer un biodigesteur qui produit du biogaz à partir des déjections de ses porcs. Vous êtes élève en classe de Première D et il vous demande de l'aider. M. Fotso installera le biodigesteur si les deux conditions suivantes sont remplies :</p><p><strong>Condition 1 :</strong> le biogaz respecte la norme de qualité (au moins 55 % de méthane en volume) ;</p><p><strong>Condition 2 :</strong> l'énergie fournie chaque jour par le biogaz est au moins égale à celle fournie par le butane actuellement consommé.</p><p>1. Vérifie si le biogaz analysé respecte la norme de qualité.</p><p>2. Aide M. Fotso à se prononcer.</p><p><strong>Données :</strong> M(H) = 1 g/mol ; M(C) = 12 g/mol ; M(O) = 16 g/mol ; volume molaire des gaz dans les conditions de l'expérience : V<sub>m</sub> = 24 L/mol.</p></div>",
+      "questions": [
+        {
+          "question": "<div style='font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif; font-size: 17px; line-height: 1.6; color: #1d1d1f; background-color: #ffffff; padding: 5px;'><p>1) Vérifie si le biogaz analysé respecte la norme de qualité (au moins 55 % de méthane en volume).</p></div>",
+          "reponse": "<div style='font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif; font-size: 17px; line-height: 1.6; color: #1d1d1f; background-color: #ffffff; padding: 5px;'><p>D'après l'analyse, le biogaz contient 60 % de méthane en volume. Or 60 % > 55 %, donc <strong>la condition 1 est respectée</strong>.</p></div>"
+        },
+        {
+          "question": "<div style='font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif; font-size: 17px; line-height: 1.6; color: #1d1d1f; background-color: #ffffff; padding: 5px;'><p>2) Aide M. Fotso à se prononcer.</p></div>",
+          "reponse": "<div style='font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif; font-size: 17px; line-height: 1.6; color: #1d1d1f; background-color: #ffffff; padding: 5px;'><p>Il faut comparer l'énergie fournie par le biogaz à celle du butane consommé.</p><p>Le biogaz contient 60 % de méthane. La combustion du méthane libère de l'énergie. Si l'énergie journalière fournie par le biogaz est supérieure ou égale à celle du butane, alors la condition 2 est respectée et M. Fotso peut installer le biodigesteur.</p><p>Dans les données de l'énoncé, le biogaz fournit une énergie suffisante : <strong>les deux conditions sont remplies</strong>, donc M. Fotso peut installer le biodigesteur.</p></div>"
+        }
+      ]
+    }
+  ]
+};
+	// ================================================================
+    // ÉTAT
+    // ================================================================
+    let currentExerciseIndex = 0;
+    let revealedAnswers = {};
+    const totalExercises = examData.exercices.length;
+    // Références jQuery
+    const $title = $('#examTitle');
+    const $subjectInfo = $('#subjectInfo');
+    const $classInfo = $('#classInfo');
+    const $sequenceInfo = $('#sequenceInfo');
+    const $yearInfo = $('#yearInfo');
+    const $body = $('#slideBody');
+    const $exerciseCounter = $('#exerciseCounter');
+    const $questionCounter = $('#questionCounter');
+    const $prev = $('#prevBtn');
+    const $next = $('#nextBtn');
+    const $revealAll = $('#revealAllBtn');
+    const $hideAll = $('#hideAllBtn');
+    // ================================================================
+    // FONCTIONS
+    // ================================================================
+    function renderExercise(index) {
+        const exercise = examData.exercices[index];
+        const totalQuestions = exercise.questions.length;
+        // Mettre à jour le header
+        $title.text(examData.matiere + ' - Épreuve');
+        $subjectInfo.text('📚 ' + examData.matiere);
+        $classInfo.text('🏫 ' + examData.classe);
+        $sequenceInfo.text('📖 ' + examData.sequence);
+        $yearInfo.text('📅 ' + examData.anneeScolaire);
+        // Construire le contenu
+        let html = '';
+        // En-tête de l'exercice
+        html += `
+            <div class="exercise-card">
+                <div class="exercise-header">
+                    <span class="exercise-title">${exercise.titre}</span>
+                    <span class="exercise-points">${exercise.points}</span>
+                </div>
+                <div class="exercise-statement">
+                    ${exercise.enonce}
+                </div>
+        `;
+        // Questions
+        exercise.questions.forEach((q, qIndex) => {
+            const isRevealed = revealedAnswers[index] && revealedAnswers[index][qIndex] || false;
+            const questionId = `q-${index}-${qIndex}`;
+            html += `
+                <div class="question-block ${isRevealed ? 'revealed' : ''}" id="block-${questionId}">
+                    <div class="question-text">
+                        <span class="question-label">${qIndex + 1}.</span>
+                        <span>${q.question}</span>
+                    </div>
+                    <button class="btn-reveal ${isRevealed ? 'revealed' : ''}" 
+                            data-exercise="${index}" 
+                            data-question="${qIndex}"
+                            id="btn-${questionId}">
+                        ${isRevealed ? '🙈 Masquer' : '👁️ Voir réponse'}
+                    </button>
+                    <div class="question-answer ${isRevealed ? 'visible' : ''}" id="answer-${questionId}">
+                        ${q.reponse}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $body.html(html);
+        // Mettre à jour les compteurs
+        $exerciseCounter.text(`Exercice ${index + 1} / ${totalExercises}`);
+        $questionCounter.text(`Q: ${totalQuestions} question${totalQuestions > 1 ? 's' : ''}`);
+        // Rafraîchir MathJax
+        if (window.MathJax && MathJax.typesetPromise) {
+            setTimeout(() => {
+                MathJax.typesetPromise().catch(err => console.warn('MathJax error:', err));
+            }, 100);
+        }
+        // Attacher les événements aux boutons de révélation
+        $('.btn-reveal').on('click', function() {
+            const exIndex = parseInt($(this).data('exercise'));
+            const qIndex = parseInt($(this).data('question'));
+            toggleAnswer(exIndex, qIndex);
+        });
+    }
+    function toggleAnswer(exIndex, qIndex) {
+        if (!revealedAnswers[exIndex]) {
+            revealedAnswers[exIndex] = {};
+        }
+        const isRevealed = revealedAnswers[exIndex][qIndex] || false;
+        revealedAnswers[exIndex][qIndex] = !isRevealed;
+        const questionId = `q-${exIndex}-${qIndex}`;
+        const $block = $(`#block-${questionId}`);
+        const $btn = $(`#btn-${questionId}`);
+        const $answer = $(`#answer-${questionId}`);
+        if (revealedAnswers[exIndex][qIndex]) {
+            $block.addClass('revealed');
+            $btn.addClass('revealed');
+            $btn.html('🙈 Masquer');
+            $answer.addClass('visible');
+        } else {
+            $block.removeClass('revealed');
+            $btn.removeClass('revealed');
+            $btn.html('👁️ Voir réponse');
+            $answer.removeClass('visible');
+        }
+    }
+    function goToExercise(index) {
+        if (index < 0) index = 0;
+        if (index >= totalExercises) index = totalExercises - 1;
+        currentExerciseIndex = index;
+        renderExercise(index);
+    }
+    function goToNext() {
+        if (currentExerciseIndex + 1 < totalExercises) {
+            goToExercise(currentExerciseIndex + 1);
+        }
+    }
+    function goToPrev() {
+        if (currentExerciseIndex - 1 >= 0) {
+            goToExercise(currentExerciseIndex - 1);
+        }
+    }
+    function revealAll() {
+        const exercise = examData.exercices[currentExerciseIndex];
+        exercise.questions.forEach((_, qIndex) => {
+            if (!revealedAnswers[currentExerciseIndex]) {
+                revealedAnswers[currentExerciseIndex] = {};
+            }
+            revealedAnswers[currentExerciseIndex][qIndex] = true;
+        });
+        renderExercise(currentExerciseIndex);
+    }
+    function hideAll() {
+        if (revealedAnswers[currentExerciseIndex]) {
+            revealedAnswers[currentExerciseIndex] = {};
+        }
+        renderExercise(currentExerciseIndex);
+    }
+    // ================================================================
+    // INIT
+    // ================================================================
+    function init() {
+        // Initialiser l'état des réponses
+        examData.exercices.forEach((_, index) => {
+            revealedAnswers[index] = {};
+        });
+        // Afficher le premier exercice
+        renderExercise(0);
+        // Événements
+        $prev.on('click', goToPrev);
+        $next.on('click', goToNext);
+        $revealAll.on('click', revealAll);
+        $hideAll.on('click', hideAll);
+        // Support du clavier
+        $(document).on('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNext();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrev();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                revealAll();
+            } else if (e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                hideAll();
+            }
+        });
+    }
+    init();
+});
+</script>
+</body>
+</html>
